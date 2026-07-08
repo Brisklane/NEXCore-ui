@@ -1,0 +1,178 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">difference</span></div>
+      <div>
+        <h1>Production Variances</h1>
+        <p class="inv-hero-sub">Analyze and settle production cost variances against standard costs</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreate()"><span class="material-symbols-outlined">add</span> New Variance</button>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="kpi-strip">
+    <div class="kpi-card kpi-brand"><div class="kpi-top"><span class="kpi-label">Total Records</span><span class="kpi-icon"><span class="material-symbols-outlined">trending_up</span></span></div><div class="kpi-value">{{ totalCount }}</div></div>
+    <div class="kpi-card kpi-success"><div class="kpi-top"><span class="kpi-label">Favorable</span><span class="kpi-icon"><span class="material-symbols-outlined">arrow_downward</span></span></div><div class="kpi-value">{{ favorableCount }}</div></div>
+    <div class="kpi-card kpi-danger"><div class="kpi-top"><span class="kpi-label">Unfavorable</span><span class="kpi-icon"><span class="material-symbols-outlined">arrow_upward</span></span></div><div class="kpi-value">{{ unfavorableCount }}</div></div>
+    <div class="kpi-card kpi-cyan"><div class="kpi-top"><span class="kpi-label">Settled</span><span class="kpi-icon"><span class="material-symbols-outlined">check_circle</span></span></div><div class="kpi-value">{{ settledCount }}</div></div>
+    <div class="kpi-card kpi-amber"><div class="kpi-top"><span class="kpi-label">Net Variance</span><span class="kpi-icon"><span class="material-symbols-outlined">payments</span></span></div><div class="kpi-value" [class]="getVarianceClass(totalVarianceAmount)">{{ totalVarianceAmount | number:'1.2-2' }}</div></div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="ux-help-box" role="note">
+    <strong>Variance Insight</strong>
+    Variances are meaningful only when standard costs and execution data are complete. Validate BOM, routing, and postings before settlement.
+  </div>
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editing ? 'Edit Variance' : 'Record Variance' }}</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Production Order *</label>
+          @if (editing) {
+            <div class="form-control form-control-readonly">{{ getSelectedOrderLabel() }}</div>
+          } @else {
+            <select [(ngModel)]="formProductionOrderId" (ngModelChange)="onProductionOrderChange()" class="form-control">
+              <option value="">-- Select Production Order --</option>
+              @for (opt of productionOrderOptions; track opt.id) {
+                <option [value]="opt.id">{{ opt.label }}</option>
+              }
+            </select>
+            <small class="cell-secondary">Only Completed or Closed production orders are shown.</small>
+          }
+        </div>
+        @if (!editing) {
+          <div class="form-group">
+            <label>Cost Entry *</label>
+            <select [(ngModel)]="formCostEntryId" (ngModelChange)="onCostEntryChange()" class="form-control" [disabled]="!formProductionOrderId">
+              <option value="">-- Select Cost Entry --</option>
+              @for (opt of costEntryOptions; track opt.id) {
+                <option [value]="opt.id">{{ opt.label }}</option>
+              }
+            </select>
+          </div>
+        }
+        <div class="form-group">
+          <label>Variance Category</label>
+          <select [(ngModel)]="formVarianceType" (ngModelChange)="onVarianceTypeChange()">@for (t of varianceTypes; track t) { <option [value]="t">{{ t }}</option> }</select>
+        </div>
+        <div class="form-group">
+          <label>Standard {{ formVarianceType }} Cost</label>
+          <input type="number" [(ngModel)]="formStandardAmount" min="0" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label>Actual {{ formVarianceType }} Cost</label>
+          <input type="number" [(ngModel)]="formActualAmount" min="0" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label>Variance (calculated)</label>
+          <input type="number" [ngModel]="formActualAmount - formStandardAmount" readonly
+            [class.text-success]="formActualAmount - formStandardAmount < 0"
+            [class.text-danger]="formActualAmount - formStandardAmount > 0" />
+        </div>
+        <div class="form-group form-group-wide">
+          <label>Notes</label>
+          <textarea [(ngModel)]="formNotes" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancel()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()">{{ editing ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <input type="text" class="filter-search" [(ngModel)]="filterSearch" (ngModelChange)="onFilterChange()" placeholder="Search by order or category..." />
+    <select class="filter-select" [(ngModel)]="filterSettled" (ngModelChange)="onFilterChange()">
+      <option value="all">All</option>
+      <option value="settled">Settled</option>
+      <option value="unsettled">Unsettled</option>
+    </select>
+    <span class="filter-count">{{ filteredItems.length }} of {{ totalCount }}</span>
+  </div>
+
+  @if (loading) { <div class="loading-spinner">Loading...</div> } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" [class.sorted]="sortBy === 'orderNumber'" (click)="sort('orderNumber')">Order # <span class="sort-icon">{{ sortBy === 'orderNumber' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'varianceCategory'" (click)="sort('varianceCategory')">Category <span class="sort-icon">{{ sortBy === 'varianceCategory' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'materialVariance'" (click)="sort('materialVariance')">Mat. Var <span class="sort-icon">{{ sortBy === 'materialVariance' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'laborVariance'" (click)="sort('laborVariance')">Labor Var <span class="sort-icon">{{ sortBy === 'laborVariance' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'machineVariance'" (click)="sort('machineVariance')">Machine Var <span class="sort-icon">{{ sortBy === 'machineVariance' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'overheadVariance'" (click)="sort('overheadVariance')">Overhead Var <span class="sort-icon">{{ sortBy === 'overheadVariance' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'totalVariance'" (click)="sort('totalVariance')">Total Variance <span class="sort-icon">{{ sortBy === 'totalVariance' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'isSettled'" (click)="sort('isSettled')">Settled <span class="sort-icon">{{ sortBy === 'isSettled' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of displayRows; track row.id) {
+            <tr [class.row-new]="row.id === highlighter.id">
+              <td class="cell-primary">{{ getOrderLabel(row.productionOrderId) }}</td>
+              <td>{{ row.varianceCategory || '—' }}</td>
+              <td [class]="getVarianceClass(row.materialVariance)">
+                {{ row.materialVariance | number:'1.2-2' }}
+              </td>
+              <td [class]="getVarianceClass(row.laborVariance)">
+                {{ row.laborVariance | number:'1.2-2' }}
+              </td>
+              <td [class]="getVarianceClass(row.machineVariance)">
+                {{ row.machineVariance | number:'1.2-2' }}
+              </td>
+              <td [class]="getVarianceClass(row.overheadVariance)">
+                {{ row.overheadVariance | number:'1.2-2' }}
+              </td>
+              <td class="text-bold" [class]="getVarianceClass(row.totalVariance)">
+                {{ row.totalVariance | number:'1.2-2' }}
+                @if (isFavorable(row.totalVariance)) { <span class="badge badge-completed">↓ Fav</span> }
+                @else if (row.totalVariance > 0) { <span class="badge badge-cancelled">↑ Unfav</span> }
+              </td>
+              <td>
+                @if (row.isSettled) {
+                  <span class="badge badge-completed">✓ Settled</span>
+                  @if (row.settledAt) { <div class="cell-secondary">{{ row.settledAt | date:'mediumDate' }}</div> }
+                } @else {
+                  <span class="badge badge-draft">Open</span>
+                }
+              </td>
+              <td class="actions-cell">
+                @if (!row.isSettled) {
+                  <button class="btn-xs btn-success" (click)="settleVariance(row)">Settle</button>
+                }
+                <button class="btn-icon" (click)="openEdit(row)" title="Edit">✏️</button>
+                <button class="btn-icon" (click)="delete(row)" title="Delete">🗑️</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="9" class="empty-row">No variance records found</td></tr>
+          }
+        </tbody>
+      </table>
+      @if (filteredItems.length > 0) {
+        <div class="pagination-bar">
+          <div class="pagination-info">
+            <span>Rows per page:</span>
+            <select [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+              @for (opt of pageSizeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+            </select>
+            <span>Showing {{ (page - 1) * pageSize + 1 }} to {{ page * pageSize > totalCount ? totalCount : page * pageSize }} of {{ totalCount }} entries</span>
+          </div>
+          <div class="pagination-controls">
+            <button class="btn-page" [disabled]="page <= 1" (click)="goToPage(page - 1)">&#8249; Prev</button>
+            <span class="page-indicator">Page {{ page }} of {{ totalPages }}</span>
+            <button class="btn-page" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next &#8250;</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

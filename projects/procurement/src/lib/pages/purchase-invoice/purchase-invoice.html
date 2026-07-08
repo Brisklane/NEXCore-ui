@@ -1,0 +1,194 @@
+<div class="page-container">
+
+  <app-page-header icon="receipt_long" [title]="title" [subtitle]="subtitle">
+    @if (isAllView) {
+      <button class="btn btn-primary" (click)="openCreate()">+ New Vendor Bill</button>
+    }
+  </app-page-header>
+
+  <app-alert type="error"   [message]="error"></app-alert>
+  <app-alert type="success" [message]="success"></app-alert>
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editing ? 'Edit Vendor Bill — ' + editing.invoiceNumber : 'New Vendor Bill' }}</h3>
+
+      <div class="tab-bar">
+        <button [class]="formTab === 'details' ? 'tab-btn tab-btn-active' : 'tab-btn'" (click)="formTab = 'details'">Details</button>
+        <button [class]="formTab === 'lines' ? 'tab-btn tab-btn-active' : 'tab-btn'" (click)="formTab = 'lines'">Lines ({{ formLines.length }})</button>
+        <button [class]="formTab === 'notes' ? 'tab-btn tab-btn-active' : 'tab-btn'" (click)="formTab = 'notes'">Notes</button>
+      </div>
+
+      @if (formTab === 'details') {
+        <div class="form-grid">
+          <app-input label="Vendor Invoice #" required placeholder="Enter number from vendor's invoice"
+                     [(ngModel)]="form.vendorInvoiceNumber" [error]="submitted ? errors.vendorInvoiceNumber : ''"></app-input>
+          <app-select label="Vendor" required [options]="vendorOptions" [(ngModel)]="form.vendorId"
+                      (ngModelChange)="onVendorChange($event)"
+                      [error]="submitted ? errors.vendorId : ''" placeholder="-- Select vendor --"></app-select>
+          <app-select label="Purchase Order (optional)" [options]="poOptions" [(ngModel)]="form.purchaseOrderId"
+                      (ngModelChange)="onPOChange()" placeholder="-- None --"></app-select>
+          <app-input label="Invoice Date" type="date" [(ngModel)]="form.invoiceDate" (ngModelChange)="recomputeDueDate()"></app-input>
+          <app-input label="Due Date" required type="date" [(ngModel)]="form.dueDate" [error]="submitted ? errors.dueDate : ''"></app-input>
+          <app-input label="Posting Date" type="date" [(ngModel)]="form.postingDate"></app-input>
+          <app-select label="Currency" [options]="currencyOptions" [(ngModel)]="form.currencyCode" placeholder=""></app-select>
+          <app-input label="Exchange Rate" type="number" [min]="0" [step]="0.0001" [(ngModel)]="form.exchangeRate"></app-input>
+          <app-select label="Payment Terms" [options]="paymentTermOptions" [(ngModel)]="form.paymentTerms" (ngModelChange)="recomputeDueDate()" placeholder=""></app-select>
+        </div>
+        @if (form.purchaseOrderId) {
+          <p class="subtitle" style="margin-top:6px">Lines were pre-filled from the selected PO's billable quantities — adjust as needed on the Lines tab.</p>
+        }
+      }
+
+      @if (formTab === 'lines') {
+        <div class="help-box">
+          <span class="help-icon">ℹ️</span>
+          <span><strong>3-way matching</strong> reconciles this vendor bill against the <strong>Purchase Order</strong> (what was ordered),
+            the <strong>Goods Receipt</strong> (what was actually received), and the <strong>Invoice</strong> (what the vendor billed) —
+            comparing quantity and price across all three. The <strong>Match</strong> badge on the list shows
+            <em>Fully Matched</em> when everything agrees within tolerance. A <strong>match exception</strong> means a difference was
+            found (e.g. billed quantity exceeds the received quantity, or the unit price differs from the PO) and the bill must be
+            reviewed and resolved before it can be approved or paid.</span>
+        </div>
+        @if (submitted && errors.lines) { <div class="alert alert-error">{{ errors.lines }}</div> }
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th><th>Description</th><th style="text-align:right">Qty</th><th>UoM</th>
+                <th style="text-align:right">Unit Price</th><th style="text-align:right">Disc %</th><th style="text-align:right">Tax %</th>
+                <th>Category</th><th style="text-align:right">Line Total</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (l of formLines; track $index; let i = $index) {
+                <tr>
+                  <td>{{ l.itemCode || '—' }}</td>
+                  <td>{{ l.itemDescription }}</td>
+                  <td style="text-align:right">{{ l.quantity }}</td>
+                  <td>{{ l.unitOfMeasureName || '—' }}</td>
+                  <td style="text-align:right">{{ l.unitPrice | number:'1.2-2' }}</td>
+                  <td style="text-align:right">{{ l.discountPercent ?? 0 }}</td>
+                  <td style="text-align:right">{{ l.taxPercent ?? 0 }}</td>
+                  <td>{{ categoryName(l.procurementCategoryId) }}</td>
+                  <td style="text-align:right">{{ lineTotal(l) | number:'1.2-2' }}</td>
+                  <td style="text-align:center"><button type="button" class="btn-remove" (click)="removeLine(i)">✕</button></td>
+                </tr>
+              } @empty { <tr><td colspan="10" class="empty-row">No lines added yet.</td></tr> }
+            </tbody>
+          </table>
+        </div>
+        @if (formLines.length) { <div class="lines-total">Invoice Total: {{ formLinesTotal | number:'1.2-2' }} {{ form.currencyCode }}</div> }
+
+        <h4 class="section-title">Add Line</h4>
+        <div class="form-grid line-add-grid">
+          <div class="form-group">
+            <label>Item</label>
+            <lib-entity-picker-input
+              [apiUrl]="itemApiUrl" [value]="newLine.itemCode || ''"
+              [displayFields]="itemDisplayFields" [columns]="itemColumns" [pickerPageSize]="25"
+              entityLabel="Item" placeholder="Search items…" (itemSelected)="onLineItemSelect($event)">
+            </lib-entity-picker-input>
+          </div>
+          <app-input label="Description" placeholder="Item description" [(ngModel)]="newLine.itemDescription"></app-input>
+          <app-input label="Quantity" type="number" [min]="0" placeholder="1" [(ngModel)]="newLine.quantity"></app-input>
+          <app-select label="UoM" [options]="uomOptions" [(ngModel)]="newLine.unitOfMeasureId" placeholder="-- Unit --"></app-select>
+          <app-input label="Unit Price" type="number" [min]="0" [step]="0.01" placeholder="0.00" [(ngModel)]="newLine.unitPrice"></app-input>
+          <app-input label="Discount %" type="number" [min]="0" [max]="100" placeholder="0" [(ngModel)]="newLine.discountPercent"></app-input>
+          <app-input label="Tax %" type="number" [min]="0" [max]="100" placeholder="0" [(ngModel)]="newLine.taxPercent"></app-input>
+          <app-select label="Category" [options]="categoryOptions" [(ngModel)]="newLine.procurementCategoryId" placeholder="-- None --"></app-select>
+          <div class="form-group form-check-row">
+            <button type="button" class="btn btn-secondary" (click)="addLine()">+ Add Line</button>
+          </div>
+        </div>
+      }
+
+      @if (formTab === 'notes') {
+        <div class="form-grid">
+          <div class="form-group-full">
+            <app-textarea label="Notes" [rows]="3" placeholder="Notes" [(ngModel)]="form.notes"></app-textarea>
+          </div>
+          <div class="form-group-full">
+            <app-textarea label="Internal Notes" [rows]="2" placeholder="Internal notes" [(ngModel)]="form.internalNotes"></app-textarea>
+          </div>
+        </div>
+      }
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()" [disabled]="saving">{{ editing ? 'Save Changes' : 'Create Bill' }}</button>
+      </div>
+    </div>
+  }
+
+  <div class="filters-bar">
+    <span class="filter-search">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search by invoice #, vendor inv # or vendor…" [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
+      @if (search) { <button class="search-clear" title="Clear search" (click)="search = ''; onSearchChange()">×</button> }
+    </span>
+    <select class="filter-input" [(ngModel)]="statusFilter" (ngModelChange)="onStatusChange()">
+      <option [ngValue]="''">All statuses</option>
+      @for (opt of statusFilterOptions; track opt.value) { <option [ngValue]="opt.value">{{ opt.label }}</option> }
+    </select>
+  </div>
+
+  <app-data-table [sortableAll]="true"
+    [columns]="columns" [data]="invoices" [actions]="actions" [loading]="loading"
+    [totalCount]="totalCount" [page]="page" [pageSize]="pageSize"
+    [sortBy]="sortBy" [sortDirection]="sortDirection"
+    [highlightRowId]="highlighter.id"
+    (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)" (sortChange)="onSortChange($event)"
+    emptyMessage="No vendor bills found." (rowAction)="onRowAction($event)">
+  </app-data-table>
+
+</div>
+
+@if (showHoldModal) {
+  <div class="modal-overlay">
+    <div class="modal-box">
+      <h4>Put Invoice on Hold</h4>
+      <div class="form-group">
+        <label>Hold Reason <span style="color:#ef4444">*</span></label>
+        <textarea [(ngModel)]="holdReason" rows="3" placeholder="Reason for holding"
+                  [style.border-color]="holdSubmitted && !holdReason.trim() ? '#ef4444' : null"></textarea>
+        @if (holdSubmitted && !holdReason.trim()) { <span style="color:#ef4444;font-size:12px;margin-top:3px;display:block">A reason is required.</span> }
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showHoldModal = false">Cancel</button>
+        <button class="btn btn-primary" (click)="confirmHold()">Hold</button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showDisputeModal) {
+  <div class="modal-overlay">
+    <div class="modal-box">
+      <h4>Dispute Invoice</h4>
+      <div class="form-group">
+        <label>Dispute Reason <span style="color:#ef4444">*</span></label>
+        <textarea [(ngModel)]="disputeReason" rows="3" placeholder="Reason for dispute"
+                  [style.border-color]="disputeSubmitted && !disputeReason.trim() ? '#ef4444' : null"></textarea>
+        @if (disputeSubmitted && !disputeReason.trim()) { <span style="color:#ef4444;font-size:12px;margin-top:3px;display:block">A reason is required.</span> }
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showDisputeModal = false">Cancel</button>
+        <button class="btn btn-danger" (click)="confirmDispute()">Dispute</button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showDeleteConfirm) {
+  <div class="modal-overlay">
+    <div class="modal-box">
+      <h4>Delete Vendor Bill</h4>
+      <p>Delete <strong>{{ deleteTarget?.invoiceNumber }}</strong>? This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showDeleteConfirm = false">Cancel</button>
+        <button class="btn btn-danger" (click)="confirmDelete()">Delete</button>
+      </div>
+    </div>
+  </div>
+}

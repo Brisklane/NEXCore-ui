@@ -1,0 +1,95 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">confirmation_number</span></div>
+      <div>
+        <h1>Coupons</h1>
+        <p class="inv-hero-sub">View active coupons and validate codes</p>
+      </div>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <!-- Validate Coupon -->
+  <div class="form-panel">
+    <h3>Validate Coupon Code</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Coupon Code *</label>
+        <input type="text" [(ngModel)]="validateCode" placeholder="Enter coupon code" />
+      </div>
+      <div class="form-group">
+        <label>Customer (optional)</label>
+        <select [(ngModel)]="validateCustomerId">
+          <option value="">-- None --</option>
+          @for (c of contacts; track c.id) {
+            <option [value]="c.id">{{ c.firstName }} {{ c.lastName }}{{ c.accountName ? ' · ' + c.accountName : '' }}</option>
+          }
+        </select>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-secondary" (click)="clearValidation()">Clear</button>
+      <button class="btn btn-primary" (click)="validateCoupon()" [disabled]="!validateCode">Validate</button>
+    </div>
+
+    @if (validationError) {
+      <div class="alert alert-error" style="margin-top:12px">{{ validationError }}</div>
+    }
+    @if (validationResult) {
+      <div class="alert alert-success" style="margin-top:12px">
+        <strong>Valid Coupon:</strong> {{ validationResult.code }} — {{ validationResult.discountType === 'Percentage' ? validationResult.discountValue + '%' : validationResult.discountValue + ' off' }}
+      </div>
+    }
+  </div>
+
+  <!-- Active Coupons Table -->
+  <div class="inv-toolbar">
+    <span class="inv-search">
+      <span class="material-symbols-outlined">search</span>
+      <input type="text" [(ngModel)]="searchQuery" placeholder="Search by code, description or type…" />
+    </span>
+    <span class="toolbar-count"><strong>{{ filteredCoupons.length }}</strong> record(s)</span>
+  </div>
+
+  @if (loading) {
+    <div class="grid-card"><div class="grid-scroll"><table class="data-grid"><thead><tr><th>Code</th><th>Type</th><th class="num">Discount</th><th class="num">Usage</th><th>Valid Until</th><th>Active</th></tr></thead><tbody>@for (s of [0,1,2,3]; track s) { <tr><td><span class="skeleton sk-line" style="width:50%"></span></td><td><span class="skeleton sk-line" style="width:50%"></span></td><td><span class="skeleton sk-line" style="width:40%"></span></td><td><span class="skeleton sk-line" style="width:30%"></span></td><td><span class="skeleton sk-line" style="width:50%"></span></td><td><span class="skeleton sk-line" style="width:40%"></span></td></tr> }</tbody></table></div></div>
+  } @else {
+    <div class="grid-card">
+      <div class="grid-scroll">
+        <table class="data-grid">
+          <thead>
+            <tr>
+              <th class="th-sort" [class.is-sorted]="sortBy === 'code'" (click)="sort('code')">Code <span class="sort-caret">{{ sortBy === 'code' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+              <th class="th-sort" [class.is-sorted]="sortBy === 'description'" (click)="sort('description')">Description <span class="sort-caret">{{ sortBy === 'description' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+              <th class="th-sort" [class.is-sorted]="sortBy === 'discountType'" (click)="sort('discountType')">Type <span class="sort-caret">{{ sortBy === 'discountType' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+              <th class="num th-sort" [class.is-sorted]="sortBy === 'discountValue'" (click)="sort('discountValue')">Discount <span class="sort-caret">{{ sortBy === 'discountValue' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+              <th class="num th-sort" [class.is-sorted]="sortBy === 'minOrderAmount'" (click)="sort('minOrderAmount')">Min Order <span class="sort-caret">{{ sortBy === 'minOrderAmount' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+              <th class="num th-sort" [class.is-sorted]="sortBy === 'usageCount'" (click)="sort('usageCount')">Usage <span class="sort-caret">{{ sortBy === 'usageCount' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+              <th class="th-sort" [class.is-sorted]="sortBy === 'validTo'" (click)="sort('validTo')">Valid Until <span class="sort-caret">{{ sortBy === 'validTo' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+              <th class="th-sort" [class.is-sorted]="sortBy === 'isActive'" (click)="sort('isActive')">Active <span class="sort-caret">{{ sortBy === 'isActive' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of filteredCoupons; track c.id) {
+              <tr>
+                <td class="col-strong">{{ c.code }}</td>
+                <td>{{ c.description || '—' }}</td>
+                <td>{{ c.discountType }}</td>
+                <td class="num">{{ c.discountType === 'Percentage' ? c.discountValue + '%' : (c.discountValue | number:'1.2-2') }}</td>
+                <td class="num">{{ c.minOrderAmount | number:'1.2-2' }}</td>
+                <td class="num">{{ c.usageCount }}{{ c.maxUsageCount ? ' / ' + c.maxUsageCount : '' }}</td>
+                <td>{{ c.validTo ? (c.validTo | date:'mediumDate') : '—' }}</td>
+                <td><span class="status-pill" [class.pill-instock]="c.isActive" [class.pill-muted]="!c.isActive">{{ c.isActive ? 'Active' : 'Inactive' }}</span></td>
+              </tr>
+            }
+            @empty {
+              <tr><td colspan="8"><div class="inv-empty" style="padding:40px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">confirmation_number</span></div><div class="inv-empty-title">No active coupons</div><div class="inv-empty-text">Coupons you create will appear here.</div></div></td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+</div>

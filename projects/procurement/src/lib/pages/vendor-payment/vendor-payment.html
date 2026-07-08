@@ -1,0 +1,139 @@
+<div class="page-container">
+
+  <app-page-header icon="payments" title="Vendor Payments" subtitle="Outgoing payments to suppliers, allocated to vendor bills">
+    <button class="btn btn-primary" (click)="openCreate()">+ New Payment</button>
+  </app-page-header>
+
+  <app-alert type="error"   [message]="error"></app-alert>
+  <app-alert type="success" [message]="success"></app-alert>
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>New Vendor Payment</h3>
+
+      <div class="help-box">
+        <span class="help-icon">ℹ️</span>
+        <span><strong>Withholding tax</strong> is deducted from the gross amount, so the <strong>net cash paid to the vendor</strong>
+          equals the <strong>total amount − withholding tax</strong>. A single payment can be <strong>applied (allocated)
+          across multiple outstanding bills</strong>; any amount left unallocated remains as a credit on the vendor account.</span>
+      </div>
+
+      <div class="form-grid">
+        <app-select label="Vendor" required [options]="vendorOptions" [(ngModel)]="form.vendorId"
+                    (ngModelChange)="onVendorChange()" [error]="submitted ? errors.vendorId : ''" placeholder="-- Select vendor --"></app-select>
+        <app-select label="Pay To (Vendor Bank Account)" [options]="vendorBankAccountOptions" [(ngModel)]="form.vendorBankAccountId"
+                    placeholder="-- Select bank account --"></app-select>
+        <app-select label="Payment Method" [options]="methodOptions" [(ngModel)]="form.paymentMethod" placeholder=""></app-select>
+        <app-input label="Payment Date" type="date" [(ngModel)]="form.paymentDate"></app-input>
+        <app-input label="Value Date" type="date" [(ngModel)]="form.valueDate"></app-input>
+        <app-select label="Currency" [options]="currencyOptions" [(ngModel)]="form.currencyCode" placeholder=""></app-select>
+        <app-input label="Exchange Rate" type="number" [min]="0" [step]="0.0001" [(ngModel)]="form.exchangeRate"></app-input>
+        <app-input label="Payment Amount" required type="number" [min]="0" [step]="0.01"
+                   [(ngModel)]="form.totalAmount" [error]="submitted ? errors.totalAmount : ''"></app-input>
+        <app-input label="Withholding Tax" type="number" [min]="0" [step]="0.01" [(ngModel)]="form.withholdingTaxAmount"></app-input>
+        <app-input label="Bank Reference" placeholder="Bank ref" [(ngModel)]="form.bankReferenceNumber"></app-input>
+        <app-input label="Cheque Number" placeholder="Cheque #" [(ngModel)]="form.checkNumber"></app-input>
+      </div>
+
+      <h4 class="section-title">Allocate to Vendor Bills</h4>
+      <div class="helper-box">
+        <span class="helper-icon">ℹ️</span>
+        <div>Outstanding bills for the selected vendor are listed below. Enter how much of this payment applies to each
+          (capped at each bill's outstanding amount), or use <strong>Auto-allocate</strong> to spread the payment total
+          oldest-first. Any unallocated amount stays as a credit on the vendor account.</div>
+      </div>
+
+      @if (form.vendorId) {
+        <div class="table-container">
+          <table>
+            <thead><tr><th>Bill #</th><th>Vendor Inv #</th><th style="text-align:right">Outstanding</th><th style="text-align:right">Allocated</th></tr></thead>
+            <tbody>
+              @for (a of allocations; track a.invoiceId) {
+                <tr>
+                  <td>{{ a.invoiceNumber }}</td>
+                  <td>{{ a.vendorInvoiceNumber }}</td>
+                  <td style="text-align:right">{{ a.outstanding | number:'1.2-2' }}</td>
+                  <td style="text-align:right"><input class="num-input" type="number" min="0" [max]="a.outstanding" [(ngModel)]="a.allocatedAmount" (ngModelChange)="clampAllocation(a)" /></td>
+                </tr>
+              } @empty { <tr><td colspan="4" class="empty-row">No outstanding bills for this vendor.</td></tr> }
+            </tbody>
+          </table>
+        </div>
+        @if (allocations.length) {
+          <div style="display:flex;gap:12px;align-items:center;justify-content:flex-end;margin-top:8px">
+            <button type="button" class="btn btn-secondary" (click)="autoAllocate()">Auto-allocate</button>
+            <span class="lines-total" [class.alloc-warn]="errors.allocation" [class.alloc-ok]="!errors.allocation && allocatedTotal > 0">
+              Allocated: {{ allocatedTotal | number:'1.2-2' }} / {{ (form.totalAmount ?? 0) | number:'1.2-2' }} {{ form.currencyCode }}
+            </span>
+          </div>
+          @if (submitted && errors.allocation) { <div class="alert alert-error">{{ errors.allocation }}</div> }
+        }
+      } @else {
+        <div class="empty-row" style="padding:24px;text-align:center;color:#94a3b8">Select a vendor to load outstanding bills.</div>
+      }
+
+      <div class="form-grid" style="margin-top:12px">
+        <div class="form-group-full">
+          <app-textarea label="Notes" [rows]="2" placeholder="Payment notes" [(ngModel)]="form.notes"></app-textarea>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()" [disabled]="saving">Create Payment</button>
+      </div>
+    </div>
+  }
+
+  <div class="filters-bar">
+    <span class="filter-search">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search by payment # or vendor…" [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
+      @if (search) { <button class="search-clear" title="Clear search" (click)="search = ''; onSearchChange()">×</button> }
+    </span>
+    <select class="filter-input" [(ngModel)]="statusFilter" (ngModelChange)="onStatusChange()">
+      <option [ngValue]="''">All statuses</option>
+      @for (opt of statusFilterOptions; track opt.value) { <option [ngValue]="opt.value">{{ opt.label }}</option> }
+    </select>
+  </div>
+
+  <app-data-table [sortableAll]="true"
+    [columns]="columns" [data]="payments" [actions]="actions" [loading]="loading"
+    [totalCount]="totalCount" [page]="page" [pageSize]="pageSize"
+    [sortBy]="sortBy" [sortDirection]="sortDirection"
+    [highlightRowId]="highlighter.id"
+    (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)" (sortChange)="onSortChange($event)"
+    emptyMessage="No payments found." (rowAction)="onRowAction($event)">
+  </app-data-table>
+
+</div>
+
+@if (showClearModal) {
+  <div class="modal-overlay">
+    <div class="modal-box">
+      <h4>Mark as Paid</h4>
+      <p style="margin:0 0 12px;color:#6b7280">This records the payment, reduces the bill's outstanding balance, and posts it to the ledger.</p>
+      <div class="form-group">
+        <label>Reference <span style="color:#9ca3af">(optional)</span></label>
+        <input type="text" [(ngModel)]="bankReference" placeholder="e.g. bank transfer / cheque ref" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showClearModal = false">Cancel</button>
+        <button class="btn btn-primary" (click)="confirmClear()">Mark as Paid</button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showDeleteConfirm) {
+  <div class="modal-overlay">
+    <div class="modal-box">
+      <h4>Delete Payment</h4>
+      <p>Delete <strong>{{ deleteTarget?.paymentNumber }}</strong>? This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showDeleteConfirm = false">Cancel</button>
+        <button class="btn btn-danger" (click)="confirmDelete()">Delete</button>
+      </div>
+    </div>
+  </div>
+}

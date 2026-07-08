@@ -1,0 +1,209 @@
+<header class="top-header">
+  <button type="button" class="hamburger-btn" (click)="menuToggle.emit()" aria-label="Toggle menu">
+    <span></span><span></span><span></span>
+  </button>
+
+  <label class="header-search">
+    <svg class="hs-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+         stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path>
+    </svg>
+    <input type="text" placeholder="Search anything…" aria-label="Search" />
+    <kbd class="hs-kbd">Ctrl K</kbd>
+  </label>
+
+  <!-- ===== Workspace chip (collapses company / branch / unit) ===== -->
+  <div class="workspace" *ngIf="contextSwitcher.companies().length > 0" [class.switching]="contextSwitcher.isSwitching()">
+    <button type="button" class="ws-trigger" (click)="toggleWorkspace($event)" [class.open]="wsOpen" [disabled]="contextSwitcher.isSwitching()">
+      <span class="ws-badge">{{ companyInitial }}</span>
+      <span class="ws-text">
+        <span class="ws-company">{{ selectedCompanyName }}</span>
+        <span class="ws-branch">{{ selectedBranchName }}</span>
+      </span>
+      <span class="ctx-spin" *ngIf="contextSwitcher.isSwitching()" aria-label="Switching…"></span>
+      <svg class="ws-caret" *ngIf="!contextSwitcher.isSwitching()" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+    </button>
+
+    <div class="ws-backdrop" *ngIf="wsOpen" (click)="closeWorkspace()"></div>
+
+    <div class="ws-panel" *ngIf="wsOpen" (click)="$event.stopPropagation()">
+      <div class="ws-panel-title">Switch workspace</div>
+
+  <div class="context-switcher" [class.switching]="contextSwitcher.isSwitching()">
+    <!-- Company -->
+    <label class="ctx-seg" title="Company">
+      <svg class="ctx-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="4" y="3" width="16" height="18" rx="1.5"></rect>
+        <path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2"></path>
+      </svg>
+      <select
+        class="ctx-sel"
+        name="ctxCompany"
+        [ngModel]="contextSwitcher.selectedCompanyId()"
+        (ngModelChange)="onCompanyChange($event)"
+        [disabled]="contextSwitcher.isSwitching()"
+      >
+        <option *ngFor="let c of contextSwitcher.companies()" [ngValue]="c.companyId">{{ c.companyName }}</option>
+      </select>
+      <svg class="ctx-caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+    </label>
+
+    <span class="ctx-divider" *ngIf="contextSwitcher.branches().length > 0"></span>
+
+    <!-- Branch -->
+    <label class="ctx-seg" title="Branch" *ngIf="contextSwitcher.branches().length > 0">
+      <svg class="ctx-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 9l1-4h14l1 4"></path>
+        <path d="M5 9v11h14V9"></path>
+        <path d="M9 20v-5h6v5"></path>
+      </svg>
+      <select
+        class="ctx-sel"
+        name="ctxBranch"
+        [ngModel]="contextSwitcher.selectedBranchId()"
+        (ngModelChange)="onBranchChange($event)"
+        [disabled]="contextSwitcher.isSwitching()"
+      >
+        <option *ngFor="let b of contextSwitcher.branches()" [ngValue]="b.id">{{ b.name }}</option>
+      </select>
+      <svg class="ctx-caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+    </label>
+
+    <span class="ctx-divider" *ngIf="contextSwitcher.businessUnits().length > 0"></span>
+
+    <!-- Business Unit -->
+    <label class="ctx-seg" title="Business Unit" *ngIf="contextSwitcher.businessUnits().length > 0">
+      <svg class="ctx-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+        <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+        <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+        <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+      </svg>
+      <select
+        class="ctx-sel"
+        name="ctxBusinessUnit"
+        [ngModel]="contextSwitcher.selectedBusinessUnitId()"
+        (ngModelChange)="onBusinessUnitChange($event)"
+        [disabled]="contextSwitcher.isSwitching()"
+      >
+        <option *ngFor="let bu of contextSwitcher.businessUnits()" [ngValue]="bu.id">{{ bu.name }}</option>
+      </select>
+      <svg class="ctx-caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+    </label>
+
+    </div><!-- /.context-switcher -->
+    </div><!-- /.ws-panel -->
+  </div><!-- /.workspace -->
+
+  <div class="header-right">
+    <button type="button" class="ai-launch" (click)="aiToggle.emit()" aria-label="Open NexCore AI">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"></path>
+        <path d="M19 14l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8.8-2z"></path>
+      </svg>
+      <span class="ai-launch-label">Ask AI</span>
+    </button>
+
+    <div class="header-icons">
+      <div class="icon-btn">
+        <svg
+          viewBox="0 0 24 24"
+          class="top-icon"
+          stroke="currentColor"
+          fill="none"
+          stroke-width="1.7"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+          <polyline points="2,4 12,13 22,4"></polyline>
+        </svg>
+      </div>
+
+      <div class="icon-btn">
+        <span class="badge-dot"></span>
+        <svg
+          viewBox="0 0 24 24"
+          class="top-icon"
+          stroke="currentColor"
+          fill="none"
+          stroke-width="1.7"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="profile-area" (click)="toggleMenu($event)">
+      <div class="profile-box">
+        <div class="profile-pic">{{ initials }}</div>
+        <div class="profile-info">
+          <div class="name">{{ fullName }}</div>
+        </div>
+        <svg class="profile-caret" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+      </div>
+
+      <div class="profile-menu" *ngIf="showMenu" (click)="$event.stopPropagation()">
+        <div class="pm-head">
+          <div class="pm-avatar">{{ initials }}</div>
+          <div class="pm-id">
+            <div class="pm-name">{{ fullName }}</div>
+            <div class="pm-hint">Manage your account</div>
+          </div>
+        </div>
+
+        <!-- View Profile -->
+        <button class="pm-row" type="button" (click)="goMyProfile($event)">
+          <svg class="pm-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          <span class="pm-label">{{ t.myProfile || 'View Profile' }}</span>
+          <svg class="pm-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg>
+        </button>
+
+        <!-- Help -->
+        <button class="pm-row" type="button" (click)="goHelp($event)">
+          <svg class="pm-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.4-3 4"></path><path d="M12 17h.01"></path></svg>
+          <span class="pm-label">{{ t.help || 'Help & Support' }}</span>
+          <svg class="pm-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg>
+        </button>
+
+        <div class="pm-sep"></div>
+        <div class="pm-section-label">Preferences</div>
+
+        <!-- Theme -->
+        <div class="pm-row static">
+          <svg class="pm-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path></svg>
+          <span class="pm-label">{{ t.theme || 'Theme' }}</span>
+          <div class="pm-theme" (click)="$event.stopPropagation()">
+            <!-- Light -->
+            <button class="pm-theme-opt" type="button" [class.active]="theme === 'Light'" (click)="setTheme('Light', $event)" title="Light">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path></svg>
+            </button>
+            <!-- Dark (graphite) -->
+            <button class="pm-theme-opt" type="button" [class.active]="theme === 'Dark'" (click)="setTheme('Dark', $event)" title="Dark">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+            </button>
+            <!-- Midnight (navy blue) -->
+            <button class="pm-theme-opt" type="button" [class.active]="theme === 'Midnight'" (click)="setTheme('Midnight', $event)" title="Midnight">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"></path><path d="M19.5 15l.6 1.6 1.6.6-1.6.6-.6 1.6-.6-1.6-1.6-.6 1.6-.6z"></path></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="pm-sep"></div>
+
+        <!-- Log Out -->
+        <button class="pm-row danger" type="button" (click)="logout($event)">
+          <svg class="pm-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="M16 17l5-5-5-5M21 12H9"></path></svg>
+          <span class="pm-label">{{ t.logout || 'Log Out' }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</header>

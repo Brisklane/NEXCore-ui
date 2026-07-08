@@ -1,0 +1,137 @@
+<div class="dsh hr-dsh">
+
+  <!-- Spotlight banner -->
+  <div class="dsh-banner">
+    <div class="dsh-banner-l">
+      <span class="dsh-eyebrow"><span class="material-symbols-outlined">diversity_1</span> Human Resources · People</span>
+      <h1>HR Dashboard</h1>
+      <p class="dsh-banner-sub">247 employees, 8 open positions, and 3 new hires joining this week. Attendance is healthy at 94%.</p>
+    </div>
+    <div class="dsh-banner-r">
+      <div class="dsh-fig">
+        <div class="dsh-fig-val">247</div>
+        <div class="dsh-fig-label">Headcount</div>
+      </div>
+      <div class="dsh-fig-sep"></div>
+      <div class="dsh-fig">
+        <div class="dsh-fig-val">4.2%</div>
+        <div class="dsh-fig-label">Attrition</div>
+      </div>
+      <button class="dsh-cta" (click)="go('/hr/employees')"><span class="material-symbols-outlined">person_add</span> Add Employee</button>
+    </div>
+  </div>
+
+  <!-- Bento -->
+  <div class="dsh-bento">
+
+    <!-- Stat tiles -->
+    <div class="dsh-tile dsh-stat span-3 hover" *ngFor="let s of stats" [ngClass]="s.color">
+      <div class="dsh-stat-ico"><span class="material-symbols-outlined">{{ s.icon }}</span></div>
+      <div class="dsh-stat-label">{{ s.label }}</div>
+      <div class="dsh-stat-val">{{ s.value }}</div>
+      <div class="dsh-stat-foot">
+        <span class="dsh-delta" [ngClass]="s.dir"><span class="material-symbols-outlined">{{ s.dir === 'up' ? 'arrow_upward' : 'arrow_downward' }}</span>{{ s.delta }}</span>
+        {{ s.foot }}
+      </div>
+    </div>
+
+    <!-- Headcount growth area chart -->
+    <div class="dsh-tile span-8">
+      <div class="dsh-th">
+        <div class="dsh-th-title"><span class="dsh-th-ico"><span class="material-symbols-outlined">trending_up</span></span> Headcount Growth</div>
+        <span class="dsh-th-hint">Last 8 months</span>
+      </div>
+      <svg class="dsh-chart" viewBox="0 0 600 200" preserveAspectRatio="none" style="height:190px;">
+        <defs>
+          <linearGradient id="hrArea" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#2b7fff" stop-opacity="0.28"/>
+            <stop offset="1" stop-color="#2b7fff" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <line x1="0" y1="45" x2="600" y2="45" stroke="var(--border-light,#f1f5f9)" stroke-width="1"/>
+        <line x1="0" y1="97" x2="600" y2="97" stroke="var(--border-light,#f1f5f9)" stroke-width="1"/>
+        <line x1="0" y1="150" x2="600" y2="150" stroke="var(--border-light,#f1f5f9)" stroke-width="1"/>
+        <path d="M0,150 L85,131 L170,107 L255,87 L340,74 L425,62 L510,43 L595,30 L595,180 L0,180 Z" fill="url(#hrArea)"/>
+        <path d="M0,150 L85,131 L170,107 L255,87 L340,74 L425,62 L510,43 L595,30" fill="none" stroke="#2b7fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="595" cy="30" r="4.5" fill="#2b7fff" stroke="#fff" stroke-width="2"/>
+      </svg>
+      <div class="dsh-chart-x"><span *ngFor="let x of headcountX">{{ x }}</span></div>
+    </div>
+
+    <!-- Attendance donut -->
+    <div class="dsh-tile span-4">
+      <div class="dsh-th">
+        <div class="dsh-th-title"><span class="dsh-th-ico"><span class="material-symbols-outlined">fact_check</span></span> Attendance Today</div>
+      </div>
+      <div class="dsh-donut-wrap">
+        <div class="dsh-donut">
+          <svg width="138" height="138" viewBox="0 0 138 138">
+            <circle cx="69" cy="69" r="40" fill="none" stroke="var(--bg-muted,#f1f5f9)" stroke-width="16"/>
+            <circle *ngFor="let a of attendance" cx="69" cy="69" r="40" fill="none" [attr.stroke]="a.color" stroke-width="16"
+                    [attr.stroke-dasharray]="a.dash" [attr.stroke-dashoffset]="a.off" transform="rotate(-90 69 69)"/>
+          </svg>
+          <div class="dsh-donut-center">
+            <div class="dsh-donut-num">94%</div>
+            <div class="dsh-donut-cap">present</div>
+          </div>
+        </div>
+        <div class="dsh-legend">
+          <div class="dsh-leg" *ngFor="let a of attendance">
+            <span class="dsh-leg-dot" [style.background]="a.color"></span>
+            <span class="dsh-leg-label">{{ a.label }}</span>
+            <span class="dsh-leg-val">{{ a.count }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hiring pipeline -->
+    <div class="dsh-tile span-4">
+      <div class="dsh-th">
+        <div class="dsh-th-title"><span class="dsh-th-ico"><span class="material-symbols-outlined">filter_alt</span></span> Hiring Pipeline</div>
+        <span class="dsh-th-hint">8 roles</span>
+      </div>
+      <div style="margin-top:2px;">
+        <div class="dsh-prog-row" *ngFor="let p of pipeline">
+          <span class="dsh-prog-label">{{ p.label }}</span>
+          <span class="dsh-prog-val">{{ p.count }}</span>
+          <div class="dsh-prog-track"><div class="dsh-prog-fill" [ngClass]="p.cls" [style.width.%]="p.pct"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Departments -->
+    <div class="dsh-tile span-4">
+      <div class="dsh-th">
+        <div class="dsh-th-title"><span class="dsh-th-ico"><span class="material-symbols-outlined">account_tree</span></span> By Department</div>
+      </div>
+      <div class="dsh-list">
+        <div class="dsh-li" *ngFor="let d of departments">
+          <div class="dsh-li-av">{{ d.ini }}</div>
+          <div class="dsh-li-main">
+            <div class="dsh-li-title">{{ d.name }}</div>
+            <div class="dsh-li-sub">{{ d.sub }}</div>
+          </div>
+          <div class="dsh-li-val">{{ d.val }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent activity -->
+    <div class="dsh-tile span-4">
+      <div class="dsh-th">
+        <div class="dsh-th-title"><span class="dsh-th-ico"><span class="material-symbols-outlined">bolt</span></span> Recent Activity</div>
+      </div>
+      <div class="dsh-feed">
+        <div class="dsh-fi" *ngFor="let a of activity">
+          <span class="dsh-fi-dot" [ngClass]="a.dot"></span>
+          <div class="dsh-fi-body">
+            <div class="dsh-fi-text" [innerHTML]="a.text"></div>
+            <div class="dsh-fi-time">{{ a.time }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

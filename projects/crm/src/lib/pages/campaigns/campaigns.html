@@ -1,0 +1,167 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">campaign</span></div>
+      <div>
+        <h1>Campaigns</h1>
+        <p class="inv-hero-sub">Create and manage your marketing campaigns</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Campaign</button>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="md-split">
+    <!-- ══ LEFT: campaign rows ══ -->
+    <div class="md-list">
+      <div class="md-list-head">
+        <span class="inv-search"><span class="material-symbols-outlined">search</span><input type="text" placeholder="Search campaigns…" [(ngModel)]="searchTerm" name="campaignSearch" (input)="onSearchChange()" /></span>
+      </div>
+      <div class="md-list-body">
+        @if (loading) {
+          @for (s of [0,1,2,3]; track s) { <div class="md-rec"><span class="skeleton sk-circle" style="width:34px;height:34px"></span><div style="flex:1"><span class="skeleton sk-line" style="width:70%"></span></div></div> }
+        } @else if (filteredCampaigns.length === 0) {
+          <div class="inv-empty" style="padding:36px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">campaign</span></div><div class="inv-empty-title">No campaigns</div><div class="inv-empty-text">Create your first campaign.</div></div>
+        } @else {
+          @for (c of filteredCampaigns; track c.id) {
+            <button class="md-rec" [class.selected]="editingCampaign?.id === c.id" (click)="openEditForm(c)">
+              <span class="md-rec-ico"><span class="material-symbols-outlined" style="font-size:17px">campaign</span></span>
+              <div class="md-rec-main"><span class="md-rec-title">{{ c.campaignName }}</span><span class="md-rec-sub">@if (c.type) { {{ c.type }} · }{{ c.status || 'Planned' }}</span></div>
+              <span class="md-rec-status" [class.on]="c.active" [class.off]="!c.active"></span>
+            </button>
+          }
+        }
+      </div>
+      @if (totalCount > 0) {
+        <div class="md-list-foot"><span>{{ firstEntry }}–{{ lastEntry }} of {{ totalCount }}</span><div class="md-pager"><button class="btn-page" [disabled]="page <= 1" (click)="goToPage(page - 1)">Prev</button><button class="btn-page" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next</button></div></div>
+      }
+    </div>
+
+    <!-- ══ RIGHT: form | empty ══ -->
+    <div class="md-detail">
+      @if (showForm) {
+        <div class="md-detail-head">
+          <span class="md-detail-title">{{ editingCampaign ? 'Edit Campaign' : 'New Campaign' }}</span>
+          <button class="icon-btn" title="Close" (click)="cancelForm()"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="md-detail-body">
+      <form class="activity-form">
+
+        <!-- Campaign Information -->
+        <div class="form-section">
+          <div class="section-header"><h4>Campaign Information</h4></div>
+          <div class="form-grid">
+            <div class="form-group form-group-full">
+              <label>Campaign Name <span class="required">*</span></label>
+              <input type="text" [(ngModel)]="formCampaignName" name="campaignName" placeholder="Enter campaign name" />
+            </div>
+            <div class="form-group">
+              <label>Status</label>
+              <select [(ngModel)]="formStatus" name="status">
+                @for (o of statusOptions; track o) { <option [value]="o">{{ o }}</option> }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Type</label>
+              <select [(ngModel)]="formType" name="type">
+                <option value="">— Select Type —</option>
+                @for (o of typeOptions; track o) { <option [value]="o">{{ o }}</option> }
+              </select>
+            </div>
+            <div class="form-group active-toggle">
+              <label>Active</label>
+              <label class="toggle-label">
+                <input type="checkbox" [(ngModel)]="formActive" name="active" class="toggle-input" />
+                <span class="toggle-track">
+                  <span class="toggle-thumb"></span>
+                </span>
+                <span class="toggle-text">{{ formActive ? 'Yes' : 'No' }}</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Schedule & Hierarchy -->
+        <div class="form-section">
+          <div class="section-header"><h4>Schedule &amp; Hierarchy</h4></div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Start Date</label>
+              <input type="date" [(ngModel)]="formStartDate" name="startDate" />
+            </div>
+            <div class="form-group">
+              <label>End Date</label>
+              <input type="date" [(ngModel)]="formEndDate" name="endDate" />
+            </div>
+            <div class="form-group">
+              <label>Parent Campaign</label>
+              <crm-lookup-dropdown
+                [(ngModel)]="formParentCampaignId"
+                name="parentCampaignId"
+                [options]="parentCampaignOptions"
+                placeholder="Select parent campaign"
+                label="Parent Campaign">
+              </crm-lookup-dropdown>
+            </div>
+          </div>
+        </div>
+
+        <!-- Financials & Stats -->
+        <div class="form-section">
+          <div class="section-header"><h4>Financials &amp; Stats</h4></div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Expected Revenue</label>
+              <input type="number" [(ngModel)]="formExpectedRevenue" name="expectedRevenue" min="0" placeholder="0.00" />
+            </div>
+            <div class="form-group">
+              <label>Budgeted Cost</label>
+              <input type="number" [(ngModel)]="formBudgetedCost" name="budgetedCost" min="0" placeholder="0.00" />
+            </div>
+            <div class="form-group">
+              <label>Actual Cost</label>
+              <input type="number" [(ngModel)]="formActualCost" name="actualCost" min="0" placeholder="0.00" />
+            </div>
+            <div class="form-group">
+              <label>Num Sent</label>
+              <input type="number" [(ngModel)]="formNumSent" name="numSent" min="0" placeholder="0" />
+            </div>
+            <div class="form-group">
+              <label>Expected Response %</label>
+              <input type="number" [(ngModel)]="formExpectedResponsePercent" name="expectedResponsePercent" min="0" max="100" step="0.1" placeholder="0.0" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Additional Info -->
+        <div class="form-section">
+          <div class="section-header"><h4>Additional Info</h4></div>
+          <div class="form-grid">
+            <div class="form-group form-group-full">
+              <label>Description</label>
+              <textarea [(ngModel)]="formDescription" name="description" rows="3" placeholder="Campaign goals, audience, key messages..."></textarea>
+            </div>
+          </div>
+        </div>
+
+      </form>
+      <div class="form-actions">
+        @if (editingCampaign) { <button class="ibtn ibtn--danger" style="margin-right:auto" (click)="deleteCampaign(editingCampaign.id)"><span class="material-symbols-outlined">delete</span> Delete</button> }
+        <button class="ibtn ibtn--secondary" (click)="cancelForm()">Cancel</button>
+        <button class="ibtn ibtn--primary" [disabled]="!formCampaignName.trim()" (click)="saveCampaign()"><span class="material-symbols-outlined">save</span> {{ editingCampaign ? 'Update Campaign' : 'Create Campaign' }}</button>
+      </div>
+        </div>
+      } @else {
+        <div class="md-empty">
+          <div class="md-empty-icon"><span class="material-symbols-outlined">campaign</span></div>
+          <div class="md-empty-title">Manage campaigns</div>
+          <div class="md-empty-text">Select a campaign to edit, or create a new one.</div>
+          <button class="btn-brand" style="margin-top:8px" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Campaign</button>
+        </div>
+      }
+    </div>
+  </div>
+</div>

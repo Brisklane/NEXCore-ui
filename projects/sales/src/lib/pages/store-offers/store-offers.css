@@ -1,0 +1,23 @@
+﻿@import '../shared-styles.css';
+
+.form-group-full { grid-column: 1 / -1; }
+
+textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-default, #e2e8f0);
+  border-radius: 6px;
+  font-size: 13px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.badge-chip {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  margin-top: 2px;
+}

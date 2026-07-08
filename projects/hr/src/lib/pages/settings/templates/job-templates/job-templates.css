@@ -1,0 +1,113 @@
+﻿/* Job Templates Styles */
+
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.page-header h2 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.page-header .subtitle {
+  margin: 0.35rem 0 0;
+  color: var(--text-muted, #6b7280);
+}
+
+.form-panel {
+  padding: 1.5rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(100, 116, 139, 0.18);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+  margin-bottom: 1.5rem;
+}
+
+.form-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group-full {
+  grid-column: 1 / -1;
+}
+
+.form-group label {
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 0.75rem;
+  font-size: 0.97rem;
+  background: var(--bg-surface, #fff);
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+.table-container table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-container th,
+.table-container td {
+  padding: 0.95rem 0.9rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.table-container th {
+  font-weight: 700;
+  color: var(--text-primary, #334155);
+}
+
+.status-badge {
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.18);
+  color: #0ea5e9;
+  font-size: 0.85rem;
+}
+
+.empty-state {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-muted, #6b7280);
+}
+
+.loading-spinner {
+  padding: 2rem 0;
+  text-align: center;
+}

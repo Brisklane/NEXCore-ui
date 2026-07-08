@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 140" width="560" height="140">
+  <!-- Shopping bag -->
+  <path d="M22 48 L12 128 L108 128 L98 48 Z" rx="3" fill="#e01a22"/>
+  <!-- Bag handle -->
+  <path d="M38 48 Q38 20 60 20 Q82 20 82 48" fill="none" stroke="#e01a22" stroke-width="8" stroke-linecap="round"/>
+  <!-- White checkmark on bag -->
+  <polyline points="32,86 52,106 90,68" fill="none" stroke="white" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- AI badge circle -->
+  <circle cx="96" cy="56" r="15" fill="#e01a22" stroke="white" stroke-width="2.5"/>
+  <!-- AI text in badge -->
+  <text x="96" y="61" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="bold" fill="white">AI</text>
+  <!-- "order" in dark -->
+  <text x="128" y="100" font-family="'Segoe UI',Arial,sans-serif" font-size="72" font-weight="700" fill="#2b2b2b" letter-spacing="-2">order</text>
+  <!-- "Yaa" in red -->
+  <text x="382" y="100" font-family="'Segoe UI',Arial,sans-serif" font-size="72" font-weight="700" fill="#e01a22" letter-spacing="-2">Yaa</text>
+  <!-- Tagline -->
+  <text x="130" y="124" font-family="'Segoe UI',Arial,sans-serif" font-size="17" fill="#999" letter-spacing="0.3">Shop to nearest store</text>
+</svg>

@@ -1,0 +1,138 @@
+<div class="dsh crm-dsh">
+
+  <!-- Spotlight banner -->
+  <div class="dsh-banner">
+    <div class="dsh-banner-l">
+      <span class="dsh-eyebrow"><span class="material-symbols-outlined">diversity_3</span> CRM · Sales & Relationships</span>
+      <h1>Welcome back, {{ userName }}</h1>
+      <p class="dsh-banner-sub">Your pipeline is heating up — 3 deals are set to close this week. Here's where things stand today.</p>
+    </div>
+    <div class="dsh-banner-r">
+      <div class="dsh-fig">
+        <div class="dsh-fig-val">$1.24M</div>
+        <div class="dsh-fig-label">Pipeline value</div>
+      </div>
+      <div class="dsh-fig-sep"></div>
+      <div class="dsh-fig">
+        <div class="dsh-fig-val">32%</div>
+        <div class="dsh-fig-label">Win rate</div>
+      </div>
+      <button class="dsh-cta" (click)="navigate('/crm/deals')"><span class="material-symbols-outlined">add</span> New Deal</button>
+    </div>
+  </div>
+
+  <!-- Bento -->
+  <div class="dsh-bento">
+
+    <!-- Stat tiles -->
+    <div class="dsh-tile dsh-stat span-3 hover" *ngFor="let s of stats" [ngClass]="s.color">
+      <div class="dsh-stat-ico"><span class="material-symbols-outlined">{{ s.icon }}</span></div>
+      <div class="dsh-stat-label">{{ s.label }}</div>
+      <div class="dsh-stat-val">{{ s.value }}</div>
+      <div class="dsh-stat-foot">
+        <span class="dsh-delta" [ngClass]="s.dir"><span class="material-symbols-outlined">{{ s.dir === 'up' ? 'arrow_upward' : 'arrow_downward' }}</span>{{ s.delta }}</span>
+        {{ s.foot }}
+      </div>
+    </div>
+
+    <!-- Revenue trend area chart -->
+    <div class="dsh-tile span-8">
+      <div class="dsh-th">
+        <div class="dsh-th-title"><span class="dsh-th-ico"><span class="material-symbols-outlined">monitoring</span></span> Revenue Trend</div>
+        <span class="dsh-th-hint">Last 8 months · in $K</span>
+      </div>
+      <svg class="dsh-chart" viewBox="0 0 600 200" preserveAspectRatio="none" style="height:190px;">
+        <defs>
+          <linearGradient id="crmArea" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#2b7fff" stop-opacity="0.28"/>
+            <stop offset="1" stop-color="#2b7fff" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <line x1="0" y1="45" x2="600" y2="45" stroke="var(--border-light,#f1f5f9)" stroke-width="1"/>
+        <line x1="0" y1="97" x2="600" y2="97" stroke="var(--border-light,#f1f5f9)" stroke-width="1"/>
+        <line x1="0" y1="150" x2="600" y2="150" stroke="var(--border-light,#f1f5f9)" stroke-width="1"/>
+        <path d="M0,150 L85,124 L170,137 L255,99 L340,77 L425,90 L510,56 L595,30 L595,180 L0,180 Z" fill="url(#crmArea)"/>
+        <path d="M0,150 L85,124 L170,137 L255,99 L340,77 L425,90 L510,56 L595,30" fill="none" stroke="#2b7fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="595" cy="30" r="4.5" fill="#2b7fff" stroke="#fff" stroke-width="2"/>
+      </svg>
+      <div class="dsh-chart-x"><span>Dec</span><span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span></div>
+    </div>
+
+    <!-- Pipeline by stage -->
+    <div class="dsh-tile span-4">
+      <div class="dsh-th">
+        <div class="dsh-th-title"><span class="dsh-th-ico"><span class="material-symbols-outlined">filter_alt</span></span> Pipeline by Stage</div>
+        <a class="dsh-link" (click)="navigate('/crm/deals')">View</a>
+      </div>
+      <div style="margin-top:2px;">
+        <div class="dsh-prog-row" *ngFor="let p of pipeline">
+          <span class="dsh-prog-label">{{ p.stage }}</span>
+          <span class="dsh-prog-val">{{ p.count }}</span>
+          <div class="dsh-prog-track"><div class="dsh-prog-fill" [ngClass]="p.cls" [style.width.%]="p.pct"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top performers -->
+    <div class="dsh-tile span-4">
+      <div class="dsh-th">
+        <div class="dsh-th-title"><span class="dsh-th-ico"><span class="material-symbols-outlined">emoji_events</span></span> Top Performers</div>
+        <span class="dsh-th-hint">Quota</span>
+      </div>
+      <div class="dsh-list">
+        <div class="dsh-li" *ngFor="let p of performers">
+          <div class="dsh-li-av">{{ p.ini }}</div>
+          <div class="dsh-li-main">
+            <div class="dsh-li-title">{{ p.name }}</div>
+            <div class="dsh-li-sub">{{ p.sub }}</div>
+          </div>
+          <div class="dsh-li-val">{{ p.val }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lead sources donut -->
+    <div class="dsh-tile span-4">
+      <div class="dsh-th">
+        <div class="dsh-th-title"><span class="dsh-th-ico"><span class="material-symbols-outlined">donut_small</span></span> Lead Sources</div>
+      </div>
+      <div class="dsh-donut-wrap">
+        <div class="dsh-donut">
+          <svg width="138" height="138" viewBox="0 0 138 138">
+            <circle cx="69" cy="69" r="40" fill="none" stroke="var(--bg-muted,#f1f5f9)" stroke-width="16"/>
+            <circle *ngFor="let s of sources" cx="69" cy="69" r="40" fill="none" [attr.stroke]="s.color" stroke-width="16"
+                    [attr.stroke-dasharray]="s.dash" [attr.stroke-dashoffset]="s.off" transform="rotate(-90 69 69)"/>
+          </svg>
+          <div class="dsh-donut-center">
+            <div class="dsh-donut-num">148</div>
+            <div class="dsh-donut-cap">leads</div>
+          </div>
+        </div>
+        <div class="dsh-legend">
+          <div class="dsh-leg" *ngFor="let s of sources">
+            <span class="dsh-leg-dot" [style.background]="s.color"></span>
+            <span class="dsh-leg-label">{{ s.label }}</span>
+            <span class="dsh-leg-val">{{ s.count }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent activity -->
+    <div class="dsh-tile span-4">
+      <div class="dsh-th">
+        <div class="dsh-th-title"><span class="dsh-th-ico"><span class="material-symbols-outlined">bolt</span></span> Recent Activity</div>
+      </div>
+      <div class="dsh-feed">
+        <div class="dsh-fi" *ngFor="let a of activity">
+          <span class="dsh-fi-dot" [ngClass]="a.dot"></span>
+          <div class="dsh-fi-body">
+            <div class="dsh-fi-text" [innerHTML]="a.text"></div>
+            <div class="dsh-fi-time">{{ a.time }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

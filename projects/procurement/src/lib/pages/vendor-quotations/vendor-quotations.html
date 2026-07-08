@@ -1,0 +1,167 @@
+<div class="page-container">
+
+  <app-page-header icon="quiz" title="Vendor Quotations" subtitle="Receive, compare, evaluate and award vendor bids against an RFQ">
+    @if (rfq && canReceiveQuotations) {
+      <button class="btn btn-primary" (click)="openSubmitForm()">+ Record Quotation</button>
+    }
+  </app-page-header>
+
+  <app-alert type="error"   [message]="error"></app-alert>
+  <app-alert type="success" [message]="success"></app-alert>
+
+  <div class="filters-bar">
+    <select class="filter-input" [(ngModel)]="selectedRfqId" (ngModelChange)="onRfqChange()">
+      <option value="">-- Select an RFQ --</option>
+      @for (opt of rfqOptions; track opt.value) { <option [ngValue]="opt.value">{{ opt.label }}</option> }
+    </select>
+  </div>
+
+  @if (!rfq) {
+    <div class="empty-row" style="padding:40px;text-align:center;color:#94a3b8">Select a sent RFQ to view and compare its vendor quotations.</div>
+  } @else {
+
+    <!-- RFQ summary -->
+    <div class="rfq-summary">
+      <div class="item"><label>RFQ #</label><span>{{ rfq.rfqNumber }}</span></div>
+      <div class="item"><label>Title</label><span>{{ rfq.title }}</span></div>
+      <div class="item"><label>Status</label><span>{{ rfqStatusLabel(rfq.status) }}</span></div>
+      <div class="item"><label>Deadline</label><span>{{ rfq.submissionDeadline | date:'dd MMM yyyy' }}</span></div>
+      <div class="item"><label>Currency</label><span>{{ rfq.currencyCode }}</span></div>
+      <div class="item"><label>Lines</label><span>{{ rfq.lines.length }}</span></div>
+      <div class="item"><label>Quotations</label><span>{{ rfq.vendorQuotations.length }}</span></div>
+    </div>
+
+    <!-- Quotation submit form -->
+    @if (showSubmitForm) {
+      <div class="form-panel">
+        <h3>Record Vendor Quotation</h3>
+        <div class="form-grid">
+          <app-select label="Vendor" required [options]="vendorOptions" [(ngModel)]="sForm.vendorId"
+                      [error]="submitted ? submitErrors.vendorId : ''" placeholder="-- Select vendor --"></app-select>
+          <app-input label="Vendor Quote Ref." placeholder="Vendor's reference" [(ngModel)]="sForm.vendorQuotationReference"></app-input>
+          <app-input label="Valid Until" required type="date" [(ngModel)]="sForm.validUntil"
+                     [error]="submitted ? submitErrors.validUntil : ''"></app-input>
+          <app-select label="Currency" [options]="currencyOptions" [(ngModel)]="sForm.currencyCode" placeholder=""></app-select>
+          <app-select label="Payment Terms" [options]="paymentTermOptions" [(ngModel)]="sForm.paymentTerms" placeholder=""></app-select>
+          <app-select label="Incoterm" [options]="incotermOptions" [(ngModel)]="sForm.incoterm" placeholder="-- None --"></app-select>
+          <app-input label="Incoterm Location" placeholder="e.g. Port of Karachi" [(ngModel)]="sForm.incotermLocation"></app-input>
+          <app-input label="Delivery Lead Time (days)" type="number" [min]="0" [(ngModel)]="sForm.deliveryLeadTimeDays"></app-input>
+          <div class="form-group-full">
+            <app-textarea label="Notes" [rows]="2" [(ngModel)]="sForm.notes"></app-textarea>
+          </div>
+        </div>
+
+        <h4 class="section-title">Quoted Lines</h4>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th><th style="text-align:right">Qty</th><th style="text-align:right">Unit Price</th>
+                <th style="text-align:right">Disc %</th><th style="text-align:right">Tax %</th>
+                <th>Promised</th><th style="text-align:right">Lead (d)</th><th style="text-align:center">Alt</th><th style="text-align:right">Net</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (l of sLines; track l.rfqLineId) {
+                <tr>
+                  <td>{{ l.itemDescription }}</td>
+                  <td style="text-align:right">{{ l.quantity }}</td>
+                  <td style="text-align:right"><input class="num-input" type="number" min="0" step="0.01" [(ngModel)]="l.unitPrice" /></td>
+                  <td style="text-align:right"><input class="num-input" type="number" min="0" max="100" [(ngModel)]="l.discountPercent" /></td>
+                  <td style="text-align:right"><input class="num-input" type="number" min="0" max="100" [(ngModel)]="l.taxPercent" /></td>
+                  <td><input class="num-input" type="date" [(ngModel)]="l.promisedDeliveryDate" /></td>
+                  <td style="text-align:right"><input class="num-input" type="number" min="0" [(ngModel)]="l.leadTimeDays" /></td>
+                  <td style="text-align:center"><input type="checkbox" [(ngModel)]="l.isAlternative" /></td>
+                  <td style="text-align:right">{{ lineNet(l) | number:'1.2-2' }}</td>
+                </tr>
+              } @empty { <tr><td colspan="9" class="empty-row">This RFQ has no lines.</td></tr> }
+            </tbody>
+          </table>
+        </div>
+        <div class="lines-total">Quotation Total: {{ sLinesTotal | number:'1.2-2' }} {{ sForm.currencyCode }}</div>
+
+        <div class="form-actions">
+          <button class="btn btn-secondary" (click)="cancelSubmit()">Cancel</button>
+          <button class="btn btn-primary" (click)="submitQuotation()" [disabled]="saving">Submit Quotation</button>
+        </div>
+      </div>
+    }
+
+    <!-- Comparison + evaluation -->
+    <h3 class="section-title">Quotation Comparison</h3>
+
+    <div class="helper-box">
+      <span class="helper-icon">ℹ️</span>
+      <div>
+        Score each bid <strong>0–100</strong>: <strong>Tech</strong> = how well it meets technical/quality requirements,
+        <strong>Comm</strong> = price &amp; commercial competitiveness. <strong>Overall</strong> is their average (shown live).
+        Tick <strong>Recommend</strong> to flag your preferred bid, then <strong>Save Evaluation Scores</strong>.
+        <strong>Award</strong> accepts a bid, rejects the rest, and creates a draft Purchase Order from it.
+      </div>
+    </div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" (click)="sort('vendorName')">Vendor <span class="sort-icon">{{ sortIcon('vendorName') }}</span></th>
+            <th class="sortable" (click)="sort('quotationNumber')">Quote # <span class="sort-icon">{{ sortIcon('quotationNumber') }}</span></th>
+            <th class="sortable" style="text-align:right" (click)="sort('totalAmount')">Total <span class="sort-icon">{{ sortIcon('totalAmount') }}</span></th>
+            <th class="sortable" (click)="sort('validUntil')">Valid Until <span class="sort-icon">{{ sortIcon('validUntil') }}</span></th>
+            <th class="sortable" style="text-align:right" (click)="sort('deliveryLeadTimeDays')">Lead (d) <span class="sort-icon">{{ sortIcon('deliveryLeadTimeDays') }}</span></th>
+            <th style="text-align:right">Tech</th><th style="text-align:right">Comm</th>
+            <th style="text-align:right">Overall</th><th style="text-align:center">Recommend</th>
+            <th class="sortable" style="text-align:center" (click)="sort('status')">Status <span class="sort-icon">{{ sortIcon('status') }}</span></th>
+            <th style="text-align:center">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (q of pagedQuotations; track q.id) {
+            <tr [class.recommended-row]="evalModel[q.id]?.isRecommended" [class.row-new]="q.id === highlighter.id">
+              <td>{{ q.vendorName || vendorName(q.vendorId) }}</td>
+              <td>{{ q.quotationNumber }}</td>
+              <td style="text-align:right">{{ q.totalAmount | number:'1.2-2' }} {{ q.currencyCode }}</td>
+              <td>{{ q.validUntil | date:'dd MMM yyyy' }}</td>
+              <td style="text-align:right">{{ q.deliveryLeadTimeDays }}</td>
+              <td style="text-align:right"><input class="score-input" type="number" min="0" max="100" step="1"
+                  [(ngModel)]="evalModel[q.id].technicalScore" (ngModelChange)="clampScore(q.id, 'technicalScore')" /></td>
+              <td style="text-align:right"><input class="score-input" type="number" min="0" max="100" step="1"
+                  [(ngModel)]="evalModel[q.id].commercialScore" (ngModelChange)="clampScore(q.id, 'commercialScore')" /></td>
+              <td style="text-align:right">{{ overallDisplay(q) }}</td>
+              <td style="text-align:center"><input type="checkbox" [(ngModel)]="evalModel[q.id].isRecommended" /></td>
+              <td style="text-align:center"><span [class]="quotationStatusBadge(q.status)">{{ quotationStatusLabel(q.status) }}</span></td>
+              <td style="text-align:center">
+                @if (canAward(q)) { <button class="btn btn-sm btn-success" (click)="award(q)">Award</button> }
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="11" class="empty-row">No quotations received yet.</td></tr>
+          }
+        </tbody>
+      </table>
+
+      @if (quotationCount > 0) {
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 4px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:8px;color:#6b7280;font-size:13px">
+            <span>Rows per page:</span>
+            <select [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()" style="padding:4px 8px">
+              @for (opt of pageSizeOptions; track opt) { <option [ngValue]="opt">{{ opt }}</option> }
+            </select>
+            <span>{{ (page - 1) * pageSize + 1 }}–{{ page * pageSize > quotationCount ? quotationCount : page * pageSize }} of {{ quotationCount }}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;font-size:13px">
+            <button class="btn btn-secondary" [disabled]="page <= 1" (click)="page = page - 1">‹ Prev</button>
+            <span>Page {{ page }} of {{ totalPages }}</span>
+            <button class="btn btn-secondary" [disabled]="page >= totalPages" (click)="page = page + 1">Next ›</button>
+          </div>
+        </div>
+      }
+    </div>
+
+    @if (rfq.vendorQuotations.length) {
+      <div class="form-actions">
+        <button class="btn btn-primary" (click)="saveEvaluation()" [disabled]="savingEval">Save Evaluation Scores</button>
+      </div>
+    }
+  }
+
+</div>

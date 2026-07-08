@@ -1,0 +1,71 @@
+.approval-layout {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.approval-list {
+  flex: 1 1 600px;
+  min-width: 0;
+}
+
+.approval-detail {
+  flex: 0 0 420px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  padding: 1.25rem;
+}
+
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.detail-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.detail-meta p {
+  margin: 0.25rem 0;
+  font-size: 0.875rem;
+}
+
+.steps-section {
+  margin-top: 1rem;
+}
+
+.steps-section h4 {
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  color: var(--text-muted, #64748b);
+}
+
+.current-step {
+  background: var(--highlight-bg, #f0fdf4);
+  font-weight: 600;
+}
+
+.selected-row {
+  background: var(--selected-bg, #eff6ff);
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  background: var(--badge-bg, #e2e8f0);
+  color: var(--badge-color, #475569);
+}

@@ -1,0 +1,27 @@
+<div class="layout-shell" [class.sidebar-open]="sidebarOpen" [class.sidebar-collapsed]="sidebarCollapsed">
+  <div class="sidebar-backdrop" (click)="closeSidebar()"></div>
+
+  @if (sidebarLayout === 'classic') {
+    <app-sidebar-classic
+      (click)="closeSidebar()"
+      (aiOpen)="toggleAi()"
+    ></app-sidebar-classic>
+  } @else {
+    <app-sidebar
+      [collapsed]="sidebarCollapsed"
+      (click)="closeSidebar()"
+      (aiOpen)="toggleAi()"
+      (collapseToggle)="toggleCollapse()"
+    ></app-sidebar>
+  }
+
+  <div class="layout-main">
+    <app-header (menuToggle)="toggleSidebar()" (aiToggle)="toggleAi()"></app-header>
+
+    <div class="layout-content">
+      <router-outlet></router-outlet>
+    </div>
+  </div>
+
+  <app-ai-panel [open]="aiOpen" (close)="closeAi()"></app-ai-panel>
+</div>

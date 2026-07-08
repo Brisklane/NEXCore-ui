@@ -1,0 +1,247 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">calendar_month</span></div>
+      <div>
+        <h1>Production Schedules</h1>
+        <p class="inv-hero-sub">Schedule and track production order execution across work centers</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreate()"><span class="material-symbols-outlined">add</span> New Schedule</button>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="kpi-strip">
+    <div class="kpi-card kpi-brand"><div class="kpi-top"><span class="kpi-label">Total Schedules</span><span class="kpi-icon"><span class="material-symbols-outlined">calendar_month</span></span></div><div class="kpi-value">{{ totalCount }}</div></div>
+    <div class="kpi-card kpi-cyan"><div class="kpi-top"><span class="kpi-label">Scheduled</span><span class="kpi-icon"><span class="material-symbols-outlined">push_pin</span></span></div><div class="kpi-value">{{ scheduledCount }}</div></div>
+    <div class="kpi-card kpi-violet"><div class="kpi-top"><span class="kpi-label">In Progress</span><span class="kpi-icon"><span class="material-symbols-outlined">settings</span></span></div><div class="kpi-value">{{ inProgressCount }}</div></div>
+    <div class="kpi-card kpi-success"><div class="kpi-top"><span class="kpi-label">Completed</span><span class="kpi-icon"><span class="material-symbols-outlined">check_circle</span></span></div><div class="kpi-value">{{ completedCount }}</div></div>
+    <div class="kpi-card kpi-danger"><div class="kpi-top"><span class="kpi-label">Conflicts</span><span class="kpi-icon"><span class="material-symbols-outlined">warning</span></span></div><div class="kpi-value">{{ conflictCount }}</div></div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="ux-help-box" role="note">
+    <strong>Scheduling Best Practice</strong>
+    Build schedules from validated routing and work-center capacity to reduce conflicts and improve execution reliability.
+  </div>
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editing ? 'Edit Schedule' : 'Create Schedule' }}</h3>
+      <div class="form-grid">
+
+        <!-- Operation picker (optional) -->
+        <div class="form-group">
+          <label>Operation</label>
+          <div class="op-picker-wrap">
+            <input
+              type="text"
+              class="op-picker-input"
+              [(ngModel)]="operationSearchText"
+              [disabled]="!!editing"
+              placeholder="Optional — type to search operations..."
+              autocomplete="off"
+              (focus)="onOperationFocus()"
+              (input)="onOperationInput()"
+              (blur)="onOperationBlur()"
+            />
+            @if (showOperationDropdown) {
+              <div class="op-picker-dropdown">
+                @if (filteredOperationSuggestions.length === 0) {
+                  <div class="op-picker-empty">No operations found</div>
+                }
+                @for (op of filteredOperationSuggestions; track op.id) {
+                  <div class="op-picker-option" (mousedown)="selectOperationOption(op)">
+                    <span class="op-order">{{ op.label.split(' / ')[0] }}</span>
+                    <span class="op-seq">{{ op.label.split(' / ')[1] }}</span>
+                    <span class="op-wc">{{ op.label.split(' / ').slice(2).join(' / ') }}</span>
+                  </div>
+                }
+                <button type="button" class="op-picker-more" (mousedown)="openOperationPicker()">Search more...</button>
+              </div>
+            }
+          </div>
+          <small style="color: #666; font-size: 0.85rem;">Selecting an operation auto-fills the Production Order below</small>
+        </div>
+
+        <div class="form-group">
+          <label>Production Order *</label>
+          @if (editing) {
+            <input type="text" [value]="formPoPickerText || getOrderLabel(formProductionOrderId)" class="form-control" readonly />
+          } @else {
+            <lib-option-picker-input
+              [options]="poPickerOptions"
+              [value]="formPoPickerText"
+              [entityLabel]="'Production Order'"
+              [columns]="poColumns"
+              placeholder="Search by order # or product..."
+              (optionSelected)="onPoSelected($event)"
+            />
+          }
+        </div>
+
+        <div class="form-group">
+          <label>Work Center *</label>
+          <select [(ngModel)]="formWorkCenterId">
+            <option value="">-- Select Work Center --</option>
+            @for (wc of workCenterOptions; track wc.id) {
+              <option [value]="wc.id">{{ wc.name }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Schedule Type</label>
+          <select [(ngModel)]="formScheduleType">@for (s of statusOptions; track s) { <option [value]="s">{{ s }}</option> }</select>
+        </div>
+
+        <div class="form-group">
+          <label>Scheduled Start</label>
+          <input type="date" [(ngModel)]="formScheduledStart" />
+        </div>
+
+        <div class="form-group">
+          <label>Scheduled End</label>
+          <input type="date" [(ngModel)]="formScheduledEnd" />
+        </div>
+
+        <div class="form-group">
+          <label>Capacity Required (hrs)</label>
+          <input type="number" [(ngModel)]="formCapacityHours" min="0" step="0.5" />
+        </div>
+
+        <div class="form-group form-group-wide">
+          <label>Notes</label>
+          <textarea [(ngModel)]="formNotes" rows="2"></textarea>
+        </div>
+
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancel()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()">{{ editing ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <input type="text" class="filter-search" [(ngModel)]="filterSearch" (ngModelChange)="onFilterChange()" placeholder="Search by order or work center..." />
+    <select class="filter-select" [(ngModel)]="filterStatus" (ngModelChange)="onFilterChange()">
+      <option value="all">All Types</option>
+      @for (s of statusOptions; track s) { <option [value]="s">{{ s }}</option> }
+    </select>
+    <span class="filter-count">{{ filteredItems.length }} of {{ totalCount }}</span>
+  </div>
+
+  @if (loading) { <div class="loading-spinner">Loading...</div> } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" [class.sorted]="sortBy === 'productionOrderId'" (click)="sort('productionOrderId')">Order # <span class="sort-icon">{{ sortBy === 'productionOrderId' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'workCenterName'" (click)="sort('workCenterName')">Work Center <span class="sort-icon">{{ sortBy === 'workCenterName' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'scheduledStartDate'" (click)="sort('scheduledStartDate')">Sched. Start <span class="sort-icon">{{ sortBy === 'scheduledStartDate' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'scheduledEndDate'" (click)="sort('scheduledEndDate')">Sched. End <span class="sort-icon">{{ sortBy === 'scheduledEndDate' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'capacityRequiredHours'" (click)="sort('capacityRequiredHours')">Capacity Hrs <span class="sort-icon">{{ sortBy === 'capacityRequiredHours' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Conflict</th>
+            <th class="sortable" [class.sorted]="sortBy === 'scheduleType'" (click)="sort('scheduleType')">Type <span class="sort-icon">{{ sortBy === 'scheduleType' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of displayRows; track row.id) {
+            <tr [class.row-new]="row.id === highlighter.id">
+              <td class="cell-primary">{{ getOrderLabel(row.productionOrderId) }}</td>
+              <td>
+                <div class="cell-primary">{{ getWorkCenterLabel(row.workCenterId) || row.workCenterName || 'Unmapped Work Center' }}</div>
+                @if (!row.workCenterName && !getWorkCenterLabel(row.workCenterId)) { <div class="cell-secondary guid-hint">Work center not found</div> }
+              </td>
+              <td>{{ row.scheduledStartDate | date:'mediumDate' }}</td>
+              <td>{{ row.scheduledEndDate | date:'mediumDate' }}</td>
+              <td>{{ row.capacityRequiredHours | number:'1.0-1' }} h</td>
+              <td>
+                @if (row.hasCapacityConflict || hasComputedConflict(row)) {
+                  <span class="badge badge-cancelled" [title]="getConflictLabel(row)">⚠️ {{ computedConflictByScheduleId[row.id]?.overloadPct ? '+' + computedConflictByScheduleId[row.id].overloadPct + '%' : 'Conflict' }}</span>
+                } @else {
+                  <span class="badge badge-completed">✓ OK</span>
+                }
+              </td>
+              <td><span class="badge {{ getStatusClass(row.scheduleType) }}">{{ row.scheduleType }}</span></td>
+              <td class="actions-cell">
+                @if (row.scheduleType === 'Scheduled') {
+                  <button class="btn-xs btn-action" (click)="quickUpdateStatus(row, 'InProgress')">Start</button>
+                }
+                @if (row.scheduleType === 'InProgress') {
+                  <button class="btn-xs btn-success" (click)="quickUpdateStatus(row, 'Completed')">Complete</button>
+                }
+                <button class="btn-icon" (click)="openEdit(row)" title="Edit">✏️</button>
+                <button class="btn-icon" (click)="delete(row)" title="Delete">🗑️</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="8" class="empty-row">No schedules found</td></tr>
+          }
+        </tbody>
+      </table>
+      @if (filteredItems.length > 0) {
+        <div class="pagination-bar">
+          <div class="pagination-info">
+            <span>Rows per page:</span>
+            <select [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+              @for (opt of pageSizeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+            </select>
+            <span>Showing {{ (page - 1) * pageSize + 1 }} to {{ page * pageSize > totalCount ? totalCount : page * pageSize }} of {{ totalCount }} entries</span>
+          </div>
+          <div class="pagination-controls">
+            <button class="btn-page" [disabled]="page <= 1" (click)="goToPage(page - 1)">&#8249; Prev</button>
+            <span class="page-indicator">Page {{ page }} of {{ totalPages }}</span>
+            <button class="btn-page" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next &#8250;</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<!-- Operation picker modal — outside page-container so it overlays everything -->
+@if (showOperationPicker) {
+  <div class="op-overlay" (click)="closeOperationPicker()">
+    <div class="op-card" (click)="$event.stopPropagation()">
+      <div class="op-card-head">
+        <h4>Search: Operation</h4>
+        <button type="button" class="op-close-btn" (click)="closeOperationPicker()" title="Close">✕</button>
+      </div>
+      <div class="op-card-toolbar">
+        <input type="text" class="op-search-input" [(ngModel)]="operationPickerSearch" (input)="onOperationPickerSearch()" placeholder="Search by order or work center..." />
+        <div class="op-pagination-controls">
+          <div class="op-page-stat">{{ operationPickerPageStart }}-{{ operationPickerPageEnd }}/{{ operationPickerTotal }}</div>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="goToOperationPickerPage(operationPickerPage - 1)" [disabled]="!operationPickerHasPrev">◀</button>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="goToOperationPickerPage(operationPickerPage + 1)" [disabled]="!operationPickerHasNext">▶</button>
+        </div>
+      </div>
+      <div class="op-table-wrap">
+        <table class="op-table">
+          <thead>
+            <tr><th>Order #</th><th>Operation</th><th>Work Center</th></tr>
+          </thead>
+          <tbody>
+            @if (operationPickerTotal === 0) {
+              <tr><td colspan="3" class="op-empty-row">No operations found</td></tr>
+            } @else {
+              @for (op of operationPickerPageItems; track op.id) {
+                <tr class="op-select-row" (click)="selectOperationOption(op)">
+                  <td>{{ op.label.split(' / ')[0] }}</td>
+                  <td>{{ op.label.split(' / ')[1] }}</td>
+                  <td>{{ op.label.split(' / ').slice(2).join(' / ') }}</td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+}

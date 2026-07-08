@@ -1,0 +1,136 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>POS Terminals</h2>
+      <p class="subtitle">Manage point-of-sale terminals</p>
+    </div>
+    <button class="btn btn-primary" (click)="openCreateForm()">+ Add Terminal</button>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (successMsg) { <div class="alert alert-success">{{ successMsg }}</div> }
+
+  <!-- ── Create / Edit form ───────────────────────────────── -->
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editingTerminal ? 'Edit Terminal' : 'New Terminal' }}</h3>
+      <div class="form-grid form-grid-3">
+        <div class="form-group">
+          <label>Terminal Name *</label>
+          <input type="text" [(ngModel)]="formTerminalName" placeholder="e.g. Terminal 1" />
+        </div>
+        <div class="form-group">
+          <label>Terminal Code *</label>
+          <input type="text" [(ngModel)]="formTerminalCode" placeholder="e.g. T-001"
+            [disabled]="!!editingTerminal" />
+        </div>
+        <div class="form-group">
+          <label>Store *</label>
+          <select [(ngModel)]="formPosStoreId" [disabled]="!!editingTerminal">
+            <option value="">-- Select store --</option>
+            @for (s of stores; track s.id) {
+              <option [value]="s.id">{{ s.tradingName }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Device Identifier</label>
+          <input type="text" [(ngModel)]="formDeviceIdentifier" placeholder="Device UUID (optional)" />
+        </div>
+        <div class="form-group">
+          <label>IP Address</label>
+          <input type="text" [(ngModel)]="formIpAddress" placeholder="e.g. 192.168.1.100" />
+        </div>
+        <div class="form-group">
+          <label>Cash Drawer ID</label>
+          <input type="text" [(ngModel)]="formCashDrawerId" placeholder="UUID (optional)" />
+        </div>
+        <div class="form-group">
+          <label>Receipt Template ID</label>
+          <input type="text" [(ngModel)]="formReceiptTemplateId" placeholder="UUID (optional)" />
+        </div>
+        @if (editingTerminal) {
+          <div class="form-group">
+            <label>Active</label>
+            <select [(ngModel)]="formIsActive">
+              <option [ngValue]="true">Yes</option>
+              <option [ngValue]="false">No</option>
+            </select>
+          </div>
+        }
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()">{{ editingTerminal ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  <!-- ── Filters ───────────────────────────────────────────── -->
+  <div class="filters-bar">
+    <select [(ngModel)]="filterStoreId">
+      <option value="">All Stores</option>
+      @for (s of stores; track s.id) {
+        <option [value]="s.id">{{ s.tradingName }}</option>
+      }
+    </select>
+    <input type="text" [(ngModel)]="searchQuery" placeholder="Search by name, code or device…" style="flex:1;" />
+    <span class="filter-count">{{ filteredTerminals.length }} record(s)</span>
+  </div>
+
+  <!-- ── Terminals table ───────────────────────────────────── -->
+  @if (loading) {
+    <div class="loading-spinner">Loading terminals…</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" [class.sorted]="sortBy === 'terminalName'" (click)="sort('terminalName')">Name / Code <span class="sort-icon">{{ sortBy === 'terminalName' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Store</th>
+            <th class="sortable" [class.sorted]="sortBy === 'deviceIdentifier'" (click)="sort('deviceIdentifier')">Device / IP <span class="sort-icon">{{ sortBy === 'deviceIdentifier' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'isOnline'" (click)="sort('isOnline')">Online <span class="sort-icon">{{ sortBy === 'isOnline' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'isActive'" (click)="sort('isActive')">Active <span class="sort-icon">{{ sortBy === 'isActive' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (t of filteredTerminals; track t.id) {
+            <tr [class.row-new]="t.id === highlighter.id">
+              <td>
+                <div style="font-weight:500;">{{ t.terminalName ?? '—' }}</div>
+                <span style="font-family:monospace;font-size:11px;background:#f1f5f9;padding:2px 6px;border-radius:4px;color:#64748b;">{{ t.terminalCode }}</span>
+              </td>
+              <td style="font-size:12px;color:#64748b;">{{ storeName(t.posStoreId) }}</td>
+              <td style="font-size:12px;color:#64748b;">
+                <div>{{ t.deviceIdentifier ?? '—' }}</div>
+                @if (t.ipAddress) { <div>{{ t.ipAddress }}</div> }
+              </td>
+              <td>
+                <span [class]="t.isOnline ? 'badge badge-accepted' : 'badge badge-cancelled'">
+                  {{ t.isOnline ? 'Online' : 'Offline' }}
+                </span>
+              </td>
+              <td>
+                <span [class]="t.isActive ? 'badge badge-accepted' : 'badge badge-cancelled'">
+                  {{ t.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td class="actions-cell">
+                <button class="btn btn-secondary btn-sm" (click)="openEditForm(t)" title="Edit">✎</button>
+                @if (t.isOnline) {
+                  <button class="btn btn-secondary btn-sm" (click)="goOffline(t.id)" title="Go Offline"
+                    style="background:#fee2e2;color:#b91c1c;">Offline</button>
+                }
+                <button class="btn btn-danger btn-sm" (click)="deleteTerminal(t.id)" title="Delete">✕</button>
+              </td>
+            </tr>
+          }
+          @empty {
+            <tr><td colspan="6" style="text-align:center;padding:32px;color:#94a3b8;">No terminals found.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

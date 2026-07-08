@@ -1,0 +1,256 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">edit_note</span></div>
+      <div>
+        <h1>Journal Entries</h1>
+        <p class="inv-hero-sub">Create and manage journal entries</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Journal Entry</button>
+    </div>
+  </div>
+
+  @if (error) {
+    <div class="alert alert-error">{{ error }}</div>
+  }
+  @if (successMsg) {
+    <div class="alert alert-success">{{ successMsg }}</div>
+  }
+
+  <!-- FORM -->
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ isEditMode ? 'Edit Journal Entry' : 'Create Journal Entry' }}</h3>
+      @if (isEditMode) {
+        <p class="subtitle">Editing a draft entry. Ledger, type, document date and currency are fixed; description, posting date, reference and lines can be changed.</p>
+      }
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Ledger *</label>
+          <select [(ngModel)]="formLedgerId" (ngModelChange)="onFormLedgerChange()" [disabled]="isEditMode" [class.input-invalid]="triedSubmit && fieldErrors['ledger']">
+            @for (l of ledgers; track l.id) {
+              <option [value]="l.id">{{ l.name }}</option>
+            }
+          </select>
+          @if (triedSubmit && fieldErrors['ledger']) { <span class="field-error">{{ fieldErrors['ledger'] }}</span> }
+        </div>
+        <div class="form-group">
+          <label>Document Type *</label>
+          <select [(ngModel)]="formDocumentType" [disabled]="isEditMode" [class.input-invalid]="triedSubmit && fieldErrors['documentType']">
+            <option value="General">General</option>
+            <option value="Adjustment">Adjustment</option>
+            <option value="Closing">Closing</option>
+            <option value="Opening">Opening</option>
+          </select>
+          @if (triedSubmit && fieldErrors['documentType']) { <span class="field-error">{{ fieldErrors['documentType'] }}</span> }
+        </div>
+        <div class="form-group">
+          <label>Posting Date *</label>
+          <input type="date" [(ngModel)]="formPostingDate" [class.input-invalid]="triedSubmit && fieldErrors['postingDate']" />
+          @if (triedSubmit && fieldErrors['postingDate']) { <span class="field-error">{{ fieldErrors['postingDate'] }}</span> }
+        </div>
+        <div class="form-group">
+          <label>Document Date *</label>
+          <input type="date" [(ngModel)]="formDocumentDate" [disabled]="isEditMode" [class.input-invalid]="triedSubmit && fieldErrors['documentDate']" />
+          @if (triedSubmit && fieldErrors['documentDate']) { <span class="field-error">{{ fieldErrors['documentDate'] }}</span> }
+        </div>
+        <div class="form-group">
+          <label>Currency Code *</label>
+          <select [(ngModel)]="formCurrencyCode" [disabled]="isEditMode" [class.input-invalid]="triedSubmit && fieldErrors['currency']">
+            <option value="">Select currency</option>
+            @for (c of currencies; track c.code) {
+              <option [value]="c.code">{{ c.code }} – {{ c.name }}</option>
+            }
+          </select>
+          @if (triedSubmit && fieldErrors['currency']) { <span class="field-error">{{ fieldErrors['currency'] }}</span> }
+        </div>
+        <div class="form-group">
+          <label>Reference Number</label>
+          <input type="text" [(ngModel)]="formReferenceNumber" placeholder="Optional" />
+        </div>
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label>Description *</label>
+          <textarea [(ngModel)]="formDescription" rows="2" placeholder="Entry description" [class.input-invalid]="triedSubmit && fieldErrors['description']"></textarea>
+          @if (triedSubmit && fieldErrors['description']) { <span class="field-error">{{ fieldErrors['description'] }}</span> }
+        </div>
+      </div>
+
+      <!-- Lines -->
+      <div class="lines-header">
+        <h4>Journal Lines</h4>
+        <button class="btn btn-secondary btn-sm" (click)="addLine()">+ Add Line</button>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Account</th>
+              <th>Debit</th>
+              <th>Credit</th>
+              <th>Currency</th>
+              <th>Description</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of formLines; track $index; let i = $index) {
+              <tr>
+                <td>{{ i + 1 }}</td>
+                <td>
+                  <select [(ngModel)]="line.ledgerAccountId" style="width:100%;min-width:180px;" [class.input-invalid]="triedSubmit && lineError(line)">
+                    <option value="">Select account</option>
+                    @for (a of ledgerAccounts; track a.id) {
+                      <option [value]="a.id">{{ a.accountNumber }} - {{ a.accountName }}</option>
+                    }
+                  </select>
+                  @if (triedSubmit && lineError(line)) { <span class="field-error">{{ lineError(line) }}</span> }
+                </td>
+                <td><input type="number" [(ngModel)]="line.debitAmount" min="0" style="width:100px;" /></td>
+                <td><input type="number" [(ngModel)]="line.creditAmount" min="0" style="width:100px;" /></td>
+                <td>
+                  <select [(ngModel)]="line.currencyCode" style="width:90px;">
+                    @for (c of currencies; track c.code) {
+                      <option [value]="c.code">{{ c.code }}</option>
+                    }
+                  </select>
+                </td>
+                <td><input type="text" [(ngModel)]="line.description" placeholder="Line desc" style="width:150px;" /></td>
+                <td><button class="btn-icon btn-icon-danger" (click)="removeLine(i)" title="Remove">🗑️</button></td>
+              </tr>
+            }
+            <tr class="totals-row">
+              <td colspan="2" style="text-align:right;">Totals:</td>
+              <td>{{ totalDebit | number:'1.2-2' }}</td>
+              <td>{{ totalCredit | number:'1.2-2' }}</td>
+              <td colspan="3">
+                @if (!isBalanced) {
+                  <span style="color:#b91c1c; font-size:12px;">⚠ Unbalanced (diff: {{ totalDebit - totalCredit | number:'1.2-2' }})</span>
+                } @else {
+                  <span style="color:#15803d; font-size:12px;">✓ Balanced</span>
+                }
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="form-actions">
+        @if (triedSubmit && !isFormValid) {
+          <span class="field-error" style="align-self:center; margin-right:auto;">Please fix the highlighted fields before saving the entry.</span>
+        }
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="saveEntry()">{{ isEditMode ? 'Update Entry' : 'Create Entry' }}</button>
+      </div>
+    </div>
+  }
+
+  <!-- DETAIL VIEW -->
+  @if (selectedEntry) {
+    <div class="detail-panel">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="margin:0;">Journal #{{ selectedEntry.journalNumber }}</h3>
+        <div style="display:flex; gap:8px;">
+          @if (selectedEntry.status === 'Draft') {
+            <button class="btn btn-primary btn-sm" (click)="submitEntry(selectedEntry)">Submit</button>
+          }
+          @if (selectedEntry.status === 'Submitted') {
+            <button class="btn btn-primary btn-sm" (click)="postEntry(selectedEntry)">Post</button>
+          }
+          @if (selectedEntry.status === 'Posted') {
+            <button class="btn btn-danger btn-sm" (click)="reverseEntry(selectedEntry)">Reverse</button>
+          }
+          <button class="btn btn-secondary btn-sm" (click)="closeDetail()">✕ Close</button>
+        </div>
+      </div>
+      <div class="detail-grid">
+        <div class="detail-item"><label>Document Type</label><span>{{ selectedEntry.documentType }}</span></div>
+        <div class="detail-item"><label>Posting Date</label><span>{{ selectedEntry.postingDate | date:'mediumDate' }}</span></div>
+        <div class="detail-item"><label>Document Date</label><span>{{ selectedEntry.documentDate | date:'mediumDate' }}</span></div>
+        <div class="detail-item"><label>Currency</label><span>{{ selectedEntry.currencyCode }}</span></div>
+        <div class="detail-item"><label>Reference</label><span>{{ selectedEntry.referenceNumber ?? '—' }}</span></div>
+        <div class="detail-item"><label>Status</label><span class="badge" [ngClass]="getStatusClass(selectedEntry.status)">{{ selectedEntry.status }}</span></div>
+        <div class="detail-item"><label>Total Debit</label><span>{{ selectedEntry.totalDebit | number:'1.2-2' }}</span></div>
+        <div class="detail-item"><label>Total Credit</label><span>{{ selectedEntry.totalCredit | number:'1.2-2' }}</span></div>
+        <div class="detail-item" style="grid-column: 1 / -1;"><label>Description</label><span>{{ selectedEntry.description }}</span></div>
+      </div>
+    </div>
+  }
+
+  <!-- LIST TABLE -->
+  <div class="filters-bar">
+    <select [(ngModel)]="selectedLedgerId" (ngModelChange)="onLedgerChange()">
+      @for (l of ledgers; track l.id) {
+        <option [value]="l.id">{{ l.name }}</option>
+      }
+    </select>
+    <span class="filter-search">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search by journal #, type or description…" [disabled]="!selectedLedgerId" [(ngModel)]="filterSearch" (ngModelChange)="onSearchInput()" (keyup.enter)="applyFilters()" />
+      @if (filterSearch) { <button class="search-clear" title="Clear search" (click)="filterSearch = ''; applyFilters()">×</button> }
+    </span>
+  </div>
+
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" [class.sorted]="sortBy === 'journalNumber'" (click)="sort('journalNumber')">Journal # <span class="sort-icon">{{ sortBy === 'journalNumber' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'documentType'" (click)="sort('documentType')">Type <span class="sort-icon">{{ sortBy === 'documentType' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'postingDate'" (click)="sort('postingDate')">Posting Date <span class="sort-icon">{{ sortBy === 'postingDate' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'description'" (click)="sort('description')">Description <span class="sort-icon">{{ sortBy === 'description' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'currencyCode'" (click)="sort('currencyCode')">Currency <span class="sort-icon">{{ sortBy === 'currencyCode' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'totalDebit'" (click)="sort('totalDebit')">Debit <span class="sort-icon">{{ sortBy === 'totalDebit' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'totalCredit'" (click)="sort('totalCredit')">Credit <span class="sort-icon">{{ sortBy === 'totalCredit' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'status'" (click)="sort('status')">Status <span class="sort-icon">{{ sortBy === 'status' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (e of entries; track e.id) {
+            <tr [class.row-new]="e.id === highlighter.id">
+              <td>{{ e.journalNumber }}</td>
+              <td>{{ e.documentType }}</td>
+              <td>{{ e.postingDate | date:'mediumDate' }}</td>
+              <td>{{ e.description }}</td>
+              <td>{{ e.currencyCode }}</td>
+              <td>{{ e.totalDebit | number:'1.2-2' }}</td>
+              <td>{{ e.totalCredit | number:'1.2-2' }}</td>
+              <td><span class="badge" [ngClass]="getStatusClass(e.status)">{{ e.status }}</span></td>
+              <td class="actions-cell">
+                <button class="btn btn-secondary btn-sm" (click)="viewEntry(e)">View</button>
+                @if (e.status === 'Draft') {
+                  <button class="btn btn-secondary btn-sm" (click)="openEditForm(e)">Edit</button>
+                  <button class="btn btn-danger btn-sm" (click)="deleteEntry(e)">Delete</button>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="9" class="empty-row">No journal entries found</td></tr>
+          }
+        </tbody>
+      </table>
+      @if (entries.length > 0) {
+        <div class="pagination-bar">
+          <div class="pagination-info">
+            <span>Rows per page:</span>
+            <select [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+              @for (opt of pageSizeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+            </select>
+            <span>{{ (page - 1) * pageSize + 1 }}–{{ page * pageSize > totalCount ? totalCount : page * pageSize }} of {{ totalCount }}</span>
+          </div>
+          <div class="pagination-controls">
+            <button class="btn-page" [disabled]="page <= 1" (click)="goToPage(page - 1)">&#8249; Prev</button>
+            <span class="page-indicator">Page {{ page }} of {{ totalPages }}</span>
+            <button class="btn-page" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next &#8250;</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

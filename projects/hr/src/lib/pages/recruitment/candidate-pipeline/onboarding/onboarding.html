@@ -1,0 +1,70 @@
+<div class="container">
+  <h2>Onboarding Tasks</h2>
+
+  <div *ngIf="error" class="error">{{ error }}</div>
+
+  <button (click)="openCreateForm()" class="btn btn-primary">+ New Task</button>
+
+  <table class="table" *ngIf="!loading && tasks.length > 0">
+    <thead>
+      <tr>
+        <th>Employee ID</th>
+        <th>Title</th>
+        <th>Due Date</th>
+        <th>Assigned To</th>
+        <th>Completed</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let task of tasks">
+        <td>{{ task.employeeId }}</td>
+        <td>{{ task.title }}</td>
+        <td>{{ task.dueDate | date:'short' }}</td>
+        <td>{{ task.assignedToId }}</td>
+        <td>{{ task.isCompleted ? 'Yes' : 'No' }}</td>
+        <td>
+          <button (click)="openEditForm(task)" class="btn btn-sm btn-secondary">Edit</button>
+          <button (click)="deleteTask(task)" class="btn btn-sm btn-danger">Delete</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p *ngIf="!loading && tasks.length === 0">No tasks found.</p>
+  <p *ngIf="loading">Loading...</p>
+
+  <div *ngIf="showForm" class="form-container">
+    <h3>{{ editingTask ? 'Edit' : 'Create' }} Task</h3>
+    <form (ngSubmit)="saveTask()">
+      <div class="form-group">
+        <label>Employee ID:</label>
+        <input type="text" [(ngModel)]="formEmployeeId" name="employeeId" required />
+      </div>
+      <div class="form-group">
+        <label>Title:</label>
+        <input type="text" [(ngModel)]="formTitle" name="title" required />
+      </div>
+      <div class="form-group">
+        <label>Description:</label>
+        <textarea [(ngModel)]="formDescription" name="description"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Due Date:</label>
+        <input type="date" [(ngModel)]="formDueDate" name="dueDate" />
+      </div>
+      <div class="form-group">
+        <label>Assigned To (ID):</label>
+        <input type="text" [(ngModel)]="formAssignedToId" name="assignedToId" />
+      </div>
+      <div class="form-group">
+        <label>
+          <input type="checkbox" [(ngModel)]="formIsCompleted" name="isCompleted" />
+          Completed
+        </label>
+      </div>
+      <button type="submit" class="btn btn-success">Save</button>
+      <button type="button" (click)="cancelForm()" class="btn btn-secondary">Cancel</button>
+    </form>
+  </div>
+</div>

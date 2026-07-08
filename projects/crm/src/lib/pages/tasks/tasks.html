@@ -1,0 +1,243 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">task_alt</span></div>
+      <div>
+        <h1>Tasks</h1>
+        <p class="inv-hero-sub">Create and track tasks linked to your CRM records</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Task</button>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="kpi-strip">
+    <div class="kpi-card kpi-brand"><div class="kpi-top"><span class="kpi-label">Total Tasks</span><span class="kpi-icon"><span class="material-symbols-outlined">checklist</span></span></div><div class="kpi-value">{{ total }}</div></div>
+    <div class="kpi-card kpi-danger"><div class="kpi-top"><span class="kpi-label">High Priority</span><span class="kpi-icon"><span class="material-symbols-outlined">priority_high</span></span></div><div class="kpi-value">{{ highPriority }}</div></div>
+    <div class="kpi-card kpi-cyan"><div class="kpi-top"><span class="kpi-label">In Progress</span><span class="kpi-icon"><span class="material-symbols-outlined">autorenew</span></span></div><div class="kpi-value">{{ inProgress }}</div></div>
+    <div class="kpi-card kpi-amber"><div class="kpi-top"><span class="kpi-label">Not Started</span><span class="kpi-icon"><span class="material-symbols-outlined">pause_circle</span></span></div><div class="kpi-value">{{ notStarted }}</div></div>
+    <div class="kpi-card kpi-success"><div class="kpi-top"><span class="kpi-label">Completed</span><span class="kpi-icon"><span class="material-symbols-outlined">check_circle</span></span></div><div class="kpi-value">{{ completed }}</div></div>
+    <div class="kpi-card kpi-violet"><div class="kpi-top"><span class="kpi-label">Overdue</span><span class="kpi-icon"><span class="material-symbols-outlined">warning</span></span></div><div class="kpi-value">{{ overdue }}</div></div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editingTask ? 'Edit Task' : 'New Task' }}</h3>
+      <form class="activity-form">
+
+        <!-- About -->
+        <div class="form-section">
+          <div class="section-header"><h4>About</h4></div>
+          <div class="form-grid">
+            <div class="form-group form-group-full">
+              <label>Subject <span class="required">*</span></label>
+              <input type="text" [(ngModel)]="formSubject" name="subject" placeholder="What needs to be done?" />
+            </div>
+            <div class="form-group form-group-full">
+              <label>Description</label>
+              <textarea [(ngModel)]="formDescription" name="description" rows="3" placeholder="Additional details or instructions..."></textarea>
+            </div>
+            <div class="form-group">
+              <label>Due Date</label>
+              <input type="date" [(ngModel)]="formDueDate" name="dueDate" />
+            </div>
+            <div class="form-group">
+              <label>Priority</label>
+              <select [(ngModel)]="formPriority" name="priority">
+                @for (o of priorityOptions; track o) { <option [value]="o">{{ o }}</option> }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Status</label>
+              <select [(ngModel)]="formStatus" name="status">
+                @for (o of statusOptions; track o) { <option [value]="o">{{ o }}</option> }
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Name -->
+        <div class="form-section">
+          <div class="section-header"><h4>Name</h4></div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Type</label>
+              <select [(ngModel)]="formNameType" name="nameType" (ngModelChange)="onNameTypeChange()">
+                @for (o of nameTypeOptions; track o) { <option [value]="o">{{ o }}</option> }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>{{ formNameType }}</label>
+              <crm-lookup-dropdown
+                [(ngModel)]="formNameId"
+                name="nameId"
+                [options]="nameOptions"
+                [placeholder]="'Select ' + formNameType"
+                [label]="formNameType"
+              ></crm-lookup-dropdown>
+            </div>
+          </div>
+        </div>
+
+        <!-- Related To -->
+        <div class="form-section">
+          <div class="section-header"><h4>Related To</h4></div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Type</label>
+              <select [(ngModel)]="formRelatedToType" name="relatedToType" (ngModelChange)="onRelatedToTypeChange()">
+                @for (o of relatedToTypeOptions; track o) { <option [value]="o">{{ o }}</option> }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>{{ formRelatedToType }}</label>
+              <crm-lookup-dropdown
+                [(ngModel)]="formRelatedToId"
+                name="relatedToId"
+                [options]="relatedToOptions"
+                [placeholder]="'Select ' + formRelatedToType"
+                [label]="formRelatedToType"
+              ></crm-lookup-dropdown>
+            </div>
+          </div>
+        </div>
+
+      </form>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" [disabled]="!formSubject.trim()" (click)="saveTask()">
+          {{ editingTask ? 'Update Task' : 'Create Task' }}
+        </button>
+      </div>
+    </div>
+  }
+
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else {
+
+    <!-- Active Tasks -->
+    <div class="sub-section">
+      <div class="sub-section-header open-header">
+        <h4>Active Tasks</h4>
+        <span class="count-chip">{{ openTasksCount }}</span>
+      </div>
+      <div class="filter-bar">
+        <input type="text" class="filter-search" placeholder="Search active tasks..."
+          [(ngModel)]="openTasksSearch" name="openTasksSearch" (input)="onOpenTasksSearch()" />
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th>Due Date</th>
+              <th>Name</th>
+              <th>Related To</th>
+              <th>Priority</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (t of pagedOpenTasks; track t.id) {
+              <tr [class.row-overdue]="isOverdue(t)">
+                <td class="cell-primary">{{ t.subject }}</td>
+                <td [class.overdue-date]="isOverdue(t)">{{ t.dueDate ? (t.dueDate | date:'MMM d, y') : '—' }}</td>
+                <td>{{ getNameDisplay(t) }}</td>
+                <td>{{ getRelatedDisplay(t) }}</td>
+                <td><span class="badge {{ getPriorityClass(t.priority) }}">{{ t.priority || 'Normal' }}</span></td>
+                <td><span class="badge {{ getStatusClass(t.status) }}">{{ t.status || 'Not Started' }}</span></td>
+                <td class="actions-cell">
+                  <button class="btn-done" (click)="markDone(t)">Done</button>
+                  <button class="btn-icon" title="Edit" (click)="openEditForm(t)">✏️</button>
+                  <button class="btn-icon btn-icon-danger" title="Delete" (click)="deleteTask(t.id)">🗑️</button>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="7" class="empty-row">No active tasks.</td></tr>
+            }
+          </tbody>
+        </table>
+        <div class="pagination-bar">
+          <div class="pagination-info">
+            <span>Rows per page:</span>
+            <select [(ngModel)]="openTasksPageSize" name="openTasksPageSize" (change)="onOpenTasksPageSizeChange()">
+              @for (opt of pageSizeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+            </select>
+            <span>Showing {{ openTasksFirstEntry }} to {{ openTasksLastEntry }} of {{ openTasksTotal }}</span>
+          </div>
+          <div class="pagination-controls">
+            <button class="btn-page" [disabled]="openTasksPage <= 1" (click)="goToOpenTasksPage(openTasksPage - 1)">&#8249; Prev</button>
+            <span class="page-indicator">Page {{ openTasksPage }} of {{ openTasksTotalPages }}</span>
+            <button class="btn-page" [disabled]="openTasksPage >= openTasksTotalPages" (click)="goToOpenTasksPage(openTasksPage + 1)">Next &#8250;</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Completed Tasks -->
+    <div class="sub-section">
+      <div class="sub-section-header done-header">
+        <h4>Completed Tasks</h4>
+        <span class="count-chip">{{ closedTasksCount }}</span>
+      </div>
+      <div class="filter-bar">
+        <input type="text" class="filter-search" placeholder="Search completed tasks..."
+          [(ngModel)]="closedTasksSearch" name="closedTasksSearch" (input)="onClosedTasksSearch()" />
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th>Due Date</th>
+              <th>Name</th>
+              <th>Related To</th>
+              <th>Priority</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (t of pagedClosedTasks; track t.id) {
+              <tr class="row-done">
+                <td class="cell-primary">{{ t.subject }}</td>
+                <td>{{ t.dueDate ? (t.dueDate | date:'MMM d, y') : '—' }}</td>
+                <td>{{ getNameDisplay(t) }}</td>
+                <td>{{ getRelatedDisplay(t) }}</td>
+                <td><span class="badge {{ getPriorityClass(t.priority) }}">{{ t.priority || 'Normal' }}</span></td>
+                <td><span class="badge badge-completed">Completed</span></td>
+                <td class="actions-cell">
+                  <button class="btn-icon" title="Edit" (click)="openEditForm(t)">✏️</button>
+                  <button class="btn-icon btn-icon-danger" title="Delete" (click)="deleteTask(t.id)">🗑️</button>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="7" class="empty-row">No completed tasks yet.</td></tr>
+            }
+          </tbody>
+        </table>
+        <div class="pagination-bar">
+          <div class="pagination-info">
+            <span>Rows per page:</span>
+            <select [(ngModel)]="closedTasksPageSize" name="closedTasksPageSize" (change)="onClosedTasksPageSizeChange()">
+              @for (opt of pageSizeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+            </select>
+            <span>Showing {{ closedTasksFirstEntry }} to {{ closedTasksLastEntry }} of {{ closedTasksTotal }}</span>
+          </div>
+          <div class="pagination-controls">
+            <button class="btn-page" [disabled]="closedTasksPage <= 1" (click)="goToClosedTasksPage(closedTasksPage - 1)">&#8249; Prev</button>
+            <span class="page-indicator">Page {{ closedTasksPage }} of {{ closedTasksTotalPages }}</span>
+            <button class="btn-page" [disabled]="closedTasksPage >= closedTasksTotalPages" (click)="goToClosedTasksPage(closedTasksPage + 1)">Next &#8250;</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  }
+</div>

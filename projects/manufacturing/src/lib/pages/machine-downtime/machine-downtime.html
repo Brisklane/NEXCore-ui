@@ -1,0 +1,77 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">warning</span></div>
+      <div>
+        <h1>Machine Downtime</h1>
+        <p class="inv-hero-sub">Record downtime events — open incidents auto-extend linked production schedules when closed</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreate()"><span class="material-symbols-outlined">add</span> New Record</button>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (scheduleExtendInfo) { <div class="alert alert-info">📅 {{ scheduleExtendInfo }}</div> }
+
+  <div class="ux-help-box" role="note">
+    <strong>Capacity Accuracy &amp; Auto-Recovery</strong>
+    Track downtime with correct categories and duration. When you close an open incident (set an end time), all active production schedules linked to the same order are automatically extended by the downtime duration to keep delivery dates realistic.
+  </div>
+
+  <div class="md-split">
+    <div class="md-list">
+      <div class="md-list-body">
+        @if (loading) {
+          @for (s of [0,1,2,3]; track s) { <div class="md-rec"><span class="skeleton sk-circle" style="width:34px;height:34px"></span><div style="flex:1"><span class="skeleton sk-line" style="width:70%"></span></div></div> }
+        } @else if (displayRows.length === 0) {
+          <div class="inv-empty" style="padding:36px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">warning</span></div><div class="inv-empty-title">No downtime records</div><div class="inv-empty-text">Record your first downtime event.</div></div>
+        } @else {
+          @for (row of displayRows; track row.id) {
+            <button class="md-rec" [class.selected]="editing?.id === row.id" [class.row-new]="row.id === highlighter.id" (click)="openEdit(row)">
+              <span class="md-rec-ico">{{ row.durationHours | number:'1.0-0' }}h</span>
+              <div class="md-rec-main"><span class="md-rec-title">{{ getWorkCenterLabel(row.workCenterId, row.workCenterName) }}</span><span class="md-rec-sub">{{ row.category }} · {{ row.startTime | date:'short' }}</span></div>
+            </button>
+          }
+        }
+      </div>
+      @if (totalCount > 0) {
+        <div class="md-list-foot"><span>{{ (page - 1) * pageSize + 1 }}–{{ page * pageSize > totalCount ? totalCount : page * pageSize }} of {{ totalCount }}</span><div class="md-pager"><button class="btn-page" [disabled]="page <= 1" (click)="goToPage(page - 1)">Prev</button><button class="btn-page" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next</button></div></div>
+      }
+    </div>
+
+    <div class="md-detail">
+      @if (showForm) {
+        <div class="md-detail-head">
+          <span class="md-detail-title">{{ editing ? 'Edit Downtime' : 'Record Downtime' }}</span>
+          <button class="icon-btn" title="Close" (click)="cancel()"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="md-detail-body">
+          <div class="form-grid">
+            <div class="form-group"><label>Work Center *</label><select [(ngModel)]="formWorkCenterId" class="form-control"><option value="">-- Select Work Center --</option>@for (opt of workCenterOptions; track opt.id) { <option [value]="opt.id">{{ opt.label }}</option> }</select></div>
+            <div class="form-group"><label>Production Order</label><select [(ngModel)]="formProductionOrderId" class="form-control"><option value="">-- Select Production Order (Optional) --</option>@for (opt of productionOrderOptions; track opt.id) { <option [value]="opt.id">{{ opt.label }}</option> }</select><small class="cell-secondary">Only Released or In Progress production orders are shown.</small></div>
+            <div class="form-group"><label>Category</label><select [(ngModel)]="formCategory">@for (c of categories; track c) { <option [value]="c">{{ c }}</option> }</select></div>
+            <div class="form-group"><label>Start Time</label><input type="datetime-local" [(ngModel)]="formStartTime" (ngModelChange)="onTimeChange()" /></div>
+            <div class="form-group"><label>End Time</label><input type="datetime-local" [(ngModel)]="formEndTime" (ngModelChange)="onTimeChange()" /></div>
+            <div class="form-group"><label>Downtime Hours *</label><input type="number" [(ngModel)]="formDowntimeHours" min="0.01" step="0.25" /></div>
+            <div class="form-group"><label>Reason *</label><input type="text" [(ngModel)]="formReason" /></div>
+            <div class="form-group form-group-wide"><label>Notes</label><textarea [(ngModel)]="formNotes" rows="2"></textarea></div>
+          </div>
+          <div class="form-actions">
+            @if (editing) { <button class="ibtn ibtn--danger" style="margin-right:auto" (click)="delete(editing)"><span class="material-symbols-outlined">delete</span> Delete</button> }
+            <button class="ibtn ibtn--secondary" (click)="cancel()">Cancel</button>
+            <button class="ibtn ibtn--primary" (click)="save()"><span class="material-symbols-outlined">save</span> {{ editing ? 'Update' : 'Create' }}</button>
+          </div>
+        </div>
+      } @else {
+        <div class="md-empty">
+          <div class="md-empty-icon"><span class="material-symbols-outlined">warning</span></div>
+          <div class="md-empty-title">Manage downtime records</div>
+          <div class="md-empty-text">Select a record to edit, or create a new one.</div>
+          <button class="btn-brand" style="margin-top:8px" (click)="openCreate()"><span class="material-symbols-outlined">add</span> New Record</button>
+        </div>
+      }
+    </div>
+  </div>
+</div>

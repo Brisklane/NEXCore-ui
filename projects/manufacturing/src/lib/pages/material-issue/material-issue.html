@@ -1,0 +1,191 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">output</span></div>
+      <div>
+        <h1>Material Issues</h1>
+        <p class="inv-hero-sub">Track component material issues to production orders</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreate()"><span class="material-symbols-outlined">add</span> New Issue</button>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="kpi-strip">
+    <div class="kpi-card kpi-brand"><div class="kpi-top"><span class="kpi-label">Total Issues</span><span class="kpi-icon"><span class="material-symbols-outlined">inventory_2</span></span></div><div class="kpi-value">{{ totalCount }}</div></div>
+    <div class="kpi-card kpi-cyan"><div class="kpi-top"><span class="kpi-label">Total Issued</span><span class="kpi-icon"><span class="material-symbols-outlined">arrow_upward</span></span></div><div class="kpi-value">{{ totalIssuedQty | number:'1.0-2' }}</div></div>
+    <div class="kpi-card kpi-amber"><div class="kpi-top"><span class="kpi-label">Total Returned</span><span class="kpi-icon"><span class="material-symbols-outlined">arrow_downward</span></span></div><div class="kpi-value">{{ totalReturnedQty | number:'1.0-2' }}</div></div>
+    <div class="kpi-card kpi-success"><div class="kpi-top"><span class="kpi-label">Net Issued</span><span class="kpi-icon"><span class="material-symbols-outlined">balance</span></span></div><div class="kpi-value">{{ (totalIssuedQty - totalReturnedQty) | number:'1.0-2' }}</div></div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (success) { <div class="alert alert-success">{{ success }}</div> }
+
+  <div class="ux-help-box" role="note">
+    <strong>Inventory Deduction</strong>
+    Saving a new material issue automatically records an inventory deduction transaction for the selected material. This keeps stock levels accurate in real time. Edits to existing issues update quantities only — no additional inventory transaction is created.
+  </div>
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editing ? 'Edit Material Issue' : 'Create Material Issue' }}</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Production Order *</label>
+          @if (editing) {
+            <input type="text" [value]="formPoPickerText || getOrderLabel(formProductionOrderId)" class="form-control" readonly />
+          } @else {
+            <lib-option-picker-input
+              [options]="poPickerOptions"
+              [value]="formPoPickerText"
+              [entityLabel]="'Production Order'"
+              [columns]="poColumns"
+              placeholder="Search by order # or product..."
+              (optionSelected)="onPoSelected($event)"
+            />
+          }
+          @if (!editing && formProductionOrderId && selectedOrderStatus) {
+            @if (selectedOrderStatus === 'Released') {
+              <span class="po-status-hint po-status-ok">✓ Released — materials can be issued</span>
+            } @else {
+              <span class="po-status-hint po-status-block">⚠ Status is "{{ selectedOrderStatus }}" — only Released orders accept material issues</span>
+            }
+          }
+        </div>
+        <div class="form-group">
+          <label>Material *</label>
+          @if (editing) {
+            <div class="form-control-readonly">{{ formComponentDisplayText || '—' }}</div>
+          } @else {
+            <lib-product-picker-input
+              [value]="formComponentDisplayText"
+              [entityLabel]="'Material'"
+              placeholder="Type material code or name..."
+              (productSelected)="onMaterialSelected($event)"
+            />
+          }
+        </div>
+        @if (!editing) {
+          <div class="form-group">
+            <label>Issue From Warehouse *</label>
+            <select [(ngModel)]="formWarehouseId" (ngModelChange)="onWarehouseChange()">
+              <option value="">-- Select Warehouse --</option>
+              @for (opt of warehouseOptions; track opt.id) {
+                <option [value]="opt.id">{{ opt.label }}</option>
+              }
+            </select>
+            <span class="field-note">Stock will be deducted from this warehouse.</span>
+          </div>
+        }
+        <div class="form-group">
+          <label>Quantity Issued *</label>
+          <input type="number" [(ngModel)]="formIssuedQuantity" min="0.001" step="0.001" />
+          @if (!editing) {
+            @if (availableQtyLoading) {
+              <span class="field-note">Loading availability...</span>
+            } @else if (availableQty !== null) {
+              <div class="qty-context">
+                <span class="qty-context-line">Available in warehouse: <strong>{{ availableQty | number:'1.0-3' }}</strong></span>
+                @if ((formIssuedQuantity ?? 0) > 0) {
+                  @if (formIssuedQuantity > availableQty) {
+                    <span class="qty-hint qty-hint-over">⚠ Exceeds available stock</span>
+                  } @else if (formIssuedQuantity === availableQty) {
+                    <span class="qty-hint qty-hint-exact">✓ Uses all available stock</span>
+                  } @else {
+                    <span class="qty-context-line">Remaining after issue: <strong>{{ getRemainingQty() | number:'1.0-3' }}</strong></span>
+                  }
+                }
+              </div>
+            } @else if (formComponentId && formWarehouseId) {
+              <span class="field-note">No stock record found for this item in the selected warehouse.</span>
+            } @else if (formComponentId && !formWarehouseId) {
+              <span class="field-note">Select a warehouse to see available stock.</span>
+            }
+          }
+        </div>
+        <div class="form-group">
+          <label>Unit of Measure</label>
+          <input type="text" [(ngModel)]="formUnit" placeholder="e.g. EA, KG" />
+        </div>
+        <div class="form-group">
+          <label>Issue Date</label>
+          <input type="date" [(ngModel)]="formIssueDate" />
+        </div>
+        <div class="form-group form-group-wide">
+          <label>Notes</label>
+          <textarea [(ngModel)]="formNotes" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancel()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()">{{ editing ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <input type="text" class="filter-search" [(ngModel)]="filterSearch" (ngModelChange)="onFilterChange()" placeholder="Search by material or order..." />
+    <span class="filter-count">{{ filteredItems.length }} of {{ totalCount }}</span>
+  </div>
+
+  @if (loading) { <div class="loading-spinner">Loading...</div> } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" [class.sorted]="sortBy === 'orderNumber'" (click)="sort('orderNumber')">Order # <span class="sort-icon">{{ sortBy === 'orderNumber' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'materialName'" (click)="sort('materialName')">Material <span class="sort-icon">{{ sortBy === 'materialName' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'quantityIssued'" (click)="sort('quantityIssued')">Qty Issued <span class="sort-icon">{{ sortBy === 'quantityIssued' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'quantityReturned'" (click)="sort('quantityReturned')">Qty Returned <span class="sort-icon">{{ sortBy === 'quantityReturned' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Net</th>
+            <th class="sortable" [class.sorted]="sortBy === 'unitOfMeasure'" (click)="sort('unitOfMeasure')">Unit <span class="sort-icon">{{ sortBy === 'unitOfMeasure' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'issuedAt'" (click)="sort('issuedAt')">Issued At <span class="sort-icon">{{ sortBy === 'issuedAt' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'notes'" (click)="sort('notes')">Notes <span class="sort-icon">{{ sortBy === 'notes' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of displayRows; track item.id) {
+            <tr [class.row-new]="item.id === highlighter.id">
+              <td class="cell-primary">{{ getOrderLabel(item.productionOrderId) }}</td>
+              <td>
+                <div class="cell-primary">{{ getMaterialLabel(item.materialId, item.materialName) }}</div>
+              </td>
+              <td>{{ item.quantityIssued | number:'1.0-3' }}</td>
+              <td>{{ item.quantityReturned | number:'1.0-3' }}</td>
+              <td class="cell-primary">{{ (item.quantityIssued - item.quantityReturned) | number:'1.0-3' }}</td>
+              <td>{{ item.unitOfMeasure || '—' }}</td>
+              <td>{{ item.issuedAt | date:'mediumDate' }}</td>
+              <td class="cell-notes">{{ item.notes || '—' }}</td>
+              <td class="actions-cell">
+                <button class="btn-icon" (click)="openEdit(item)" title="Edit">✏️</button>
+                <button class="btn-icon" (click)="delete(item)" title="Delete">🗑️</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="9" class="empty-row">No material issues found</td></tr>
+          }
+        </tbody>
+      </table>
+      @if (filteredItems.length > 0) {
+        <div class="pagination-bar">
+          <div class="pagination-info">
+            <span>Rows per page:</span>
+            <select [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+              @for (opt of pageSizeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+            </select>
+            <span>Showing {{ (page - 1) * pageSize + 1 }} to {{ page * pageSize > totalCount ? totalCount : page * pageSize }} of {{ totalCount }} entries</span>
+          </div>
+          <div class="pagination-controls">
+            <button class="btn-page" [disabled]="page <= 1" (click)="goToPage(page - 1)">&#8249; Prev</button>
+            <span class="page-indicator">Page {{ page }} of {{ totalPages }}</span>
+            <button class="btn-page" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next &#8250;</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

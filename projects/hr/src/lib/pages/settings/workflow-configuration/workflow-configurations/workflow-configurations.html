@@ -1,0 +1,103 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">schema</span></div>
+      <div>
+        <h1>Workflow Configurations</h1>
+        <p class="inv-hero-sub">Manage workflow approval configurations</p>
+      </div>
+    </div>
+    <button class="btn btn-primary" (click)="openCreateForm()">+ New Workflow</button>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editingWorkflow ? 'Edit Workflow' : 'Create Workflow' }}</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Workflow Name *</label>
+          <input type="text" [(ngModel)]="formWorkflowName" placeholder="e.g. Job Requisition Approval" />
+        </div>
+        <div class="form-group">
+          <label>Workflow Code</label>
+          <input type="text" [(ngModel)]="formWorkflowCode" placeholder="e.g. WF-JOB-REQ" />
+        </div>
+        <div class="form-group">
+          <label>Module</label>
+          <input type="text" [(ngModel)]="formModule" placeholder="e.g. HR, Finance" />
+        </div>
+        <div class="form-group">
+          <label>Transaction Type</label>
+          <input type="text" [(ngModel)]="formTransactionType" placeholder="e.g. JobRequisition" />
+        </div>
+        <div class="form-group">
+          <label>Total Levels</label>
+          <input type="number" [(ngModel)]="formTotalLevels" min="1" />
+        </div>
+        <div class="form-group">
+          <label>Effective From</label>
+          <input type="date" [(ngModel)]="formEffectiveFrom" />
+        </div>
+        <div class="form-group">
+          <label>Effective To</label>
+          <input type="date" [(ngModel)]="formEffectiveTo" />
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <input type="text" [(ngModel)]="formDescription" placeholder="Description" />
+        </div>
+        @if (editingWorkflow) {
+          <div class="form-group form-check-row">
+            <label><input type="checkbox" [(ngModel)]="formIsActive" /> Active</label>
+          </div>
+        }
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="saveWorkflow()">{{ editingWorkflow ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Code</th>
+            <th>Module</th>
+            <th>Transaction Type</th>
+            <th>Levels</th>
+            <th>Active</th>
+            <th>Effective From</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (w of workflows; track w.id) {
+            <tr>
+              <td>{{ w.workflowName }}</td>
+              <td>{{ w.workflowCode }}</td>
+              <td>{{ w.module }}</td>
+              <td>{{ w.transactionType }}</td>
+              <td>{{ w.totalLevels }}</td>
+              <td>{{ w.isActive ? 'Yes' : 'No' }}</td>
+              <td>{{ w.effectiveFrom ? (w.effectiveFrom | date:'mediumDate') : '—' }}</td>
+              <td>
+                <button class="btn btn-sm btn-secondary" (click)="openEditForm(w)">Edit</button>
+                <button class="btn btn-sm btn-danger" (click)="deleteWorkflow(w)">Delete</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="8" class="empty-cell">No workflow configurations found.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

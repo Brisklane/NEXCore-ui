@@ -1,0 +1,110 @@
+.apps-page {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.apps-head {
+  margin-bottom: 22px;
+}
+
+.apps-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+  margin: 0 0 4px 0;
+}
+
+.apps-subtitle {
+  font-size: 13.5px;
+  color: var(--text-muted, #64748b);
+  margin: 0;
+}
+
+.apps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 18px;
+}
+
+.app-card {
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-default, #e9edf3);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.app-card:hover {
+  transform: translateY(-3px);
+  border-color: transparent;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.1);
+}
+
+.app-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  margin-bottom: 14px;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.16);
+}
+.app-icon .material-symbols-outlined {
+  font-size: 24px;
+}
+
+.app-name {
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+  line-height: 1.2;
+}
+
+.app-brand {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--accent, #2b7fff);
+  margin-top: 3px;
+}
+
+.app-desc {
+  font-size: 12.5px;
+  color: var(--text-muted, #64748b);
+  margin-top: 6px;
+  margin-bottom: 16px;
+  flex: 1;
+}
+
+.app-explore {
+  align-self: flex-start;
+  padding: 7px 16px;
+  border-radius: 9px;
+  border: 1px solid var(--border-default, #e2e8f0);
+  background: var(--bg-surface, #ffffff);
+  color: var(--text-heading, #0f172a);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.app-explore:hover {
+  background: var(--accent, #2b7fff);
+  border-color: var(--accent, #2b7fff);
+  color: #fff;
+}
+
+.app-explore.soon {
+  cursor: not-allowed;
+  color: var(--text-muted, #94a3b8);
+  background: var(--bg-muted, #f1f5f9);
+  border-color: transparent;
+}
+.app-explore.soon:hover {
+  background: var(--bg-muted, #f1f5f9);
+  color: var(--text-muted, #94a3b8);
+}

@@ -1,0 +1,66 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">account_tree</span></div>
+      <div>
+        <h1>Departments</h1>
+        <p class="inv-hero-sub">Manage departments</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Department</button>
+    </div>
+  </div>
+
+  <div *ngIf="error" class="alert alert-error">{{ error }}</div>
+
+  <div class="md-split">
+    <!-- ══ LEFT: department rows ══ -->
+    <div class="md-list">
+      <div class="md-list-body">
+        <ng-container *ngIf="loading">
+          <div class="md-rec" *ngFor="let s of [0,1,2,3]"><span class="skeleton sk-circle" style="width:34px;height:34px"></span><div style="flex:1"><span class="skeleton sk-line" style="width:70%"></span></div></div>
+        </ng-container>
+        <div *ngIf="!loading && departments.length === 0" class="inv-empty" style="padding:36px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">account_tree</span></div><div class="inv-empty-title">No departments</div><div class="inv-empty-text">Create your first department.</div></div>
+        <button class="md-rec" *ngFor="let dept of departments" [class.selected]="editingDept?.id === dept.id" (click)="openEditForm(dept)">
+          <span class="md-rec-ico">{{ (dept.departmentName || '?').charAt(0) }}</span>
+          <div class="md-rec-main"><span class="md-rec-title">{{ dept.departmentName }}</span><span class="md-rec-sub"><span class="md-rec-code">{{ dept.departmentCode }}</span></span></div>
+          <span class="md-rec-status" [class.on]="dept.isActive" [class.off]="!dept.isActive"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ══ RIGHT: form | empty ══ -->
+    <div class="md-detail">
+      <ng-container *ngIf="showForm; else deptEmpty">
+        <div class="md-detail-head">
+          <span class="md-detail-title">{{ editingDept ? 'Edit Department' : 'New Department' }}</span>
+          <button class="icon-btn" title="Close" (click)="cancelForm()"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="md-detail-body">
+          <form (ngSubmit)="saveDepartment()">
+            <div class="form-grid">
+              <div class="form-group"><label>Department Name *</label><input type="text" [(ngModel)]="formDepartmentName" name="departmentName" required /></div>
+              <div class="form-group"><label>Department Code</label><input type="text" [(ngModel)]="formDepartmentCode" name="departmentCode" /></div>
+              <div class="form-group"><label>Parent Department ID</label><input type="text" [(ngModel)]="formParentId" name="parentId" /></div>
+              <div class="form-group"><label>Dept Head Employee ID</label><input type="text" [(ngModel)]="formManagerId" name="managerId" /></div>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="ibtn ibtn--danger" style="margin-right:auto" *ngIf="editingDept" (click)="deleteDepartment(editingDept)"><span class="material-symbols-outlined">delete</span> Delete</button>
+              <button type="button" (click)="cancelForm()" class="ibtn ibtn--secondary">Cancel</button>
+              <button type="submit" class="ibtn ibtn--primary"><span class="material-symbols-outlined">save</span> {{ editingDept ? 'Update' : 'Create' }}</button>
+            </div>
+          </form>
+        </div>
+      </ng-container>
+      <ng-template #deptEmpty>
+        <div class="md-empty">
+          <div class="md-empty-icon"><span class="material-symbols-outlined">account_tree</span></div>
+          <div class="md-empty-title">Manage departments</div>
+          <div class="md-empty-text">Select a department to edit, or create a new one.</div>
+          <button class="btn-brand" style="margin-top:8px" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Department</button>
+        </div>
+      </ng-template>
+    </div>
+  </div>
+</div>

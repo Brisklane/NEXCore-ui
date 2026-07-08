@@ -1,0 +1,91 @@
+<div class="page-container gr-page">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">move_to_inbox</span></div>
+      <div>
+        <h1>Goods Receipt</h1>
+        <p class="inv-hero-sub">Receive stock into a location — capture serials or batch details as units arrive</p>
+      </div>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <!-- Step 1 — receipt header -->
+  <div class="form-card gr-card">
+    <div class="gr-card-title"><span class="gr-step">1</span> Receipt details</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Destination location <span class="req">*</span></label>
+        <select [(ngModel)]="warehouseId"><option value="">— Select —</option>@for (w of warehouses; track w.id) { <option [value]="w.id">{{ w.name }}</option> }</select>
+      </div>
+      <div class="form-group"><label>Reference</label><input type="text" [(ngModel)]="reference" placeholder="Supplier invoice / PO no." /></div>
+      <div class="form-group"><label>Date</label><input type="date" [(ngModel)]="documentDate" /></div>
+    </div>
+  </div>
+
+  <!-- Step 2 — items -->
+  <div class="gr-lines-head">
+    <div class="gr-card-title" style="margin:0"><span class="gr-step">2</span> Items received</div>
+    <span class="gr-count-chip">{{ lines.length }} line{{ lines.length === 1 ? '' : 's' }}</span>
+  </div>
+
+  @for (line of lines; track $index; let i = $index) {
+    <div class="line-card" [class.line-card-empty]="!line.itemId">
+      <div class="line-top">
+        <div class="line-num">{{ i + 1 }}</div>
+        <div class="line-item">
+          <label class="line-mini-label">Item</label>
+          <select [(ngModel)]="line.itemId">
+            <option value="">— Select item —</option>
+            @for (it of items; track it.id) { <option [value]="it.id">{{ it.code }} — {{ it.name }}</option> }
+          </select>
+          @if (line.itemId) {
+            <span class="track-badge" [class.track-serial]="tracking(line.itemId)==='Serial'" [class.track-lot]="tracking(line.itemId)==='Lot'" [class.track-none]="tracking(line.itemId)==='None'">
+              <span class="material-symbols-outlined">{{ tracking(line.itemId)==='Serial' ? 'barcode' : (tracking(line.itemId)==='Lot' ? 'inventory' : 'tag') }}</span>
+              {{ tracking(line.itemId)==='Serial' ? 'Serial-tracked' : (tracking(line.itemId)==='Lot' ? 'Lot-tracked' : 'Quantity') }}
+            </span>
+          }
+        </div>
+        @if (tracking(line.itemId) !== 'Serial') {
+          <div class="line-qty"><label class="line-mini-label">Qty</label><input type="number" [(ngModel)]="line.quantity" min="0" step="0.01" placeholder="0" /></div>
+        } @else {
+          <div class="line-qty"><label class="line-mini-label">Qty</label><input type="number" [value]="lineQty(line)" disabled title="Driven by the serials entered below" /></div>
+        }
+        <div class="line-cost"><label class="line-mini-label">Unit cost</label><input type="number" [(ngModel)]="line.unitCost" min="0" step="0.01" placeholder="0.00" /></div>
+        <div class="line-total"><label class="line-mini-label">Line total</label><span class="line-total-val">{{ (lineQty(line) * (line.unitCost || 0)) | number:'1.0-2' }}</span></div>
+        <button class="icon-btn danger" title="Remove line" (click)="removeLine(i)" [disabled]="lines.length === 1"><span class="material-symbols-outlined">delete</span></button>
+      </div>
+
+      @if (tracking(line.itemId) === 'Serial') {
+        <div class="line-capture">
+          <label class="capture-label"><span class="material-symbols-outlined">barcode_scanner</span> Serial numbers / IMEIs — one per line (scan or paste)</label>
+          <textarea [(ngModel)]="line.serialText" rows="3" placeholder="SN-0001&#10;SN-0002&#10;SN-0003"></textarea>
+          <div class="capture-hint"><span class="material-symbols-outlined">check_circle</span> {{ parsedSerials(line).length }} unit(s) will be created</div>
+        </div>
+      } @else if (tracking(line.itemId) === 'Lot') {
+        <div class="line-capture line-capture-grid">
+          <div class="form-group"><label>Batch / Lot number <span class="req">*</span></label><input type="text" [(ngModel)]="line.batchNumber" placeholder="e.g. LOT-2026-014" /></div>
+          <div class="form-group"><label>Manufacture date</label><input type="date" [(ngModel)]="line.manufactureDate" /></div>
+          <div class="form-group"><label>Expiry date</label><input type="date" [(ngModel)]="line.expiryDate" /></div>
+        </div>
+      }
+    </div>
+  }
+
+  <button class="ibtn ibtn--tertiary add-line-btn" (click)="addLine()"><span class="material-symbols-outlined">add</span> Add another item</button>
+
+  <!-- Sticky action bar -->
+  <div class="gr-actionbar">
+    <div class="gr-totals">
+      <div class="gr-total"><span class="gr-total-label">Total qty</span><span class="gr-total-value">{{ totalQty | number:'1.0-2' }}</span></div>
+      <div class="gr-total"><span class="gr-total-label">Total value</span><span class="gr-total-value">{{ totalCost | number:'1.0-2' }}</span></div>
+    </div>
+    <div class="gr-actions">
+      <button class="ibtn ibtn--secondary" (click)="cancel()">Cancel</button>
+      <button class="ibtn ibtn--primary" (click)="save()" [disabled]="saving || !canSave">
+        <span class="material-symbols-outlined">{{ saving ? 'progress_activity' : 'check' }}</span>
+        {{ saving ? 'Posting…' : 'Receive & Post' }}
+      </button>
+    </div>
+  </div>
+</div>

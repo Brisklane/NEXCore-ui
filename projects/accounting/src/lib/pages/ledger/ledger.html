@@ -1,0 +1,101 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">menu_book</span></div>
+      <div>
+        <h1>Ledgers</h1>
+        <p class="inv-hero-sub">Manage your general ledgers</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Ledger</button>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="md-split">
+    <!-- ══ LEFT: ledger rows ══ -->
+    <div class="md-list">
+      <div class="md-list-head">
+        <span class="inv-search"><span class="material-symbols-outlined">search</span><input type="text" placeholder="Search ledgers…" [(ngModel)]="filterSearch" (ngModelChange)="onSearchInput()" (keyup.enter)="applyFilters()" /></span>
+      </div>
+      <div class="md-list-body">
+        @if (loading) {
+          @for (s of [0,1,2,3]; track s) { <div class="md-rec"><span class="skeleton sk-circle" style="width:34px;height:34px"></span><div style="flex:1"><span class="skeleton sk-line" style="width:70%"></span></div></div> }
+        } @else if (ledgers.length === 0) {
+          <div class="inv-empty" style="padding:36px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">menu_book</span></div><div class="inv-empty-title">No ledgers</div><div class="inv-empty-text">Create your first ledger.</div></div>
+        } @else {
+          @for (l of ledgers; track l.id) {
+            <button class="md-rec" [class.selected]="editingLedger?.id === l.id" [class.row-new]="l.id === highlighter.id" (click)="openEditForm(l)">
+              <span class="md-rec-ico">{{ l.baseCurrencyCode }}</span>
+              <div class="md-rec-main"><span class="md-rec-title">{{ l.name }}@if (l.isDefault) { <span class="status-pill pill-brand" style="margin-left:6px">Default</span> }</span><span class="md-rec-sub">{{ getCalendarName(l.fiscalCalendarId) }}</span></div>
+              <span class="md-rec-status" [class.on]="l.isActive" [class.off]="!l.isActive"></span>
+            </button>
+          }
+        }
+      </div>
+      @if (totalCount > 0) {
+        <div class="md-list-foot"><span>{{ (page - 1) * pageSize + 1 }}–{{ page * pageSize > totalCount ? totalCount : page * pageSize }} of {{ totalCount }}</span><div class="md-pager"><button class="btn-page" [disabled]="page <= 1" (click)="goToPage(page - 1)">Prev</button><button class="btn-page" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next</button></div></div>
+      }
+    </div>
+
+    <!-- ══ RIGHT: form | empty ══ -->
+    <div class="md-detail">
+      @if (showForm) {
+        <div class="md-detail-head">
+          <span class="md-detail-title">{{ editingLedger ? 'Edit Ledger' : 'New Ledger' }}</span>
+          <button class="icon-btn" title="Close" (click)="cancelForm()"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="md-detail-body">
+          <div class="form-grid">
+        <div class="form-group">
+          <label>Name *</label>
+          <input type="text" [(ngModel)]="formName" placeholder="Ledger name" />
+        </div>
+        <div class="form-group">
+          <label>Base Currency Code *</label>
+          <select [(ngModel)]="formCurrency">
+            <option value="">Select currency</option>
+            @for (c of currencies; track c.code) {
+              <option [value]="c.code">{{ c.code }} – {{ c.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Fiscal Calendar *</label>
+          <select [(ngModel)]="formCalendarId">
+            <option value="">Select calendar</option>
+            @for (cal of fiscalCalendars; track cal.id) {
+              <option [value]="cal.id">{{ cal.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <input type="text" [(ngModel)]="formDescription" placeholder="Description" />
+        </div>
+        <div class="form-group form-check-row">
+          <label><input type="checkbox" [(ngModel)]="formIsDefault" /> Default Ledger</label>
+          @if (editingLedger) {
+            <label><input type="checkbox" [(ngModel)]="formIsActive" /> Active</label>
+          }
+        </div>
+      </div>
+          <div class="form-actions">
+            @if (editingLedger) { <button class="ibtn ibtn--danger" style="margin-right:auto" (click)="deleteLedger(editingLedger)"><span class="material-symbols-outlined">delete</span> Delete</button> }
+            <button class="ibtn ibtn--secondary" (click)="cancelForm()">Cancel</button>
+            <button class="ibtn ibtn--primary" (click)="saveLedger()"><span class="material-symbols-outlined">save</span> {{ editingLedger ? 'Update' : 'Create' }}</button>
+          </div>
+        </div>
+      } @else {
+        <div class="md-empty">
+          <div class="md-empty-icon"><span class="material-symbols-outlined">menu_book</span></div>
+          <div class="md-empty-title">Manage ledgers</div>
+          <div class="md-empty-text">Select a ledger to edit, or create a new one.</div>
+          <button class="btn-brand" style="margin-top:8px" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Ledger</button>
+        </div>
+      }
+    </div>
+  </div>
+</div>

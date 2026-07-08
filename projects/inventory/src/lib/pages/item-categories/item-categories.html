@@ -1,0 +1,263 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">category</span></div>
+      <div>
+        <h1>Product Groups</h1>
+        <p class="inv-hero-sub">Organize products into groups and sub-groups</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Group</button>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="md-split">
+    <!-- ══ LEFT: group list ══ -->
+    <div class="md-list">
+      <div class="md-list-head">
+        <span class="inv-search"><span class="material-symbols-outlined">search</span><input type="text" placeholder="Search groups…" [(ngModel)]="filterSearch" (ngModelChange)="onSearchInput()" (keyup.enter)="applyFilters()" /></span>
+        <div class="md-list-head-row"><select class="inv-select" [(ngModel)]="filterStatus" (ngModelChange)="applyFilters()"><option value="">All Statuses</option><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+      </div>
+      <div class="md-list-body">
+        @if (loading) {
+          @for (s of [0,1,2,3,4]; track s) { <div class="md-rec"><span class="skeleton sk-circle" style="width:34px;height:34px"></span><div style="flex:1"><span class="skeleton sk-line" style="width:70%"></span></div></div> }
+        } @else if (items.length === 0) {
+          <div class="inv-empty" style="padding:36px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">category</span></div><div class="inv-empty-title">No groups found</div><div class="inv-empty-text">Add your first group.</div></div>
+        } @else {
+          @for (item of displayItems; track item.id) {
+            <button class="md-rec" [class.selected]="editingItem?.id === item.id" [class.row-new]="item.id === highlighter.id" (click)="openEditForm(item)">
+              <span class="md-rec-ico">{{ (item.name || item.code || '?').charAt(0) }}</span>
+              <div class="md-rec-main"><span class="md-rec-title">{{ item.name || '—' }}</span><span class="md-rec-sub"><span class="md-rec-code">{{ item.code }}</span>@if (item.description) { · {{ item.description }} }</span></div>
+              <span class="md-rec-status" [class.on]="item.isActive" [class.off]="!item.isActive"></span>
+            </button>
+          }
+        }
+      </div>
+      @if (totalCount > 0) {
+        <div class="md-list-foot"><span>{{ (page - 1) * pageSize + 1 }}–{{ page * pageSize < totalCount ? page * pageSize : totalCount }} of {{ totalCount | number }}</span><div class="md-pager"><button class="btn-page" (click)="goToPage(page - 1)" [disabled]="page <= 1">Prev</button><button class="btn-page" (click)="goToPage(page + 1)" [disabled]="page >= totalPages">Next</button></div></div>
+      }
+    </div>
+
+    <!-- ══ RIGHT: create / edit form ══ -->
+    <div class="md-detail">
+      @if (showForm) {
+        <div class="md-detail-head">
+          <span class="md-detail-title">{{ editingItem ? 'Edit Group' : 'New Group' }}</span>
+          <button class="icon-btn" title="Close" (click)="cancelForm()"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="md-detail-body">
+          <div class="tab-bar">
+            <button [class]="formTab === 'basic' ? 'tab-btn tab-btn-active' : 'tab-btn'" (click)="formTab = 'basic'">Basic Info</button>
+            <button [class]="formTab === 'accounts' ? 'tab-btn tab-btn-active' : 'tab-btn'" (click)="formTab = 'accounts'">GL Accounts</button>
+          </div>
+
+          @if (formTab === 'basic') {
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Code</label>
+                <input type="text" [(ngModel)]="formCode" placeholder="Auto-generated" readonly class="input-readonly" />
+              </div>
+              <div class="form-group">
+                <label>Name <span class="field-required">*</span></label>
+                <input type="text" [(ngModel)]="formName" placeholder="Group name" [class.input-error]="saveAttempted && !formName?.trim()" />
+                @if (saveAttempted && !formName?.trim()) { <span class="field-error-msg">Name is required</span> }
+              </div>
+              <div class="form-group">
+                <label>Parent Group ID</label>
+                <input type="text" [(ngModel)]="formParentCategoryId" placeholder="Parent ID (optional)" />
+              </div>
+              <div class="form-group form-group-full">
+                <label>Description</label>
+                <input type="text" [(ngModel)]="formDescription" placeholder="Description" />
+              </div>
+              @if (editingItem) {
+                <div class="form-check-row"><label><input type="checkbox" [(ngModel)]="formIsActive" /> Active</label></div>
+              }
+            </div>
+          }
+
+          @if (formTab === 'accounts') {
+
+            <!-- ════════════════ CREATE MODE ════════════════ -->
+            @if (!editingItem) {
+
+              <div class="gl-notice gl-notice-hint" style="margin-bottom:16px">
+                Select the parent GL account for each type, then choose whether to auto-generate sub-accounts on save.
+              </div>
+
+              <div class="gl-section-label">Parent Accounts</div>
+              <div class="gl-accounts-grid">
+                <div class="gl-account-card">
+                  <div class="gl-account-card-header">Inventory</div>
+                  <div class="gl-account-field">
+                    <label>Parent Account</label>
+                    <lib-entity-picker-input [options]="glAccounts" [value]="accountLabelByNumber(formParentInventoryAccountNo)" [displayFields]="accountDisplayFields" [columns]="accountColumns" [pickerPageSize]="25" entityLabel="Account" placeholder="Search parent..." (itemSelected)="onParentInventorySelected($event)" />
+                  </div>
+                </div>
+                <div class="gl-account-card">
+                  <div class="gl-account-card-header">COGS</div>
+                  <div class="gl-account-field">
+                    <label>Parent Account</label>
+                    <lib-entity-picker-input [options]="glAccounts" [value]="accountLabelByNumber(formParentCogsAccountNo)" [displayFields]="accountDisplayFields" [columns]="accountColumns" [pickerPageSize]="25" entityLabel="Account" placeholder="Search parent..." (itemSelected)="onParentCogsSelected($event)" />
+                  </div>
+                </div>
+                <div class="gl-account-card">
+                  <div class="gl-account-card-header">Purchase</div>
+                  <div class="gl-account-field">
+                    <label>Parent Account</label>
+                    <lib-entity-picker-input [options]="glAccounts" [value]="accountLabelByNumber(formParentPurchaseAccountNo)" [displayFields]="accountDisplayFields" [columns]="accountColumns" [pickerPageSize]="25" entityLabel="Account" placeholder="Search parent..." (itemSelected)="onParentPurchaseSelected($event)" />
+                  </div>
+                </div>
+                <div class="gl-account-card">
+                  <div class="gl-account-card-header">Sales</div>
+                  <div class="gl-account-field">
+                    <label>Parent Account</label>
+                    <lib-entity-picker-input [options]="glAccounts" [value]="accountLabelByNumber(formParentSalesAccountNo)" [displayFields]="accountDisplayFields" [columns]="accountColumns" [pickerPageSize]="25" entityLabel="Account" placeholder="Search parent..." (itemSelected)="onParentSalesSelected($event)" />
+                  </div>
+                </div>
+              </div>
+
+              <label class="gl-autogen-row">
+                <input type="checkbox" [(ngModel)]="formAutoGenerateSubAccounts" />
+                <div class="gl-autogen-text">
+                  <strong>Auto Generate Sub-Accounts</strong>
+                  <span>
+                    @if (formAutoGenerateSubAccounts) { A dedicated child account will be created under each parent when you save. }
+                    @else { Select sub-accounts manually from the chart of accounts below. }
+                  </span>
+                </div>
+              </label>
+
+              @if (formAutoGenerateSubAccounts) {
+                <div class="gl-autogen-preview">
+                  <div class="gl-autogen-preview-title">Accounts that will be created on Save</div>
+                  @if (foundParents.length === 0) {
+                    <div class="gl-autogen-preview-empty">Select parent accounts above to see the preview.</div>
+                  } @else {
+                    <table class="gl-autogen-table">
+                      <thead><tr><th>Type</th><th>Under Parent</th><th>New Code</th><th>New Name</th></tr></thead>
+                      <tbody>
+                        @for (p of foundParents; track p.no) {
+                          <tr>
+                            <td><span class="gl-autogen-type">{{ p.label }}</span></td>
+                            <td class="gl-autogen-parent">{{ p.no }} — {{ p.name }}</td>
+                            <td><code class="gl-autogen-code">{{ p.subNo }}</code></td>
+                            <td class="gl-autogen-name">{{ p.subName || '(' + formName + ' - ' + p.label + ')' }}</td>
+                          </tr>
+                        }
+                        @for (p of missingParents; track p.no) {
+                          <tr class="gl-autogen-skip">
+                            <td><span class="gl-autogen-type gl-autogen-type-skip">{{ p.label }}</span></td>
+                            <td colspan="3" class="gl-autogen-skip-msg">&#9888; Parent <code>{{ p.no }}</code> not found in chart — will be skipped</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  }
+                  @if (!formName) { <div class="gl-autogen-preview-hint">Enter a group name above (Basic Info tab) to see the full account names.</div> }
+                </div>
+              }
+
+              @if (!formAutoGenerateSubAccounts) {
+                <div class="gl-section-label" style="margin-top:16px">Sub-Accounts</div>
+                <div class="gl-accounts-grid">
+                  <div class="gl-account-card">
+                    <div class="gl-account-card-header">Inventory</div>
+                    <div class="gl-account-field">
+                      <label>Account</label>
+                      <lib-entity-picker-input [options]="glAccounts" [value]="accountLabel(formInventoryAccountId)" [displayFields]="accountDisplayFields" [columns]="accountColumns" [pickerPageSize]="25" entityLabel="Account" placeholder="Search or create..." [allowCreate]="!!formParentInventoryAccountNo" [createCodePreview]="inventoryCreatePreviewCode" createNameSuffix=" - Inventory" [createDefaultName]="inventoryCreateDefaultName" [allOptions]="glAccounts" (itemSelected)="formInventoryAccountId = $event['id']" (createRequested)="createInventoryChildAccount($event)" />
+                    </div>
+                  </div>
+                  <div class="gl-account-card">
+                    <div class="gl-account-card-header">COGS</div>
+                    <div class="gl-account-field">
+                      <label>Account</label>
+                      <lib-entity-picker-input [options]="glAccounts" [value]="accountLabel(formCogsAccountId)" [displayFields]="accountDisplayFields" [columns]="accountColumns" [pickerPageSize]="25" entityLabel="Account" placeholder="Search or create..." [allowCreate]="!!formParentCogsAccountNo" [createCodePreview]="cogsCreatePreviewCode" createNameSuffix=" - COGS" [createDefaultName]="cogsCreateDefaultName" [allOptions]="glAccounts" (itemSelected)="formCogsAccountId = $event['id']" (createRequested)="createCogsChildAccount($event)" />
+                    </div>
+                  </div>
+                  <div class="gl-account-card">
+                    <div class="gl-account-card-header">Purchase</div>
+                    <div class="gl-account-field">
+                      <label>Account</label>
+                      <lib-entity-picker-input [options]="glAccounts" [value]="accountLabel(formPurchaseAccountId)" [displayFields]="accountDisplayFields" [columns]="accountColumns" [pickerPageSize]="25" entityLabel="Account" placeholder="Search or create..." [allowCreate]="!!formParentPurchaseAccountNo" [createCodePreview]="purchaseCreatePreviewCode" createNameSuffix=" - Purchase" [createDefaultName]="purchaseCreateDefaultName" [allOptions]="glAccounts" (itemSelected)="formPurchaseAccountId = $event['id']" (createRequested)="createPurchaseChildAccount($event)" />
+                    </div>
+                  </div>
+                  <div class="gl-account-card">
+                    <div class="gl-account-card-header">Sales</div>
+                    <div class="gl-account-field">
+                      <label>Account</label>
+                      <lib-entity-picker-input [options]="glAccounts" [value]="accountLabel(formSalesAccountId)" [displayFields]="accountDisplayFields" [columns]="accountColumns" [pickerPageSize]="25" entityLabel="Account" placeholder="Search or create..." [allowCreate]="!!formParentSalesAccountNo" [createCodePreview]="salesCreatePreviewCode" createNameSuffix=" - Sales" [createDefaultName]="salesCreateDefaultName" [allOptions]="glAccounts" (itemSelected)="formSalesAccountId = $event['id']" (createRequested)="createSalesChildAccount($event)" />
+                    </div>
+                  </div>
+                </div>
+              }
+
+            } @else {
+
+              <!-- ════════════════ EDIT MODE ════════════════ -->
+              @if (editingHasGlAccounts) {
+                <div class="gl-notice gl-notice-auto" style="margin-bottom:16px">GL accounts are configured. Items in this group inherit these accounts by default.</div>
+              }
+              @if (generateGlSuccess) { <div class="gl-notice gl-notice-auto" style="margin-bottom:8px">{{ generateGlSuccess }}</div> }
+
+              <div class="gl-accounts-grid">
+                <div class="gl-account-card">
+                  <div class="gl-account-card-header">Inventory</div>
+                  <div class="gl-account-field"><label>Parent Account</label><div class="gl-account-readonly">{{ accountLabelByNumber(formParentInventoryAccountNo) || '—' }}</div></div>
+                  <div class="gl-account-divider"></div>
+                  <div class="gl-account-field">
+                    <label>Account</label>
+                    <lib-entity-picker-input [options]="glAccounts" [value]="accountLabel(formInventoryAccountId)" [displayFields]="accountDisplayFields" [columns]="accountColumns" [pickerPageSize]="25" entityLabel="Account" placeholder="Search or create..." [allowCreate]="!!formParentInventoryAccountNo" [createCodePreview]="inventoryCreatePreviewCode" createNameSuffix=" - Inventory" [createDefaultName]="inventoryCreateDefaultName" [allOptions]="glAccounts" (itemSelected)="formInventoryAccountId = $event['id']" (createRequested)="createInventoryChildAccount($event)" />
+                  </div>
+                </div>
+                <div class="gl-account-card">
+                  <div class="gl-account-card-header">COGS</div>
+                  <div class="gl-account-field"><label>Parent Account</label><div class="gl-account-readonly">{{ accountLabelByNumber(formParentCogsAccountNo) || '—' }}</div></div>
+                  <div class="gl-account-divider"></div>
+                  <div class="gl-account-field">
+                    <label>Account</label>
+                    <lib-entity-picker-input [options]="glAccounts" [value]="accountLabel(formCogsAccountId)" [displayFields]="accountDisplayFields" [columns]="accountColumns" [pickerPageSize]="25" entityLabel="Account" placeholder="Search or create..." [allowCreate]="!!formParentCogsAccountNo" [createCodePreview]="cogsCreatePreviewCode" createNameSuffix=" - COGS" [createDefaultName]="cogsCreateDefaultName" [allOptions]="glAccounts" (itemSelected)="formCogsAccountId = $event['id']" (createRequested)="createCogsChildAccount($event)" />
+                  </div>
+                </div>
+                <div class="gl-account-card">
+                  <div class="gl-account-card-header">Purchase</div>
+                  <div class="gl-account-field"><label>Parent Account</label><div class="gl-account-readonly">{{ accountLabelByNumber(formParentPurchaseAccountNo) || '—' }}</div></div>
+                  <div class="gl-account-divider"></div>
+                  <div class="gl-account-field">
+                    <label>Account</label>
+                    <lib-entity-picker-input [options]="glAccounts" [value]="accountLabel(formPurchaseAccountId)" [displayFields]="accountDisplayFields" [columns]="accountColumns" [pickerPageSize]="25" entityLabel="Account" placeholder="Search or create..." [allowCreate]="!!formParentPurchaseAccountNo" [createCodePreview]="purchaseCreatePreviewCode" createNameSuffix=" - Purchase" [createDefaultName]="purchaseCreateDefaultName" [allOptions]="glAccounts" (itemSelected)="formPurchaseAccountId = $event['id']" (createRequested)="createPurchaseChildAccount($event)" />
+                  </div>
+                </div>
+                <div class="gl-account-card">
+                  <div class="gl-account-card-header">Sales</div>
+                  <div class="gl-account-field"><label>Parent Account</label><div class="gl-account-readonly">{{ accountLabelByNumber(formParentSalesAccountNo) || '—' }}</div></div>
+                  <div class="gl-account-divider"></div>
+                  <div class="gl-account-field">
+                    <label>Account</label>
+                    <lib-entity-picker-input [options]="glAccounts" [value]="accountLabel(formSalesAccountId)" [displayFields]="accountDisplayFields" [columns]="accountColumns" [pickerPageSize]="25" entityLabel="Account" placeholder="Search or create..." [allowCreate]="!!formParentSalesAccountNo" [createCodePreview]="salesCreatePreviewCode" createNameSuffix=" - Sales" [createDefaultName]="salesCreateDefaultName" [allOptions]="glAccounts" (itemSelected)="formSalesAccountId = $event['id']" (createRequested)="createSalesChildAccount($event)" />
+                  </div>
+                </div>
+              </div>
+
+            }
+          }
+
+          <div class="form-actions">
+            <button class="ibtn ibtn--secondary" (click)="cancelForm()">Cancel</button>
+            <button class="ibtn ibtn--primary" (click)="save()"><span class="material-symbols-outlined">save</span> {{ editingItem ? 'Save changes' : 'Create group' }}</button>
+          </div>
+        </div>
+      } @else {
+        <div class="md-empty">
+          <div class="md-empty-icon"><span class="material-symbols-outlined">category</span></div>
+          <div class="md-empty-title">Manage product groups</div>
+          <div class="md-empty-text">Select a group to edit, or add a new one.</div>
+          <button class="btn-brand" style="margin-top:8px" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Group</button>
+        </div>
+      }
+    </div>
+  </div>
+</div>

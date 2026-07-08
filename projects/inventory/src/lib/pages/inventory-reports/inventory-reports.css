@@ -1,0 +1,88 @@
+@import '../shared-styles.css';
+
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid var(--border-color, #e2e8f0);
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary, #64748b);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  border-radius: 4px 4px 0 0;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.tab-btn:hover {
+  color: var(--primary, #3b82f6);
+}
+
+.tab-btn-active {
+  color: var(--primary, #3b82f6);
+  border-bottom-color: var(--primary, #3b82f6);
+  background: var(--bg-subtle, #eff6ff);
+}
+
+.num-cell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.qty-negative {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.filter-label {
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+  align-self: center;
+}
+
+.filter-date {
+  padding: 7px 10px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.filter-select {
+  padding: 7px 10px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 6px;
+  font-size: 14px;
+  background: #fff;
+  min-width: 180px;
+}
+
+.row-warning td {
+  background-color: #fffbeb;
+}
+
+.row-danger td {
+  background-color: #fef2f2;
+}
+
+.filter-hint {
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+  margin-bottom: 8px;
+}
+
+.badge-warning {
+  background-color: #fef3c7;
+  color: #92400e;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}

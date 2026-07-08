@@ -1,0 +1,196 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">tag</span></div>
+      <div>
+        <h1>Document Sequences</h1>
+        <p class="inv-hero-sub">Numbering format and running counters for sales documents (orders, invoices, receipts…)</p>
+      </div>
+    </div>
+    <button class="btn-brand" (click)="openCreateForm()"
+            [disabled]="(showForm && !editing) || availableDocumentTypes.length === 0"
+            [title]="availableDocumentTypes.length === 0 ? 'All document types already have a sequence' : ''">
+      <span class="material-symbols-outlined">add</span> Add Sequence
+    </button>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (successMsg) { <div class="alert alert-success">{{ successMsg }}</div> }
+
+  <!-- ── Create / Edit form ───────────────────────────────── -->
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editing ? 'Edit ' + documentTypeLabel(form.documentType) + ' Sequence' : 'New Document Sequence' }}</h3>
+
+      <div class="ds-layout">
+        <div class="ds-fields">
+
+          <h4 class="ds-section-title">General</h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Document Type *</label>
+              @if (editing) {
+                <input type="text" [value]="documentTypeLabel(form.documentType)" disabled />
+              } @else {
+                <select [(ngModel)]="form.documentType">
+                  @for (d of availableDocumentTypes; track d.value) {
+                    <option [ngValue]="d.value">{{ d.label }}</option>
+                  }
+                </select>
+              }
+            </div>
+            <div class="form-group">
+              <label>Description</label>
+              <input type="text" [(ngModel)]="form.description" placeholder="Optional note" />
+            </div>
+            @if (editing) {
+              <div class="form-group">
+                <label>Active</label>
+                <select [(ngModel)]="form.isActive">
+                  <option [ngValue]="true">Yes</option>
+                  <option [ngValue]="false">No</option>
+                </select>
+              </div>
+            }
+          </div>
+
+          <h4 class="ds-section-title">Format</h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Prefix *</label>
+              <input type="text" [(ngModel)]="form.prefix" (ngModelChange)="schedulePreview()" placeholder="e.g. SO" />
+            </div>
+            <div class="form-group">
+              <label>Separator</label>
+              <input type="text" [(ngModel)]="form.separator" (ngModelChange)="schedulePreview()" placeholder="e.g. -" maxlength="3" />
+            </div>
+            <div class="form-group">
+              <label>Suffix</label>
+              <input type="text" [(ngModel)]="form.suffix" (ngModelChange)="schedulePreview()" placeholder="Optional" />
+            </div>
+            <div class="form-group">
+              <label>Number Padding</label>
+              <input type="number" [(ngModel)]="form.sequencePadding" (ngModelChange)="schedulePreview()" min="1" max="12" />
+            </div>
+            <div class="form-group">
+              <label>Year Format</label>
+              <select [(ngModel)]="form.yearFormat" (ngModelChange)="schedulePreview()" [disabled]="!form.includeYear">
+                @for (y of yearFormats; track y.value) {
+                  <option [ngValue]="y.value">{{ y.label }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Reset Counter</label>
+              <select [(ngModel)]="form.resetOn">
+                @for (r of resetPeriods; track r.value) {
+                  <option [ngValue]="r.value">{{ r.label }}</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group form-check-row">
+            <label><input type="checkbox" [(ngModel)]="form.includeYear" (ngModelChange)="schedulePreview()" /> Include year</label>
+            <label><input type="checkbox" [(ngModel)]="form.includeMonth" (ngModelChange)="schedulePreview()" [disabled]="!form.includeYear" /> Include month</label>
+            <label><input type="checkbox" [(ngModel)]="form.includeDay" (ngModelChange)="schedulePreview()" [disabled]="!form.includeYear || !form.includeMonth" /> Include day</label>
+          </div>
+
+          @if (!editing) {
+            <h4 class="ds-section-title">Counter</h4>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Start From</label>
+                <input type="number" [(ngModel)]="form.startFrom" (ngModelChange)="schedulePreview()" min="1" />
+              </div>
+            </div>
+          }
+
+          <!-- Reset counter (edit only — separate action from saving the format) -->
+          @if (editing) {
+            <h4 class="ds-section-title">Counter</h4>
+            <div class="ds-counter-now">
+              Next number will be <strong>{{ editing.nextNumberPreview || editing.nextSequenceNumber }}</strong>
+              (current counter: {{ editing.nextSequenceNumber }})
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Reset counter to</label>
+                <input type="number" [(ngModel)]="resetTo" min="1" />
+              </div>
+              <div class="form-group">
+                <label>&nbsp;</label>
+                <button class="btn btn-danger btn-sm" (click)="resetCounter()">Reset counter</button>
+              </div>
+            </div>
+            <p class="ds-warn">Resetting only changes where numbering continues — it does not renumber existing documents.</p>
+          }
+
+        </div>
+
+        <!-- ── Live preview ──────────────────────────────────── -->
+        <div class="ds-preview-pane">
+          <div class="ds-preview-label">Next number preview</div>
+          <div class="ds-preview-sample">
+            @if (previewLoading) { <span class="ds-preview-loading">…</span> }
+            @else { {{ previewResult?.preview || '—' }} }
+          </div>
+          @if (previewResult?.pattern) {
+            <div class="ds-preview-pattern">Pattern: <code>{{ previewResult?.pattern }}</code></div>
+          }
+          @if (previewResult?.codeIntPreview) {
+            <div class="ds-preview-pattern">Int code: <code>{{ previewResult!.codeIntPreview }}</code></div>
+          }
+          <div class="ds-preview-note">Live sample using these settings. Actual numbers increment per document.</div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()">{{ editing ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  <!-- ── Sequences table ───────────────────────────────────── -->
+  @if (loading) {
+    <div class="loading-spinner">Loading sequences…</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" [class.sorted]="sortBy === 'documentType'" (click)="sort('documentType')">Document Type <span class="sort-icon">{{ sortBy === 'documentType' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Format</th>
+            <th class="sortable" [class.sorted]="sortBy === 'nextSequenceNumber'" (click)="sort('nextSequenceNumber')">Next Number <span class="sort-icon">{{ sortBy === 'nextSequenceNumber' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'resetOn'" (click)="sort('resetOn')">Resets <span class="sort-icon">{{ sortBy === 'resetOn' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'isActive'" (click)="sort('isActive')">Status <span class="sort-icon">{{ sortBy === 'isActive' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of displaySequences; track s.id) {
+            <tr [class.row-new]="s.id === highlighter.id">
+              <td style="font-weight:500;">
+                {{ documentTypeLabel(s.documentType) }}
+                @if (s.description) { <div style="font-size:11px;color:#94a3b8;">{{ s.description }}</div> }
+              </td>
+              <td style="font-size:12px;color:#64748b;"><code>{{ formatMask(s) }}</code></td>
+              <td><code class="ds-next">{{ s.nextNumberPreview || s.nextSequenceNumber }}</code></td>
+              <td style="font-size:12px;color:#64748b;">{{ resetLabel(s.resetOn) }}</td>
+              <td>
+                <span [class]="s.isActive ? 'badge badge-active' : 'badge badge-inactive'">{{ s.isActive ? 'Active' : 'Inactive' }}</span>
+              </td>
+              <td class="actions-cell">
+                <button class="btn btn-secondary btn-sm" (click)="openEditForm(s)" title="Edit / reset">✎ Edit</button>
+              </td>
+            </tr>
+          }
+          @empty {
+            <tr><td colspan="6" style="text-align:center;padding:32px;color:#94a3b8;">No document sequences configured yet.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

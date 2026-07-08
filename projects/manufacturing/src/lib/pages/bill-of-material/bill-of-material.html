@@ -1,0 +1,579 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">account_tree</span></div>
+      <div>
+        <h1>Bill of Material / Routing</h1>
+        <p class="inv-hero-sub">Add BOM details first, then define routing operations for the finished product</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreate()"><span class="material-symbols-outlined">add</span> New BOM</button>
+    </div>
+  </div>
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  @if (showForm) {
+    <div class="form-panel">
+      <div class="form-title-row">
+        <h3>{{ editing ? 'Edit BOM' : 'Create BOM' }}</h3>
+        <button
+          class="btn btn-secondary"
+          type="button"
+          (click)="toggleOperationsSection()"
+        >
+            {{ showOperationsSection ? 'Hide Routing' : 'Add Routing' }}
+        </button>
+      </div>
+
+      @if (showOperationsPrompt && !formFinishedProductId) {
+        <div class="alert alert-error">
+          Add BOM details first. Routing operations become available after you choose the finished product.
+        </div>
+      }
+
+      <!-- BOM ID Display -->
+      @if (!editing) {
+        <div class="form-grid">
+          <div class="form-group">
+            <label>BOM ID</label>
+            <input type="text" [ngModel]="formBomId" readonly class="input-readonly" />
+          </div>
+        </div>
+      }
+
+      <!-- Finished Product Section -->
+      <div class="bom-section-header">
+        <span>Finished Product</span>
+      </div>
+      <div class="form-grid">
+        <div class="form-group autocomplete-group" style="grid-column: span 2">
+          <label>Finished Product *</label>
+          <div class="autocomplete-wrap">
+            <input
+              type="text"
+              [(ngModel)]="finishedProductSearch"
+              (focus)="onFinishedProductFocus()"
+              (input)="onFinishedProductInput()"
+              (blur)="closeFinishedDropdown()"
+              [placeholder]="itemsLoading ? 'Loading products...' : 'Type product name or code...'"
+              [disabled]="!!editing || itemsLoading"
+              autocomplete="off"
+            />
+            @if (showFinishedProductDropdown) {
+              <div class="autocomplete-dropdown">
+                @if (finishedProductSuggestions.length === 0) {
+                  <div class="autocomplete-empty">No finished products found</div>
+                }
+                @for (s of finishedProductSuggestions; track s.id) {
+                  <div class="autocomplete-option" (mousedown)="selectFinishedProduct(s)">
+                    <span class="opt-code">{{ s.code }}</span>
+                    <span class="opt-name">{{ s.name }}</span>
+                    @if (s.itemType) { <span class="opt-badge">{{ s.itemType }}</span> }
+                  </div>
+                }
+                <button type="button" class="autocomplete-more" (mousedown)="openFinishedProductPicker()">Search more...</button>
+              </div>
+            }
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Notes</label>
+          <input type="text" [(ngModel)]="formNotes" placeholder="Optional notes" />
+        </div>
+        @if (editing) {
+          <div class="form-group form-check-row">
+            <label><input type="checkbox" [(ngModel)]="formIsActive" /> Active</label>
+          </div>
+        }
+      </div>
+
+      @if (showFinishedProductPicker) {
+        <div class="picker-overlay" (click)="closeFinishedProductPicker()">
+          <div class="picker-card" (click)="$event.stopPropagation()">
+            <div class="picker-head">
+              <h4>Search: Product</h4>
+              <div class="picker-head-actions">
+                <button type="button" class="btn btn-primary btn-sm" (click)="toggleQuickCreateItemForm()">{{ showQuickCreateItemForm ? 'Hide Quick Form' : '+ Add New Item' }}</button>
+                <button type="button" class="btn-icon" (click)="closeFinishedProductPicker()" title="Close">✕</button>
+              </div>
+            </div>
+
+            @if (showQuickCreateItemForm) {
+              <div class="quick-create-panel">
+                <div class="quick-create-title">Quick Add Finished Product</div>
+                <div class="quick-create-help">Add basic info only. You can complete advanced details later from Inventory > Items > Edit.</div>
+                @if (quickCreateItemError) {
+                  <div class="alert alert-error">{{ quickCreateItemError }}</div>
+                }
+                @if (!canCreateQuickItem) {
+                  <div class="quick-create-missing">Missing: {{ quickCreateMissingFields.join(', ') }}</div>
+                }
+
+                <div class="quick-create-grid">
+                  <div class="form-group">
+                    <label>Code *</label>
+                    <input type="text" [(ngModel)]="quickItemCode" class="input-cell" />
+                  </div>
+                  <div class="form-group">
+                    <label>Name *</label>
+                    <input type="text" [(ngModel)]="quickItemName" class="input-cell" />
+                  </div>
+                  <div class="form-group">
+                    <label>Item Type *</label>
+                    <select [(ngModel)]="quickItemType" class="input-cell">
+                      @if (quickCreateItemTypes.length > 0) {
+                        @for (t of quickCreateItemTypes; track t.value) {
+                          <option [value]="t.value">{{ t.label }}</option>
+                        }
+                      } @else {
+                        <option value="FinishedGood">Finished Good</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Condition *</label>
+                    <select [(ngModel)]="quickItemCondition" class="input-cell">
+                      @if (quickCreateItemConditions.length > 0) {
+                        @for (c of quickCreateItemConditions; track c.value) {
+                          <option [value]="c.value">{{ c.label }}</option>
+                        }
+                      } @else {
+                        <option value="New">New</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Unit *</label>
+                    <select [(ngModel)]="quickItemBaseUnitId" class="input-cell">
+                      <option value="">Select Unit</option>
+                      @for (u of unitsById | keyvalue; track u.key) {
+                        <option [value]="u.value.id">{{ u.value.code || u.value.name }}</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Category *</label>
+                    <select [(ngModel)]="quickItemCategoryId" class="input-cell">
+                      <option value="">Select Category</option>
+                      @for (c of quickCreateCategories; track c.id) {
+                        <option [value]="c.id">{{ c.name }}</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Brand</label>
+                    <select [(ngModel)]="quickItemBrandId" class="input-cell">
+                      <option value="">Optional</option>
+                      @for (b of quickCreateBrands; track b.id) {
+                        <option [value]="b.id">{{ b.name }}</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Color</label>
+                    <select [(ngModel)]="quickItemDisplayColorId" class="input-cell">
+                      <option value="">Optional</option>
+                      @for (col of quickCreateColors; track col.id) {
+                        <option [value]="col.id">{{ col.name }}</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Purchase Price *</label>
+                    <input type="number" [(ngModel)]="quickItemPurchasePrice" class="input-cell" />
+                  </div>
+                  <div class="form-group">
+                    <label>Sale Price *</label>
+                    <input type="number" [(ngModel)]="quickItemSalePrice" class="input-cell" />
+                  </div>
+                  <div class="form-group" style="grid-column: span 2">
+                    <label>Primary Barcode *</label>
+                    <input type="text" [(ngModel)]="quickItemBarcode" class="input-cell" />
+                  </div>
+                </div>
+
+                <div class="quick-create-actions">
+                  <button type="button" class="btn btn-secondary" (click)="closeQuickCreateItemForm()">Cancel</button>
+                  <button type="button" class="btn btn-primary" (click)="createQuickItem()" [disabled]="!canCreateQuickItem">
+                    {{ quickCreateItemSaving ? 'Creating...' : 'Create Item' }}
+                  </button>
+                </div>
+              </div>
+            }
+
+            <div class="picker-toolbar">
+              <input
+                type="text"
+                class="input-cell"
+                [(ngModel)]="finishedProductPickerSearch"
+                (input)="onFinishedProductPickerSearchChange()"
+                placeholder="Search by code or name..."
+              />
+              <div class="picker-filter-wrap">
+                <span class="picker-filter-label">Item Type</span>
+                <select class="input-cell" [(ngModel)]="finishedProductPickerTypeFilter" (ngModelChange)="onFinishedProductPickerFilterChange()">
+                  @for (type of finishedProductPickerTypeOptions; track type) {
+                    <option [value]="type">{{ type === 'All' ? 'All Item Types' : formatItemTypeLabel(type) }}</option>
+                  }
+                </select>
+              </div>
+              <div class="picker-pagination-controls">
+                @if (finishedProductPickerLoading) {
+                  <div class="picker-loading-spinner"></div>
+                }
+                <div class="picker-page-stat">{{ finishedProductPickerStart }}-{{ finishedProductPickerEnd }}/{{ finishedProductPickerTotal }}</div>
+                <button type="button" class="btn btn-secondary btn-sm" (click)="goToFinishedProductPickerPage(finishedProductPickerPage - 1)" [disabled]="!finishedProductPickerHasPreviousPage || finishedProductPickerLoading">◀</button>
+                <button type="button" class="btn btn-secondary btn-sm" (click)="goToFinishedProductPickerPage(finishedProductPickerPage + 1)" [disabled]="!finishedProductPickerHasNextPage || finishedProductPickerLoading">▶</button>
+              </div>
+            </div>
+
+            <div class="picker-table-wrap">
+              <table class="picker-table">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Type</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @if (finishedProductPickerLoading) {
+                    <tr><td colspan="3" class="empty-row">Loading products...</td></tr>
+                  } @else if (finishedProductPickerTotal === 0) {
+                    <tr><td colspan="3" class="empty-row">No products found</td></tr>
+                  } @else {
+                    @for (item of finishedProductPickerPageItems; track item.id) {
+                      <tr class="picker-select-row" (click)="selectFinishedProductFromPicker(item)">
+                        <td>{{ item.code || '-' }}</td>
+                        <td>{{ item.name || '-' }}</td>
+                        <td>{{ formatItemTypeLabel(item.itemType) }}</td>
+                      </tr>
+                    }
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (materialPickerOpen) {
+        <div class="picker-overlay" (click)="closeMaterialPicker()">
+          <div class="picker-card" (click)="$event.stopPropagation()">
+            <div class="picker-head">
+              <h4>Search: Raw Material</h4>
+              <div class="picker-head-actions">
+                <button type="button" class="btn-icon" (click)="closeMaterialPicker()" title="Close">✕</button>
+              </div>
+            </div>
+            <div class="picker-toolbar">
+              <input
+                type="text"
+                class="input-cell"
+                [(ngModel)]="materialPickerSearch"
+                (input)="onMaterialPickerSearchChange()"
+                placeholder="Search by code or name..."
+              />
+              <div class="picker-pagination-controls">
+                @if (materialPickerLoading) {
+                  <div class="picker-loading-spinner"></div>
+                }
+                <div class="picker-page-stat">{{ materialPickerStart }}-{{ materialPickerEnd }}/{{ materialPickerTotal }}</div>
+                <button type="button" class="btn btn-secondary btn-sm" (click)="goToMaterialPickerPage(materialPickerPage - 1)" [disabled]="!materialPickerHasPreviousPage || materialPickerLoading">◀</button>
+                <button type="button" class="btn btn-secondary btn-sm" (click)="goToMaterialPickerPage(materialPickerPage + 1)" [disabled]="!materialPickerHasNextPage || materialPickerLoading">▶</button>
+              </div>
+            </div>
+            <div class="picker-table-wrap">
+              <table class="picker-table">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @if (materialPickerLoading) {
+                    <tr><td colspan="2" class="empty-row">Loading materials...</td></tr>
+                  } @else if (materialPickerTotal === 0) {
+                    <tr><td colspan="2" class="empty-row">No raw materials found</td></tr>
+                  } @else {
+                    @for (item of materialPickerPageItems; track item.id) {
+                      <tr class="picker-select-row" (click)="selectMaterialFromPicker(item)">
+                        <td>{{ item.code || '-' }}</td>
+                        <td>{{ item.name || '-' }}</td>
+                      </tr>
+                    }
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Raw Materials / Components Section -->
+      @if (formFinishedProductId) {
+        <div class="bom-section-header">
+          <span>Raw Materials / Components</span>
+          <button class="btn btn-secondary btn-sm" type="button" (click)="addComponent()">+ Add Material</button>
+        </div>
+
+        @if (formComponents.length > 0) {
+          <div class="components-table-wrap">
+            <table class="components-table">
+              <thead>
+                <tr>
+                  <th>Material</th>
+                  <th>Qty</th>
+                  <th>Unit</th>
+                  <th>Unit Cost</th>
+                  <th>Line Total</th>
+                  <th>Notes</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (comp of formComponents; track $index; let i = $index) {
+                  <tr>
+                    <td class="cell-material">
+                      <div class="autocomplete-wrap">
+                        <input
+                          type="text"
+                          [(ngModel)]="comp.searchText"
+                          (focus)="onComponentFocus(comp)"
+                          (input)="onComponentSearch(comp)"
+                          (blur)="closeComponentDropdown(comp)"
+                          placeholder="Search by name or code..."
+                          autocomplete="off"
+                          class="input-cell"
+                        />
+                        @if (comp.showDropdown) {
+                          <div class="autocomplete-dropdown">
+                            @if (comp.suggestions.length === 0) {
+                              <div class="autocomplete-empty">No raw materials found</div>
+                            }
+                            @for (s of comp.suggestions; track s.id) {
+                              <div class="autocomplete-option" (mousedown)="selectComponent(comp, s)">
+                                <span class="opt-code">{{ s.code }}</span>
+                                <span class="opt-name">{{ s.name }}</span>
+                                @if (s.itemType) { <span class="opt-badge">{{ s.itemType }}</span> }
+                              </div>
+                            }
+                            <button type="button" class="autocomplete-more" (mousedown)="openMaterialPicker(comp)">Search more...</button>
+                          </div>
+                        }
+                      </div>
+                    </td>
+                    <td class="cell-sm">
+                      <input
+                        type="number"
+                        [(ngModel)]="comp.quantity"
+                        min="1"
+                        step="1"
+                        (ngModelChange)="updateLineTotal(comp)"
+                        (change)="updateLineTotal(comp)"
+                        class="input-cell"
+                        [class.input-error]="comp.selectedItemId && comp.stockAvailable !== null && comp.quantity > comp.stockAvailable"
+                      />
+                      @if (comp.stockLoading && comp.selectedItemId) {
+                        <small class="stock-label">Checking stock...</small>
+                      } @else if (comp.selectedItemId && comp.stockAvailable !== null) {
+                        @if (comp.quantity > comp.stockAvailable) {
+                          <small class="stock-label stock-warn">Only {{ comp.stockAvailable }} available</small>
+                        } @else {
+                          <small class="stock-label">{{ comp.stockAvailable - comp.quantity }} remaining</small>
+                        }
+                      }
+                    </td>
+                    <td class="cell-sm">
+                      <input type="text" [ngModel]="comp.unitOfMeasure" readonly class="input-cell" />
+                    </td>
+                    <td class="cell-cost">
+                      {{ comp.unitCost | number:'1.2-2' }}
+                    </td>
+                    <td class="cell-cost cell-total">
+                      {{ comp.lineTotal | number:'1.2-2' }}
+                    </td>
+                    <td>
+                      <input type="text" [(ngModel)]="comp.notes" placeholder="Note" class="input-cell" />
+                    </td>
+                    <td>
+                      <button class="btn-icon" type="button" (click)="removeComponent(i)" title="Remove">🗑️</button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="4" class="total-label">Estimated Material Cost</td>
+                  <td class="cell-cost grand-total">{{ getTotalCost() | number:'1.2-2' }}</td>
+                  <td colspan="2"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        } @else {
+          <div class="empty-components">
+            No materials added yet. Click <strong>+ Add Material</strong> to begin.
+          </div>
+        }
+      }
+
+      @if (showOperationsSection) {
+        <div class="bom-section-header">
+          <span>Routing Operations</span>
+          <button class="btn btn-secondary btn-sm" type="button" (click)="addOperation()" [disabled]="operationsLoading">
+            + Add Routing Operation
+          </button>
+        </div>
+
+        @if (operationsLoading) {
+          <div class="empty-components">Loading operations...</div>
+        } @else {
+          @if (formOperations.length > 0) {
+            <div class="operations-wrap">
+              <div class="operations-head">
+                <span>Order</span>
+                <span>Operation Name</span>
+                <span>Work Center</span>
+                <span>Duration (Hours)</span>
+                <span>Notes</span>
+                <span></span>
+              </div>
+
+              @for (op of formOperations; track op.localId; let i = $index) {
+                <div
+                  class="operation-row"
+                  draggable="true"
+                  (dragstart)="onOperationDragStart(i, $event)"
+                  (dragover)="onOperationDragOver($event)"
+                  (drop)="onOperationDrop(i, $event)"
+                  (dragend)="onOperationDragEnd()"
+                >
+                  <div class="operation-seq" title="Drag to reorder">
+                    <span class="drag-handle">::</span>
+                    <span>#{{ i + 1 }}</span>
+                  </div>
+
+                  <input
+                    type="text"
+                    [(ngModel)]="op.operationName"
+                    placeholder="e.g. Cutting, Assembly, Painting"
+                    class="input-cell"
+                  />
+
+                  <select [(ngModel)]="op.workCenterId" class="input-cell" [disabled]="workCentersLoading">
+                    <option value="">Select Work Center</option>
+                    @for (wc of workCenters; track wc.id) {
+                      <option [ngValue]="wc.id">{{ getWorkCenterDisplay(wc.id) }}</option>
+                    }
+                  </select>
+
+                  <div class="duration-input-wrap">
+                    <input
+                      type="text"
+                      [(ngModel)]="op.durationText"
+                      (input)="onOperationDurationInput(op)"
+                      (focus)="onOperationDurationInput(op)"
+                      (blur)="onOperationDurationBlur(op)"
+                      placeholder="e.g. 1h 30m or 1:30"
+                      class="input-cell"
+                    />
+                    @if (op.showDurationDropdown) {
+                      <div class="duration-dropdown">
+                        @for (s of op.durationSuggestions; track s) {
+                          <button type="button" class="duration-option" (mousedown)="selectOperationDuration(op, s)">
+                            {{ s }}
+                          </button>
+                        }
+                      </div>
+                    }
+                  </div>
+
+                  <input type="text" [(ngModel)]="op.notes" placeholder="Optional note" class="input-cell" />
+
+                  <button class="btn-icon" type="button" (click)="removeOperation(i)" title="Remove operation">🗑️</button>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="empty-components">
+              No routing operations added yet. Click <strong>+ Add Routing Operation</strong>, then drag rows to set sequence.
+            </div>
+          }
+        }
+      }
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancel()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()" [disabled]="operationsSaving">
+          {{ operationsSaving ? 'Saving Operations...' : (editing ? 'Update BOM' : 'Create BOM') }}
+        </button>
+      </div>
+    </div>
+  }
+
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" [class.sorted]="sortBy === 'bomNumber'" (click)="sort('bomNumber')">BOM ID <span class="sort-icon">{{ sortBy === 'bomNumber' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'finishedProductName'" (click)="sort('finishedProductName')">Finished Product <span class="sort-icon">{{ sortBy === 'finishedProductName' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'componentCount'" (click)="sort('componentCount')">Components <span class="sort-icon">{{ sortBy === 'componentCount' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'byProductCount'" (click)="sort('byProductCount')">By-Products <span class="sort-icon">{{ sortBy === 'byProductCount' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'notes'" (click)="sort('notes')">Notes <span class="sort-icon">{{ sortBy === 'notes' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'isActive'" (click)="sort('isActive')">Status <span class="sort-icon">{{ sortBy === 'isActive' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of displayRows; track row.id; let i = $index) {
+            <tr [class.row-new]="row.id === highlighter.id">
+              <td class="cell-id">{{ getBomDisplayId(row) }}</td>
+              <td>
+                <div class="product-cell">
+                  <strong>{{ getFinishedProductDisplay(row) }}</strong>
+                </div>
+              </td>
+              <td>{{ getComponentCount(row) }}</td>
+              <td>{{ row.byProducts?.length ?? 0 }}</td>
+              <td>{{ row.notes || '-' }}</td>
+              <td>
+                <span class="badge" [class.badge-active]="row.isActive" [class.badge-inactive]="!row.isActive">
+                  {{ row.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td class="actions-cell">
+                <button class="btn-icon" (click)="openEdit(row)">✏️</button>
+                <button class="btn-icon" (click)="delete(row)">🗑️</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="7" class="empty-row">No BOMs found</td></tr>
+          }
+        </tbody>
+      </table>
+      @if (items.length > 0) {
+        <div class="pagination-bar">
+          <div class="pagination-info">
+            <span>Rows per page:</span>
+            <select [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+              @for (opt of pageSizeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+            </select>
+            <span>Showing {{ (page - 1) * pageSize + 1 }} to {{ page * pageSize > totalCount ? totalCount : page * pageSize }} of {{ totalCount }} entries</span>
+          </div>
+          <div class="pagination-controls">
+            <button class="btn-page" [disabled]="page <= 1" (click)="goToPage(page - 1)">&#8249; Prev</button>
+            <span class="page-indicator">Page {{ page }} of {{ totalPages }}</span>
+            <button class="btn-page" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next &#8250;</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
+

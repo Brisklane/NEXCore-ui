@@ -1,0 +1,99 @@
+<div class="page-container">
+
+  <app-page-header icon="assignment_return" title="Purchase Returns (RTV)" subtitle="Return received goods to the vendor">
+    <button class="btn btn-primary" (click)="openCreate()">+ New Return</button>
+  </app-page-header>
+
+  <app-alert type="error"   [message]="error"></app-alert>
+  <app-alert type="success" [message]="success"></app-alert>
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>New Purchase Return</h3>
+
+      <div class="helper-box">
+        <span class="helper-icon">ℹ️</span>
+        <div>Select a <strong>posted goods receipt</strong> — its received lines load below. Enter the quantity to return
+          per line (capped at the received quantity) and a reason. <strong>Approve</strong> then <strong>Post</strong> the
+          return; a vendor debit note can then be raised against it from the Vendor Debit Notes page.</div>
+      </div>
+
+      <div class="form-grid">
+        <app-select label="Goods Receipt" required [options]="grnOptions" [(ngModel)]="form.goodsReceiptId"
+                    (ngModelChange)="onGrnChange()" [error]="submitted ? errors.grn : ''" placeholder="-- Select posted GRN --"></app-select>
+        <app-input label="Return Date" type="date" [(ngModel)]="form.returnDate"></app-input>
+        <app-select label="Return Reason" [options]="reasonOptions" [(ngModel)]="form.returnReason" placeholder=""></app-select>
+        <app-input label="Vendor RMA #" placeholder="Vendor return authorisation" [(ngModel)]="form.vendorReturnAuthorisationNumber"></app-input>
+        <div class="form-group-full">
+          <app-textarea label="Description" [rows]="2" placeholder="Reason / description" [(ngModel)]="form.description"></app-textarea>
+        </div>
+      </div>
+
+      @if (selectedGrn) {
+        <h4 class="section-title">Return Lines — GRN {{ selectedGrn.receiptNumber }}</h4>
+        @if (submitted && errors.lines) { <div class="alert alert-error">{{ errors.lines }}</div> }
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr><th>Item</th><th style="text-align:right">Received</th><th style="text-align:right">Return Qty</th><th>Reason</th><th>Quality Issue</th></tr>
+            </thead>
+            <tbody>
+              @for (l of formLines; track l.goodsReceiptLineId) {
+                <tr>
+                  <td>{{ l.itemCode ? l.itemCode + ' — ' : '' }}{{ l.itemDescription }}</td>
+                  <td style="text-align:right">{{ l.quantityReceived }}</td>
+                  <td style="text-align:right"><input class="num-input" type="number" min="0" [max]="l.quantityReceived" [(ngModel)]="l.quantityReturned" /></td>
+                  <td>
+                    <select class="txt-input" [(ngModel)]="l.returnReason">
+                      @for (opt of reasonOptions; track opt.value) { <option [ngValue]="opt.value">{{ opt.label }}</option> }
+                    </select>
+                  </td>
+                  <td><input class="txt-input" type="text" [(ngModel)]="l.qualityIssueDescription" placeholder="Issue (optional)" /></td>
+                </tr>
+              } @empty { <tr><td colspan="5" class="empty-row">This GRN has no lines.</td></tr> }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()" [disabled]="saving">Create Return</button>
+      </div>
+    </div>
+  }
+
+  <div class="filters-bar">
+    <span class="filter-search">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search by return #, GRN or vendor…" [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
+      @if (search) { <button class="search-clear" title="Clear search" (click)="search = ''; onSearchChange()">×</button> }
+    </span>
+    <select class="filter-input" [(ngModel)]="statusFilter" (ngModelChange)="onStatusChange()">
+      <option [ngValue]="''">All statuses</option>
+      @for (opt of statusFilterOptions; track opt.value) { <option [ngValue]="opt.value">{{ opt.label }}</option> }
+    </select>
+  </div>
+
+  <app-data-table [sortableAll]="true"
+    [columns]="columns" [data]="returns" [actions]="actions" [loading]="loading"
+    [highlightRowId]="highlighter.id"
+    [totalCount]="totalCount" [page]="page" [pageSize]="pageSize" [sortBy]="sortBy" [sortDirection]="sortDirection"
+    (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)" (sortChange)="onSortChange($event)"
+    emptyMessage="No purchase returns found." (rowAction)="onRowAction($event)">
+  </app-data-table>
+
+</div>
+
+@if (showDeleteConfirm) {
+  <div class="modal-overlay">
+    <div class="modal-box">
+      <h4>Delete Return</h4>
+      <p>Delete <strong>{{ deleteTarget?.returnNumber }}</strong>? This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showDeleteConfirm = false">Cancel</button>
+        <button class="btn btn-danger" (click)="confirmDelete()">Delete</button>
+      </div>
+    </div>
+  </div>
+}

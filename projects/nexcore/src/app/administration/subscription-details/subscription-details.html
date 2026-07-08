@@ -1,0 +1,105 @@
+<div class="page-container">
+
+  <div class="page-header">
+    <div>
+      <h2>Subscription Details</h2>
+      <p class="subtitle">Your plan, usage and billing history for this workspace.</p>
+    </div>
+  </div>
+
+  <!-- ── Current plan hero ───────────────────────────────────────────── -->
+  <section class="plan-hero">
+    <div class="plan-hero-left">
+      <span class="plan-hero-badge">{{ currentPlan.status }}</span>
+      <h3 class="plan-hero-name">{{ currentPlan.name }} Plan</h3>
+      <p class="plan-hero-desc">Renews on {{ currentPlan.renewsOn }} · {{ currentPlan.seatsIncluded }} seats included</p>
+    </div>
+    <div class="plan-hero-right">
+      <div class="plan-hero-price">
+        <span class="amount">{{ currentPlan.price }}</span>
+        <span class="cadence">{{ currentPlan.cadence }}</span>
+      </div>
+      <button class="btn plan-hero-btn" type="button" disabled title="Coming soon">Manage billing</button>
+    </div>
+  </section>
+
+  <!-- ── Usage ───────────────────────────────────────────────────────── -->
+  <section class="block">
+    <div class="block-head">
+      <h3>Usage this period</h3>
+    </div>
+    <div class="usage-grid">
+      <div class="usage-card" *ngFor="let u of usage" [style.--c]="u.accent">
+        <div class="usage-top">
+          <span class="usage-ico"><span class="material-symbols-outlined">{{ u.icon }}</span></span>
+          <span class="usage-label">{{ u.label }}</span>
+        </div>
+        <div class="usage-value">{{ u.used | number }} <span class="usage-of">/ {{ u.limit | number }} {{ u.unit }}</span></div>
+        <div class="usage-bar"><div class="usage-bar-fill" [style.width.%]="usagePercent(u)"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Available plans ─────────────────────────────────────────────── -->
+  <section class="block">
+    <div class="block-head">
+      <h3>Plans</h3>
+      <p class="subtitle">Pricing shown here is illustrative — final plans will be confirmed before launch.</p>
+    </div>
+    <div class="plans-grid">
+      <div class="plan-card" *ngFor="let p of plans" [class.highlight]="p.highlight">
+        <span class="plan-current-tag" *ngIf="p.current">Current plan</span>
+        <h4 class="plan-card-name">{{ p.name }}</h4>
+        <p class="plan-card-tagline">{{ p.tagline }}</p>
+        <div class="plan-card-price"><span class="amount">{{ p.price }}</span><span class="cadence">{{ p.cadence }}</span></div>
+        <ul class="plan-card-features">
+          <li *ngFor="let f of p.features">
+            <span class="material-symbols-outlined">check</span>{{ f }}
+          </li>
+        </ul>
+        <button class="btn plan-card-btn" [class.btn-primary]="!p.current" [class.btn-secondary]="p.current" type="button" [disabled]="p.current" title="Coming soon">
+          {{ p.current ? 'Current plan' : 'Switch plan' }}
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Payment method + billing history ────────────────────────────── -->
+  <section class="block billing-cols">
+    <div class="card payment-card">
+      <div class="block-head"><h3>Payment method</h3></div>
+      <div class="payment-row">
+        <span class="payment-card-chip">{{ paymentMethod.brand }}</span>
+        <div class="payment-row-text">
+          <div class="payment-number">•••• •••• •••• {{ paymentMethod.last4 }}</div>
+          <div class="payment-expiry">Expires {{ paymentMethod.expiry }}</div>
+        </div>
+      </div>
+      <button class="btn btn-secondary" type="button" disabled title="Coming soon">Update payment method</button>
+    </div>
+
+    <div class="card invoices-card">
+      <div class="block-head"><h3>Billing history</h3></div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr><th>Invoice</th><th>Date</th><th>Description</th><th>Amount</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let inv of invoices">
+              <td>{{ inv.id }}</td>
+              <td>{{ inv.date }}</td>
+              <td>{{ inv.description }}</td>
+              <td>{{ inv.amount }}</td>
+              <td><span class="badge" [class.badge-active]="inv.status === 'Paid'" [class.badge-draft]="inv.status === 'Pending'" [class.badge-inactive]="inv.status === 'Failed'">{{ inv.status }}</span></td>
+              <td class="actions-cell">
+                <button class="btn-icon" disabled title="Coming soon"><span class="material-symbols-outlined">download</span></button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</div>

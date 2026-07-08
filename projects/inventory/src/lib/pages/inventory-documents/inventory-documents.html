@@ -1,0 +1,113 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">receipt_long</span></div>
+      <div>
+        <h1>Documents</h1>
+        <p class="inv-hero-sub">View and post receipts, issues and transfers</p>
+      </div>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (success) { <div class="alert alert-success">{{ success }}</div> }
+
+  <div class="md-split">
+    <!-- ══ LEFT: document list ══ -->
+    <div class="md-list">
+      <div class="md-list-head">
+        <span class="inv-search"><span class="material-symbols-outlined">search</span><input type="text" placeholder="Search documents…" [(ngModel)]="filterSearch" (ngModelChange)="onSearchInput()" (keyup.enter)="applyFilters()" /></span>
+        <div class="md-list-head-row">
+          <select class="inv-select" [(ngModel)]="filterDocumentType" (ngModelChange)="applyFilters()">
+            <option value="">All Types</option><option value="Adjustment">Adjustment</option><option value="GRN">Receipt (GRN)</option><option value="Issue">Issue</option><option value="Transfer">Transfer</option><option value="Delivery">Delivery</option>
+          </select>
+          <select class="inv-select" [(ngModel)]="filterStatus" (ngModelChange)="applyFilters()">
+            <option value="">All Statuses</option><option value="DRAFT">Draft</option><option value="POSTED">Posted</option><option value="CANCELLED">Cancelled</option>
+          </select>
+        </div>
+      </div>
+      <div class="md-list-body">
+        @if (loading) {
+          @for (s of [0,1,2,3,4]; track s) { <div class="md-rec"><span class="skeleton sk-circle" style="width:34px;height:34px"></span><div style="flex:1"><span class="skeleton sk-line" style="width:70%"></span></div></div> }
+        } @else if (items.length === 0) {
+          <div class="inv-empty" style="padding:36px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">receipt_long</span></div><div class="inv-empty-title">No documents found</div><div class="inv-empty-text">Documents are created from Goods Receipt, Issue and Adjustment flows.</div></div>
+        } @else {
+          @for (item of displayItems; track item.id) {
+            <button class="md-rec" [class.selected]="detailDoc?.id === item.id" [class.row-new]="item.id === highlighter.id" (click)="viewDocument(item)">
+              <span class="md-rec-ico"><span class="material-symbols-outlined" style="font-size:18px">description</span></span>
+              <div class="md-rec-main">
+                <span class="md-rec-title">{{ item.documentNumber }}</span>
+                <span class="md-rec-sub"><span class="md-rec-code">{{ item.documentType }}</span> · {{ item.documentDate | date:'mediumDate' }} · {{ item.lines?.length ?? 0 }} items</span>
+              </div>
+              <span [class]="statusClass(item.status)">{{ statusLabel(item.status) }}</span>
+            </button>
+          }
+        }
+      </div>
+      @if (totalCount > 0) {
+        <div class="md-list-foot"><span>{{ (page - 1) * pageSize + 1 }}–{{ page * pageSize < totalCount ? page * pageSize : totalCount }} of {{ totalCount | number }}</span><div class="md-pager"><button class="btn-page" (click)="goToPage(page - 1)" [disabled]="page <= 1">Prev</button><button class="btn-page" (click)="goToPage(page + 1)" [disabled]="page >= totalPages">Next</button></div></div>
+      }
+    </div>
+
+    <!-- ══ RIGHT: document detail ══ -->
+    <div class="md-detail">
+      @if (detailDoc) {
+        <div class="md-detail-head">
+          <span class="md-detail-title">Document {{ detailDoc.documentNumber }}</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            @if (detailDoc.status?.toUpperCase() !== 'POSTED' && detailDoc.status?.toUpperCase() !== 'CANCELLED') {
+              <button class="ibtn ibtn--primary" [disabled]="posting && postingId === detailDoc.id" (click)="postDocument(detailDoc)">
+                <span class="material-symbols-outlined">task_alt</span> {{ posting && postingId === detailDoc.id ? 'Posting…' : 'Post' }}
+              </button>
+            }
+            <button class="icon-btn" title="Close" (click)="closeDetail()"><span class="material-symbols-outlined">close</span></button>
+          </div>
+        </div>
+        <div class="md-detail-body">
+          <div class="detail-meta">
+            <div><span class="detail-label">Type</span> {{ detailDoc.documentType }}</div>
+            <div><span class="detail-label">Status</span> <span [class]="statusClass(detailDoc.status)">{{ statusLabel(detailDoc.status) }}</span></div>
+            <div><span class="detail-label">Date</span> {{ detailDoc.documentDate | date:'medium' }}</div>
+            <div><span class="detail-label">Posted</span> {{ detailDoc.postingDate ? (detailDoc.postingDate | date:'medium') : '—' }}</div>
+            <div class="detail-full"><span class="detail-label">Description</span> {{ detailDoc.description || '—' }}</div>
+          </div>
+          @if (detailLoading) {
+            <div class="loading-spinner">Loading lines…</div>
+          } @else {
+            <div class="table-container">
+              <table>
+                <thead><tr><th>#</th><th>Item</th><th>Location</th><th class="num-cell">Qty</th><th>Unit</th><th class="num-cell">Unit Cost</th><th class="num-cell">Total</th></tr></thead>
+                <tbody>
+                  @if (!detailDoc.lines || detailDoc.lines.length === 0) {
+                    <tr><td colspan="7" class="empty-row">No line items</td></tr>
+                  }
+                  @for (l of detailDoc.lines; track l.id) {
+                    <tr>
+                      <td>{{ l.lineNumber }}</td>
+                      <td>{{ itemName(l.itemId) }}</td>
+                      <td>{{ warehouseName(l.warehouseId) }}</td>
+                      <td class="num-cell">{{ l.quantity | number:'1.2-2' }}</td>
+                      <td>{{ unitName(l.unitId) }}</td>
+                      <td class="num-cell">{{ l.unitCost | number:'1.2-2' }}</td>
+                      <td class="num-cell">{{ l.totalCost | number:'1.2-2' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <div class="detail-totals">
+              <span>Total Qty: <strong>{{ detailDoc.totalQuantity | number:'1.2-2' }}</strong></span>
+              <span>Total Cost: <strong>{{ detailDoc.totalCost | number:'1.2-2' }}</strong></span>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="md-empty">
+          <div class="md-empty-icon"><span class="material-symbols-outlined">receipt_long</span></div>
+          <div class="md-empty-title">Document details</div>
+          <div class="md-empty-text">Select a document from the list to view its lines and post it.</div>
+        </div>
+      }
+    </div>
+  </div>
+</div>

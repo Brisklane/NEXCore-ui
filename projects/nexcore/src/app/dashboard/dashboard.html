@@ -1,0 +1,227 @@
+<div class="dash">
+
+  <!-- ===== Welcome ===== -->
+  <header class="dash-head">
+    <div>
+      <h1 class="dash-title">{{ greeting() }}, {{ userName() }} 👋</h1>
+      <p class="dash-sub">Here's what's happening with your business today.</p>
+    </div>
+    <div class="dash-date">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+           stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+        <path d="M16 2v4M8 2v4M3 10h18"></path>
+      </svg>
+      <span>{{ today | date:'EEE, MMM d, y' }}</span>
+    </div>
+  </header>
+
+  <!-- ===== KPI row ===== -->
+  <section class="kpi-grid">
+    <article class="kpi-card" *ngFor="let k of kpis" [style.--c]="k.accent">
+      <div class="kpi-top">
+        <span class="kpi-ico">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+               stroke-linecap="round" stroke-linejoin="round" [ngSwitch]="k.icon">
+            <g *ngSwitchCase="'revenue'"><path d="M12 1v22"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></g>
+            <g *ngSwitchCase="'orders'"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path></g>
+            <g *ngSwitchCase="'users'"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path></g>
+            <g *ngSwitchCase="'invoice'"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6M9 13h6M9 17h4"></path></g>
+          </svg>
+        </span>
+        <span class="kpi-delta" [class.neg]="k.delta < 0">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path *ngIf="k.delta >= 0" d="M7 17 17 7M9 7h8v8"></path>
+            <path *ngIf="k.delta < 0" d="M7 7l10 10M15 17H7V9"></path>
+          </svg>
+          {{ k.delta < 0 ? -k.delta : k.delta }}%
+        </span>
+      </div>
+      <div class="kpi-value">{{ k.value }}</div>
+      <div class="kpi-foot">
+        <span class="kpi-label">{{ k.label }}</span>
+        <svg class="kpi-spark" viewBox="0 0 64 24" preserveAspectRatio="none">
+          <polyline [attr.points]="sparkPoints(k.spark)" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round"></polyline>
+        </svg>
+      </div>
+    </article>
+  </section>
+
+  <!-- ===== Core Modules ===== -->
+  <section class="dash-block">
+    <div class="block-head">
+      <h2>Core Modules</h2>
+    </div>
+    <div class="mod-grid">
+      <a class="mod-card" *ngFor="let m of modules" [routerLink]="m.route" [style.--c]="m.accent">
+        <span class="mod-ico"><img [src]="m.image" [alt]="m.label" /></span>
+        <div class="mod-body">
+          <div class="mod-name">{{ m.label }}</div>
+          <div class="mod-desc">{{ m.desc }}</div>
+        </div>
+        <div class="mod-foot">
+          <span class="mod-active">{{ m.active }} active</span>
+          <svg class="mod-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <!-- ===== Overview + side rail ===== -->
+  <section class="dash-cols">
+
+    <!-- Left column: chart + invoices -->
+    <div class="chart-col">
+
+      <!-- Business Overview chart -->
+      <div class="card chart-card">
+        <div class="block-head">
+          <h2>Business Overview</h2>
+          <span class="legend">
+            <i class="dot rev"></i> Revenue
+            <i class="dot exp"></i> Expenses
+          </span>
+        </div>
+
+        <div class="chart-wrap">
+          <svg class="chart" viewBox="0 0 600 220" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="revFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--brand-blue)" stop-opacity="0.28"></stop>
+                <stop offset="100%" stop-color="var(--brand-blue)" stop-opacity="0"></stop>
+              </linearGradient>
+            </defs>
+            <line *ngFor="let g of [0,1,2,3]" class="grid-line"
+                  x1="0" [attr.y1]="g*55" x2="600" [attr.y2]="g*55"></line>
+            <path [attr.d]="areaPath(revenue, 600, 200)" fill="url(#revFill)"></path>
+            <path [attr.d]="linePath(revenue, 600, 200)" fill="none" stroke="var(--brand-blue)" stroke-width="3"
+                  stroke-linecap="round" stroke-linejoin="round"></path>
+            <path [attr.d]="linePath(expenses, 600, 200)" fill="none" stroke="var(--brand-cyan)" stroke-width="2.5"
+                  stroke-dasharray="5 6" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+          <div class="chart-x">
+            <span *ngFor="let m of months">{{ m }}</span>
+          </div>
+        </div>
+
+        <div class="chart-stats">
+          <div><span class="cs-label">Revenue</span><span class="cs-val">$248,620</span><span class="cs-up">▲ 12.5%</span></div>
+          <div><span class="cs-label">Expenses</span><span class="cs-val">$112,400</span><span class="cs-up">▲ 4.3%</span></div>
+          <div><span class="cs-label">Net Profit</span><span class="cs-val">$136,220</span><span class="cs-up">▲ 18.6%</span></div>
+        </div>
+      </div>
+
+      <!-- Recent Invoices -->
+      <div class="card inv-card">
+        <div class="block-head">
+          <h2>Recent Invoices</h2>
+          <a class="link-more" routerLink="/accounting">View all</a>
+        </div>
+        <div class="inv-table">
+          <div class="inv-row inv-header">
+            <span>Invoice</span>
+            <span>Client</span>
+            <span>Amount</span>
+            <span>Due Date</span>
+            <span>Status</span>
+          </div>
+          <div class="inv-row" *ngFor="let inv of recentInvoices">
+            <span class="inv-id">{{ inv.id }}</span>
+            <span class="inv-client">{{ inv.client }}</span>
+            <span class="inv-amount">{{ inv.amount }}</span>
+            <span class="inv-due">{{ inv.dueDate }}</span>
+            <span class="inv-status"
+                  [class.paid]="inv.status === 'Paid'"
+                  [class.overdue]="inv.status === 'Overdue'"
+                  [class.pending]="inv.status === 'Pending'">{{ inv.status }}</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right rail: activity + tasks + quick actions -->
+    <div class="side-rail">
+
+      <!-- Activity -->
+      <div class="card">
+        <div class="block-head">
+          <h2>Recent Activity</h2>
+          <a class="link-more" href="javascript:void(0)">View all</a>
+        </div>
+        <ul class="activity">
+          <li *ngFor="let a of activities">
+            <span class="act-dot" [style.background]="a.tone"></span>
+            <div class="act-body">
+              <div class="act-title">{{ a.title }}</div>
+              <div class="act-meta">{{ a.meta }} · {{ a.time }}</div>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Tasks -->
+      <div class="card">
+        <div class="block-head">
+          <h2>My Tasks</h2>
+          <span class="task-count">{{ tasks.length }}</span>
+        </div>
+        <ul class="tasks">
+          <li *ngFor="let t of tasks" [class.done]="t.done" (click)="toggleTask(t)">
+            <span class="check" [class.on]="t.done">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                   stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+            </span>
+            <span class="task-text">{{ t.text }}</span>
+            <span class="task-pri" [class.high]="t.priority==='High'" [class.med]="t.priority==='Medium'">{{ t.priority }}</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="card qa-card">
+        <div class="block-head">
+          <h2>Quick Actions</h2>
+        </div>
+        <div class="qa-grid">
+          <a class="qa-btn" *ngFor="let a of quickActions" [routerLink]="a.route" [style.--c]="a.accent">
+            <span class="qa-ico">
+              <span class="material-symbols-outlined">{{ a.icon }}</span>
+            </span>
+            <span class="qa-label">{{ a.label }}</span>
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===== Industry Solutions ===== -->
+  <section class="dash-block">
+    <div class="block-head">
+      <h2>Industry Solutions</h2>
+      <a class="link-more" href="javascript:void(0)">View all</a>
+    </div>
+    <div class="ind-row">
+      <article class="ind-card" *ngFor="let s of industries" [style.--c]="s.accent">
+        <span class="ind-ico">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+               stroke-linecap="round" stroke-linejoin="round" [ngSwitch]="s.icon">
+            <g *ngSwitchCase="'restaurant'"><path d="M3 2v7c0 1.1.9 2 2 2h0a2 2 0 0 0 2-2V2M5 2v20M16 2a4 4 0 0 0-4 4v6h4M16 12v10"></path></g>
+            <g *ngSwitchCase="'pos'"><rect x="3" y="4" width="18" height="12" rx="2"></rect><path d="M7 20h10M9 16v4M15 16v4"></path></g>
+            <g *ngSwitchCase="'realestate'"><path d="M3 11l9-8 9 8"></path><path d="M5 9.5V21h14V9.5M9 21v-6h6v6"></path></g>
+            <g *ngSwitchCase="'health'"><path d="M19 14c1.5-1.5 3-3.3 3-5.5A4.5 4.5 0 0 0 12 5.5 4.5 4.5 0 0 0 2 8.5c0 2.2 1.5 4 3 5.5l7 7z"></path></g>
+            <g *ngSwitchCase="'retail'"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><path d="M3 6h18M16 10a4 4 0 0 1-8 0"></path></g>
+          </svg>
+        </span>
+        <div class="ind-name">{{ s.name }}</div>
+        <div class="ind-tag">{{ s.tag }}</div>
+        <div class="ind-desc">{{ s.desc }}</div>
+        <button class="ind-btn" type="button">Explore</button>
+      </article>
+    </div>
+  </section>
+
+</div>

@@ -1,0 +1,115 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">schema</span></div>
+      <div>
+        <h1>Workflow Conditions</h1>
+        <p class="inv-hero-sub">Define conditional rules per workflow configuration</p>
+      </div>
+    </div>
+    <button class="btn btn-primary" [disabled]="!selectedWorkflowId" (click)="openCreateForm()">+ New Condition</button>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="form-group" style="max-width:400px;margin-bottom:1rem;">
+    <label>Filter by Workflow</label>
+    <select [(ngModel)]="selectedWorkflowId" (ngModelChange)="onWorkflowChange()">
+      <option value="">— Select Workflow —</option>
+      @for (w of workflows; track w.id) {
+        <option [value]="w.id">{{ w.workflowName }}</option>
+      }
+    </select>
+  </div>
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editingCondition ? 'Edit Condition' : 'Create Condition' }}</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Workflow *</label>
+          <select [(ngModel)]="formWorkflowConfigId">
+            <option value="">— Select Workflow —</option>
+            @for (w of workflows; track w.id) {
+              <option [value]="w.id">{{ w.workflowName }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Field Name</label>
+          <input type="text" [(ngModel)]="formFieldName" placeholder="e.g. salary, department" />
+        </div>
+        <div class="form-group">
+          <label>Operator</label>
+          <input type="text" [(ngModel)]="formOperator" placeholder="e.g. GreaterThan, Equals" />
+        </div>
+        <div class="form-group">
+          <label>Field Value</label>
+          <input type="text" [(ngModel)]="formFieldValue" placeholder="e.g. 100000" />
+        </div>
+        <div class="form-group">
+          <label>Action Type</label>
+          <input type="text" [(ngModel)]="formActionType" placeholder="e.g. AddApprover, Skip" />
+        </div>
+        <div class="form-group">
+          <label>Action Value</label>
+          <input type="text" [(ngModel)]="formActionValue" placeholder="e.g. employee ID or level" />
+        </div>
+        <div class="form-group">
+          <label>Logical Group</label>
+          <input type="number" [(ngModel)]="formLogicalGroup" min="1" />
+        </div>
+        <div class="form-group">
+          <label>Join Operator</label>
+          <input type="text" [(ngModel)]="formJoinOperator" placeholder="e.g. AND, OR" />
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="saveCondition()">{{ editingCondition ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else if (selectedWorkflowId) {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>Operator</th>
+            <th>Value</th>
+            <th>Action Type</th>
+            <th>Action Value</th>
+            <th>Group</th>
+            <th>Join</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of conditions; track c.id) {
+            <tr>
+              <td>{{ c.fieldName }}</td>
+              <td>{{ c.operator }}</td>
+              <td>{{ c.fieldValue }}</td>
+              <td>{{ c.actionType }}</td>
+              <td>{{ c.actionValue }}</td>
+              <td>{{ c.logicalGroup }}</td>
+              <td>{{ c.joinOperator }}</td>
+              <td>
+                <button class="btn btn-sm btn-secondary" (click)="openEditForm(c)">Edit</button>
+                <button class="btn btn-sm btn-danger" (click)="deleteCondition(c)">Delete</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="8" class="empty-cell">No conditions defined for this workflow.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else {
+    <div class="empty-state"><p>Select a workflow to view its conditions.</p></div>
+  }
+</div>

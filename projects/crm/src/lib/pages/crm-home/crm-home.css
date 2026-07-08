@@ -1,0 +1,7 @@
+@import '../shared-styles.css';
+
+/* CRM dashboard — brand cyan→blue accent (global .dsh kit supplies the layout) */
+.crm-dsh {
+  --dsh-accent: #2b7fff;
+  --dsh-accent-2: #22c7e6;
+}

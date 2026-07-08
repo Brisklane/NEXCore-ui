@@ -1,0 +1,124 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">schema</span></div>
+      <div>
+        <h1>Workflow Escalations</h1>
+        <p class="inv-hero-sub">Define escalation rules per workflow step</p>
+      </div>
+    </div>
+    <button class="btn btn-primary" [disabled]="!selectedStepId" (click)="openCreateForm()">+ New Escalation</button>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="form-row" style="display:flex;gap:1rem;margin-bottom:1rem;flex-wrap:wrap;">
+    <div class="form-group" style="min-width:280px;">
+      <label>Filter by Workflow</label>
+      <select [(ngModel)]="selectedWorkflowId" (ngModelChange)="onWorkflowChange()">
+        <option value="">— Select Workflow —</option>
+        @for (w of workflows; track w.id) {
+          <option [value]="w.id">{{ w.workflowName }}</option>
+        }
+      </select>
+    </div>
+    @if (selectedWorkflowId) {
+      <div class="form-group" style="min-width:280px;">
+        <label>Filter by Step</label>
+        <select [(ngModel)]="selectedStepId" (ngModelChange)="onStepChange()">
+          <option value="">— Select Step —</option>
+          @for (s of steps; track s.id) {
+            <option [value]="s.id">Level {{ s.levelNo }} — {{ s.approverType }}</option>
+          }
+        </select>
+      </div>
+    }
+  </div>
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editingEscalation ? 'Edit Escalation' : 'Create Escalation' }}</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Step *</label>
+          <select [(ngModel)]="formWorkflowConfigStepId">
+            <option value="">— Select Step —</option>
+            @for (s of steps; track s.id) {
+              <option [value]="s.id">Level {{ s.levelNo }} — {{ s.approverType }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>After Hours</label>
+          <input type="number" [(ngModel)]="formAfterHours" min="1" />
+        </div>
+        <div class="form-group">
+          <label>Action Type</label>
+          <input type="text" [(ngModel)]="formActionType" placeholder="e.g. Notify, AutoApprove" />
+        </div>
+        <div class="form-group">
+          <label>Action Target</label>
+          <input type="text" [(ngModel)]="formActionTarget" placeholder="e.g. Manager email or employee ID" />
+        </div>
+        <div class="form-group">
+          <label>Reminder Count</label>
+          <input type="number" [(ngModel)]="formReminderCount" min="0" />
+        </div>
+        <div class="form-group form-check-row">
+          <label><input type="checkbox" [(ngModel)]="formAutoApproveFlag" /> Auto-Approve on Escalation</label>
+        </div>
+        @if (editingEscalation) {
+          <div class="form-group form-check-row">
+            <label><input type="checkbox" [(ngModel)]="formIsActive" /> Active</label>
+          </div>
+        }
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="saveEscalation()">{{ editingEscalation ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else if (selectedStepId) {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>After Hours</th>
+            <th>Action Type</th>
+            <th>Action Target</th>
+            <th>Reminders</th>
+            <th>Auto-Approve</th>
+            <th>Active</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (e of escalations; track e.id) {
+            <tr>
+              <td>{{ e.afterHours }}h</td>
+              <td>{{ e.actionType }}</td>
+              <td>{{ e.actionTarget }}</td>
+              <td>{{ e.reminderCount }}</td>
+              <td>{{ e.autoApproveFlag ? 'Yes' : 'No' }}</td>
+              <td>{{ e.isActive ? 'Yes' : 'No' }}</td>
+              <td>
+                <button class="btn btn-sm btn-secondary" (click)="openEditForm(e)">Edit</button>
+                <button class="btn btn-sm btn-danger" (click)="deleteEscalation(e)">Delete</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="7" class="empty-cell">No escalations defined for this step.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else if (selectedWorkflowId) {
+    <div class="empty-state"><p>Select a step to view its escalations.</p></div>
+  } @else {
+    <div class="empty-state"><p>Select a workflow to begin.</p></div>
+  }
+</div>

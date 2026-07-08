@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 116 28" width="116" height="28">
+  <!-- Book icon -->
+  <rect x="2" y="3" width="16" height="22" rx="2" fill="#1565C0"/>
+  <rect x="4" y="3" width="3" height="22" fill="#1976D2"/>
+  <line x1="8" y1="9" x2="16" y2="9" stroke="#90CAF9" stroke-width="1"/>
+  <line x1="8" y1="13" x2="16" y2="13" stroke="#90CAF9" stroke-width="1"/>
+  <line x1="8" y1="17" x2="16" y2="17" stroke="#90CAF9" stroke-width="1"/>
+  <!-- Text -->
+  <text x="23" y="13" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="700" fill="#1565C0" letter-spacing="0.5">SCHOOL</text>
+  <text x="23" y="24" font-family="Segoe UI, Arial, sans-serif" font-size="8.5" font-weight="400" fill="#666" letter-spacing="0.5">NEXCORE</text>
+</svg>

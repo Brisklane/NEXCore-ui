@@ -1,0 +1,33 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    // "ignoreDeprecations": "6.0",
+
+    "baseUrl": "./",
+    "paths": {
+      "@nexcore/core":   ["projects/core/src/public-api"],
+      "@nexcore/shared": ["projects/shared/src/public-api"],
+      "@env":              ["projects/nexcore/src/environments/environment"],
+      "@nexcore/accounting": ["projects/accounting/src/public-api"],
+      "@nexcore/inventory": ["projects/inventory/src/public-api"],
+      "@nexcore/sales": ["projects/sales/src/public-api"],
+      "@nexcore/procurement": ["projects/procurement/src/public-api"],
+      "@nexcore/hr": ["projects/hr/src/public-api"],
+      "@nexcore/crm": ["projects/crm/src/public-api"],
+      "@nexcore/manufacturing": ["projects/manufacturing/src/public-api"]
+    },
+
+    "moduleResolution": "bundler",
+    "target": "ES2022",
+    "module": "ESNext",
+    "strict": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true
+  }
+}

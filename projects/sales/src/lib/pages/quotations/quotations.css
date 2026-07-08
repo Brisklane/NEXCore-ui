@@ -1,0 +1,56 @@
+@import '../shared-styles.css';
+
+/* ─── Live stock availability (lines tab) ─── */
+.item-input-num.input-error {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 2px rgba(239,68,68,0.15);
+}
+.stock-label {
+  display: block;
+  font-size: 0.72rem;
+  margin-top: 3px;
+  white-space: nowrap;
+  color: var(--text-secondary, #6b7280);
+}
+.stock-label.stock-ok { color: #16a34a; font-weight: 500; }
+.stock-label.stock-warn { color: #ef4444; font-weight: 500; }
+
+/* Quick-add customer modal (opened from the customer picker) */
+.qc-modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+}
+.qc-modal-card {
+  width: 100%; max-width: 640px;
+  background: #fff; border-radius: 12px;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+  display: flex; flex-direction: column;
+  max-height: 90vh; overflow: hidden;
+}
+.qc-modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid #e2e8f0;
+  background: linear-gradient(180deg, #eff6ff 0%, #f8fbff 100%);
+}
+.qc-modal-head h4 { margin: 0; font-size: 1.1rem; color: #0f2f55; }
+.qc-modal-close {
+  width: 30px; height: 30px; border-radius: 8px;
+  border: 1px solid #cfe0f5; background: #fff; cursor: pointer; font-size: 15px;
+}
+.qc-modal-close:hover { background: #eff6ff; }
+.qc-modal-body { padding: 18px 20px; overflow-y: auto; }
+.qc-modal-hint { margin: 0 0 14px; font-size: 0.85rem; color: #64748b; }
+.qc-form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.qc-form-grid .qc-span-2 { grid-column: 1 / -1; }
+.qc-form-grid .form-group { display: flex; flex-direction: column; gap: 4px; }
+.qc-form-grid label { font-size: 0.8rem; font-weight: 600; color: #475569; }
+.qc-form-grid input, .qc-form-grid select {
+  padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem;
+}
+.qc-modal-foot {
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding: 14px 20px; border-top: 1px solid #e2e8f0; background: #f8fafc;
+}
+.qc-error { color: #ef4444; font-size: 0.85rem; margin-bottom: 10px; }

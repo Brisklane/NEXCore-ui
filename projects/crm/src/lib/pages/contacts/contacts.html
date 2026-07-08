@@ -1,0 +1,271 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">contacts</span></div>
+      <div>
+        <h1>Contacts</h1>
+        <p class="inv-hero-sub">Manage your customer contacts</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Contact</button>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="md-split">
+    <!-- ══ LEFT: contact rows ══ -->
+    <div class="md-list">
+      <div class="md-list-head">
+        <span class="inv-search"><span class="material-symbols-outlined">search</span><input type="text" placeholder="Search contacts…" [(ngModel)]="searchTerm" (input)="onSearchChange()" /></span>
+      </div>
+      <div class="md-list-body">
+        @if (loading) {
+          @for (s of [0,1,2,3]; track s) { <div class="md-rec"><span class="skeleton sk-circle" style="width:34px;height:34px"></span><div style="flex:1"><span class="skeleton sk-line" style="width:70%"></span></div></div> }
+        } @else if (filteredContacts.length === 0) {
+          <div class="inv-empty" style="padding:36px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">contacts</span></div><div class="inv-empty-title">No contacts</div><div class="inv-empty-text">Create your first contact.</div></div>
+        } @else {
+          @for (c of filteredContacts; track c.id) {
+            <button class="md-rec" [class.selected]="editingContact?.id === c.id" (click)="openEditForm(c)">
+              <span class="md-rec-ico">{{ (c.firstName || c.lastName || '?').charAt(0) }}</span>
+              <div class="md-rec-main"><span class="md-rec-title">{{ c.firstName }} {{ c.lastName }}</span><span class="md-rec-sub">{{ c.accountName || c.email || '—' }}@if (c.title) { · {{ c.title }} }</span></div>
+            </button>
+          }
+        }
+      </div>
+      @if (totalCount > 0) {
+        <div class="md-list-foot"><span>{{ firstEntry }}–{{ lastEntry }} of {{ totalCount }}</span><div class="md-pager"><button class="btn-page" [disabled]="page <= 1" (click)="goToPage(page - 1)">Prev</button><button class="btn-page" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next</button></div></div>
+      }
+    </div>
+
+    <!-- ══ RIGHT: form | empty ══ -->
+    <div class="md-detail">
+      @if (showForm) {
+        <div class="md-detail-head">
+          <span class="md-detail-title">{{ editingContact ? 'Edit Contact' : 'New Contact' }}</span>
+          <button class="icon-btn" title="Close" (click)="cancelForm()"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="md-detail-body">
+      <form [formGroup]="contactForm" class="contact-form">
+        <section class="form-section">
+          <div class="section-header">
+            <h4>About</h4>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="salutation">Salutation</label>
+              <crm-lookup-dropdown
+                formControlName="salutation"
+                [options]="salutationOptions"
+                placeholder="Select salutation"
+                label="Salutation"
+              ></crm-lookup-dropdown>
+            </div>
+
+            <div class="name-grid form-group-full">
+              <div class="form-group">
+                <label for="firstName">First Name <span class="required">*</span></label>
+                <input id="firstName" type="text" formControlName="firstName" class="form-control" placeholder="Enter first name" />
+                @if (getFieldError('firstName')) {
+                  <span class="error-text">{{ getFieldError('firstName') }}</span>
+                }
+              </div>
+
+              <div class="form-group">
+                <label for="lastName">Last Name <span class="required">*</span></label>
+                <input id="lastName" type="text" formControlName="lastName" class="form-control" placeholder="Enter last name" />
+                @if (getFieldError('lastName')) {
+                  <span class="error-text">{{ getFieldError('lastName') }}</span>
+                }
+              </div>
+            </div>
+
+            <div class="form-group form-group-full">
+              <label>Account Name</label>
+              <crm-lookup-dropdown
+                formControlName="accountId"
+                [options]="accountLookupOptions"
+                placeholder="Select account"
+                label="Account"
+              ></crm-lookup-dropdown>
+            </div>
+
+            <div class="form-group">
+              <label for="title">Title</label>
+              <input id="title" type="text" formControlName="title" class="form-control" placeholder="Contact title" />
+            </div>
+
+            <div class="form-group form-group-full">
+              <label for="reportsToSearch">Report To</label>
+              <div class="lookup-field">
+                <span class="lookup-icon">⌕</span>
+                <input
+                  id="reportsToSearch"
+                  type="text"
+                  formControlName="reportsToSearch"
+                  class="form-control lookup-input"
+                  placeholder="Search contact"
+                  [matAutocomplete]="reportToAuto"
+                />
+                <span class="lookup-tag">Contact</span>
+              </div>
+              <span class="lookup-help">Search by contact name to assign a reporting relationship.</span>
+              <mat-autocomplete
+                #reportToAuto="matAutocomplete"
+                [displayWith]="displayContactOption"
+                (optionSelected)="onReportToSelected($event.option.value)"
+              >
+                @for (option of filteredReportToOptions; track option.id) {
+                  <mat-option [value]="option">
+                    <div class="lookup-option">
+                      <span class="lookup-option-title">{{ option.label }}</span>
+                      <span class="lookup-option-meta">Contact</span>
+                    </div>
+                  </mat-option>
+                }
+                @if (filteredReportToOptions.length === 0) {
+                  <mat-option disabled>
+                    <div class="lookup-option lookup-option-empty">
+                      <span class="lookup-option-title">No matching contacts</span>
+                      <span class="lookup-option-meta">Try a different search term</span>
+                    </div>
+                  </mat-option>
+                }
+              </mat-autocomplete>
+            </div>
+
+            <div class="form-group form-group-full">
+              <label for="description">Description</label>
+              <textarea
+                id="description"
+                formControlName="description"
+                class="form-control textarea"
+                rows="4"
+                placeholder="Add background, relationship notes, or conversation context"
+              ></textarea>
+            </div>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <div class="section-header">
+            <h4>Get in Touch</h4>
+          </div>
+
+          <div class="form-grid">
+            <!-- Country — select first to unlock phone and state -->
+            <div class="form-group">
+              <label for="mailingCountry">Country</label>
+              <crm-lookup-dropdown
+                formControlName="mailingCountry"
+                [options]="countryOptions"
+                placeholder="Select country"
+                label="Country"
+              ></crm-lookup-dropdown>
+            </div>
+
+            <!-- Phone — enabled after country is selected; dial code badge is non-editable -->
+            <div class="form-group">
+              <label for="phone">Phone</label>
+              <div class="phone-field-wrap" [class.field-disabled]="contactForm.get('phone')?.disabled">
+                @if (phoneDialCode) {
+                  <span class="phone-dial-badge">{{ phoneDialCode }}</span>
+                }
+                <input
+                  id="phone"
+                  type="tel"
+                  class="phone-number-input"
+                  [class.no-prefix]="!phoneDialCode"
+                  [disabled]="contactForm.get('phone')?.disabled"
+                  [value]="phoneDisplayValue"
+                  (input)="onPhoneInput($event)"
+                  (blur)="contactForm.get('phone')?.markAsTouched()"
+                  [placeholder]="phoneDialCode ? 'Phone number' : 'Select a country first'"
+                  [maxlength]="phoneNumberMax"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="email">Email</label>
+              <input id="email" type="email" formControlName="email" class="form-control" placeholder="name@company.com" />
+              @if (getFieldError('email')) {
+                <span class="error-text">{{ getFieldError('email') }}</span>
+              }
+            </div>
+
+            <!-- Mailing Address -->
+            <div class="form-group form-group-full">
+              <label for="mailingStreet">Mailing Address</label>
+              <input
+                id="mailingStreet"
+                type="text"
+                formControlName="mailingStreet"
+                class="form-control"
+                [class.error]="contactForm.get('mailingStreet')?.invalid && contactForm.get('mailingStreet')?.touched"
+                placeholder="Street address, building, floor, etc."
+                [maxlength]="addressMax"
+              />
+              @if (getFieldError('mailingStreet')) {
+                <span class="error-text">{{ getFieldError('mailingStreet') }}</span>
+              }
+            </div>
+
+            <div class="form-group">
+              <label for="mailingCity">Mailing City</label>
+              <input
+                id="mailingCity"
+                type="text"
+                formControlName="mailingCity"
+                class="form-control"
+                [class.error]="contactForm.get('mailingCity')?.invalid && contactForm.get('mailingCity')?.touched"
+                placeholder="City"
+                [maxlength]="cityMax"
+              />
+              @if (getFieldError('mailingCity')) {
+                <span class="error-text">{{ getFieldError('mailingCity') }}</span>
+              }
+            </div>
+
+            <div class="form-group">
+              <label for="mailingPostalCode">Mailing Zip Code</label>
+              <input id="mailingPostalCode" type="text" formControlName="mailingPostalCode" class="form-control" placeholder="Postal / ZIP code" />
+            </div>
+
+            <!-- State/Province — enabled after country is selected -->
+            <div class="form-group">
+              <label for="mailingState">Mailing State/Province</label>
+              <crm-lookup-dropdown
+                formControlName="mailingState"
+                [options]="stateOptions"
+                placeholder="Select state/province"
+                label="State/Province"
+              ></crm-lookup-dropdown>
+            </div>
+
+            <div class="form-group form-group-checkbox form-group-full">
+              <mat-checkbox formControlName="emailOptOut">Do not send marketing emails</mat-checkbox>
+            </div>
+          </div>
+        </section>
+
+        <div class="form-actions">
+          @if (editingContact) { <button class="ibtn ibtn--danger" type="button" style="margin-right:auto" (click)="deleteContact(editingContact.id)"><span class="material-symbols-outlined">delete</span> Delete</button> }
+          <button class="ibtn ibtn--secondary" type="button" (click)="cancelForm()">Cancel</button>
+          <button class="ibtn ibtn--primary" type="button" (click)="saveContact()"><span class="material-symbols-outlined">save</span> {{ editingContact ? 'Update Contact' : 'Create Contact' }}</button>
+        </div>
+      </form>
+        </div>
+      } @else {
+        <div class="md-empty">
+          <div class="md-empty-icon"><span class="material-symbols-outlined">contacts</span></div>
+          <div class="md-empty-title">Manage contacts</div>
+          <div class="md-empty-text">Select a contact to edit, or create a new one.</div>
+          <button class="btn-brand" style="margin-top:8px" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Contact</button>
+        </div>
+      }
+    </div>
+  </div>
+</div>

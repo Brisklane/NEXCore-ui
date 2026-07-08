@@ -1,0 +1,91 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">beach_access</span></div>
+      <div>
+        <h1>Leave Requests</h1>
+        <p class="inv-hero-sub">Review and manage employee leave applications</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Request</button>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="md-split">
+    <!-- ══ LEFT: request rows ══ -->
+    <div class="md-list">
+      <div class="md-list-body">
+        @if (loading) {
+          @for (s of [0,1,2,3,4]; track s) { <div class="md-rec"><span class="skeleton sk-circle" style="width:34px;height:34px"></span><div style="flex:1"><span class="skeleton sk-line" style="width:70%"></span></div></div> }
+        } @else if (requests.length === 0) {
+          <div class="inv-empty" style="padding:36px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">beach_access</span></div><div class="inv-empty-title">No leave requests</div><div class="inv-empty-text">Create your first leave request.</div></div>
+        } @else {
+          @for (r of requests; track r.id) {
+            <button class="md-rec" [class.selected]="editingRequest?.id === r.id" (click)="openEditForm(r)">
+              <span class="md-rec-ico"><span class="material-symbols-outlined" style="font-size:17px">event_busy</span></span>
+              <div class="md-rec-main"><span class="md-rec-title">{{ r.employeeId }}</span><span class="md-rec-sub">{{ r.startDate | date:'MMM d' }} – {{ r.endDate | date:'MMM d' }} · {{ r.totalDays }}d</span></div>
+              <span class="status-pill" [class.pill-instock]="r.status === 'approved'" [class.pill-out]="r.status === 'rejected'" [class.pill-low]="r.status === 'pending'" [class.pill-muted]="r.status !== 'approved' && r.status !== 'rejected' && r.status !== 'pending'">{{ r.status }}</span>
+            </button>
+          }
+        }
+      </div>
+    </div>
+
+    <!-- ══ RIGHT: form + status actions | empty ══ -->
+    <div class="md-detail">
+      @if (showForm) {
+        <div class="md-detail-head">
+          <span class="md-detail-title">{{ editingRequest ? 'Leave Request' : 'New Leave Request' }}</span>
+          <div style="display:flex;gap:6px;align-items:center">
+            @if (editingRequest && editingRequest.status === 'pending') {
+              <button class="ibtn ibtn--sm ibtn--secondary" (click)="approve(editingRequest)"><span class="material-symbols-outlined">check</span> Approve</button>
+              <button class="ibtn ibtn--sm ibtn--secondary" (click)="reject(editingRequest)"><span class="material-symbols-outlined">block</span> Reject</button>
+            }
+            <button class="icon-btn" title="Close" (click)="cancelForm()"><span class="material-symbols-outlined">close</span></button>
+          </div>
+        </div>
+        <div class="md-detail-body">
+          <div class="form-grid">
+        @if (!editingRequest) {
+          <div class="form-group">
+            <label>Employee ID *</label>
+            <input type="text" [(ngModel)]="formEmployeeId" placeholder="Employee ID" />
+          </div>
+          <div class="form-group">
+            <label>Leave Type ID *</label>
+            <input type="text" [(ngModel)]="formLeaveTypeId" placeholder="Leave Type ID" />
+          </div>
+        }
+        <div class="form-group">
+          <label>Start Date *</label>
+          <input type="date" [(ngModel)]="formStartDate" />
+        </div>
+        <div class="form-group">
+          <label>End Date *</label>
+          <input type="date" [(ngModel)]="formEndDate" />
+        </div>
+        <div class="form-group">
+          <label>Reason</label>
+          <input type="text" [(ngModel)]="formReason" placeholder="Reason for leave" />
+        </div>
+      </div>
+          <div class="form-actions">
+            @if (editingRequest) { <button class="ibtn ibtn--danger" style="margin-right:auto" (click)="deleteRequest(editingRequest)"><span class="material-symbols-outlined">delete</span> Delete</button> }
+            <button class="ibtn ibtn--secondary" (click)="cancelForm()">Cancel</button>
+            <button class="ibtn ibtn--primary" (click)="saveRequest()"><span class="material-symbols-outlined">save</span> {{ editingRequest ? 'Update' : 'Submit' }}</button>
+          </div>
+        </div>
+      } @else {
+        <div class="md-empty">
+          <div class="md-empty-icon"><span class="material-symbols-outlined">beach_access</span></div>
+          <div class="md-empty-title">Manage leave requests</div>
+          <div class="md-empty-text">Select a request to review and approve, or create a new one.</div>
+          <button class="btn-brand" style="margin-top:8px" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Request</button>
+        </div>
+      }
+    </div>
+  </div>
+</div>

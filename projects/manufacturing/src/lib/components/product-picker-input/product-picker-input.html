@@ -1,0 +1,79 @@
+<div class="ppi-wrap">
+  <input
+    type="text"
+    class="ppi-input"
+    [(ngModel)]="searchText"
+    [placeholder]="placeholder"
+    [disabled]="disabled"
+    (focus)="onFocus()"
+    (input)="onInput()"
+    (blur)="onBlur()"
+    autocomplete="off"
+  />
+  @if (showDropdown) {
+    <div class="ppi-dropdown">
+      @if (dropdownLoading) {
+        <div class="ppi-empty">Searching...</div>
+      }
+      @if (!dropdownLoading && suggestions.length === 0) {
+        <div class="ppi-empty">No products found</div>
+      }
+      @for (item of suggestions; track item.id) {
+        <div class="ppi-option" (mousedown)="selectSuggestion(item)">
+          <span class="ppi-code">{{ item.code }}</span>
+          <span class="ppi-name">{{ item.name }}</span>
+          @if (item.itemType) { <span class="ppi-badge">{{ item.itemType }}</span> }
+        </div>
+      }
+      <button type="button" class="ppi-more" (mousedown)="openPicker()">Search more...</button>
+    </div>
+  }
+</div>
+
+@if (showPicker) {
+  <div class="ppi-overlay" (click)="closePicker()">
+    <div class="ppi-card" (click)="$event.stopPropagation()">
+      <div class="ppi-card-head">
+        <h4>Search: {{ entityLabel }}</h4>
+        <button type="button" class="ppi-close-btn" (click)="closePicker()" title="Close">✕</button>
+      </div>
+      <div class="ppi-card-toolbar">
+        <input
+          type="text"
+          class="ppi-search-input"
+          [(ngModel)]="pickerSearch"
+          (input)="onPickerSearchChange()"
+          placeholder="Search by code or name..."
+        />
+        <div class="ppi-pagination-controls">
+          @if (pickerLoading) { <div class="ppi-spinner"></div> }
+          <div class="ppi-page-stat">{{ pickerStart }}-{{ pickerEnd }}/{{ pickerTotal }}</div>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="goToPickerPage(pickerPage - 1)" [disabled]="!pickerHasPreviousPage || pickerLoading">◀</button>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="goToPickerPage(pickerPage + 1)" [disabled]="!pickerHasNextPage || pickerLoading">▶</button>
+        </div>
+      </div>
+      <div class="ppi-table-wrap">
+        <table class="ppi-table">
+          <thead>
+            <tr><th>Code</th><th>Name</th><th>Type</th></tr>
+          </thead>
+          <tbody>
+            @if (pickerLoading) {
+              <tr><td colspan="3" class="ppi-empty-row">Loading products...</td></tr>
+            } @else if (pickerTotal === 0) {
+              <tr><td colspan="3" class="ppi-empty-row">No products found</td></tr>
+            } @else {
+              @for (item of pickerPageItems; track item.id) {
+                <tr class="ppi-select-row" (click)="selectFromPicker(item)">
+                  <td>{{ item.code || '-' }}</td>
+                  <td>{{ item.name || '-' }}</td>
+                  <td>{{ item.itemType || '-' }}</td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+}

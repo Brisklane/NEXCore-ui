@@ -1,0 +1,72 @@
+<div class="container">
+  <h2>Hiring Requisitions</h2>
+
+  <div *ngIf="error" class="error">{{ error }}</div>
+
+  <button (click)="openCreateForm()" class="btn btn-primary">+ New Requisition</button>
+
+  <table class="table" *ngIf="!loading && requisitions.length > 0">
+    <thead>
+      <tr>
+        <th>Job Title</th>
+        <th>Department</th>
+        <th>Designation</th>
+        <th>Headcount</th>
+        <th>Target Start</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let req of requisitions">
+        <td>{{ req.jobTitle }}</td>
+        <td>{{ getDepartmentName(req.departmentId) }}</td>
+        <td>{{ getDesignationName(req.designationId) }}</td>
+        <td>{{ req.headcount }}</td>
+        <td>{{ req.targetStartDate | date:'shortDate' }}</td>
+        <td>{{ req.statusLookupValueId }}</td>
+        <td>
+          <button (click)="openEditForm(req)" class="btn btn-sm btn-secondary">Edit</button>
+          <button (click)="deleteRequisition(req)" class="btn btn-sm btn-danger">Delete</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p *ngIf="!loading && requisitions.length === 0">No requisitions found.</p>
+  <p *ngIf="loading">Loading...</p>
+
+  <div *ngIf="showForm" class="form-container">
+    <h3>{{ editingRequisition ? 'Edit' : 'Create' }} Requisition</h3>
+    <form (ngSubmit)="saveRequisition()">
+      <div class="form-group">
+        <label>Job Title:</label>
+        <input type="text" [(ngModel)]="formJobTitle" name="jobTitle" required />
+      </div>
+      <div class="form-group">
+        <label>Department:</label>
+        <select [(ngModel)]="formDepartmentId" name="departmentId" required>
+          <option value="">-- Select Department --</option>
+          <option *ngFor="let d of departments" [value]="d.id">{{ d.name }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Designation:</label>
+        <select [(ngModel)]="formDesignationId" name="designationId" required>
+          <option value="">-- Select Designation --</option>
+          <option *ngFor="let d of designations" [value]="d.id">{{ d.name }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Headcount:</label>
+        <input type="number" [(ngModel)]="formHeadcount" name="headcount" min="1" />
+      </div>
+      <div class="form-group">
+        <label>Target Start Date:</label>
+        <input type="date" [(ngModel)]="formTargetStartDate" name="targetStartDate" />
+      </div>
+      <button type="submit" class="btn btn-success">Save</button>
+      <button type="button" (click)="cancelForm()" class="btn btn-secondary">Cancel</button>
+    </form>
+  </div>
+</div>

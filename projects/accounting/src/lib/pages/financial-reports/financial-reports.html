@@ -1,0 +1,173 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">assessment</span></div>
+      <div>
+        <h1>Financial Reports</h1>
+        <p class="inv-hero-sub">Generate and view financial reports</p>
+      </div>
+    </div>
+  </div>
+
+  @if (error) {
+    <div class="alert alert-error">{{ error }}</div>
+  }
+
+  <div class="reports-layout">
+    <!-- Report Catalog Sidebar -->
+    <aside class="report-catalog">
+      @for (category of categories; track category) {
+        <div class="catalog-section">
+          <h4 class="catalog-category">{{ category }}</h4>
+          @for (report of getReportsByCategory(category); track report.key) {
+            <button
+              class="catalog-item"
+              [class.active]="selectedReport?.key === report.key"
+              (click)="selectReport(report)"
+            >
+              {{ report.label }}
+            </button>
+          }
+        </div>
+      }
+    </aside>
+
+    <!-- Report Workspace -->
+    <main class="report-workspace">
+      @if (!selectedReport) {
+        <div class="empty-state">
+          <div class="empty-icon">📊</div>
+          <h3>Select a Report</h3>
+          <p>Choose a report from the catalog on the left to get started.</p>
+        </div>
+      } @else {
+        <div class="report-panel">
+          <h3 class="report-title">{{ selectedReport.label }}</h3>
+
+          <!-- Filters -->
+          <div class="filter-bar">
+            @if (selectedReport.needsLedger) {
+              <div class="filter-group">
+                <label>Ledger</label>
+                <select [(ngModel)]="filterLedgerId" (ngModelChange)="onLedgerChange()">
+                  <option value="">All Ledgers</option>
+                  @for (l of ledgers; track l.id) {
+                    <option [value]="l.id">{{ l.name }}</option>
+                  }
+                </select>
+              </div>
+            }
+
+            @if (selectedReport.needsDateRange) {
+              <div class="filter-group">
+                <label>From Date</label>
+                <input type="date" [(ngModel)]="filterFromDate" />
+              </div>
+              <div class="filter-group">
+                <label>To Date</label>
+                <input type="date" [(ngModel)]="filterToDate" />
+              </div>
+            }
+
+            @if (selectedReport.needsReportDate) {
+              <div class="filter-group">
+                <label>Report Date</label>
+                <input type="date" [(ngModel)]="filterReportDate" />
+              </div>
+            }
+
+            @if (selectedReport.needsAsOfDate) {
+              <div class="filter-group">
+                <label>As of Date</label>
+                <input type="date" [(ngModel)]="filterAsOfDate" />
+              </div>
+            }
+
+            @if (selectedReport.needsAccountId) {
+              <div class="filter-group">
+                <label>Account</label>
+                <select [(ngModel)]="filterAccountId">
+                  <option value="">Select account</option>
+                  @for (a of accounts; track a.id) {
+                    <option [value]="a.id">{{ a.accountNumber }} – {{ a.accountName }}</option>
+                  }
+                </select>
+              </div>
+            }
+
+            @if (selectedReport.needsCustomerCode) {
+              <div class="filter-group">
+                <label>Customer Code</label>
+                <input type="text" [(ngModel)]="filterCustomerCode" placeholder="Enter customer code" />
+              </div>
+            }
+
+            @if (selectedReport.needsVendorCode) {
+              <div class="filter-group">
+                <label>Vendor Code</label>
+                <input type="text" [(ngModel)]="filterVendorCode" placeholder="Enter vendor code" />
+              </div>
+            }
+
+            @if (selectedReport.needsDimensionId) {
+              <div class="filter-group">
+                <label>Dimension</label>
+                <select [(ngModel)]="filterDimensionId">
+                  <option value="">Select dimension</option>
+                  @for (d of dimensions; track d.id) {
+                    <option [value]="d.id">{{ d.name }}</option>
+                  }
+                </select>
+              </div>
+            }
+
+            <div class="filter-actions">
+              <button class="btn btn-primary" (click)="generateReport()" [disabled]="loading">
+                @if (loading) {
+                  Generating…
+                } @else {
+                  Generate Report
+                }
+              </button>
+            </div>
+          </div>
+
+          <!-- Results -->
+          @if (reportGenerated) {
+            @if (reportData.length === 0) {
+              <div class="no-data">
+                <p>No data returned for the selected criteria.</p>
+              </div>
+            } @else {
+              <div class="report-results">
+                <div class="results-header">
+                  <span class="row-count">{{ reportData.length }} row(s)</span>
+                </div>
+                <div class="table-wrapper">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        @for (col of reportColumns; track col) {
+                          <th>{{ formatColumnHeader(col) }}</th>
+                        }
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (row of reportData; track $index) {
+                        <tr>
+                          @for (col of reportColumns; track col) {
+                            <td>{{ formatCellValue(row[col]) }}</td>
+                          }
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      }
+    </main>
+  </div>
+</div>

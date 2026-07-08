@@ -1,0 +1,156 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">badge</span></div>
+      <div>
+        <h1>Employees</h1>
+        <p class="inv-hero-sub">Manage employee records</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Employee</button>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="md-split">
+    <!-- ══ LEFT: employee rows ══ -->
+    <div class="md-list">
+      <div class="md-list-body">
+        @if (loading) {
+          @for (s of [0,1,2,3,4]; track s) { <div class="md-rec"><span class="skeleton sk-circle" style="width:34px;height:34px"></span><div style="flex:1"><span class="skeleton sk-line" style="width:70%"></span></div></div> }
+        } @else if (employees.length === 0) {
+          <div class="inv-empty" style="padding:36px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">badge</span></div><div class="inv-empty-title">No employees</div><div class="inv-empty-text">Create your first employee.</div></div>
+        } @else {
+          @for (e of employees; track e.id) {
+            <button class="md-rec" [class.selected]="editingEmployee?.id === e.id" (click)="openEditForm(e)">
+              <span class="md-rec-ico">{{ (e.firstName || '?').charAt(0) }}{{ (e.lastName || '').charAt(0) }}</span>
+              <div class="md-rec-main"><span class="md-rec-title">{{ e.firstName }} {{ e.lastName }}</span><span class="md-rec-sub"><span class="md-rec-code">{{ e.employeeCode }}</span>@if (getDepartmentName(e.departmentId)) { · {{ getDepartmentName(e.departmentId) }} }</span></div>
+              <span class="md-rec-status" [class.on]="e.isActive" [class.off]="!e.isActive"></span>
+            </button>
+          }
+        }
+      </div>
+    </div>
+
+    <!-- ══ RIGHT: form | empty ══ -->
+    <div class="md-detail">
+      @if (showForm) {
+        <div class="md-detail-head">
+          <span class="md-detail-title">{{ editingEmployee ? 'Edit Employee' : 'New Employee' }}</span>
+          <button class="icon-btn" title="Close" (click)="cancelForm()"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="md-detail-body">
+          <div class="form-grid">
+        @if (!editingEmployee) {
+          <div class="form-group">
+            <label>Employee Code</label>
+            <input type="text" [(ngModel)]="formEmployeeCode" placeholder="e.g. EMP-001" />
+          </div>
+        }
+        <div class="form-group">
+          <label>First Name *</label>
+          <input type="text" [(ngModel)]="formFirstName" placeholder="First name" />
+        </div>
+        <div class="form-group">
+          <label>Middle Name</label>
+          <input type="text" [(ngModel)]="formMiddleName" placeholder="Middle name" />
+        </div>
+        <div class="form-group">
+          <label>Last Name *</label>
+          <input type="text" [(ngModel)]="formLastName" placeholder="Last name" />
+        </div>
+        <div class="form-group">
+          <label>Email *</label>
+          <input type="email" [(ngModel)]="formEmail" placeholder="Email address" />
+        </div>
+        <div class="form-group">
+          <label>Phone</label>
+          <input type="text" [(ngModel)]="formPhone" placeholder="Phone number" />
+        </div>
+        <div class="form-group">
+          <label>Department</label>
+          <select [(ngModel)]="formDepartmentId">
+            <option value="">-- Select Department --</option>
+            @for (d of departments; track d.id) {
+              <option [value]="d.id">{{ d.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Designation</label>
+          <select [(ngModel)]="formDesignationId">
+            <option value="">-- Select Designation --</option>
+            @for (d of designations; track d.id) {
+              <option [value]="d.id">{{ d.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Position</label>
+          <select [(ngModel)]="formPositionId">
+            <option value="">-- Select Position --</option>
+            @for (p of positions; track p.id) {
+              <option [value]="p.id">{{ p.positionName }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Reporting Manager</label>
+          <select [(ngModel)]="formReportingManagerId">
+            <option value="">-- Select Manager --</option>
+            @for (m of reportingManagers; track m.id) {
+              <option [value]="m.id">{{ m.firstName }} {{ m.lastName }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Job Location</label>
+          <select [(ngModel)]="formJobLocationId">
+            <option value="">-- Select Location --</option>
+            @for (l of jobLocations; track l.id) {
+              <option [value]="l.id">{{ l.locationName }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select [(ngModel)]="formStatus">
+            @for (s of statusOptions; track s.value) {
+              <option [value]="s.value">{{ s.label }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Join Date</label>
+          <input type="date" [(ngModel)]="formJoinDate" />
+        </div>
+        @if (editingEmployee) {
+          <div class="form-group">
+            <label>Exit Date</label>
+            <input type="date" [(ngModel)]="formExitDate" />
+          </div>
+          <div class="form-group form-check-row">
+            <label><input type="checkbox" [(ngModel)]="formIsActive" /> Active</label>
+          </div>
+        }
+      </div>
+          <div class="form-actions">
+            @if (editingEmployee) { <button class="ibtn ibtn--danger" style="margin-right:auto" (click)="deleteEmployee(editingEmployee)"><span class="material-symbols-outlined">delete</span> Delete</button> }
+            <button class="ibtn ibtn--secondary" (click)="cancelForm()">Cancel</button>
+            <button class="ibtn ibtn--primary" (click)="saveEmployee()"><span class="material-symbols-outlined">save</span> {{ editingEmployee ? 'Update' : 'Create' }}</button>
+          </div>
+        </div>
+      } @else {
+        <div class="md-empty">
+          <div class="md-empty-icon"><span class="material-symbols-outlined">badge</span></div>
+          <div class="md-empty-title">Manage employees</div>
+          <div class="md-empty-text">Select an employee to edit, or create a new one.</div>
+          <button class="btn-brand" style="margin-top:8px" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Employee</button>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+

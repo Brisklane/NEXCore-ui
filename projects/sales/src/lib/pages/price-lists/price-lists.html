@@ -1,0 +1,85 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">sell</span></div>
+      <div>
+        <h1>Price Lists</h1>
+        <p class="inv-hero-sub">Manage product price lists</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Price List</button>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (successMsg) { <div class="alert alert-success">{{ successMsg }}</div> }
+
+  <div class="md-split">
+    <!-- ══ LEFT: price list rows ══ -->
+    <div class="md-list">
+      <div class="md-list-head">
+        <span class="inv-search"><span class="material-symbols-outlined">search</span><input type="text" [(ngModel)]="searchQuery" placeholder="Search price lists…" /></span>
+      </div>
+      <div class="md-list-body">
+        @if (loading) {
+          @for (s of [0,1,2,3]; track s) { <div class="md-rec"><span class="skeleton sk-circle" style="width:34px;height:34px"></span><div style="flex:1"><span class="skeleton sk-line" style="width:70%"></span></div></div> }
+        } @else if (filteredPriceLists.length === 0) {
+          <div class="inv-empty" style="padding:36px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">sell</span></div><div class="inv-empty-title">No price lists</div><div class="inv-empty-text">Create your first price list.</div></div>
+        } @else {
+          @for (pl of filteredPriceLists; track pl.id) {
+            <button class="md-rec" [class.selected]="editingItem?.id === pl.id" [class.row-new]="pl.id === highlighter.id" (click)="openEditForm(pl)">
+              <span class="md-rec-ico">{{ (pl.name || pl.code || '?').charAt(0) }}</span>
+              <div class="md-rec-main"><span class="md-rec-title">{{ pl.name || '—' }}</span><span class="md-rec-sub"><span class="md-rec-code">{{ pl.code }}</span>@if (pl.currencyCode) { · {{ pl.currencyCode }} }</span></div>
+              <span class="md-rec-status" [class.on]="pl.isActive" [class.off]="!pl.isActive"></span>
+            </button>
+          }
+        }
+      </div>
+    </div>
+
+    <!-- ══ RIGHT: form | empty ══ -->
+    <div class="md-detail">
+      @if (showForm) {
+        <div class="md-detail-head">
+          <span class="md-detail-title">{{ editingItem ? 'Edit Price List' : 'New Price List' }}</span>
+          <button class="icon-btn" title="Close" (click)="cancelForm()"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="md-detail-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Code</label>
+              <input type="text" [(ngModel)]="formCode" [disabled]="!!editingItem || formAutoCode" placeholder="e.g. PL-RETAIL" />
+              @if (!editingItem) {
+                <label style="font-weight:400;font-size:12px;margin-top:4px;display:flex;align-items:center;gap:6px;">
+                  <input type="checkbox" [(ngModel)]="formAutoCode" (ngModelChange)="onAutoCodeToggle()" style="width:auto;" /> Auto-generate
+                </label>
+                @if (!formAutoCode && formCode.trim()) {
+                  @if (codeTaken) { <small style="color:var(--c-danger-text);font-size:11px;">✕ "{{ formCode }}" is already in use.</small> }
+                  @else { <small style="color:var(--c-success-text);font-size:11px;">✓ Available.</small> }
+                }
+              }
+            </div>
+            <div class="form-group"><label>Name *</label><input type="text" [(ngModel)]="formName" placeholder="Price list name" /></div>
+            <div class="form-group"><label>Currency Code</label><select [(ngModel)]="formCurrencyCode"><option value="">-- Select Currency --</option>@for (cur of currencies; track cur.code) { <option [value]="cur.code">{{ cur.code }}{{ cur.name ? ' — ' + cur.name : '' }}</option> }</select></div>
+            <div class="form-group"><label>Valid From</label><input type="date" [(ngModel)]="formValidFrom" /></div>
+            <div class="form-group"><label>Valid To</label><input type="date" [(ngModel)]="formValidTo" /></div>
+            @if (editingItem) { <div class="form-group form-check-row"><label><input type="checkbox" [(ngModel)]="formIsActive" /> Active</label></div> }
+          </div>
+          <div class="form-actions">
+            @if (editingItem) { <button class="ibtn ibtn--danger" style="margin-right:auto" (click)="delete(editingItem.id)"><span class="material-symbols-outlined">delete</span> Delete</button> }
+            <button class="ibtn ibtn--secondary" (click)="cancelForm()">Cancel</button>
+            <button class="ibtn ibtn--primary" (click)="save()"><span class="material-symbols-outlined">save</span> {{ editingItem ? 'Update' : 'Create' }}</button>
+          </div>
+        </div>
+      } @else {
+        <div class="md-empty">
+          <div class="md-empty-icon"><span class="material-symbols-outlined">sell</span></div>
+          <div class="md-empty-title">Manage price lists</div>
+          <div class="md-empty-text">Select a price list to edit, or create a new one.</div>
+          <button class="btn-brand" style="margin-top:8px" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Price List</button>
+        </div>
+      }
+    </div>
+  </div>
+</div>

@@ -1,0 +1,11 @@
+@import '../shared-styles.css';
+.badge-warning { background: #fef3c7; color: #92400e; }
+
+.filters-bar { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.filter-input {
+  padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; min-width: 220px;
+}
+.filter-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15); }
+
+.section-title { margin: 18px 0 8px; font-size: 14px; font-weight: 600; color: #334155; }
+.line-add-grid { margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e2e8f0; align-items: end; }

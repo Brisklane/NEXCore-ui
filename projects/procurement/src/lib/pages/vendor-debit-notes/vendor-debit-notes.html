@@ -1,0 +1,89 @@
+<div class="page-container">
+
+  <app-page-header icon="note_alt" title="Vendor Debit Notes" subtitle="AP credit claims raised against posted purchase returns">
+    <button class="btn btn-primary" (click)="openCreate()">+ New Debit Note</button>
+  </app-page-header>
+
+  <app-alert type="error"   [message]="error"></app-alert>
+  <app-alert type="success" [message]="success"></app-alert>
+
+  <div class="help-box">
+    <span class="help-icon">ℹ️</span>
+    <span>A <strong>vendor debit note</strong> is a claim that <strong>reduces what you owe the vendor</strong> (your
+      accounts-payable balance), raised against a <strong>posted purchase return</strong> for goods sent back. Its lines
+      and amounts are derived automatically from the return. Once created, <strong>Send</strong> it to the vendor, mark it
+      <strong>Acknowledged</strong>, then <strong>Settle</strong> it as it is offset against a payment or refund.</span>
+  </div>
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>New Vendor Debit Note</h3>
+
+      <div class="helper-box">
+        <span class="helper-icon">ℹ️</span>
+        <div>A debit note credits your AP balance for goods returned to the vendor. Pick a <strong>posted purchase
+          return</strong> that doesn't already have one — the lines and amounts are derived automatically from the
+          return. Then <strong>Send</strong> it to the vendor, mark it <strong>Acknowledged</strong>, and
+          <strong>Settle</strong> it once offset against a payment or refund.</div>
+      </div>
+
+      <div class="form-grid">
+        <app-select label="Source Return" required [options]="returnOptions" [(ngModel)]="form.purchaseReturnId"
+                    [error]="submitted ? errors.purchaseReturnId : ''" placeholder="-- Select posted return --"></app-select>
+        <app-input label="Debit Note Date" type="date" [(ngModel)]="form.debitNoteDate"></app-input>
+        <div class="form-group-full">
+          <app-textarea label="Notes" [rows]="2" placeholder="Notes" [(ngModel)]="form.notes"></app-textarea>
+        </div>
+      </div>
+
+      @if (selectedReturn) {
+        <div class="dn-summary">
+          <div class="item"><label>Vendor</label><span>{{ selectedReturn.vendorName }}</span></div>
+          <div class="item"><label>Return</label><span>{{ selectedReturn.returnNumber }}</span></div>
+          <div class="item"><label>Lines</label><span>{{ selectedReturn.lines.length }}</span></div>
+          <div class="item"><label>Credit Amount</label><span>{{ selectedReturn.totalReturnAmount | number:'1.2-2' }} {{ selectedReturn.currencyCode }}</span></div>
+        </div>
+      }
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()" [disabled]="saving">Create Debit Note</button>
+      </div>
+    </div>
+  }
+
+  <div class="filters-bar">
+    <span class="filter-search">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search by debit note #, return or vendor…" [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
+      @if (search) { <button class="search-clear" title="Clear search" (click)="search = ''; onSearchChange()">×</button> }
+    </span>
+    <select class="filter-input" [(ngModel)]="statusFilter" (ngModelChange)="onStatusChange()">
+      <option [ngValue]="''">All statuses</option>
+      @for (opt of statusFilterOptions; track opt.value) { <option [ngValue]="opt.value">{{ opt.label }}</option> }
+    </select>
+  </div>
+
+  <app-data-table [sortableAll]="true"
+    [columns]="columns" [data]="notes" [actions]="actions" [loading]="loading"
+    [totalCount]="totalCount" [page]="page" [pageSize]="pageSize" [sortBy]="sortBy" [sortDirection]="sortDirection"
+    [highlightRowId]="highlighter.id"
+    emptyMessage="No debit notes found."
+    (rowAction)="onRowAction($event)"
+    (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)" (sortChange)="onSortChange($event)">
+  </app-data-table>
+
+</div>
+
+@if (showDeleteConfirm) {
+  <div class="modal-overlay">
+    <div class="modal-box">
+      <h4>Delete Debit Note</h4>
+      <p>Delete <strong>{{ deleteTarget?.debitNoteNumber }}</strong>? This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showDeleteConfirm = false">Cancel</button>
+        <button class="btn btn-danger" (click)="confirmDelete()">Delete</button>
+      </div>
+    </div>
+  </div>
+}

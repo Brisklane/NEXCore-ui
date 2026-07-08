@@ -1,0 +1,26 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">tune</span></div>
+      <div>
+        <h1>Integration Settings</h1>
+        <p class="inv-hero-sub">Configure LinkedIn, Job Boards and other integrations</p>
+      </div>
+    </div>
+  </div>
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (success) { <div class="alert alert-success">{{ success }}</div> }
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else {
+    <div class="integration-panel">
+      <div class="integration-card">
+        <h3>Seed lookup values</h3>
+        <p>Use this action to populate the HR lookup values required for integration and configuration data.</p>
+        <div class="integration-actions">
+          <button class="btn btn-primary" (click)="seedLookupValues()" [disabled]="loading">Run Seed</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

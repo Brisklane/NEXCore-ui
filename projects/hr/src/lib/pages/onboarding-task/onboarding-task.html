@@ -1,0 +1,151 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">checklist</span></div>
+      <div>
+        <h1>Onboarding Task Templates</h1>
+        <p class="inv-hero-sub">Define reusable onboarding task templates for new employees</p>
+      </div>
+    </div>
+    <button class="btn btn-primary" (click)="openCreateForm()">+ New Template</button>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editingTask ? 'Edit Task Template' : 'Create Task Template' }}</h3>
+      <div class="form-grid">
+        @if (!editingTask) {
+          <div class="form-group">
+            <label>Template Code</label>
+            <input type="text" [(ngModel)]="formTemplateCode" placeholder="e.g. OBT-001" />
+          </div>
+        }
+        <div class="form-group">
+          <label>Task Name *</label>
+          <input type="text" [(ngModel)]="formTaskName" placeholder="Task name" />
+        </div>
+        <div class="form-group">
+          <label>Category</label>
+          <select [(ngModel)]="formTaskCategory">
+            <option value="">-- Select Category --</option>
+            @for (cat of categoryOptions; track cat.value) {
+              <option [value]="cat.value">{{ cat.label }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <input type="text" [(ngModel)]="formDescription" placeholder="Task description" />
+        </div>
+        <div class="form-group">
+          <label>Default Assignee Role</label>
+          <input type="text" [(ngModel)]="formDefaultAssigneeRole" placeholder="e.g. HR Manager" />
+        </div>
+        <div class="form-group">
+          <label>Due Days from Start</label>
+          <input type="number" [(ngModel)]="formDefaultDueDaysFromStart" min="0" placeholder="e.g. 7" />
+        </div>
+        <div class="form-group">
+          <label>Sort Order</label>
+          <input type="number" [(ngModel)]="formSortOrder" min="0" placeholder="e.g. 1" />
+        </div>
+        <div class="form-group">
+          <label>Applicable Department</label>
+          <select [(ngModel)]="formApplicableDepartmentId">
+            <option value="">-- All Departments --</option>
+            @for (d of departments; track d.id) {
+              <option [value]="d.id">{{ d.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Applicable Designation</label>
+          <select [(ngModel)]="formApplicableDesignationId">
+            <option value="">-- All Designations --</option>
+            @for (d of designations; track d.id) {
+              <option [value]="d.id">{{ d.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Applicable Employment Type</label>
+          <select [(ngModel)]="formApplicableEmploymentType">
+            <option value="">-- All Types --</option>
+            @for (e of employmentTypeOptions; track e.value) {
+              <option [value]="e.value">{{ e.label }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Estimated Hours</label>
+          <input type="number" [(ngModel)]="formEstimatedHours" min="0" placeholder="e.g. 2" />
+        </div>
+        <div class="form-group form-check-row">
+          <label><input type="checkbox" [(ngModel)]="formIsRequired" /> Required</label>
+          <label><input type="checkbox" [(ngModel)]="formRequiresDocumentUpload" /> Requires Document Upload</label>
+          <label><input type="checkbox" [(ngModel)]="formRequiresManagerSignoff" /> Requires Manager Sign-off</label>
+        </div>
+        @if (editingTask) {
+          <div class="form-group form-check-row">
+            <label><input type="checkbox" [(ngModel)]="formIsActive" /> Active</label>
+          </div>
+        }
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="saveTask()">{{ editingTask ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Task Name</th>
+            <th>Category</th>
+            <th>Due Days</th>
+            <th>Required</th>
+            <th>Dept</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (t of tasks; track t.id) {
+            <tr>
+              <td>{{ t.templateCode || '—' }}</td>
+              <td>{{ t.taskName }}</td>
+              <td>{{ t.taskCategory || '—' }}</td>
+              <td>{{ t.defaultDueDaysFromStart }}</td>
+              <td>
+                <span class="badge" [class.badge-active]="t.isRequired" [class.badge-inactive]="!t.isRequired">
+                  {{ t.isRequired ? 'Required' : 'Optional' }}
+                </span>
+              </td>
+              <td>{{ getDepartmentName(t.applicableDepartmentId) }}</td>
+              <td>
+                <span class="badge" [class.badge-active]="t.isActive" [class.badge-inactive]="!t.isActive">
+                  {{ t.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td class="actions-cell">
+                <button class="btn btn-sm btn-secondary" (click)="openEditForm(t)">Edit</button>
+                <button class="btn btn-sm btn-danger" (click)="deleteTask(t)">Delete</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="8" class="empty-row">No onboarding task templates found.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>
+

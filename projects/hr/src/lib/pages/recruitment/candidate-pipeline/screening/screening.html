@@ -1,0 +1,119 @@
+<div class="container">
+  <h2>Job Applications</h2>
+
+  <div *ngIf="error" class="error">{{ error }}</div>
+
+  <!-- <button (click)="openCreateForm()" class="btn btn-primary">+ New Application</button> -->
+
+  <table class="table" *ngIf="!loading && applications.length > 0">
+    <thead>
+      <tr>
+        <th>Job</th>
+        <th>Candidate</th>
+        <th>Channel</th>
+        <th>Stage</th>
+        <th>Status</th>
+        <th>Priority</th>
+        <th>Recruiter</th>
+        <th>Applied At</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let app of applications">
+        <td>{{ getJobTitle(app.jobId) }}</td>
+        <td>{{ getCandidateName(app.candidateId) }}</td>
+        <td>{{ getJobPostingChannelName(app.jobPostingChannelId) }}</td>
+        <td>{{ getLookupValueName(stageValues, app.currentStageLookupValueId) }}</td>
+        <td>{{ getLookupValueName(statusValues, app.statusLookupValueId) }}</td>
+        <td>{{ getLookupValueName(priorityValues, app.priorityLookupValueId) }}</td>
+        <td>{{ getEmployeeName(app.assignedRecruiterEmployeeId) }}</td>
+        <td>{{ app.appliedDate | date:'short' }}</td>
+        <td>
+          <button (click)="openEditForm(app)" class="btn btn-sm btn-secondary">Edit</button>
+          <button (click)="changeStatus(app, '3')" class="btn btn-sm btn-primary">Shortlist</button>
+          <button (click)="changeStatus(app, '7')" class="btn btn-sm btn-warning">Reject</button>
+          <button (click)="deleteApplication(app)" class="btn btn-sm btn-danger">Delete</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p *ngIf="!loading && applications.length === 0">No applications found.</p>
+  <p *ngIf="loading">Loading...</p>
+
+  <div *ngIf="showForm" class="form-container">
+    <h3>{{ editingApplication ? 'Edit' : 'Create' }} Application</h3>
+    <form (ngSubmit)="saveApplication()">
+      <div class="form-group">
+        <label>Job:</label>
+        <select [(ngModel)]="formJobId" name="jobId" [disabled]="editingApplication" required>
+          <option value="" disabled>Select a job</option>
+          <option *ngFor="let job of jobs" [value]="job.id">
+            {{ job.jobTitle || job.jobCode || job.id }}
+          </option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Candidate:</label>
+        <select [(ngModel)]="formCandidateId" name="candidateId" [disabled]="editingApplication" required>
+          <option value="" disabled>Select a candidate</option>
+          <option *ngFor="let candidate of candidates" [value]="candidate.id">
+            {{ (candidate.firstName || candidate.lastName) ? (candidate.firstName + ' ' + candidate.lastName).trim() : candidate.email || candidate.id }}
+          </option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Job Posting Channel:</label>
+        <select [(ngModel)]="formJobPostingChannelId" name="jobPostingChannelId">
+          <option value="" disabled selected>Select a posting channel</option>
+          <option *ngFor="let channel of jobPostingChannels" [value]="channel.id">
+            {{ channel.channelNameSnapshot || channel.id }}
+          </option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Current Stage:</label>
+        <select [(ngModel)]="formCurrentStageLookupValueId" name="currentStageLookupValueId">
+          <option value="" disabled selected>Select a stage</option>
+          <option *ngFor="let stage of stageValues" [value]="stage.id">
+            {{ stage.name || stage.code || stage.id }}
+          </option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Status:</label>
+        <select [(ngModel)]="formStatusLookupValueId" name="statusLookupValueId">
+          <option value="" disabled selected>Select a status</option>
+          <option *ngFor="let status of statusValues" [value]="status.id">
+            {{ status.name || status.code || status.id }}
+          </option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Priority:</label>
+        <select [(ngModel)]="formPriorityLookupValueId" name="priorityLookupValueId">
+          <option value="" disabled selected>Select a priority</option>
+          <option *ngFor="let priority of priorityValues" [value]="priority.id">
+            {{ priority.name || priority.code || priority.id }}
+          </option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Assigned Recruiter:</label>
+        <select [(ngModel)]="formAssignedRecruiterEmployeeId" name="assignedRecruiterEmployeeId">
+          <option value="" disabled selected>Select a recruiter</option>
+          <option *ngFor="let employee of employees" [value]="employee.id">
+            {{ (employee.firstName || employee.lastName) ? (employee.firstName + ' ' + employee.lastName).trim() : employee.email || employee.id }}
+          </option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Applied Date:</label>
+        <input type="date" [(ngModel)]="formAppliedDate" name="appliedDate" />
+      </div>
+      <button type="submit" class="btn btn-success">Save</button>
+      <button type="button" (click)="cancelForm()" class="btn btn-secondary">Cancel</button>
+    </form>
+  </div>
+</div>

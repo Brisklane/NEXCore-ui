@@ -1,0 +1,140 @@
+<!-- cdkDropListGroup on the root so ALL cdkDropLists below are auto-connected,
+     including the closed-lost zone that lives in the page header.           -->
+<div class="kanban-page" cdkDropListGroup>
+
+  <!-- ── PAGE HEADER ───────────────────────────────────────────────── -->
+  <div class="page-header">
+    <div>
+      <h2>Pipeline</h2>
+      <p class="subtitle">Drag deals across stages to update their progress</p>
+    </div>
+
+    <!-- Right side: meta text OR closed-lost zone (swaps on drag) -->
+    <div class="header-right">
+      <!-- Meta text: visible when not dragging -->
+      <span class="meta-text" [class.hidden]="isDragging">
+        {{ totalDeals }} items &bull; Sorted by Amount
+      </span>
+
+      <!-- Closed Lost drop zone: visible when dragging
+           Always in DOM (display:flex) so CDK registers it;
+           hidden via opacity/pointer-events when not dragging.         -->
+      <div class="closed-lost-drop"
+           [class.visible]="isDragging"
+           cdkDropList
+           id="closed-lost"
+           [cdkDropListData]="closedLostDeals"
+           (cdkDropListDropped)="onDrop($event)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+        Closed Lost
+      </div>
+    </div>
+  </div>
+
+  <!-- ── BOARD ─────────────────────────────────────────────────────── -->
+  <div class="board">
+    <div class="board-inner">
+
+      <!-- PIPELINE HEADER CHIPS -->
+      <div class="pipeline-header">
+        @for (stage of stages; track stage.id; let first = $first; let last = $last) {
+          <div class="stage-chip"
+               [class.chip-first]="first"
+               [class.chip-last]="last"
+               [class.chip-middle]="!first && !last">
+            <div class="stage-top">
+              {{ stage.name }}
+              <span class="stage-badge">{{ stage.deals.length }}</span>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- KANBAN COLUMNS — cdkDropList on the ENTIRE col for easy dropping -->
+      <div class="columns-wrapper">
+        @for (stage of stages; track stage.id) {
+
+          <div class="col"
+               [class.col-won]="stage.isWon"
+               cdkDropList
+               cdkDropListOrientation="vertical"
+               [id]="stage.id"
+               [cdkDropListData]="stage.deals"
+               (cdkDropListDropped)="onDrop($event)">
+
+            <div class="col-amount">{{ total(stage.deals) | number:'1.0-0' }}</div>
+
+            @for (deal of stage.deals; track deal.id) {
+              <div class="deal-card"
+                   [class.card-won]="stage.isWon"
+                   cdkDrag
+                   [cdkDragData]="deal"
+                   (cdkDragStarted)="onDragStarted()"
+                   (cdkDragEnded)="isDragging = false">
+
+                <div class="drag-placeholder" *cdkDragPlaceholder></div>
+
+                <!-- Row 1: title + stage-select dropdown -->
+                <div class="card-row1">
+                  <span class="card-title">{{ deal.name }}</span>
+
+                  <!-- Stage-select dropdown -->
+                  <div class="dd-wrapper" (click)="$event.stopPropagation()">
+                    <button class="dd-trigger"
+                            (click)="toggleDropdown(deal, stage, $event)"
+                            [class.dd-open]="activeDropdown?.dealId === deal.id"
+                            title="Change stage">
+                      <!-- Centered chevron-down SVG -->
+                      <svg width="11" height="7" viewBox="0 0 11 7" fill="none"
+                           stroke="#555" stroke-width="1.8" stroke-linecap="round"
+                           stroke-linejoin="round">
+                        <polyline points="1,1 5.5,6 10,1"/>
+                      </svg>
+                    </button>
+
+                    @if (activeDropdown?.dealId === deal.id) {
+                      <div class="dd-menu">
+                        @for (s of stages; track s.id) {
+                          <div class="dd-item"
+                               [class.dd-current]="s.id === stage.id"
+                               (click)="moveDealToStage(deal, stage.id, s.id)">
+                            @if (s.id === stage.id) {
+                              <svg class="dd-check" width="12" height="12" viewBox="0 0 12 12"
+                                   fill="none" stroke="#1565C0" stroke-width="2"
+                                   stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="2,6 5,9 10,3"/>
+                              </svg>
+                            }
+                            {{ s.name }}
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                </div>
+
+                <div class="card-stage-label">{{ stage.name }}</div>
+
+                <!-- Bottom row: date + amount -->
+                <div class="card-bottom">
+                  <span class="card-date">{{ deal.closeDate | date:'M/d/yyyy' }}</span>
+                  <span class="card-amount">{{ deal.amount | number:'1.0-0' }}</span>
+                </div>
+
+              </div>
+            } @empty {
+              <div class="empty-col">No deals yet</div>
+            }
+
+          </div>
+        }
+      </div>
+
+    </div>
+  </div>
+
+</div>

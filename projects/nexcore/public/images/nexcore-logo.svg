@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 410" fill="none">
+  <defs>
+    <linearGradient id="nlMark" x1="130" y1="40" x2="320" y2="290" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2b7fff"/>
+      <stop offset="0.55" stop-color="#22b6e6"/>
+      <stop offset="1" stop-color="#2fd6c3"/>
+    </linearGradient>
+    <linearGradient id="nlText" x1="60" y1="0" x2="392" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#33d4c6"/>
+      <stop offset="0.5" stop-color="#22b6e6"/>
+      <stop offset="1" stop-color="#2b7fff"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Mark (hexagon network) -->
+  <g transform="translate(115 22) scale(1.75)" fill="none">
+    <path d="M60 10 L104 34 L104 86 L60 110 L16 86 L16 34 Z"
+          stroke="url(#nlMark)" stroke-width="8.5" stroke-linejoin="round"/>
+    <path d="M16 86 L104 34" stroke="url(#nlMark)" stroke-width="8.5" stroke-linecap="round"/>
+    <g fill="url(#nlMark)">
+      <circle cx="60" cy="10" r="8.5"/>
+      <circle cx="104" cy="34" r="8.5"/>
+      <circle cx="104" cy="86" r="8.5"/>
+      <circle cx="60" cy="110" r="8.5"/>
+      <circle cx="16" cy="86" r="8.5"/>
+      <circle cx="16" cy="34" r="8.5"/>
+      <circle cx="60" cy="60" r="7.5"/>
+    </g>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="220" y="382" text-anchor="middle"
+        font-family="'Segoe UI', 'Poppins', system-ui, Arial, sans-serif"
+        font-size="92" letter-spacing="-2" fill="url(#nlText)">
+    <tspan font-weight="800">NEX</tspan><tspan font-weight="500">Core</tspan>
+  </text>
+</svg>

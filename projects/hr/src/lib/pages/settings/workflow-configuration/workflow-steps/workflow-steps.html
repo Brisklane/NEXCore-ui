@@ -1,0 +1,119 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">schema</span></div>
+      <div>
+        <h1>Workflow Steps</h1>
+        <p class="inv-hero-sub">Define approval steps per workflow configuration</p>
+      </div>
+    </div>
+    <button class="btn btn-primary" [disabled]="!selectedWorkflowId" (click)="openCreateForm()">+ New Step</button>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="form-group" style="max-width:400px;margin-bottom:1rem;">
+    <label>Filter by Workflow</label>
+    <select [(ngModel)]="selectedWorkflowId" (ngModelChange)="onWorkflowChange()">
+      <option value="">— Select Workflow —</option>
+      @for (w of workflows; track w.id) {
+        <option [value]="w.id">{{ w.workflowName }}</option>
+      }
+    </select>
+  </div>
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editingStep ? 'Edit Step' : 'Create Step' }}</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Workflow *</label>
+          <select [(ngModel)]="formWorkflowConfigId">
+            <option value="">— Select Workflow —</option>
+            @for (w of workflows; track w.id) {
+              <option [value]="w.id">{{ w.workflowName }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Level No *</label>
+          <input type="number" [(ngModel)]="formLevelNo" min="1" />
+        </div>
+        <div class="form-group">
+          <label>Approver Type</label>
+          <input type="text" [(ngModel)]="formApproverType" placeholder="e.g. Employee, Role, Department" />
+        </div>
+        <div class="form-group">
+          <label>Approver Value</label>
+          <input type="text" [(ngModel)]="formApproverValue" placeholder="ID or role name" />
+        </div>
+        <div class="form-group">
+          <label>SLA Hours</label>
+          <input type="number" [(ngModel)]="formSlaHours" min="1" />
+        </div>
+        <div class="form-group">
+          <label>Execution Type</label>
+          <input type="text" [(ngModel)]="formExecutionType" placeholder="e.g. Sequential, Parallel" />
+        </div>
+        <div class="form-group">
+          <label>Sort Order</label>
+          <input type="number" [(ngModel)]="formSortOrder" min="1" />
+        </div>
+        <div class="form-group form-check-row">
+          <label><input type="checkbox" [(ngModel)]="formMandatory" /> Mandatory</label>
+        </div>
+        <div class="form-group form-check-row">
+          <label><input type="checkbox" [(ngModel)]="formIsConditional" /> Conditional</label>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="saveStep()">{{ editingStep ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else if (selectedWorkflowId) {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Level</th>
+            <th>Approver Type</th>
+            <th>Approver Value</th>
+            <th>SLA (hrs)</th>
+            <th>Execution Type</th>
+            <th>Mandatory</th>
+            <th>Conditional</th>
+            <th>Sort</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of steps; track s.id) {
+            <tr>
+              <td>{{ s.levelNo }}</td>
+              <td>{{ s.approverType }}</td>
+              <td>{{ s.approverValue }}</td>
+              <td>{{ s.slaHours }}</td>
+              <td>{{ s.executionType }}</td>
+              <td>{{ s.mandatory ? 'Yes' : 'No' }}</td>
+              <td>{{ s.isConditional ? 'Yes' : 'No' }}</td>
+              <td>{{ s.sortOrder }}</td>
+              <td>
+                <button class="btn btn-sm btn-secondary" (click)="openEditForm(s)">Edit</button>
+                <button class="btn btn-sm btn-danger" (click)="deleteStep(s)">Delete</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="9" class="empty-cell">No steps defined for this workflow.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else {
+    <div class="empty-state"><p>Select a workflow to view its steps.</p></div>
+  }
+</div>

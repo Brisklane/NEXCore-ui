@@ -1,0 +1,285 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">assignment</span></div>
+      <div>
+        <h1>Production Orders</h1>
+        <p class="inv-hero-sub">Plan, release and track manufacturing production orders through the workflow</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreate()"><span class="material-symbols-outlined">add</span> New Order</button>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="kpi-strip">
+    <div class="kpi-card kpi-brand"><div class="kpi-top"><span class="kpi-label">Total Orders</span><span class="kpi-icon"><span class="material-symbols-outlined">factory</span></span></div><div class="kpi-value">{{ totalCount }}</div></div>
+    <div class="kpi-card kpi-amber"><div class="kpi-top"><span class="kpi-label">Draft</span><span class="kpi-icon"><span class="material-symbols-outlined">edit_note</span></span></div><div class="kpi-value">{{ draftCount }}</div></div>
+    <div class="kpi-card kpi-cyan"><div class="kpi-top"><span class="kpi-label">Released</span><span class="kpi-icon"><span class="material-symbols-outlined">rocket_launch</span></span></div><div class="kpi-value">{{ releasedCount }}</div></div>
+    <div class="kpi-card kpi-violet"><div class="kpi-top"><span class="kpi-label">In Progress</span><span class="kpi-icon"><span class="material-symbols-outlined">settings</span></span></div><div class="kpi-value">{{ inProgressCount }}</div></div>
+    <div class="kpi-card kpi-success"><div class="kpi-top"><span class="kpi-label">Completed</span><span class="kpi-icon"><span class="material-symbols-outlined">check_circle</span></span></div><div class="kpi-value">{{ completedCount }}</div></div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (scheduleInfo) { <div class="alert alert-info">📅 {{ scheduleInfo }}</div> }
+  @if (varianceInfo) { <div class="alert alert-info">📊 {{ varianceInfo }}</div> }
+
+  <div class="ux-help-box" role="note">
+    <strong>Automation Tip</strong>
+    Use product/BOM/routing master data instead of manual IDs where possible. Production execution, WIP, and costing quality depends on clean order setup.
+  </div>
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editing ? 'Edit Production Order' : 'Create Production Order' }}</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Product *</label>
+          <lib-product-picker-input
+            [value]="productDisplayText"
+            [disabled]="!!editing"
+            [typeFilter]="'FinishedGood'"
+            placeholder="Type product code or name..."
+            (productSelected)="onProductSelected($event)"
+          />
+        </div>
+        <div class="form-group">
+          <label>Planned Quantity *</label>
+          <input type="number" [(ngModel)]="formQuantity" min="1" />
+        </div>
+        <div class="form-group">
+          <label>Unit of Measure</label>
+          <input type="text" [(ngModel)]="formUnit" placeholder="e.g. EA, KG, L" />
+        </div>
+        <div class="form-group">
+          <label>Bill of Material @if (!editing) { * }</label>
+          <lib-option-picker-input
+            [options]="bomOptions"
+            [value]="formBomLabel"
+            [entityLabel]="'Bill of Material'"
+            [columns]="bomColumns"
+            placeholder="Search BOM..."
+            (optionSelected)="onBomSelected($event)"
+          />
+        </div>
+        <div class="form-group">
+          <label>Routing @if (!editing) { * }</label>
+          <lib-option-picker-input
+            [options]="routingOptions"
+            [value]="formRoutingLabel"
+            [entityLabel]="'Routing'"
+            [columns]="routingColumns"
+            placeholder="Search Routing..."
+            (optionSelected)="onRoutingSelected($event)"
+          />
+        </div>
+        <div class="form-group">
+          <label>Start Date</label>
+          <input type="date" [(ngModel)]="formStartDate" />
+        </div>
+        <div class="form-group">
+          <label>End Date</label>
+          <input type="date" [(ngModel)]="formEndDate" />
+        </div>
+        @if (editing) {
+          <div class="form-group">
+            <label>Status</label>
+            <select [(ngModel)]="formStatus">@for (s of statusOptions; track s) { <option [value]="s">{{ s }}</option> }</select>
+          </div>
+        }
+        <div class="form-group form-group-wide">
+          <label>Notes</label>
+          <textarea [(ngModel)]="formNotes" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancel()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()">{{ editing ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  <!-- WIP Modal -->
+  @if (showWipModal && wipOrder) {
+    <div class="modal-overlay" (click)="closeWipModal()">
+      <div class="modal-panel" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Record Work In Progress</h3>
+          <button class="btn-icon" (click)="closeWipModal()">✕</button>
+        </div>
+        <div class="convert-summary">
+          <div class="summary-row"><span class="summary-label">Order</span><span class="summary-value">{{ wipOrder.orderNumber }}</span></div>
+          <div class="summary-row"><span class="summary-label">Product</span><span class="summary-value">{{ getProductDisplayLabel(wipOrder.productId, wipOrder.productName) }}</span></div>
+          <div class="summary-row"><span class="summary-label">Planned Qty</span><span class="summary-value">{{ wipOrder.quantityPlanned | number:'1.0-2' }}</span></div>
+        </div>
+        @if (wipError) { <div class="alert alert-error">{{ wipError }}</div> }
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Qty In Progress</label>
+            <input type="number" [(ngModel)]="wipQtyInProgress" min="0" step="1" />
+          </div>
+          <div class="form-group">
+            <label>Qty Completed</label>
+            <input type="number" [(ngModel)]="wipQtyCompleted" min="0" step="1" />
+          </div>
+          <div class="form-group">
+            <label>Qty Rejected</label>
+            <input type="number" [(ngModel)]="wipQtyRejected" min="0" step="1" />
+          </div>
+          <div class="form-group form-group-wide">
+            <label>Notes</label>
+            <textarea [(ngModel)]="wipNotes" rows="2" placeholder="Optional progress notes..."></textarea>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-secondary" (click)="closeWipModal()" [disabled]="wipLoading">Cancel</button>
+          <button class="btn btn-primary" (click)="submitWip()" [disabled]="wipLoading">
+            {{ wipLoading ? 'Saving...' : (existingWipId ? 'Update WIP' : 'Record WIP') }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Inspection + Scrap Modal -->
+  @if (showInspectModal && inspectOrder) {
+    <div class="modal-overlay" (click)="closeInspectModal()">
+      <div class="modal-panel" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Record Inspection</h3>
+          <button class="btn-icon" (click)="closeInspectModal()">✕</button>
+        </div>
+        <div class="convert-summary">
+          <div class="summary-row"><span class="summary-label">Order</span><span class="summary-value">{{ inspectOrder.orderNumber }}</span></div>
+          <div class="summary-row"><span class="summary-label">Product</span><span class="summary-value">{{ getProductDisplayLabel(inspectOrder.productId, inspectOrder.productName) }}</span></div>
+          <div class="summary-row"><span class="summary-label">Planned Qty</span><span class="summary-value">{{ inspectOrder.quantityPlanned | number:'1.0-2' }}</span></div>
+        </div>
+        @if (inspectError) { <div class="alert alert-error">{{ inspectError }}</div> }
+        @if (inspectSuccess) { <div class="alert alert-success">{{ inspectSuccess }}</div> }
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Inspected Quantity *</label>
+            <input type="number" [(ngModel)]="inspectQty" min="0.001" step="0.001" />
+          </div>
+          <div class="form-group">
+            <label>Passed Quantity</label>
+            <input type="number" [(ngModel)]="inspectPassedQty" min="0" step="0.001" />
+          </div>
+          <div class="form-group">
+            <label>Rejected / Scrap Quantity</label>
+            <input type="number" [(ngModel)]="inspectRejectedQty" min="0" step="0.001" />
+            @if (inspectRejectedQty > 0) {
+              <span class="field-note">Rejected units are recorded for quality reporting. Any scrap write-off against inventory should be done separately once finished goods have been received.</span>
+            }
+          </div>
+          <div class="form-group form-group-wide">
+            <label>Remarks</label>
+            <textarea [(ngModel)]="inspectRemarks" rows="2" placeholder="Inspection notes or defect description..."></textarea>
+          </div>
+        </div>
+        <div class="ux-help-box" role="note" style="margin: 0 0 12px;">
+          <strong>After Inspection</strong>
+          Order status will move to <strong>QA Pending</strong>. Record a Finished Goods Receipt for the passed quantity, then set the order to Completed.
+          Rejected units are logged here for quality tracking — no inventory transaction is created at this stage.
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-secondary" (click)="closeInspectModal()" [disabled]="inspectLoading">Cancel</button>
+          <button class="btn btn-primary" (click)="submitInspection()" [disabled]="inspectLoading">
+            {{ inspectLoading ? 'Recording...' : 'Submit Inspection' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <input type="text" class="filter-search" [(ngModel)]="filterSearch" (ngModelChange)="onFilterChange()" placeholder="Search by order number or product..." />
+    <select class="filter-select" [(ngModel)]="filterStatus" (ngModelChange)="onFilterChange()">
+      <option value="all">All Statuses</option>
+      @for (s of statusOptions; track s) { <option [value]="s">{{ s }}</option> }
+    </select>
+    <span class="filter-count">{{ filteredItems.length }} of {{ totalCount }}</span>
+  </div>
+
+  @if (loading) { <div class="loading-spinner">Loading...</div> } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" [class.sorted]="sortBy === 'orderNumber'" (click)="sort('orderNumber')">Order # <span class="sort-icon">{{ sortBy === 'orderNumber' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'productName'" (click)="sort('productName')">Product <span class="sort-icon">{{ sortBy === 'productName' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'quantityPlanned'" (click)="sort('quantityPlanned')">Planned Qty <span class="sort-icon">{{ sortBy === 'quantityPlanned' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'quantityProduced'" (click)="sort('quantityProduced')">Produced <span class="sort-icon">{{ sortBy === 'quantityProduced' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'quantityRejected'" (click)="sort('quantityRejected')">Rejected <span class="sort-icon">{{ sortBy === 'quantityRejected' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Progress</th>
+            <th class="sortable" [class.sorted]="sortBy === 'startDate'" (click)="sort('startDate')">Start <span class="sort-icon">{{ sortBy === 'startDate' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'endDate'" (click)="sort('endDate')">End <span class="sort-icon">{{ sortBy === 'endDate' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'status'" (click)="sort('status')">Status <span class="sort-icon">{{ sortBy === 'status' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of displayRows; track row.id) {
+            <tr [class.row-new]="row.id === highlighter.id">
+              <td class="cell-primary">{{ row.orderNumber || '—' }}</td>
+              <td>
+                <div class="cell-primary">{{ getProductDisplayLabel(row.productId, row.productName) }}</div>
+                @if (!row.productName && !hasProductCatalogLabel(row.productId)) { <div class="cell-secondary guid-hint">Product profile missing</div> }
+              </td>
+              <td>{{ row.quantityPlanned | number:'1.0-2' }} {{ row.unitOfMeasure }}</td>
+              <td>{{ row.quantityProduced | number:'1.0-0' }}</td>
+              <td>{{ row.quantityRejected > 0 ? (row.quantityRejected | number:'1.0-0') : '—' }}</td>
+              <td>
+                <div class="progress-bar-wrap">
+                  <div class="progress-bar" [style.width.%]="getProgressPct(row)"></div>
+                </div>
+                <span class="pct-label">{{ getProgressPct(row) }}%</span>
+              </td>
+              <td>{{ row.startDate | date:'mediumDate' }}</td>
+              <td>{{ row.endDate | date:'mediumDate' }}</td>
+              <td><span class="badge {{ getStatusClass(row.status) }}">{{ row.status }}</span></td>
+              <td class="actions-cell">
+                @if (row.status === 'Draft') {
+                  <button class="btn-xs btn-action" (click)="quickUpdateStatus(row, 'Released')">Release</button>
+                }
+                @if (row.status === 'Released') {
+                  <button class="btn-xs btn-action" (click)="quickUpdateStatus(row, 'InProgress')">Start</button>
+                }
+                @if (row.status === 'InProgress') {
+                  <button class="btn-xs btn-wip" (click)="openWipModal(row)" title="Record Work In Progress">WIP</button>
+                  <button class="btn-xs btn-inspect" (click)="openInspectModal(row)" title="Record Inspection &amp; handle scrap">Inspect</button>
+                  <button class="btn-xs btn-success" (click)="checkAndComplete(row)" title="Complete (requires Finished Goods Receipt)">Complete</button>
+                }
+                @if (row.status === 'QAPending') {
+                  <button class="btn-xs btn-success" (click)="checkAndComplete(row)" title="Complete (requires Finished Goods Receipt)">Complete</button>
+                }
+                <button class="btn-icon" (click)="openEdit(row)" title="Edit">✏️</button>
+                <button class="btn-icon" (click)="delete(row)" title="Delete">🗑️</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="10" class="empty-row">No production orders found</td></tr>
+          }
+        </tbody>
+      </table>
+      @if (filteredItems.length > 0) {
+        <div class="pagination-bar">
+          <div class="pagination-info">
+            <span>Rows per page:</span>
+            <select [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+              @for (opt of pageSizeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+            </select>
+            <span>Showing {{ (page - 1) * pageSize + 1 }} to {{ page * pageSize > totalCount ? totalCount : page * pageSize }} of {{ totalCount }} entries</span>
+          </div>
+          <div class="pagination-controls">
+            <button class="btn-page" [disabled]="page <= 1" (click)="goToPage(page - 1)">&#8249; Prev</button>
+            <span class="page-indicator">Page {{ page }} of {{ totalPages }}</span>
+            <button class="btn-page" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next &#8250;</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

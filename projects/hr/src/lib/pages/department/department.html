@@ -1,0 +1,83 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">account_tree</span></div>
+      <div>
+        <h1>Departments</h1>
+        <p class="inv-hero-sub">Manage organizational departments</p>
+      </div>
+    </div>
+    <button class="btn btn-primary" (click)="openCreateForm()">+ New Department</button>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editingDepartment ? 'Edit Department' : 'Create Department' }}</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Department Name *</label>
+          <input type="text" [(ngModel)]="formDepartmentName" placeholder="Department name" />
+        </div>
+        <div class="form-group">
+          <label>Department Code</label>
+          <input type="text" [(ngModel)]="formDepartmentCode" placeholder="e.g. HR, FIN, IT" />
+        </div>
+        <div class="form-group">
+          <label>Parent Department ID</label>
+          <input type="text" [(ngModel)]="formParentDepartmentId" placeholder="Parent department ID" />
+        </div>
+        <div class="form-group">
+          <label>Dept Head Employee ID</label>
+          <input type="text" [(ngModel)]="formDepartmentHeadEmployeeId" placeholder="Head employee ID" />
+        </div>
+        @if (editingDepartment) {
+          <div class="form-group form-check-row">
+            <label><input type="checkbox" [(ngModel)]="formIsActive" /> Active</label>
+          </div>
+        }
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="saveDepartment()">{{ editingDepartment ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Name</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (d of departments; track d.id) {
+            <tr>
+              <td>{{ d.departmentCode }}</td>
+              <td>{{ d.departmentName }}</td>
+              <td>
+                <span class="badge" [class.badge-active]="d.isActive" [class.badge-inactive]="!d.isActive">
+                  {{ d.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td>
+                <button class="btn btn-sm btn-secondary" (click)="openEditForm(d)">Edit</button>
+                <button class="btn btn-sm btn-danger" (click)="deleteDepartment(d)">Delete</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="4" class="empty-state">No departments found.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

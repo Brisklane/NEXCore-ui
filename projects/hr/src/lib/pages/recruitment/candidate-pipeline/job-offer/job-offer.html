@@ -1,0 +1,120 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">handshake</span></div>
+      <div>
+        <h1>Job Offers</h1>
+        <p class="inv-hero-sub">Manage job offers sent to candidates.</p>
+      </div>
+    </div>
+    <button type="button" class="btn btn-primary" (click)="openCreateForm()">New Offer</button>
+  </div>
+
+  @if (error) {
+    <div class="alert alert-error">{{ error }}</div>
+  }
+  @if (loading) {
+    <div class="loading-spinner">Loading job offers...</div>
+  }
+
+  @if (showForm) {
+    <section class="form-panel">
+      <h3>{{ editingOffer ? 'Edit Job Offer' : 'Create Job Offer' }}</h3>
+      <form (ngSubmit)="saveOffer()" class="form-grid">
+
+        <div class="form-group">
+          <label>Application</label>
+          <select name="applicationId" [(ngModel)]="formApplicationId" [disabled]="!!editingOffer" required>
+            <option value="">— Select Application —</option>
+            @for (app of applications; track app.id) {
+              <option [value]="app.id">{{ app.applicationCode || app.id }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Currency</label>
+          <select name="currency" [(ngModel)]="formCurrencyCode">
+            <option value="">— Select Currency —</option>
+            @for (c of currencies; track c.id) {
+              <option [value]="c.currencyCode">{{ c.currencyCode }}{{ c.currencyName ? ' - ' + c.currencyName : '' }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Status</label>
+          <select name="status" [(ngModel)]="formStatus">
+            <option value="">— Select Status —</option>
+            @for (v of offerStatusValues; track v.id) {
+              <option [value]="v.id">{{ v.name || v.code }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Salary</label>
+          <input type="number" name="salary" [(ngModel)]="formSalary" min="0" />
+        </div>
+
+        <div class="form-group">
+          <label>Offer Date</label>
+          <input type="date" name="offerDate" [(ngModel)]="formOfferDate" />
+        </div>
+
+        <div class="form-group">
+          <label>Expiry Date</label>
+          <input type="date" name="expiryDate" [(ngModel)]="formExpiryDate" />
+        </div>
+
+        <div class="form-group full-width">
+          <label>Notes</label>
+          <textarea name="notes" rows="3" [(ngModel)]="formNotes"></textarea>
+        </div>
+
+        <div class="form-actions full-width">
+          <button type="submit" class="btn btn-primary">{{ editingOffer ? 'Update' : 'Save' }}</button>
+          <button type="button" class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        </div>
+      </form>
+    </section>
+  }
+
+  @if (!loading && offers.length === 0) {
+    <section class="alert alert-success">No job offers found.</section>
+  }
+
+  @if (offers.length > 0) {
+    <section class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Application</th>
+            <th>Offer Date</th>
+            <th>Expiry Date</th>
+            <th>Salary</th>
+            <th>Currency</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (offer of offers; track offer.id) {
+            <tr>
+              <td>{{ getApplicationLabel(offer.applicationId) }}</td>
+              <td>{{ offer.offerDate | date:'mediumDate' }}</td>
+              <td>{{ offer.expiryDate | date:'mediumDate' }}</td>
+              <td>{{ offer.salary ?? '—' }}</td>
+              <td>{{ getCurrencyLabel(offer.currency) }}</td>
+              <td>{{ getStatusLabel(offer.status) }}</td>
+              <td class="actions-cell">
+                <button type="button" class="btn btn-secondary btn-sm" (click)="openEditForm(offer)">Edit</button>
+                <button type="button" class="btn btn-danger btn-sm" (click)="deleteOffer(offer)">Delete</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </section>
+  }
+</div>

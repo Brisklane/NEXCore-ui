@@ -1,0 +1,289 @@
+<div class="ld-page">
+
+  <!-- ── Page Header ──────────────────────────────────────────────── -->
+  <div class="ld-header">
+    <button class="btn-back" (click)="goBack()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2.5"
+           stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+      Leads
+    </button>
+    <div class="ld-title-block">
+      <h2 class="ld-title">{{ getLeadName() }}</h2>
+      @if (lead?.company || lead?.title) {
+        <p class="ld-subtitle">
+          {{ lead?.company || '' }}{{ (lead?.company && lead?.title) ? ' · ' : '' }}{{ lead?.title || '' }}
+        </p>
+      }
+    </div>
+  </div>
+
+  @if (error) {
+    <div class="alert alert-error">{{ error }}</div>
+  }
+
+  @if (loading) {
+    <div class="loading-spinner">Loading lead…</div>
+  }
+
+  @if (!loading && lead) {
+
+    <!-- ── Stage Pipeline Row (bar + confirm button) ──────────────── -->
+    <div class="stage-row">
+
+      <!-- Chevron chips -->
+      <div class="stage-bar" [class.bar-saving]="savingStage">
+        @for (stage of stages; track stage.value; let i = $index; let first = $first; let last = $last) {
+          <div class="s-chip"
+               [ngClass]="[getChipClass(i), first ? 's-first' : (last ? 's-last' : 's-middle')]"
+               (click)="selectStage(stage.value)"
+               [title]="stage.label">
+
+            <!--
+              Both elements are always in the DOM.
+              CSS shows the tick on s-past and swaps to the label on hover.
+            -->
+            <svg class="s-check" width="14" height="14" viewBox="0 0 14 14" fill="none"
+                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                 stroke-linejoin="round">
+              <polyline points="2,7 5.5,11 12,3"/>
+            </svg>
+            <span class="s-label">{{ stage.label }}</span>
+
+            @if (getChipClass(i) === 's-current' || getChipClass(i) === 's-pending') {
+              <span class="s-dot"></span>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Confirm button -->
+      <button class="btn-confirm"
+              [class.btn-confirm-converted]="isConvertedActive"
+              [class.btn-confirm-pending]="hasPendingChange"
+              [disabled]="savingStage"
+              (click)="confirmStage()">
+        {{ buttonLabel }}
+      </button>
+
+    </div><!-- /stage-row -->
+
+    <!-- ── Two-Column Body ──────────────────────────────────────────── -->
+    <div class="ld-body">
+
+      <!-- LEFT: Lead Details ──────────────────────────────────────── -->
+      <div class="ld-left">
+
+        <!-- Lead Info -->
+        <div class="ld-panel">
+          <div class="ld-panel-title">Lead Information</div>
+          <div class="ld-rows">
+            <div class="ld-row">
+              <span class="ld-label">Status</span>
+              <span class="ld-val">
+                <span class="badge" [ngClass]="getLeadStatusClass(lead.status)">
+                  {{ lead.status || '—' }}
+                </span>
+              </span>
+            </div>
+            <div class="ld-row">
+              <span class="ld-label">Assigned To</span>
+              <span class="ld-val">{{ getEmployeeName(lead.assignedEmployeeId) }}</span>
+            </div>
+            <div class="ld-row">
+              <span class="ld-label">Lead Source</span>
+              <span class="ld-val">{{ lead.leadSource || '—' }}</span>
+            </div>
+            <div class="ld-row">
+              <span class="ld-label">Industry</span>
+              <span class="ld-val">{{ lead.industry || '—' }}</span>
+            </div>
+            <div class="ld-row">
+              <span class="ld-label">Email</span>
+              <span class="ld-val">
+                @if (lead.email) {
+                  <a [href]="'mailto:' + lead.email" class="ld-link">{{ lead.email }}</a>
+                } @else { — }
+              </span>
+            </div>
+            <div class="ld-row">
+              <span class="ld-label">Phone</span>
+              <span class="ld-val">{{ lead.phone || '—' }}</span>
+            </div>
+            <div class="ld-row">
+              <span class="ld-label">Website</span>
+              <span class="ld-val">
+                @if (lead.website) {
+                  <a [href]="lead.website" target="_blank" rel="noopener" class="ld-link">{{ lead.website }}</a>
+                } @else { — }
+              </span>
+            </div>
+            <div class="ld-row">
+              <span class="ld-label">Email Opt-Out</span>
+              <span class="ld-val">{{ lead.emailOptOut ? 'Yes' : 'No' }}</span>
+            </div>
+            <div class="ld-row">
+              <span class="ld-label">Created</span>
+              <span class="ld-val">{{ lead.createdAt | date:'MMMM d, y' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Company & Segment -->
+        <div class="ld-panel">
+          <div class="ld-panel-title">Company &amp; Segment</div>
+          <div class="ld-rows">
+            <div class="ld-row">
+              <span class="ld-label">Company</span>
+              <span class="ld-val">{{ lead.company || '—' }}</span>
+            </div>
+            <div class="ld-row">
+              <span class="ld-label">Title</span>
+              <span class="ld-val">{{ lead.title || '—' }}</span>
+            </div>
+            <div class="ld-row">
+              <span class="ld-label">Employees</span>
+              <span class="ld-val">
+                {{ lead.numberOfEmployees !== null ? (lead.numberOfEmployees | number) : '—' }}
+              </span>
+            </div>
+            <div class="ld-row">
+              <span class="ld-label">Annual Revenue</span>
+              <span class="ld-val">{{ formatCurrency(lead.annualRevenue) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Address -->
+        <div class="ld-panel">
+          <div class="ld-panel-title">Address</div>
+          <div class="ld-rows">
+            <div class="ld-row">
+              <span class="ld-label">Street</span>
+              <span class="ld-val">{{ lead.street || '—' }}</span>
+            </div>
+            <div class="ld-row">
+              <span class="ld-label">City</span>
+              <span class="ld-val">{{ lead.city || '—' }}</span>
+            </div>
+            <div class="ld-row">
+              <span class="ld-label">State / Province</span>
+              <span class="ld-val">{{ lead.state || '—' }}</span>
+            </div>
+            <div class="ld-row">
+              <span class="ld-label">Postal Code</span>
+              <span class="ld-val">{{ lead.postalCode || '—' }}</span>
+            </div>
+            <div class="ld-row">
+              <span class="ld-label">Country</span>
+              <span class="ld-val">{{ lead.country || '—' }}</span>
+            </div>
+          </div>
+        </div>
+
+        @if (lead.description) {
+          <div class="ld-panel">
+            <div class="ld-panel-title">Description</div>
+            <p class="ld-desc">{{ lead.description }}</p>
+          </div>
+        }
+
+      </div><!-- /ld-left -->
+
+      <!-- RIGHT: Activity Timeline ───────────────────────────────── -->
+      <div class="ld-right">
+        <div class="ld-panel ld-panel-fill">
+          <div class="ld-panel-title">Activity Timeline</div>
+
+          @if (activities.length === 0) {
+            <div class="empty-timeline">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none"
+                   stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <p>No activities logged for this lead.</p>
+            </div>
+          } @else {
+            <div class="timeline">
+              @for (activity of activities; track activity.id) {
+                <div class="tl-item">
+
+                  <div class="tl-icon-col">
+                    <div class="tl-icon" [ngClass]="getActivityTypeClass(activity.type)">
+                      {{ getActivityIcon(activity.type) }}
+                    </div>
+                    <div class="tl-line"></div>
+                  </div>
+
+                  <div class="tl-content">
+                    <div class="tl-top">
+                      <span class="tl-subject">{{ activity.subject || '(No subject)' }}</span>
+                      <span class="tl-type-chip" [ngClass]="getActivityTypeClass(activity.type)">
+                        {{ activity.type || 'Activity' }}
+                      </span>
+                    </div>
+
+                    <div class="tl-meta">
+                      <span class="tl-date">
+                        {{ getActivityDate(activity) | date:'MMM d, y · h:mm a' }}
+                      </span>
+                      @if (activity.status) {
+                        <span class="tl-status-chip" [ngClass]="getActivityStatusClass(activity.status)">
+                          {{ activity.status }}
+                        </span>
+                      }
+                      @if (activity.priority && activity.priority !== 'Normal') {
+                        <span class="tl-priority" [ngClass]="'prio-' + activity.priority.toLowerCase()">
+                          {{ activity.priority }}
+                        </span>
+                      }
+                    </div>
+
+                    @if (activity.description || activity.comments) {
+                      <p class="tl-body">{{ activity.description || activity.comments }}</p>
+                    }
+
+                    @if (activity.type?.toLowerCase() === 'call') {
+                      <div class="tl-chips">
+                        @if (activity.callType) {
+                          <span class="tl-chip">{{ activity.callType }}</span>
+                        }
+                        @if (activity.callPurpose) {
+                          <span class="tl-chip">{{ activity.callPurpose }}</span>
+                        }
+                        @if (activity.callResult) {
+                          <span class="tl-chip tl-chip-result">{{ activity.callResult }}</span>
+                        }
+                        @if (activity.durationMinutes) {
+                          <span class="tl-chip">{{ activity.durationMinutes }} min</span>
+                        }
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+        </div>
+      </div><!-- /ld-right -->
+
+    </div><!-- /ld-body -->
+
+    <!-- Convert modal lives inside the content guard so change detection
+         picks it up in the same scope as the rest of the lead data. -->
+    @if (showConvertModal) {
+      <lib-lead-convert-modal
+        [lead]="lead"
+        (converted)="onLeadConverted()"
+        (cancelled)="onConvertCancelled()">
+      </lib-lead-convert-modal>
+    }
+
+  }
+
+</div>

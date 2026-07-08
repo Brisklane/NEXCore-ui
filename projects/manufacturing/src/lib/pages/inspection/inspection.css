@@ -1,0 +1,68 @@
+@import '../shared-styles.css';
+
+/* Muted placeholder for auto-populated fields */
+.form-control-muted {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* Planned quantity label hint */
+.qty-planned-hint {
+  margin-left: 8px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--accent, #2b7fff);
+  background: #eef2ff;
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+/* Input border states */
+.input-over-limit {
+  border-color: #ef4444 !important;
+  background-color: #fef2f2 !important;
+}
+
+.input-valid {
+  border-color: #22c55e !important;
+  background-color: #f0fdf4 !important;
+}
+
+.input-invalid {
+  border-color: #ef4444 !important;
+  background-color: #fef2f2 !important;
+}
+
+/* Qty sum feedback line */
+.qty-sum-hint {
+  margin-top: 4px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.qty-sum-valid {
+  color: #15803d;
+  background: #dcfce7;
+}
+
+.qty-sum-invalid {
+  color: #b91c1c;
+  background: #fee2e2;
+}
+
+.qty-sum-neutral {
+  color: #6b7280;
+}
+
+/* Warning below inspected qty */
+.qty-hint-warning {
+  margin-top: 4px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #b45309;
+  background: #fef3c7;
+  padding: 3px 8px;
+  border-radius: 4px;
+}

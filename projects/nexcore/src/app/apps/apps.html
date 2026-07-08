@@ -1,0 +1,28 @@
+<div class="apps-page">
+  <header class="apps-head">
+    <h1 class="apps-title">Apps</h1>
+    <p class="apps-subtitle">Industry-ready apps built on NexCore. Launch one to get started.</p>
+  </header>
+
+  <div class="apps-grid">
+    <div class="app-card" *ngFor="let app of apps">
+      <span class="app-icon" [style.background]="app.accent">
+        <span class="material-symbols-outlined">{{ app.icon }}</span>
+      </span>
+
+      <div class="app-name">{{ app.name }}</div>
+      <div class="app-brand">{{ app.brand }}</div>
+      <div class="app-desc">{{ app.description }}</div>
+
+      <button
+        type="button"
+        class="app-explore"
+        [class.soon]="!app.available"
+        [disabled]="!app.available"
+        (click)="onExplore(app)"
+      >
+        {{ app.available ? 'Explore' : 'Coming soon' }}
+      </button>
+    </div>
+  </div>
+</div>

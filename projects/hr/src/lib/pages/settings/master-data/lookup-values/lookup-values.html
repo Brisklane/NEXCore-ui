@@ -1,0 +1,230 @@
+<div class="page-container">
+
+  <!-- ── Page Header ──────────────────────────────────────────── -->
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">tune</span></div>
+      <div>
+        <h1>Lookup Configuration</h1>
+        <p class="inv-hero-sub">Define categories (Lookup Types) and their selectable values used across HR workflows</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Tabs ─────────────────────────────────────────────────── -->
+  <div class="lookup-tabs">
+    <button class="lookup-tab" [class.active]="activeTab === 'types'" (click)="switchTab('types')">
+      Lookup Types
+    </button>
+    <button class="lookup-tab" [class.active]="activeTab === 'values'" (click)="switchTab('values')">
+      Lookup Values
+    </button>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- TAB 1 — LOOKUP TYPES                                       -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  @if (activeTab === 'types') {
+
+    <div class="tab-toolbar">
+      <div></div>
+      <button class="btn btn-primary" (click)="openCreateTypeForm()">+ New Lookup Type</button>
+    </div>
+
+    @if (typeError) { <div class="alert alert-error">{{ typeError }}</div> }
+
+    <!-- Create Type Form -->
+    @if (showTypeForm) {
+      <div class="form-panel">
+        <h3>Create Lookup Type</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Name *</label>
+            <input type="text" [(ngModel)]="formTypeName" placeholder="e.g. Interview Status" />
+          </div>
+          <div class="form-group">
+            <label>Code</label>
+            <input type="text" [(ngModel)]="formTypeCode" placeholder="e.g. INTERVIEW_STATUS" />
+          </div>
+          <div class="form-group">
+            <label>Module Name</label>
+            <input type="text" [(ngModel)]="formTypeModuleName" placeholder="e.g. Recruitment" />
+          </div>
+          <div class="form-group">
+            <label>Entity Name</label>
+            <input type="text" [(ngModel)]="formTypeEntityName" placeholder="e.g. Interview" />
+          </div>
+          <div class="form-group">
+            <label>Sort Order</label>
+            <input type="number" [(ngModel)]="formTypeSortOrder" placeholder="0" />
+          </div>
+          <div class="form-group">
+            <label>Description</label>
+            <input type="text" [(ngModel)]="formTypeDescription" placeholder="Optional description" />
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-secondary" (click)="cancelTypeForm()">Cancel</button>
+          <button class="btn btn-primary" (click)="saveType()">Create Type</button>
+        </div>
+      </div>
+    }
+
+    <!-- Types Table -->
+    @if (loadingTypes) {
+      <div class="loading-spinner">Loading lookup types...</div>
+    } @else {
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Code</th>
+              <th>Module</th>
+              <th>Entity</th>
+              <th>Sort</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (t of lookupTypes; track t.id) {
+              <tr>
+                <td>
+                  <a class="link-cell" (click)="openValuesFor(t)">{{ t.name || '—' }}</a>
+                </td>
+                <td><code class="code-chip">{{ t.code || '—' }}</code></td>
+                <td>{{ t.moduleName || '—' }}</td>
+                <td>{{ t.entityName || '—' }}</td>
+                <td>{{ t.sortOrder ?? '—' }}</td>
+                <td>
+                  <span class="badge" [class.badge-active]="t.isActive !== false" [class.badge-inactive]="t.isActive === false">
+                    {{ t.isActive !== false ? 'Active' : 'Inactive' }}
+                  </span>
+                </td>
+                <td class="actions-cell">
+                  <button class="btn btn-sm btn-secondary" title="Manage Values" (click)="openValuesFor(t)">Values ›</button>
+                  <button class="btn btn-sm btn-danger" title="Delete" (click)="deleteType(t)">🗑️</button>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="7" class="empty-row">No lookup types found. Create one to get started.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- TAB 2 — LOOKUP VALUES                                      -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  @if (activeTab === 'values') {
+
+    <!-- LookupType selector bar -->
+    <div class="lookup-type-selector">
+      <div class="selector-label">
+        <span class="material-icons" style="font-size:18px;vertical-align:middle;margin-right:4px;">category</span>
+        Lookup Type
+      </div>
+      <select class="selector-select" [(ngModel)]="selectedTypeId" (ngModelChange)="onTypeDropdownChange()">
+        <option value="">— Select a Lookup Type —</option>
+        @for (t of lookupTypes; track t.id) {
+          <option [value]="t.id">{{ t.name }}{{ t.code ? ' (' + t.code + ')' : '' }}</option>
+        }
+      </select>
+      @if (selectedType) {
+        <span class="selector-meta">{{ selectedType.moduleName ? selectedType.moduleName + ' › ' : '' }}{{ selectedType.entityName || '' }}</span>
+      }
+      @if (selectedTypeId) {
+        <button class="btn btn-primary btn-sm" style="margin-left:auto" (click)="openCreateValueForm()">+ New Value</button>
+      }
+    </div>
+
+    @if (valueError) { <div class="alert alert-error">{{ valueError }}</div> }
+
+    <!-- No type selected state -->
+    @if (!selectedTypeId) {
+      <div class="lookup-empty-state">
+        <span class="material-icons" style="font-size:48px;color:#cbd5e1">list_alt</span>
+        <p>Select a Lookup Type above to view and manage its values.</p>
+        <button class="btn btn-secondary" (click)="switchTab('types')">← Go to Lookup Types</button>
+      </div>
+    }
+
+    <!-- Create Value Form -->
+    @if (selectedTypeId && showValueForm) {
+      <div class="form-panel">
+        <h3>Add Value <span style="color:#64748b;font-weight:400">to <strong>{{ selectedType?.name }}</strong></span></h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Name *</label>
+            <input type="text" [(ngModel)]="formValueName" placeholder="e.g. Pending" />
+          </div>
+          <div class="form-group">
+            <label>Code</label>
+            <input type="text" [(ngModel)]="formValueCode" placeholder="e.g. PENDING" />
+          </div>
+          <div class="form-group">
+            <label>Sort Order</label>
+            <input type="number" [(ngModel)]="formValueSortOrder" placeholder="0" />
+          </div>
+          <div class="form-group">
+            <label>Description</label>
+            <input type="text" [(ngModel)]="formValueDescription" placeholder="Optional description" />
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-secondary" (click)="cancelValueForm()">Cancel</button>
+          <button class="btn btn-primary" (click)="saveValue()">Add Value</button>
+        </div>
+      </div>
+    }
+
+    <!-- Values Table -->
+    @if (selectedTypeId) {
+      @if (loadingValues) {
+        <div class="loading-spinner">Loading values...</div>
+      } @else {
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Code</th>
+                <th>Description</th>
+                <th>Sort</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (v of lookupValues; track v.id; let i = $index) {
+                <tr>
+                  <td class="row-num">{{ i + 1 }}</td>
+                  <td><strong>{{ v.name || '—' }}</strong></td>
+                  <td><code class="code-chip">{{ v.code || '—' }}</code></td>
+                  <td>{{ v.description || '—' }}</td>
+                  <td>{{ v.sortOrder ?? '—' }}</td>
+                  <td>
+                    <span class="badge" [class.badge-active]="v.isActive !== false" [class.badge-inactive]="v.isActive === false">
+                      {{ v.isActive !== false ? 'Active' : 'Inactive' }}
+                    </span>
+                  </td>
+                  <td class="actions-cell">
+                    <button class="btn btn-sm btn-danger" title="Delete" (click)="deleteValue(v)">🗑️</button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="7" class="empty-row">No values found for this type. Add the first value above.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+  }
+
+</div>
+

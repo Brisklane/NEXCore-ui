@@ -1,0 +1,36 @@
+<div class="page-container">
+
+  <app-page-header title="Vendor Analysis" subtitle="Spend, settlement &amp; performance ranked across active vendors">
+    <button class="btn btn-secondary" (click)="load()" [disabled]="loading">↻ Refresh</button>
+  </app-page-header>
+
+  <app-alert type="error" [message]="error"></app-alert>
+
+  <div class="helper-box">
+    <span class="helper-icon">ℹ️</span>
+    <div>Each row rolls up a vendor's confirmed purchase orders, invoiced amounts, and payments.
+      <strong>Outstanding</strong> is invoiced-minus-paid — your open payable to that vendor. Rating and on-time delivery come
+      from recorded vendor performance, where available.</div>
+  </div>
+
+  @if (data) {
+    <div class="kpi-grid">
+      <div class="kpi-card accent"><span class="kpi-label">Active Vendors</span><span class="kpi-value">{{ data.activeVendors }}</span><span class="kpi-sub">with purchase activity</span></div>
+      <div class="kpi-card"><span class="kpi-label">Total Spend</span><span class="kpi-value">{{ data.totalSpend | number:'1.0-0' }}</span><span class="kpi-sub">{{ currency }}</span></div>
+    </div>
+
+    <div class="report-card">
+      <h3>Top 10 Vendors by Purchase Value</h3>
+      <lib-bar-chart [data]="spendPoints" [currency]="currency"></lib-bar-chart>
+    </div>
+
+    <div class="report-card">
+      <h3>Vendor Detail</h3>
+      <app-data-table [sortableAll]="true" [columns]="columns" [data]="data.vendors" [loading]="loading"
+        emptyMessage="No vendor activity found."></app-data-table>
+    </div>
+  } @else if (!loading) {
+    <div class="empty-state">No vendor data available yet.</div>
+  }
+
+</div>

@@ -1,0 +1,269 @@
+<div class="register-bg">
+  <aside class="auth-brand">
+    <span class="ab-glow ab-glow-1"></span>
+    <span class="ab-glow ab-glow-2"></span>
+    <div class="ab-logo"><img src="/images/nexcore-logo.svg" alt="NexCore" /></div>
+    <div class="ab-mid">
+      <h1 class="ab-title">Start building<br />with NexCore.</h1>
+      <p class="ab-sub">
+        Set up your company in minutes and get every module — sales, inventory, HR,
+        accounting and more — ready to go.
+      </p>
+      <ul class="ab-points">
+        <li>Guided, multi-step setup</li>
+        <li>Sample data to explore instantly</li>
+        <li>One workspace for your whole team</li>
+      </ul>
+    </div>
+    <div class="ab-foot">© 2026 NexCore. All rights reserved.</div>
+  </aside>
+
+  <div class="register-card">
+    <!-- POPUP -->
+    <div *ngIf="showPopup" class="custom-popup-overlay">
+      <div class="custom-popup">
+        <p>{{ popupMessage }}</p>
+        <button type="button" class="main-btn popup-btn" (click)="closePopup()">OK</button>
+      </div>
+    </div>
+
+    <!-- LOADER -->
+    <div *ngIf="isLoadingStepOne || (isRegistering && !seedSampleData)" class="loader-overlay">
+      <div class="loader-box">
+        <div class="spinner"></div>
+        <p>
+          {{ isLoadingStepOne ? 'Validating company details...' : 'Creating company and admin account...' }}
+        </p>
+      </div>
+    </div>
+
+    <!-- SEEDING PROGRESS OVERLAY -->
+    <div *ngIf="showSeedOverlay" class="seed-overlay">
+      <div class="seed-overlay-inner">
+        <h2 class="seed-overlay-title">Setting Up Your ERP</h2>
+        <p class="seed-subtitle">Populating sample data across all modules&hellip;</p>
+
+        <div class="seed-ring-wrap">
+          <svg class="seed-ring" viewBox="0 0 120 120">
+            <circle class="seed-ring-track" cx="60" cy="60" r="52"></circle>
+            <circle
+              class="seed-ring-fill"
+              cx="60" cy="60" r="52"
+              [style.stroke-dasharray]="ringCircumference"
+              [style.stroke-dashoffset]="ringDashOffset"
+            ></circle>
+          </svg>
+          <div class="seed-ring-label">
+            <span class="seed-ring-percent">{{ seedProgress }}%</span>
+            <i *ngIf="seedCompleted" class="fa-solid fa-check seed-ring-check"></i>
+          </div>
+        </div>
+
+        <p class="seed-status">{{ currentSeedModuleName }}</p>
+
+        <div class="seed-tip-wrap">
+          <p class="seed-tip" [class.tip-visible]="tipVisible">
+            <i class="fa-regular fa-lightbulb"></i>
+            {{ erpTips[currentTipIndex] }}
+          </p>
+        </div>
+
+        <div class="seed-bar">
+          <div class="seed-bar-fill" [style.width.%]="seedProgress"></div>
+        </div>
+
+        <div class="seed-modules">
+          <div
+            class="seed-module"
+            *ngFor="let m of seedModules; let i = index"
+            [class.done]="m.done"
+            [class.active]="!m.done && !seedCompleted && i === currentSeedModuleIndex"
+          >
+            <i [class]="m.done ? 'fa-solid fa-circle-check' : m.icon"></i>
+            <span>{{ m.name }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAP MODAL -->
+    <div class="map-overlay" *ngIf="showMapModal">
+      <div class="map-modal">
+        <div class="map-topbar">
+          <input
+            class="map-search"
+            [(ngModel)]="mapSearchQuery"
+            (keyup.enter)="searchOnMap()"
+            placeholder="Search"
+          />
+          <button type="button" class="secondary-btn" (click)="searchOnMap()">Search</button>
+          <button type="button" class="map-close" (click)="closeMapModal()">âœ•</button>
+        </div>
+
+        <div id="leafletMap" class="map-canvas"></div>
+
+        <button
+          type="button"
+          class="main-btn map-confirm-btn"
+          (click)="confirmLocation()"
+          [disabled]="!selectedLatLng"
+        >
+          Confirm
+        </button>
+      </div>
+    </div>
+
+    <!-- Logo inside card -->
+    <div class="top-brand">
+      <img src="/images/nexcore-logo.svg" alt="Logo" class="top-brand-logo" />
+    </div>
+
+    <h1 *ngIf="step !== 3" class="page-title">
+      {{ step === 1 ? 'Company Register' : 'Admin Register' }}
+    </h1>
+
+    <p *ngIf="step === 1" class="page-subtitle">
+      Access Your ERP NexCore
+    </p>
+
+    <div *ngIf="step !== 3" class="stepper">
+      <div class="step-box">
+        <div class="step-circle" [class.active]="step === 1" [class.done]="step >= 2">
+          {{ step >= 2 ? 'âœ“' : '1' }}
+        </div>
+        <div class="step-label" [class.active-label]="step === 1 || step >= 2">
+          Enter Company Details
+        </div>
+      </div>
+
+      <div class="step-line"></div>
+
+      <div class="step-box">
+        <div class="step-circle" [class.active]="step === 2" [class.done]="step === 3">
+          {{ step === 3 ? 'âœ“' : '2' }}
+        </div>
+        <div class="step-label" [class.active-label]="step === 2 || step === 3">
+          Create Admin Account
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 1 -->
+    <div *ngIf="step === 1" class="form-grid">
+      <div class="field full">
+        <label>Company Name <span>*</span></label>
+        <input
+          type="text"
+          [(ngModel)]="companyName"
+          name="companyName"
+          placeholder="e.g. Acme Corporation"
+          (ngModelChange)="autoFillBranchAndBusinessUnit(); clearError('companyName')"
+        />
+        <p class="field-error">{{ errors.companyName }}</p>
+      </div>
+
+      <div class="field full">
+        <label>Preferred Currency <span>*</span></label>
+        <select [(ngModel)]="preferredCurrency" name="preferredCurrency" (ngModelChange)="clearError('preferredCurrency')">
+          <option value="">Select currency</option>
+          <option>PKR</option>
+          <option>USD</option>
+          <option>AED</option>
+        </select>
+        <p class="field-error">{{ errors.preferredCurrency }}</p>
+      </div>
+
+      <p class="minimal-note full">
+        Just the essentials to get started — you can add legal details, address, branches,
+        business units and your logo any time in <strong>Manage Company</strong>.
+      </p>
+
+      <button class="main-btn full" type="button" (click)="nextStep()" [disabled]="isLoadingStepOne">
+        {{ isLoadingStepOne ? 'Please wait...' : 'Next' }}
+      </button>
+
+      <div class="bottom-link full">
+        Already have an account?
+        <a (click)="goToLogin()">Login</a>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div *ngIf="step === 2" class="form-grid">
+      <div class="field full">
+        <label>Full Name <span>*</span></label>
+        <input type="text" [(ngModel)]="fullName" name="fullName" (ngModelChange)="clearError('fullName')" />
+        <p class="field-error">{{ errors.fullName }}</p>
+      </div>
+
+      <div class="field">
+        <label>Username <span>*</span></label>
+        <input type="text" [(ngModel)]="userName" name="userName" autocomplete="username" (ngModelChange)="clearError('userName')" />
+        <p class="field-error">{{ errors.userName }}</p>
+      </div>
+
+      <div class="field">
+        <label>Email Address <span>*</span></label>
+        <input type="email" [(ngModel)]="adminEmail" name="adminEmail" autocomplete="email" (ngModelChange)="clearError('adminEmail')" />
+        <p class="field-error">{{ errors.adminEmail }}</p>
+      </div>
+
+      <div class="field full">
+        <label>Password <span>*</span></label>
+        <input type="password" [(ngModel)]="adminPassword" name="adminPassword" autocomplete="new-password" (ngModelChange)="clearError('adminPassword')" />
+        <p class="field-hint">At least 8 characters, with an uppercase, lowercase, number and special character.</p>
+        <p class="field-error">{{ errors.adminPassword }}</p>
+      </div>
+
+      <div class="seed-option full">
+        <label class="seed-checkbox-label">
+          <input type="checkbox" [(ngModel)]="seedSampleData" name="seedSampleData" />
+          <div class="seed-checkbox-text">
+            <span class="seed-opt-title">Seed sample data</span>
+            <span class="seed-opt-desc">Populate your account with demo orders, invoices, contacts and items to explore the ERP.</span>
+          </div>
+        </label>
+      </div>
+
+      <div class="btn-row full">
+        <button class="secondary-btn" type="button" (click)="prevStep()">Back</button>
+        <button class="main-btn" type="button" (click)="register()" [disabled]="isRegistering">
+          {{ isRegistering ? (seedSampleData ? 'Setting up ERP...' : 'Registering...') : 'Create account' }}
+        </button>
+      </div>
+
+      <div class="bottom-link full">
+        Already have an account?
+        <a (click)="goToLogin()">Login</a>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div *ngIf="step === 3" class="success-screen">
+      <h1 class="success-title">Congratulations!</h1>
+
+      <p class="success-bold-text">
+        Your Company Registered Successfully. Admin Account Created.
+      </p>
+
+      <p class="success-normal-text">
+        Confirm your email address. We have sent a verification email to
+      </p>
+
+      <h3 class="email-highlight">{{ registeredEmail }}</h3>
+
+      <a href="javascript:void(0)" class="cyan-link" (click)="prevStep()">Not your email address?</a>
+
+      <p class="success-normal-text spam-notice">
+        Make sure to check your inbox and your spam folder if you can't find the email.
+      </p>
+
+      <div class="resend-block">
+        <span>Still not Received?</span>
+        <a href="javascript:void(0)" class="cyan-link">Resend Email</a>
+      </div>
+
+      <button class="main-btn success-login-btn" type="button" (click)="goToLogin()">Go to Login</button>
+    </div>
+  </div>
+</div>

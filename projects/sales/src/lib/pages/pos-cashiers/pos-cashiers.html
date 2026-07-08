@@ -1,0 +1,360 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>POS Cashiers</h2>
+      <p class="subtitle">Manage cashiers, PINs, sessions and cash movements</p>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-secondary" (click)="openCheckIn()">Check In</button>
+      <button class="btn btn-primary" (click)="openCreateForm()">+ Add Cashier</button>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (successMsg) { <div class="alert alert-success">{{ successMsg }}</div> }
+
+  <!-- ── Create / Edit cashier form ───────────────────────── -->
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editingCashier ? 'Edit Cashier' : 'New Cashier' }}</h3>
+      <div class="form-grid form-grid-3">
+        <div class="form-group">
+          <label>Display Name *</label>
+          <input type="text" [(ngModel)]="formDisplayName" placeholder="e.g. John Doe" />
+        </div>
+        <div class="form-group">
+          <label>Employee</label>
+          <select [(ngModel)]="formEmployeeId" (ngModelChange)="onEmployeeSelect($event)">
+            <option value="">-- None --</option>
+            @for (e of availableEmployees; track e.id) {
+              <option [value]="e.id">{{ e.firstName }} {{ e.lastName }}{{ e.employeeCode ? ' (' + e.employeeCode + ')' : '' }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Badge Number</label>
+          <input type="text" [(ngModel)]="formBadgeNumber" placeholder="Badge #" />
+        </div>
+        <div class="form-group">
+          <label>Store *</label>
+          @if (editingCashier) {
+            <input type="text" [value]="storeName(formStoreId)" readonly
+                   style="background:var(--bg-subtle,#f8fafc);cursor:default;" />
+          } @else {
+            <select [(ngModel)]="formStoreId">
+              <option value="">-- Select store --</option>
+              @for (s of stores; track s.id) {
+                <option [value]="s.id">{{ s.tradingName }}</option>
+              }
+            </select>
+          }
+        </div>
+        @if (editingCashier) {
+          <div class="form-group">
+            <label>Active</label>
+            <select [(ngModel)]="formIsActive">
+              <option [ngValue]="true">Yes</option>
+              <option [ngValue]="false">No</option>
+            </select>
+          </div>
+        }
+      </div>
+
+      <div class="form-section-title" style="margin-top:16px;">Permissions</div>
+      <div class="form-grid form-grid-3" style="row-gap:8px;">
+        <div class="form-group" style="flex-direction:row;align-items:center;gap:8px;">
+          <input type="checkbox" [(ngModel)]="formCanApplyManualDiscount" id="pDisc" style="width:auto;" />
+          <label for="pDisc" style="margin:0;">Apply Manual Discount</label>
+        </div>
+        @if (formCanApplyManualDiscount) {
+          <div class="form-group">
+            <label>Max Discount %</label>
+            <input type="number" [(ngModel)]="formMaxManualDiscountPercentage" placeholder="e.g. 10" min="0" max="100" />
+          </div>
+        }
+        <div class="form-group" style="flex-direction:row;align-items:center;gap:8px;">
+          <input type="checkbox" [(ngModel)]="formCanVoidTransaction" id="pVoid" style="width:auto;" />
+          <label for="pVoid" style="margin:0;">Void Transaction</label>
+        </div>
+        <div class="form-group" style="flex-direction:row;align-items:center;gap:8px;">
+          <input type="checkbox" [(ngModel)]="formCanIssueRefund" id="pRefund" style="width:auto;" />
+          <label for="pRefund" style="margin:0;">Issue Refund</label>
+        </div>
+        <div class="form-group" style="flex-direction:row;align-items:center;gap:8px;">
+          <input type="checkbox" [(ngModel)]="formCanOpenDrawer" id="pDrawer" style="width:auto;" />
+          <label for="pDrawer" style="margin:0;">Open Drawer</label>
+        </div>
+        <div class="form-group" style="flex-direction:row;align-items:center;gap:8px;">
+          <input type="checkbox" [(ngModel)]="formCanOverridePrices" id="pPrice" style="width:auto;" />
+          <label for="pPrice" style="margin:0;">Override Prices</label>
+        </div>
+        <div class="form-group" style="flex-direction:row;align-items:center;gap:8px;">
+          <input type="checkbox" [(ngModel)]="formCanApplyCoupons" id="pCoupons" style="width:auto;" />
+          <label for="pCoupons" style="margin:0;">Apply Coupons</label>
+        </div>
+        <div class="form-group" style="flex-direction:row;align-items:center;gap:8px;">
+          <input type="checkbox" [(ngModel)]="formCanAccessReports" id="pReports" style="width:auto;" />
+          <label for="pReports" style="margin:0;">Access Reports</label>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()">{{ editingCashier ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  <!-- ── Set PIN form ──────────────────────────────────────── -->
+  @if (showSetPinForm) {
+    <div class="form-panel pin-panel">
+      <h3>Set PIN — {{ pinCashierName }}</h3>
+      <p class="pin-hint">Enter a new 4–6 digit PIN for this cashier.</p>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>New PIN *</label>
+          <input type="password" [(ngModel)]="formNewPin" placeholder="••••" maxlength="6" inputmode="numeric" autocomplete="new-password" />
+        </div>
+        <div class="form-group">
+          <label>Confirm PIN *</label>
+          <input type="password" [(ngModel)]="formConfirmPin" placeholder="••••" maxlength="6" inputmode="numeric" autocomplete="new-password" />
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelPin()">Cancel</button>
+        <button class="btn btn-primary" (click)="submitSetPin()">Set PIN</button>
+      </div>
+    </div>
+  }
+
+  <!-- ── Change PIN form ───────────────────────────────────── -->
+  @if (showChangePinForm) {
+    <div class="form-panel pin-panel">
+      <h3>Change PIN — {{ pinCashierName }}</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Current PIN *</label>
+          <input type="password" [(ngModel)]="formCurrentPin" placeholder="••••" maxlength="6" inputmode="numeric" autocomplete="current-password" />
+        </div>
+        <div class="form-group">
+          <label>New PIN *</label>
+          <input type="password" [(ngModel)]="formNewPin" placeholder="••••" maxlength="6" inputmode="numeric" autocomplete="new-password" />
+        </div>
+        <div class="form-group">
+          <label>Confirm New PIN *</label>
+          <input type="password" [(ngModel)]="formConfirmPin" placeholder="••••" maxlength="6" inputmode="numeric" autocomplete="new-password" />
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelPin()">Cancel</button>
+        <button class="btn btn-primary" (click)="submitChangePin()">Change PIN</button>
+      </div>
+    </div>
+  }
+
+  <!-- ── Check-in form ─────────────────────────────────────── -->
+  @if (showCheckInForm) {
+    <div class="form-panel">
+      <h3>Cashier Check-In</h3>
+      <div class="form-grid form-grid-3">
+        <div class="form-group">
+          <label>Store *</label>
+          <select [(ngModel)]="checkInStoreId" (ngModelChange)="onCheckInStoreChange()">
+            <option value="">-- Select store --</option>
+            @for (s of stores; track s.id) {
+              <option [value]="s.id">{{ s.tradingName }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Cashier *</label>
+          <select [(ngModel)]="checkInCashierId">
+            <option value="">-- Select cashier --</option>
+            @for (c of checkInCashiers; track c.id) {
+              <option [value]="c.id">{{ c.displayName }}{{ c.badgeNumber ? ' (' + c.badgeNumber + ')' : '' }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Terminal *</label>
+          <select [(ngModel)]="checkInTerminalId">
+            <option value="">-- Select terminal --</option>
+            @for (t of checkInTerminals; track t.id) {
+              <option [value]="t.id">{{ t.terminalName }} ({{ t.terminalCode }})</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Opening Float</label>
+          <input type="number" [(ngModel)]="checkInOpeningFloat" placeholder="0.00" min="0" />
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelCheckIn()">Cancel</button>
+        <button class="btn btn-primary" (click)="checkIn()">Check In</button>
+      </div>
+    </div>
+  }
+
+  <!-- ── Cash movement form ────────────────────────────────── -->
+  @if (showCashMoveForm) {
+    <div class="form-panel">
+      <h3>Record Cash Movement</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Type</label>
+          <select [(ngModel)]="cashMoveType">
+            <option value="CashIn">Cash In</option>
+            <option value="CashOut">Cash Out</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Amount *</label>
+          <input type="number" [(ngModel)]="cashMoveAmount" placeholder="0.00" min="0" />
+        </div>
+        <div class="form-group">
+          <label>Reason</label>
+          <input type="text" [(ngModel)]="cashMoveReason" placeholder="Optional reason" />
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelCashMove()">Cancel</button>
+        <button class="btn btn-primary" (click)="recordCashMove()">Record</button>
+      </div>
+    </div>
+  }
+
+  <!-- ── Filters ───────────────────────────────────────────── -->
+  <div class="filters-bar">
+    <select [(ngModel)]="filterStoreId">
+      <option value="">All Stores</option>
+      @for (s of stores; track s.id) {
+        <option [value]="s.id">{{ s.tradingName }}</option>
+      }
+    </select>
+    <input type="text" [(ngModel)]="searchQuery" placeholder="Search by name, badge or employee ID…" style="flex:1;" />
+    <span class="filter-count">{{ filteredCashiers.length }} record(s)</span>
+  </div>
+
+  <!-- ── Cashiers table ────────────────────────────────────── -->
+  @if (loading) {
+    <div class="loading-spinner">Loading cashiers…</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" [class.sorted]="sortBy === 'displayName'" (click)="sort('displayName')">Name <span class="sort-icon">{{ sortBy === 'displayName' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Store</th>
+            <th class="sortable" [class.sorted]="sortBy === 'badgeNumber'" (click)="sort('badgeNumber')">Badge <span class="sort-icon">{{ sortBy === 'badgeNumber' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Permissions</th>
+            <th class="sortable" [class.sorted]="sortBy === 'isActive'" (click)="sort('isActive')">Active <span class="sort-icon">{{ sortBy === 'isActive' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of filteredCashiers; track c.id) {
+            <tr [class.row-new]="c.id === highlighter.id">
+              <td>
+                <div style="font-weight:500;">{{ c.displayName ?? '—' }}</div>
+                <div style="font-size:11px;color:#94a3b8;">{{ c.employeeId ?? '' }}</div>
+              </td>
+              <td style="font-size:12px;color:#64748b;">{{ storeName(c.branchId) }}</td>
+              <td style="font-family:monospace;font-size:12px;">{{ c.badgeNumber ?? '—' }}</td>
+              <td style="font-size:11px;color:#475569;">
+                @if (c.canApplyManualDiscount) { <span class="perm-chip">Discount</span> }
+                @if (c.canVoidTransaction) { <span class="perm-chip">Void</span> }
+                @if (c.canIssueRefund) { <span class="perm-chip">Refund</span> }
+                @if (c.canOpenDrawer) { <span class="perm-chip">Drawer</span> }
+                @if (c.canOverridePrices) { <span class="perm-chip">Prices</span> }
+                @if (c.canApplyCoupons) { <span class="perm-chip">Coupons</span> }
+                @if (c.canAccessReports) { <span class="perm-chip">Reports</span> }
+              </td>
+              <td>
+                <span [class]="c.isActive ? 'badge badge-accepted' : 'badge badge-cancelled'">
+                  {{ c.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td class="actions-cell">
+                <button class="btn btn-secondary btn-sm" (click)="openEditForm(c)" title="Edit">✎</button>
+                <button class="btn btn-secondary btn-sm" (click)="openSetPin(c)" title="Set PIN"
+                  style="background:#ede9fe;color:#5b21b6;">PIN</button>
+                <button class="btn btn-secondary btn-sm" (click)="openChangePin(c)" title="Change PIN"
+                  style="background:#fef9c3;color:#92400e;">🔑</button>
+                <button class="btn btn-secondary btn-sm" (click)="viewOpenSession(c.id)" title="View Session"
+                  style="background:#dbeafe;color:#1d4ed8;">📋</button>
+                <button class="btn btn-danger btn-sm" (click)="deleteCashier(c.id)" title="Delete">✕</button>
+              </td>
+            </tr>
+          }
+          @empty {
+            <tr><td colspan="6" style="text-align:center;padding:24px;color:#94a3b8;">No cashiers found.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- ── Open session panel ────────────────────────────────── -->
+  @if (selectedCashierId) {
+    <div class="detail-panel" style="margin-top:20px;">
+      <h3>Open Session</h3>
+      @if (openSession) {
+        <div class="detail-grid">
+          <div class="detail-item"><label>Session #</label><p>{{ openSession.sessionNumber ?? '—' }}</p></div>
+          <div class="detail-item"><label>Status</label><p><span class="badge badge-confirmed">{{ sessionStatusLabel(openSession.status) }}</span></p></div>
+          <div class="detail-item"><label>Opened At</label><p>{{ openSession.openedAt | date:'short' }}</p></div>
+          <div class="detail-item"><label>Opening Float</label><p>{{ openSession.openingFloat | number:'1.2-2' }}</p></div>
+          <div class="detail-item"><label>Total Sales</label><p>{{ openSession.totalSalesAmount | number:'1.2-2' }}</p></div>
+          <div class="detail-item"><label>Net Sales</label><p>{{ openSession.netSalesAmount | number:'1.2-2' }}</p></div>
+          <div class="detail-item"><label>Tax Amount</label><p>{{ openSession.totalTaxAmount | number:'1.2-2' }}</p></div>
+          <div class="detail-item"><label>Transactions</label><p>{{ openSession.transactionCount }}</p></div>
+          <div class="detail-item"><label>Cash Collected</label><p>{{ openSession.cashCollected | number:'1.2-2' }}</p></div>
+          <div class="detail-item"><label>Card Collected</label><p>{{ openSession.cardCollected | number:'1.2-2' }}</p></div>
+          <div class="detail-item"><label>Wallet Collected</label><p>{{ openSession.walletCollected | number:'1.2-2' }}</p></div>
+          <div class="detail-item"><label>Other Collected</label><p>{{ openSession.otherCollected | number:'1.2-2' }}</p></div>
+          <div class="detail-item"><label>Expected Float</label><p>{{ openSession.expectedClosingFloat | number:'1.2-2' }}</p></div>
+          <div class="detail-item"><label>Float Variance</label><p>{{ openSession.floatVariance | number:'1.2-2' }}</p></div>
+        </div>
+        <div class="form-actions" style="justify-content:flex-start;">
+          <button class="btn btn-secondary btn-sm" (click)="loadCashMovements(openSession.id)">Movements</button>
+          <button class="btn btn-secondary btn-sm" (click)="openCashMove(openSession.id)"
+            style="background:#dcfce7;color:#15803d;">+ Add Movement</button>
+          <button class="btn btn-danger btn-sm" (click)="checkOut(openSession.id)">Check Out</button>
+        </div>
+      } @else {
+        <p style="font-size:13px;color:#94a3b8;">No open session for this cashier.</p>
+      }
+    </div>
+  }
+
+  <!-- ── Cash movements table ──────────────────────────────── -->
+  @if (cashMovements.length > 0) {
+    <div class="table-container" style="margin-top:16px;">
+      <table>
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Amount</th>
+            <th>Reason</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (m of cashMovements; track m.id) {
+            <tr>
+              <td>
+                <span [class]="m.movementType === 0 ? 'badge badge-accepted' : m.movementType === 1 ? 'badge badge-cancelled' : 'badge badge-pending'">
+                  {{ movementTypeLabel(m.movementType) }}
+                </span>
+              </td>
+              <td>{{ m.amount | number:'1.2-2' }}</td>
+              <td style="font-size:12px;color:#64748b;">{{ m.reason ?? '—' }}</td>
+              <td style="font-size:12px;">{{ m.movementDate | date:'short' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

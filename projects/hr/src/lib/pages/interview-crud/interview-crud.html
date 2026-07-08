@@ -1,0 +1,153 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">groups</span></div>
+      <div>
+        <h1>Interviews</h1>
+        <p class="inv-hero-sub">Schedule and manage interviews</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> Schedule Interview</button>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="md-split">
+    <!-- ══ LEFT: interview rows ══ -->
+    <div class="md-list">
+      <div class="md-list-body">
+        @if (loading) {
+          @for (s of [0,1,2,3,4]; track s) { <div class="md-rec"><span class="skeleton sk-circle" style="width:34px;height:34px"></span><div style="flex:1"><span class="skeleton sk-line" style="width:70%"></span></div></div> }
+        } @else if (interviews.length === 0) {
+          <div class="inv-empty" style="padding:36px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">groups</span></div><div class="inv-empty-title">No interviews</div><div class="inv-empty-text">Schedule your first interview.</div></div>
+        } @else {
+          @for (i of interviews; track i.id) {
+            <button class="md-rec" [class.selected]="editingInterview?.id === i.id" (click)="openEditForm(i)">
+              <span class="md-rec-ico"><span class="material-symbols-outlined" style="font-size:17px">groups</span></span>
+              <div class="md-rec-main"><span class="md-rec-title">{{ i.interviewTitle || getCandidateName(i.candidateId) }}</span><span class="md-rec-sub">{{ getCandidateName(i.candidateId) }} · {{ i.scheduledStart | date:'MMM d, h:mm a' }}</span></div>
+              <span class="status-pill pill-info">{{ getStatusLabel(i.statusLookupValueId) }}</span>
+            </button>
+          }
+        }
+      </div>
+    </div>
+
+    <!-- ══ RIGHT: form | empty ══ -->
+    <div class="md-detail">
+      @if (showForm) {
+        <div class="md-detail-head">
+          <span class="md-detail-title">{{ editingInterview ? 'Edit Interview' : 'Schedule Interview' }}</span>
+          <button class="icon-btn" title="Close" (click)="cancelForm()"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="md-detail-body">
+          <div class="form-grid">
+        @if (!editingInterview) {
+          <div class="form-group">
+            <label>Interview Code</label>
+            <input type="text" [(ngModel)]="formInterviewCode" placeholder="e.g. INT-001" />
+          </div>
+          <div class="form-group">
+            <label>Application *</label>
+            <select [(ngModel)]="formApplicationId">
+              <option value="">-- Select Application --</option>
+              @for (a of applications; track a.id) {
+                <option [value]="a.id">{{ a.applicationCode || a.id }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Candidate *</label>
+            <select [(ngModel)]="formCandidateId">
+              <option value="">-- Select Candidate --</option>
+              @for (c of candidates; track c.id) {
+                <option [value]="c.id">{{ c.firstName }} {{ c.lastName }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Job *</label>
+            <select [(ngModel)]="formJobId">
+              <option value="">-- Select Job --</option>
+              @for (j of jobs; track j.id) {
+                <option [value]="j.id">{{ j.jobTitle || j.jobCode || j.id }}</option>
+              }
+            </select>
+          </div>
+        }
+        <div class="form-group">
+          <label>Interview Title</label>
+          <input type="text" [(ngModel)]="formInterviewTitle" placeholder="e.g. Technical Round 1" />
+        </div>
+        <div class="form-group">
+          <label>Interview Type</label>
+          <select [(ngModel)]="formInterviewTypeLookupValueId">
+            <option value="">-- Select Type --</option>
+            @for (t of interviewTypeOptions; track t.value) {
+              <option [value]="t.value">{{ t.label }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select [(ngModel)]="formStatusLookupValueId">
+            <option value="">-- Select Status --</option>
+            @for (s of statusOptions; track s.value) {
+              <option [value]="s.value">{{ s.label }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Sequence No.</label>
+          <input type="number" [(ngModel)]="formInterviewSequenceNo" min="1" placeholder="Round number" />
+        </div>
+        <div class="form-group">
+          <label>Scheduled Start</label>
+          <input type="datetime-local" [(ngModel)]="formScheduledStart" />
+        </div>
+        <div class="form-group">
+          <label>Scheduled End</label>
+          <input type="datetime-local" [(ngModel)]="formScheduledEnd" />
+        </div>
+        <div class="form-group">
+          <label>Duration (Minutes)</label>
+          <input type="number" [(ngModel)]="formDurationMinutes" min="0" placeholder="e.g. 60" />
+        </div>
+        <div class="form-group">
+          <label>Format</label>
+          <select [(ngModel)]="formFormat">
+            @for (f of formatOptions; track f.value) {
+              <option [value]="f.value">{{ f.label }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Location</label>
+          <input type="text" [(ngModel)]="formLocation" placeholder="Office / Room / City" />
+        </div>
+        <div class="form-group">
+          <label>Video Link</label>
+          <input type="text" [(ngModel)]="formVideoLink" placeholder="https://meet.google.com/..." />
+        </div>
+        <div class="form-group form-check-row">
+          <label><input type="checkbox" [(ngModel)]="formIsMandatoryRound" /> Mandatory Round</label>
+        </div>
+      </div>
+          <div class="form-actions">
+            @if (editingInterview) { <button class="ibtn ibtn--danger" style="margin-right:auto" (click)="deleteInterview(editingInterview)"><span class="material-symbols-outlined">delete</span> Delete</button> }
+            <button class="ibtn ibtn--secondary" (click)="cancelForm()">Cancel</button>
+            <button class="ibtn ibtn--primary" (click)="saveInterview()"><span class="material-symbols-outlined">save</span> {{ editingInterview ? 'Update' : 'Schedule' }}</button>
+          </div>
+        </div>
+      } @else {
+        <div class="md-empty">
+          <div class="md-empty-icon"><span class="material-symbols-outlined">groups</span></div>
+          <div class="md-empty-title">Manage interviews</div>
+          <div class="md-empty-text">Select an interview to edit, or schedule a new one.</div>
+          <button class="btn-brand" style="margin-top:8px" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> Schedule Interview</button>
+        </div>
+      }
+    </div>
+  </div>
+</div>

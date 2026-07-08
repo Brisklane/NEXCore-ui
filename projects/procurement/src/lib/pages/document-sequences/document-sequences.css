@@ -1,0 +1,13 @@
+@import '../shared-styles.css';
+
+.editing-row { background: #eff6ff; }
+.editing-row td { padding: 8px 12px; }
+.editing-row input[type="text"],
+.editing-row input[type="number"],
+.editing-row select {
+  padding: 4px 8px;
+  border: 1px solid var(--accent, #2b7fff);
+  border-radius: 4px;
+  font-size: 13px;
+}
+code { font-family: monospace; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 12px; color: #1e293b; }

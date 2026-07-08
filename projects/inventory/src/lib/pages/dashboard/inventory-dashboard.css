@@ -1,0 +1,14 @@
+@import '../shared-styles.css';
+
+/* Inventory dashboard — brand cyan→blue accent (global .dsh kit supplies the layout) */
+.inv-dsh {
+  --dsh-accent: #2b7fff;
+  --dsh-accent-2: #22c7e6;
+}
+
+/* Alert avatars show the remaining quantity, tinted by severity */
+.inv-dsh .dsh-li-av.av-danger { background: linear-gradient(135deg, #f87171, #dc2626); }
+.inv-dsh .dsh-li-av.av-amber  { background: linear-gradient(135deg, #fbbf24, #d97706); }
+
+.inv-dsh .dsh-chip.chip-low { background: #fffbeb; color: #b45309; }
+.inv-dsh .dsh-chip.chip-out { background: #fef2f2; color: #b91c1c; }

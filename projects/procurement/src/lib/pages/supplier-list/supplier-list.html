@@ -1,0 +1,219 @@
+<div class="page-container">
+
+  <app-page-header icon="store" title="Vendors" subtitle="Manage supplier master data, contacts, addresses and bank accounts">
+    <button class="btn btn-primary" (click)="openCreateForm()">+ New Vendor</button>
+  </app-page-header>
+
+  <div class="help-box"><span class="help-icon">ℹ️</span><span>Maintain your <strong>vendor master</strong> here. New vendors start as <strong>Pending Approval</strong> and must be <strong>Approved</strong> before they can be used on purchase orders or invoices; you can also <strong>Block</strong>, <strong>Deactivate</strong> or <strong>Reactivate</strong> a vendor. Use the <strong>Contacts</strong>, <strong>Addresses</strong> and <strong>Bank Accounts</strong> tabs to capture who to deal with, where to send orders, and how to pay them — each supports one primary/default entry.</span></div>
+
+  <app-alert type="error"   [message]="error"></app-alert>
+  <app-alert type="success" [message]="success"></app-alert>
+
+  <!-- ── Create / Edit Form ── -->
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editingVendor ? 'Edit Vendor — ' + editingVendor.vendorNumber : 'New Vendor' }}</h3>
+
+      <div class="tab-bar">
+        <button [class]="formTab === 'basic' ? 'tab-btn tab-btn-active' : 'tab-btn'" (click)="formTab = 'basic'">Basic Info</button>
+        <button [class]="formTab === 'contacts' ? 'tab-btn tab-btn-active' : 'tab-btn'" (click)="formTab = 'contacts'">Contacts ({{ formContacts.length }})</button>
+        <button [class]="formTab === 'addresses' ? 'tab-btn tab-btn-active' : 'tab-btn'" (click)="formTab = 'addresses'">Addresses ({{ formAddresses.length }})</button>
+        <button [class]="formTab === 'bankAccounts' ? 'tab-btn tab-btn-active' : 'tab-btn'" (click)="formTab = 'bankAccounts'">Bank Accounts ({{ formBankAccounts.length }})</button>
+      </div>
+
+      @if (formTab === 'basic') {
+        <div class="form-grid">
+          <app-input label="Name" required placeholder="Vendor / company name"
+                     [(ngModel)]="form.name" [error]="submitted ? errors.name : ''"></app-input>
+          <app-input label="Short Name" placeholder="Abbreviated name" [(ngModel)]="form.shortName"></app-input>
+          <app-select label="Type" [options]="vendorTypeOptions" [(ngModel)]="form.type" placeholder=""></app-select>
+          <app-select label="Vendor Category" [options]="categoryOptions" [(ngModel)]="form.vendorCategoryId"
+                      placeholder="-- Select category --"></app-select>
+          <app-select label="Currency" [options]="currencyOptions" [(ngModel)]="form.currencyCode" placeholder=""></app-select>
+          <app-select label="Payment Terms" [options]="paymentTermOptions" [(ngModel)]="form.paymentTerms" placeholder=""></app-select>
+          <app-input label="Lead Time (days)" type="number" [min]="0" placeholder="7"
+                     [(ngModel)]="form.leadTimeDays" [error]="submitted ? errors.leadTimeDays : ''"></app-input>
+          <app-input label="Credit Limit" type="number" [min]="0" [step]="0.01" placeholder="0.00"
+                     [(ngModel)]="form.creditLimit" [error]="submitted ? errors.creditLimit : ''"></app-input>
+          <app-input label="Primary Email" type="email" placeholder="email@vendor.com"
+                     [(ngModel)]="form.email" [error]="submitted ? errors.email : ''"></app-input>
+          <app-input label="Primary Phone" placeholder="+1 555 0100" [(ngModel)]="form.phone"></app-input>
+          <app-input label="Primary Mobile" placeholder="+1 555 0101" [(ngModel)]="form.mobile"></app-input>
+          <app-input label="Website" placeholder="https://vendor.com"
+                     [(ngModel)]="form.website" [error]="submitted ? errors.website : ''"></app-input>
+          <app-input label="Tax Registration No." placeholder="TRN or EIN" [(ngModel)]="form.taxRegNumber"></app-input>
+          <app-input label="Company Reg. No." placeholder="Registration number" [(ngModel)]="form.companyRegNumber"></app-input>
+          <app-input label="VAT Number" placeholder="VAT / GST number" [(ngModel)]="form.vatNumber"></app-input>
+
+          <div class="form-group form-check-row">
+            <label><input type="checkbox" [(ngModel)]="form.isPreferred" /> Preferred Vendor</label>
+          </div>
+
+          <div class="form-group-full">
+            <app-textarea label="Notes" [rows]="2" placeholder="Public notes" [(ngModel)]="form.notes"></app-textarea>
+          </div>
+          <div class="form-group-full">
+            <app-textarea label="Internal Notes" [rows]="2" placeholder="Internal notes (not visible to vendor)" [(ngModel)]="form.internalNotes"></app-textarea>
+          </div>
+        </div>
+      }
+
+      @if (formTab === 'contacts') {
+        @if (formContacts.length > 0) {
+          <div class="row-list">
+            @for (c of formContacts; track $index; let i = $index) {
+              <div class="row-item">
+                <span class="row-tag">{{ c.firstName }} {{ c.lastName || '' }}</span>
+                <span class="row-meta">{{ c.jobTitle || '' }}{{ c.email ? ' | ' + c.email : '' }}{{ c.phone ? ' | ' + c.phone : '' }}{{ c.isPrimary ? ' ★ Primary' : '' }}</span>
+                <button type="button" class="btn-remove" (click)="removeContact(i)">✕</button>
+              </div>
+            }
+          </div>
+        }
+        <div class="form-grid">
+          <app-input label="First Name" placeholder="First name" [(ngModel)]="newContact.firstName"></app-input>
+          <app-input label="Last Name" placeholder="Last name" [(ngModel)]="newContact.lastName"></app-input>
+          <app-input label="Job Title" placeholder="Job title" [(ngModel)]="newContact.jobTitle"></app-input>
+          <app-input label="Email" type="email" placeholder="Email" [(ngModel)]="newContact.email"></app-input>
+          <app-input label="Phone" placeholder="Phone" [(ngModel)]="newContact.phone"></app-input>
+          <div class="form-group form-check-row">
+            <label><input type="checkbox" [(ngModel)]="newContact.isPrimary" /> Primary</label>
+          </div>
+          <div class="form-group form-check-row">
+            <button type="button" class="btn btn-secondary" (click)="addContact()">+ Add Contact</button>
+          </div>
+        </div>
+      }
+
+      @if (formTab === 'addresses') {
+        @if (formAddresses.length > 0) {
+          <div class="row-list">
+            @for (a of formAddresses; track $index; let i = $index) {
+              <div class="row-item">
+                <span class="row-tag">{{ addressTypeLabel(a.addressType) }}</span>
+                <span class="row-meta">{{ addressSummary(a) }}{{ a.isDefault ? ' ★ Default' : '' }}</span>
+                <button type="button" class="btn-remove" (click)="removeAddress(i)">✕</button>
+              </div>
+            }
+          </div>
+        }
+        <div class="form-grid">
+          <app-select label="Address Type" [options]="addressTypeOptions" [(ngModel)]="newAddress.addressType" placeholder=""></app-select>
+          <app-input label="Street" placeholder="Street" [(ngModel)]="newAddress.street"></app-input>
+          <app-input label="City" placeholder="City" [(ngModel)]="newAddress.city"></app-input>
+          <app-input label="State / Province" placeholder="State" [(ngModel)]="newAddress.state"></app-input>
+          <app-input label="Postal Code" placeholder="Postal code" [(ngModel)]="newAddress.postalCode"></app-input>
+          <app-input label="Country" placeholder="Country" [(ngModel)]="newAddress.country"></app-input>
+          <div class="form-group form-check-row">
+            <label><input type="checkbox" [(ngModel)]="newAddress.isDefault" /> Default</label>
+          </div>
+          <div class="form-group form-check-row">
+            <button type="button" class="btn btn-secondary" (click)="addAddress()">+ Add Address</button>
+          </div>
+        </div>
+      }
+
+      @if (formTab === 'bankAccounts') {
+        @if (formBankAccounts.length > 0) {
+          <div class="row-list">
+            @for (b of formBankAccounts; track $index; let i = $index) {
+              <div class="row-item">
+                <span class="row-tag">{{ b.accountName }}</span>
+                <span class="row-meta">{{ b.bankName || '' }}{{ b.accountNumber ? ' | ' + b.accountNumber : '' }}{{ b.iban ? ' | IBAN: ' + b.iban : '' }}{{ b.currencyCode ? ' | ' + b.currencyCode : '' }}{{ b.isDefault ? ' ★ Default' : '' }}{{ !b.isActive ? ' (Inactive)' : '' }}</span>
+                <button type="button" class="btn-remove" (click)="removeBankAccount(i)">✕</button>
+              </div>
+            }
+          </div>
+        }
+        <div class="form-grid">
+          <app-input label="Account Name" placeholder="Account name" [(ngModel)]="newBankAccount.accountName"></app-input>
+          <app-input label="Account Number" placeholder="Account no." [(ngModel)]="newBankAccount.accountNumber"></app-input>
+          <app-input label="Bank Name" placeholder="Bank name" [(ngModel)]="newBankAccount.bankName"></app-input>
+          <app-input label="Branch Name" placeholder="Branch" [(ngModel)]="newBankAccount.branchName"></app-input>
+          <app-input label="IBAN" placeholder="IBAN" [(ngModel)]="newBankAccount.iban"></app-input>
+          <app-input label="SWIFT / BIC" placeholder="SWIFT" [(ngModel)]="newBankAccount.swiftCode"></app-input>
+          <app-select label="Currency" [options]="currencyOptions" [(ngModel)]="newBankAccount.currencyCode" placeholder=""></app-select>
+          <div class="form-group form-check-row">
+            <label><input type="checkbox" [(ngModel)]="newBankAccount.isDefault" /> Default</label>
+            <label style="margin-left:12px"><input type="checkbox" [(ngModel)]="newBankAccount.isActive" /> Active</label>
+          </div>
+          <div class="form-group form-check-row">
+            <button type="button" class="btn btn-secondary" (click)="addBankAccount()">+ Add Bank Account</button>
+          </div>
+        </div>
+      }
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="saveVendor()" [disabled]="saving">
+          {{ editingVendor ? 'Save Changes' : 'Create Vendor' }}
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- ── Filters ── -->
+  <div class="filters-bar">
+    <span class="filter-search">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search by name, number or email…" [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
+      @if (search) { <button class="search-clear" title="Clear search" (click)="search = ''; onSearchChange()">×</button> }
+    </span>
+    <select class="filter-input" [(ngModel)]="statusFilter" (ngModelChange)="onStatusChange()">
+      <option [ngValue]="''">All statuses</option>
+      @for (opt of statusFilterOptions; track opt.value) {
+        <option [ngValue]="opt.value">{{ opt.label }}</option>
+      }
+    </select>
+  </div>
+
+  <!-- ── Vendor List ── -->
+  <app-data-table [sortableAll]="true"
+    [columns]="columns"
+    [data]="vendors"
+    [actions]="actions"
+    [loading]="loading"
+    [totalCount]="totalCount" [page]="page" [pageSize]="pageSize"
+    [sortBy]="sortBy" [sortDirection]="sortDirection"
+    [highlightRowId]="highlighter.id"
+    emptyMessage="No vendors found."
+    (rowAction)="onRowAction($event)"
+    (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)" (sortChange)="onSortChange($event)">
+  </app-data-table>
+
+</div>
+
+<!-- ── Block Modal ── -->
+@if (showBlockModal) {
+  <div class="modal-overlay">
+    <div class="modal-box">
+      <h4>Block Vendor</h4>
+      <div class="form-group">
+        <label>Reason <span style="color:#ef4444">*</span></label>
+        <textarea [(ngModel)]="blockReason" rows="3" placeholder="Reason for blocking this vendor"
+                  [style.border-color]="blockSubmitted && !blockReason.trim() ? '#ef4444' : null"></textarea>
+        @if (blockSubmitted && !blockReason.trim()) {
+          <span style="color:#ef4444;font-size:12px;margin-top:3px;display:block">A block reason is required.</span>
+        }
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showBlockModal = false">Cancel</button>
+        <button class="btn btn-danger" (click)="confirmBlock()">Block Vendor</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Delete Confirm ── -->
+@if (showDeleteConfirm) {
+  <div class="modal-overlay">
+    <div class="modal-box">
+      <h4>Delete Vendor</h4>
+      <p>Are you sure you want to delete <strong>{{ deleteTarget?.name }}</strong>? This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showDeleteConfirm = false">Cancel</button>
+        <button class="btn btn-danger" (click)="confirmDelete()">Delete</button>
+      </div>
+    </div>
+  </div>
+}

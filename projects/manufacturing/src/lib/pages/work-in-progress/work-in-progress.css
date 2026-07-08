@@ -1,0 +1,24 @@
+@import '../shared-styles.css';
+
+.quantity-check {
+	color: #5f6b7a;
+	font-weight: 600;
+}
+
+.quantity-check-over {
+	color: #c62828;
+}
+
+.quantity-check-ok {
+	color: #2e7d32;
+}
+.form-control-readonly {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  min-height: 2.5rem;
+  color: #333;
+}

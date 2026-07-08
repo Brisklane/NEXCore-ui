@@ -1,0 +1,23 @@
+@import '../shared-styles.css';
+
+.result-panel pre {
+  max-height: 280px;
+  overflow: auto;
+  background: #111827;
+  color: #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.form-check-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.form-check-row label {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}

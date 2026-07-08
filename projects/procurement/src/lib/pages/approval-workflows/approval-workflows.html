@@ -1,0 +1,148 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">schema</span></div>
+      <div>
+        <h1>Approval Workflows</h1>
+        <p class="inv-hero-sub">Configure multi-level approval chains for procurement documents</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreate()"><span class="material-symbols-outlined">add</span> New Workflow</button>
+    </div>
+  </div>
+
+  <div class="help-box">
+    <span class="help-icon">ℹ️</span>
+    <span>
+      A workflow routes a document (e.g. a purchase order) through an ordered chain of approval
+      <strong>steps</strong>. The workflow is chosen by document type and by the document's value falling
+      within its <strong>amount range</strong> (Min–Max); the <strong>default</strong> workflow with the
+      highest <strong>priority</strong> wins when several match. Each step can require one or more approvals
+      from a role — mark a step <strong>parallel</strong> to let its approvers act simultaneously rather
+      than in sequence, and <strong>optional</strong> to allow it to be skipped. If a step is not actioned
+      within its <strong>escalation</strong> window (in days), it is escalated to the next approver.
+    </span>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (success) { <div class="alert alert-success">{{ success }}</div> }
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editing ? 'Edit Workflow' : 'New Workflow' }}</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Name *</label>
+          <input type="text" [(ngModel)]="formName" placeholder="Workflow name" [class.input-required]="!formName.trim()" />
+        </div>
+        <div class="form-group">
+          <label>Document Type</label>
+          <select [(ngModel)]="formDocumentType">
+            @for (opt of docTypeOptions; track opt.value) { <option [value]="opt.value">{{ opt.label }}</option> }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Min Amount</label>
+          <input type="number" [(ngModel)]="formMinAmount" placeholder="No minimum" step="0.01" min="0" />
+        </div>
+        <div class="form-group">
+          <label>Max Amount</label>
+          <input type="number" [(ngModel)]="formMaxAmount" placeholder="No maximum" step="0.01" min="0" />
+        </div>
+        <div class="form-group">
+          <label>Priority</label>
+          <input type="number" [(ngModel)]="formPriority" placeholder="1" min="1" />
+        </div>
+        <div class="form-group">
+          <div class="form-check-row"><label><input type="checkbox" [(ngModel)]="formIsDefault" /> Default for this type</label></div>
+        </div>
+        <div class="form-group form-group-full">
+          <label>Description</label>
+          <textarea [(ngModel)]="formDescription" rows="2" placeholder="When this workflow applies"></textarea>
+        </div>
+
+        <div class="form-group form-group-full"><strong class="section-title">Approval Steps</strong></div>
+        <div class="form-group form-group-full">
+          @if (formSteps.length > 0) {
+            <div class="row-list">
+              @for (s of formSteps; track $index; let i = $index) {
+                <div class="row-item">
+                  <span class="row-tag">Step {{ s.stepNumber }}: {{ s.stepName }}</span>
+                  <span class="row-meta">
+                    {{ s.approverRole || 'Any approver' }}
+                    | Req: {{ s.requiredApprovals }}
+                    | Escalate: {{ s.escalationAfterDays }}d
+                    {{ s.isParallelStep ? ' | Parallel' : '' }}
+                    {{ s.isOptional ? ' | Optional' : '' }}
+                  </span>
+                  <button type="button" class="btn-remove" (click)="removeStep(i)">✕</button>
+                </div>
+              }
+            </div>
+          }
+          <div class="add-row-form" style="margin-top:8px">
+            <input type="number" [(ngModel)]="newStep.stepNumber" placeholder="Step #" style="width:65px" min="1" />
+            <input type="text" [(ngModel)]="newStep.stepName" placeholder="Step name *" style="width:150px" />
+            <input type="text" [(ngModel)]="newStep.approverRole" placeholder="Approver role" style="width:130px" />
+            <input type="number" [(ngModel)]="newStep.requiredApprovals" placeholder="Required" style="width:80px" min="1" />
+            <input type="number" [(ngModel)]="newStep.escalationAfterDays" placeholder="Escalate days" style="width:105px" min="0" />
+            <label><input type="checkbox" [(ngModel)]="newStep.isParallelStep" /> Parallel</label>
+            <label><input type="checkbox" [(ngModel)]="newStep.isOptional" /> Optional</label>
+            <input type="text" [(ngModel)]="newStep.instructions" placeholder="Instructions" style="width:160px" />
+            <button type="button" class="btn btn-secondary" (click)="addStep()">+ Add Step</button>
+          </div>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" (click)="save()" [disabled]="!canSave">{{ editing ? 'Save' : 'Create' }}</button>
+        <button class="btn btn-secondary" (click)="cancel()">Cancel</button>
+      </div>
+    </div>
+  }
+
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead><tr><th>Name</th><th>Document Type</th><th>Amount Range</th><th>Steps</th><th>Priority</th><th>Default</th><th>Active</th><th>Actions</th></tr></thead>
+        <tbody>
+          @if (workflows.length === 0) { <tr><td colspan="8" class="empty-row">No workflows found</td></tr> }
+          @for (w of pagedWorkflows; track w.id) {
+            <tr [class.row-new]="w.id === highlighter.id">
+              <td>{{ w.name }}</td>
+              <td>{{ docTypeLabel(w.documentType) }}</td>
+              <td>{{ w.minimumAmount != null ? (w.minimumAmount | number:'1.0-0') : '0' }} – {{ w.maximumAmount != null ? (w.maximumAmount | number:'1.0-0') : '∞' }}</td>
+              <td>{{ w.steps.length }}</td>
+              <td>{{ w.priority }}</td>
+              <td><span [class]="w.isDefault ? 'badge badge-active' : 'badge badge-no'">{{ w.isDefault ? 'Yes' : 'No' }}</span></td>
+              <td><span [class]="w.isActive ? 'badge badge-active' : 'badge badge-inactive'">{{ w.isActive ? 'Active' : 'Off' }}</span></td>
+              <td class="actions-cell">
+                <button class="btn-icon" (click)="openEdit(w)">✏️</button>
+                <button class="btn-icon" (click)="delete(w)">🗑️</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      @if (workflows.length > 0) {
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 4px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:8px;color:#6b7280;font-size:13px">
+            <span>Rows per page:</span>
+            <select [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()" style="padding:4px 8px">
+              @for (opt of pageSizeOptions; track opt) { <option [ngValue]="opt">{{ opt }}</option> }
+            </select>
+            <span>{{ (page - 1) * pageSize + 1 }}–{{ page * pageSize > workflows.length ? workflows.length : page * pageSize }} of {{ workflows.length }}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;font-size:13px">
+            <button class="btn btn-secondary" [disabled]="page <= 1" (click)="page = page - 1">‹ Prev</button>
+            <span>Page {{ page }} of {{ totalPages }}</span>
+            <button class="btn btn-secondary" [disabled]="page >= totalPages" (click)="page = page + 1">Next ›</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

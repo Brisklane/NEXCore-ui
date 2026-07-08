@@ -1,0 +1,13 @@
+{
+  "name": "manufacturing",
+  "version": "0.0.1",
+  "peerDependencies": {
+    "@angular/common": "^21.2.0",
+    "@angular/core": "^21.2.0",
+    "@nexcore/core": "*"
+  },
+  "dependencies": {
+    "tslib": "^2.3.0"
+  },
+  "sideEffects": false
+}

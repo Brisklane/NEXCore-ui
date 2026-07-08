@@ -1,0 +1,141 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">fact_check</span></div>
+      <div>
+        <h1>Inspection Characteristics</h1>
+        <p class="inv-hero-sub">Manage inspection characteristics for a selected inspection record.</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" type="button" (click)="openCreate()" [disabled]="!selectedInspectionId">
+        <span class="material-symbols-outlined">add</span> New Characteristic
+      </button>
+    </div>
+  </div>
+
+  <div class="toolbar-row">
+    <div class="toolbar-group">
+      <label>Select Inspection</label>
+      <select [(ngModel)]="selectedInspectionId" (ngModelChange)="onInspectionChange($event)">
+        @for (inspection of inspections; track inspection.id) {
+          <option [value]="inspection.id">{{ getInspectionLabel(inspection) }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  @if (error && error.includes('required')) {
+    <div class="alert alert-error">Please fill in all required fields.</div>
+  }
+
+  @if (!inspections.length) {
+    <div class="alert alert-info">
+      No inspections available. Create an inspection in the Inspections module first.
+    </div>
+  }
+
+  @if (selectedInspection) {
+    <div class="inspection-summary">
+      <div><strong>Order:</strong> {{ getSelectedInspectionOrderLabel() }}</div>
+      <div>
+        <strong>Product:</strong>
+        {{ getSelectedInspectionProductLabel() }}
+      </div>
+      <div><strong>Date:</strong> {{ getSelectedInspectionDateLabel() }}</div>
+      <div><strong>Result:</strong> {{ getSelectedInspectionResultLabel() }}</div>
+    </div>
+  }
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editing ? 'Edit Characteristic' : 'Create Characteristic' }}</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Characteristic Name *</label>
+          <input type="text" [(ngModel)]="formName" placeholder="Dimensional Accuracy" />
+        </div>
+        <div class="form-group">
+          <label>Inspection Type</label>
+          <input type="text" [(ngModel)]="formInspectionType" placeholder="Dimensional" />
+        </div>
+        <div class="form-group">
+          <label>Nominal Value</label>
+          <input type="number" [(ngModel)]="formNominalValue" placeholder="0.00" />
+        </div>
+        <div class="form-group">
+          <label>Actual Value</label>
+          <input type="number" [(ngModel)]="formActualValue" placeholder="0.00" />
+        </div>
+        <div class="form-group">
+          <label>Unit</label>
+          <input type="text" [(ngModel)]="formUnit" placeholder="mm" />
+        </div>
+        <div class="form-group form-check-row">
+          <label><input type="checkbox" [(ngModel)]="formIsPassed" /> Passed</label>
+        </div>
+        <div class="form-group form-check-row">
+          <label><input type="checkbox" [(ngModel)]="formIsCritical" /> Critical Characteristic</label>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" type="button" (click)="cancel()">Cancel</button>
+        <button class="btn btn-primary" type="button" (click)="save()">
+          {{ editing ? 'Update' : 'Create' }}
+        </button>
+      </div>
+    </div>
+  }
+
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th class="sortable" [class.sorted]="sortBy === 'characteristicName'" (click)="sort('characteristicName')">Name <span class="sort-icon">{{ sortBy === 'characteristicName' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+          <th class="sortable" [class.sorted]="sortBy === 'targetValue'" (click)="sort('targetValue')">Nominal <span class="sort-icon">{{ sortBy === 'targetValue' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+          <th class="sortable" [class.sorted]="sortBy === 'actualValue'" (click)="sort('actualValue')">Actual <span class="sort-icon">{{ sortBy === 'actualValue' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+          <th class="sortable" [class.sorted]="sortBy === 'unitOfMeasure'" (click)="sort('unitOfMeasure')">Unit <span class="sort-icon">{{ sortBy === 'unitOfMeasure' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+          <th>Passed</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of pagedCharacteristics; track row.id) {
+          <tr [class.row-new]="row.id === highlighter.id">
+            <td>{{ row.characteristicName }}</td>
+            <td>{{ getNominalDisplay(row) }}</td>
+            <td>{{ row.actualValue }}</td>
+            <td>{{ getUnitDisplay(row) }}</td>
+            <td>{{ getPassedDisplay(row) }}</td>
+            <td class="actions-cell">
+              <button class="btn-icon" type="button" (click)="openEdit(row)">✏️</button>
+              <button class="btn-icon" type="button" (click)="delete(row)">🗑️</button>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="6" class="empty-row">
+              No characteristics defined for this inspection yet.
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    @if (characteristics.length > 0) {
+      <div class="pagination-bar">
+        <div class="pagination-info">
+          Rows per page:
+          <select [(ngModel)]="charPageSize" (ngModelChange)="onCharPageSizeChange()">
+            @for (s of pageSizeOptions; track s) { <option [value]="s">{{ s }}</option> }
+          </select>
+          <span>Showing {{ (charPage - 1) * charPageSize + 1 }} to {{ charPage * charPageSize < characteristics.length ? charPage * charPageSize : characteristics.length }} of {{ characteristics.length }} entries</span>
+        </div>
+        <div class="pagination-controls">
+          <button class="btn-page" (click)="goToCharPage(charPage - 1)" [disabled]="charPage <= 1">Prev</button>
+          <span class="page-indicator">Page {{ charPage }} of {{ charTotalPages }}</span>
+          <button class="btn-page" (click)="goToCharPage(charPage + 1)" [disabled]="charPage >= charTotalPages">Next</button>
+        </div>
+      </div>
+    }
+  </div>
+</div>

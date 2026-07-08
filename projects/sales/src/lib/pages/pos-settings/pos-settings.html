@@ -1,0 +1,482 @@
+﻿<div class="page-container">
+
+  <!-- ── Header ──────────────────────────────────────────────────────────── -->
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">tune</span></div>
+      <div>
+        <h1>POS Settings</h1>
+        <p class="inv-hero-sub">Configure all point-of-sale behaviour for your tenant.</p>
+      </div>
+    </div>
+    @if (isConfigTab) {
+      <div class="inv-hero-actions">
+        <button class="ibtn ibtn--secondary" [disabled]="saving" (click)="resetToDefaults()">
+          Reset to Defaults
+        </button>
+        <button class="btn-brand" [disabled]="saving || loading" (click)="save()">
+          <span class="material-symbols-outlined">save</span> {{ saving ? 'Saving...' : 'Save Changes' }}
+        </button>
+      </div>
+    }
+  </div>
+
+  @if (error)      { <div class="alert alert-error">{{ error }}</div> }
+  @if (successMsg) { <div class="alert alert-success">{{ successMsg }}</div> }
+
+  @if (loading) {
+    <div class="loading-spinner">Loading settings...</div>
+  } @else {
+
+    <div class="settings-hub">
+
+      <!-- ── Left nav ───────────────────────────────────────────────────── -->
+      <nav class="settings-nav">
+        @for (tab of tabs; track tab.key) {
+          <button class="nav-item" [class.active]="activeTab === tab.key" (click)="setTab(tab.key)">
+            <span class="material-symbols-outlined nav-icon">{{ tab.icon }}</span>
+            <span>{{ tab.label }}</span>
+          </button>
+        }
+      </nav>
+
+      <!-- ── Content pane ───────────────────────────────────────────────── -->
+      <div class="settings-content">
+
+        @switch (activeTab) {
+
+          <!-- ── GENERAL ────────────────────────────────────────────────── -->
+          @case ('general') {
+            <h3 class="section-title">General</h3>
+
+            <h4 class="sub-section">Security</h4>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Auto-lock after (minutes)</label>
+                <input type="number" min="0" [(ngModel)]="form.autoLockMinutes" />
+                <small>0 = never lock</small>
+              </div>
+            </div>
+            <div class="toggles-grid">
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.requireCashierPin" />
+                <span>Require cashier PIN to start session</span>
+              </label>
+            </div>
+
+            <h4 class="sub-section">Pricing &amp; Stock</h4>
+            <div class="toggles-grid">
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.allowPriceOverride" />
+                <span>Allow price override</span>
+              </label>
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.allowDiscount" />
+                <span>Allow discounts</span>
+              </label>
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.allowNegativeStock" />
+                <span>Allow negative stock (sell even when out of stock)</span>
+              </label>
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.taxInclusivePricing" />
+                <span>Tax-inclusive pricing (prices already include tax)</span>
+              </label>
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.autoApplyTax" />
+                <span>Auto-apply tax on every sale</span>
+              </label>
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Max discount %</label>
+                <input type="number" min="0" max="100" [(ngModel)]="form.maxDiscountPercent" />
+              </div>
+            </div>
+
+            <h4 class="sub-section">Customer</h4>
+            <div class="toggles-grid">
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.requireCustomer" />
+                <span>Require customer to be selected before checkout</span>
+              </label>
+            </div>
+
+            <h4 class="sub-section">Currency &amp; Rounding</h4>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Default currency code</label>
+                <select [(ngModel)]="form.defaultCurrencyCode">
+                  <option [value]="null">— select currency —</option>
+                  @for (c of currencies; track c.id) {
+                    <option [value]="c.code">{{ c.code }} — {{ c.name }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Rounding value</label>
+                <input type="number" min="0" step="0.01" [(ngModel)]="form.roundingValue" />
+              </div>
+              <div class="form-group">
+                <label>Rounding mode</label>
+                <select [(ngModel)]="form.roundingMode">
+                  <option value="">None</option>
+                  <option value="Up">Up</option>
+                  <option value="Down">Down</option>
+                  <option value="Nearest">Nearest</option>
+                </select>
+              </div>
+            </div>
+          }
+
+          <!-- ── PAYMENTS ────────────────────────────────────────────────── -->
+          @case ('payments') {
+            <h3 class="section-title">Payments</h3>
+
+            <h4 class="sub-section">Accepted methods</h4>
+            <div class="toggles-grid">
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.acceptCash" />
+                <span>Accept cash</span>
+              </label>
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.acceptCard" />
+                <span>Accept card</span>
+              </label>
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.acceptMobilePayment" />
+                <span>Accept mobile / digital payments</span>
+              </label>
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.acceptCreditOnAccount" />
+                <span>Accept credit on account</span>
+              </label>
+            </div>
+
+            <h4 class="sub-section">Payment rules</h4>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Default payment method</label>
+                <select [(ngModel)]="form.defaultPaymentMethod">
+                  <option value="">— none —</option>
+                  <option value="Cash">Cash</option>
+                  <option value="Card">Card</option>
+                  <option value="Mobile">Mobile</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Minimum order amount</label>
+                <input type="number" min="0" step="0.01" [(ngModel)]="form.minOrderAmount" placeholder="0 = no minimum" />
+              </div>
+              <div class="form-group">
+                <label>Maximum order amount</label>
+                <input type="number" min="0" step="0.01" [(ngModel)]="form.maxOrderAmount" placeholder="blank = no limit" />
+              </div>
+            </div>
+            <div class="toggles-grid">
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.allowSplitPayment" />
+                <span>Allow split payment (multiple methods in one sale)</span>
+              </label>
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.allowPartialPayment" />
+                <span>Allow partial payment (customer pays less than total)</span>
+              </label>
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.autoOpenCashDrawer" />
+                <span>Auto-open cash drawer on cash sale</span>
+              </label>
+            </div>
+
+            <h4 class="sub-section">Accounting GL accounts</h4>
+            <p class="hint-text">Select which GL account is debited when a payment is received. Leave unset to use the default PostingProfile account.</p>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Cash receipts account</label>
+                <select [(ngModel)]="form.cashGlAccountNumber">
+                  <option [ngValue]="null">— use PostingProfile default —</option>
+                  @for (acc of glAccounts; track acc.id) {
+                    <option [value]="acc.accountNumber">{{ acc.accountNumber }} — {{ acc.accountName }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Card / mobile receipts account</label>
+                <select [(ngModel)]="form.bankGlAccountNumber">
+                  <option [ngValue]="null">— use PostingProfile default —</option>
+                  @for (acc of glAccounts; track acc.id) {
+                    <option [value]="acc.accountNumber">{{ acc.accountNumber }} — {{ acc.accountName }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+          }
+
+          <!-- ── DISPLAY ──────────────────────────────────────────────────── -->
+          @case ('display') {
+            <h3 class="section-title">Display &amp; Cart</h3>
+
+            <h4 class="sub-section">Product grid</h4>
+            <div class="toggles-grid">
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.showProductImages" />
+                <span>Show product images</span>
+              </label>
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.showProductDescription" />
+                <span>Show product description</span>
+              </label>
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.showCategoryFilter" />
+                <span>Show category filter bar</span>
+              </label>
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.touchMode" />
+                <span>Touch mode (larger tap targets for tablets)</span>
+              </label>
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Items per page</label>
+                <input type="number" min="4" max="100" [(ngModel)]="form.itemsPerPage" />
+              </div>
+              <div class="form-group">
+                <label>Low-stock threshold (units)</label>
+                <input type="number" min="0" [(ngModel)]="form.lowStockThreshold" />
+              </div>
+            </div>
+
+            <h4 class="sub-section">Cart behaviour</h4>
+            <div class="toggles-grid">
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.allowItemNotes" />
+                <span>Allow per-line item notes</span>
+              </label>
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.allowDecimalQuantity" />
+                <span>Allow decimal quantities (e.g. 0.5 kg)</span>
+              </label>
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.barcodeScanSound" />
+                <span>Play sound on successful barcode scan</span>
+              </label>
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.showStockLevel" />
+                <span>Show current stock level on product tiles</span>
+              </label>
+            </div>
+          }
+
+          <!-- ── SESSION ──────────────────────────────────────────────────── -->
+          @case ('session') {
+            <h3 class="section-title">Session</h3>
+
+            <h4 class="sub-section">Connectivity</h4>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Operating mode</label>
+                <select [(ngModel)]="form.operatingMode">
+                  <option value="Online">Online — every sale requires a server connection</option>
+                  <option value="OfflineFallback">Offline fallback — queue sales only when connection drops</option>
+                  <option value="LocalFirst">Local-first — always sell locally, sync on session close</option>
+                </select>
+                <small>Offline-fallback and Local-first keep the till selling without internet; queued sales sync automatically when back online.</small>
+              </div>
+            </div>
+
+            <h4 class="sub-section">Session rules</h4>
+            <div class="toggles-grid">
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.requireOpeningFloat" />
+                <span>Require opening float entry when opening a session</span>
+              </label>
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.requireCashCountOnClose" />
+                <span>Require cash count when closing a session</span>
+              </label>
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.autoCloseSession" />
+                <span>Auto-close session at a fixed time each day</span>
+              </label>
+            </div>
+
+            @if (form.autoCloseSession) {
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Auto-close time</label>
+                  <input type="time" [(ngModel)]="form.autoCloseTime" />
+                </div>
+              </div>
+            }
+          }
+
+          <!-- ── PROMOTIONS & LOYALTY ─────────────────────────────────────── -->
+          @case ('promotions') {
+            <h3 class="section-title">Promotions &amp; Loyalty</h3>
+
+            <div class="toggles-grid">
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.enablePromotions" />
+                <span>Enable promotions</span>
+              </label>
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.enableCoupons" />
+                <span>Enable coupons</span>
+              </label>
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.autoApplyPromotions" />
+                <span>Auto-apply eligible promotions (no cashier action needed)</span>
+              </label>
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.enableLoyaltyPoints" />
+                <span>Enable loyalty points programme</span>
+              </label>
+            </div>
+          }
+
+          <!-- ── RECEIPT ───────────────────────────────────────────────────── -->
+          @case ('receipt') {
+            <h3 class="section-title">Receipt</h3>
+
+            <h4 class="sub-section">Printing</h4>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Default paper size</label>
+                <select [(ngModel)]="form.defaultPaperSize">
+                  @for (ps of paperSizes; track ps) {
+                    <option [value]="ps">{{ ps }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Copies per sale</label>
+                <input type="number" min="1" max="5" [(ngModel)]="form.receiptCopies" />
+              </div>
+              <div class="form-group">
+                <label>Barcode symbology</label>
+                <select [(ngModel)]="form.receiptBarcodeSymbology">
+                  <option value="">Default</option>
+                  <option value="Code128">Code 128</option>
+                  <option value="Code39">Code 39</option>
+                  <option value="EAN13">EAN-13</option>
+                  <option value="QRCode">QR Code</option>
+                </select>
+              </div>
+            </div>
+            <div class="toggles-grid">
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.autoPrintReceipt" />
+                <span>Auto-print receipt after every sale <small style="opacity:.65">(thermal printer — skips preview screen)</small></span>
+              </label>
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.askToPrintReceipt" />
+                <span>Ask cashier whether to print receipt</span>
+              </label>
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.skipReceiptScreen" />
+                <span>Skip receipt screen after payment <small style="opacity:.65">(no preview, no print prompt — goes straight to new sale)</small></span>
+              </label>
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.receiptAutoCutPaper" />
+                <span>Auto-cut paper after printing</span>
+              </label>
+            </div>
+
+            <h4 class="sub-section">Header &amp; footer content</h4>
+            <div class="toggles-grid">
+              <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.receiptShowLogo" /><span>Show logo</span></label>
+              <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.receiptShowBusinessName" /><span>Show business name</span></label>
+              <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.receiptShowAddress" /><span>Show address</span></label>
+              <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.receiptShowContact" /><span>Show contact (phone / email)</span></label>
+            </div>
+
+            <h4 class="sub-section">Line items &amp; totals</h4>
+            <div class="toggles-grid">
+              <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.receiptShowCashierName" /><span>Show cashier name</span></label>
+              <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.receiptShowCustomerName" /><span>Show customer name</span></label>
+              <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.receiptShowOrderNumber" /><span>Show order / receipt number</span></label>
+              <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.receiptShowDateTime" /><span>Show date &amp; time</span></label>
+              <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.receiptShowItemCodes" /><span>Show item codes / SKUs</span></label>
+              <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.receiptShowUnitPrice" /><span>Show unit price per line</span></label>
+              <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.receiptShowLineDiscount" /><span>Show per-line discount</span></label>
+              <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.receiptShowTaxBreakdown" /><span>Show tax breakdown</span></label>
+              <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.receiptShowDiscountLine" /><span>Show total discount line</span></label>
+              <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.receiptShowBarcode" /><span>Print barcode on receipt</span></label>
+              <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.receiptShowQrCode" /><span>Print QR code on receipt</span></label>
+            </div>
+
+            <h4 class="sub-section">Notes &amp; messages</h4>
+            <div class="form-grid form-grid--full">
+              <div class="form-group">
+                <label>Header note</label>
+                <input type="text" [(ngModel)]="form.receiptHeaderNote" placeholder="Printed at the top of the receipt" />
+              </div>
+              <div class="form-group">
+                <label>Footer message</label>
+                <input type="text" [(ngModel)]="form.receiptFooterMessage" placeholder="e.g. Thank you for your purchase!" />
+              </div>
+              <div class="form-group">
+                <label>Return policy</label>
+                <input type="text" [(ngModel)]="form.receiptReturnPolicy" placeholder="e.g. No returns after 7 days" />
+              </div>
+            </div>
+          }
+
+          <!-- ── APPEARANCE ──────────────────────────────────────────────── -->
+          @case ('appearance') {
+            <h3 class="section-title">Appearance &amp; UI</h3>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Theme</label>
+                <select [(ngModel)]="form.theme">
+                  <option value="">Default</option>
+                  <option value="Light">Light</option>
+                  <option value="Dark">Dark</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Primary colour</label>
+                <div class="color-row">
+                  <input type="color" [(ngModel)]="form.primaryColor" />
+                  <input type="text" [(ngModel)]="form.primaryColor" placeholder="#2563eb" style="flex:1" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Default product view</label>
+                <select [(ngModel)]="form.defaultProductView">
+                  <option value="Grid">Grid</option>
+                  <option value="List">List</option>
+                </select>
+              </div>
+            </div>
+            <div class="toggles-grid">
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.showNumpad" />
+                <span>Show on-screen numpad</span>
+              </label>
+              <label class="toggle-row">
+                <input type="checkbox" [(ngModel)]="form.showFavouritesBar" />
+                <span>Show favourites / quick-access bar</span>
+              </label>
+            </div>
+          }
+
+          <!-- ── RECEIPT TEMPLATES (embedded component) ──────────────────── -->
+          @case ('templates') {
+            <lib-pos-receipt-templates />
+          }
+
+          <!-- ── DOCUMENT SEQUENCES (embedded component) ─────────────────── -->
+          @case ('sequences') {
+            <lib-document-sequences />
+          }
+
+        }<!-- /@switch -->
+
+      </div><!-- /settings-content -->
+    </div><!-- /settings-hub -->
+
+  }<!-- /if !loading -->
+
+</div><!-- /page-container -->

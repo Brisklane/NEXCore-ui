@@ -1,0 +1,5 @@
+/* HR dashboard — brand cyan→blue accent (global .dsh kit supplies the layout) */
+.hr-dsh {
+  --dsh-accent: #2b7fff;
+  --dsh-accent-2: #22c7e6;
+}

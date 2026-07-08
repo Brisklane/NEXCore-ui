@@ -1,0 +1,157 @@
+<div class="page-container ptd-page">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">qr_code_2</span></div>
+      <div>
+        <h1>Label Designer</h1>
+        <p class="inv-hero-sub">Design and print barcode &amp; price tags for your products</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="ibtn ibtn--secondary" (click)="printTags()"><span class="material-symbols-outlined">print</span> Print</button>
+      <button class="btn-brand" (click)="generatePreview()"><span class="material-symbols-outlined">visibility</span> Generate preview</button>
+    </div>
+  </div>
+
+  <div class="ptd-root">
+
+    <!-- ══ LEFT: controls ══ -->
+    <aside class="ptd-controls">
+      @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+      <!-- Template -->
+      <div class="ptd-card">
+        <h4 class="ptd-section">Template</h4>
+        <label class="ptd-label">Load saved template</label>
+        <div class="ptd-tpl-row">
+          <select [(ngModel)]="selectedTemplateId" (ngModelChange)="onTemplateSelected()">
+            <option value="">— None —</option>
+            @for (t of templates; track t.id) { <option [value]="t.id">{{ t.templateName }}{{ t.isDefault ? ' (default)' : '' }}</option> }
+          </select>
+          <button class="btn btn-secondary btn-sm" (click)="setDefaultTemplate()" [disabled]="!selectedTemplateId" title="Set as default">★</button>
+        </div>
+        <div class="ptd-tpl-row">
+          <input type="text" [(ngModel)]="newTemplateName" placeholder="Save current design as…" />
+          <button class="btn btn-secondary btn-sm" (click)="saveTemplate()" [disabled]="savingTemplate">{{ savingTemplate ? '…' : 'Save' }}</button>
+        </div>
+      </div>
+
+      <!-- Layout -->
+      <div class="ptd-card">
+        <h4 class="ptd-section">Layout</h4>
+        <label class="ptd-label">Paper type</label>
+        <select [(ngModel)]="paperName" (ngModelChange)="applyPaperPreset()" [disabled]="optionsLoading">
+          @for (p of paperPresets; track p.name) { <option [value]="p.name">{{ p.name }}</option> }
+        </select>
+        <label class="ptd-check"><input type="checkbox" [(ngModel)]="printOnRollPaper" /> Continuous roll paper (unlimited height)</label>
+        <div class="ptd-grid2">
+          <div><label class="ptd-label">Tag width (mm)</label><input type="number" step="0.5" [(ngModel)]="labelWidth" /></div>
+          <div><label class="ptd-label">Tag height (mm)</label><input type="number" step="0.5" [(ngModel)]="labelHeight" [disabled]="printOnRollPaper" /></div>
+        </div>
+      </div>
+
+      <!-- Display options -->
+      <div class="ptd-card">
+        <h4 class="ptd-section">Display options</h4>
+        <label class="ptd-check"><input type="checkbox" [(ngModel)]="showProductName" /> Product name</label>
+        <label class="ptd-check"><input type="checkbox" [(ngModel)]="showPrice" /> Sale price</label>
+        <label class="ptd-check"><input type="checkbox" [(ngModel)]="showBarcode" /> Barcode</label>
+        <label class="ptd-check"><input type="checkbox" [(ngModel)]="showBorders" /> Borders</label>
+        <label class="ptd-label">Barcode type</label>
+        <select [(ngModel)]="barcodeType" (ngModelChange)="onSymbologyChange()" [disabled]="optionsLoading">
+          @for (b of barcodeTypeOptions; track b.value) { <option [value]="b.value">{{ b.label }}</option> }
+        </select>
+        <label class="ptd-label">Product name size ({{ productNameSize }}pt)</label>
+        <input type="range" [min]="nameRange.min" [max]="nameRange.max" [step]="nameRange.step" [(ngModel)]="productNameSize" />
+        <label class="ptd-label">Price size ({{ priceSize }}pt)</label>
+        <input type="range" [min]="priceRange.min" [max]="priceRange.max" [step]="priceRange.step" [(ngModel)]="priceSize" />
+        <label class="ptd-label">Barcode height ({{ barcodeHeight }}px)</label>
+        <input type="range" [min]="barcodeRange.min" [max]="barcodeRange.max" [step]="barcodeRange.step" [(ngModel)]="barcodeHeight" />
+      </div>
+
+      <!-- Products -->
+      <div class="ptd-card">
+        <h4 class="ptd-section">Products</h4>
+        <div class="ptd-search">
+          <input type="text" [(ngModel)]="productSearch" (keyup.enter)="searchProducts()" placeholder="Search by name, code, or barcode…" />
+          <button class="btn btn-secondary btn-sm" (click)="searchProducts()" title="Search">🔍</button>
+          <button class="btn btn-secondary btn-sm" (click)="loadAllProducts()" title="Load all">All</button>
+        </div>
+
+        <label class="ptd-label">Available products</label>
+        @if (loading) {
+          <div class="ptd-listbox ptd-empty">Loading…</div>
+        } @else {
+          <div class="ptd-listbox">
+            @for (p of availableProducts; track p.id) {
+              <div class="ptd-li">
+                <div class="ptd-li-info">
+                  <div class="ptd-li-name">{{ p.name }}</div>
+                  <div class="ptd-li-sub">{{ p.code }}{{ p.barcode ? ' · ' + p.barcode : '' }}</div>
+                  <div class="ptd-li-price">{{ currencyPrefix }}{{ p.price | number:'1.2-2' }}</div>
+                </div>
+                <button class="btn btn-secondary btn-sm" (click)="addProduct(p)" [disabled]="isSelected(p)">Add</button>
+              </div>
+            }
+            @empty { <div class="ptd-empty">No products.</div> }
+          </div>
+        }
+
+        <label class="ptd-label">Selected for printing</label>
+        <div class="ptd-listbox ptd-listbox-sm">
+          @for (p of selectedProducts; track p.id) {
+            <div class="ptd-li">
+              <div class="ptd-li-info ptd-li-row"><span class="ptd-li-name">{{ p.name }}</span><span class="ptd-li-price">{{ currencyPrefix }}{{ p.price | number:'1.2-2' }}</span></div>
+              <button class="btn btn-danger btn-sm" (click)="removeProduct(p)">✕</button>
+            </div>
+          }
+          @empty { <div class="ptd-empty">No products selected.</div> }
+        </div>
+
+        <div class="ptd-row-btns">
+          <button class="btn btn-secondary btn-sm" (click)="clearProducts()">Clear selected</button>
+          <button class="btn btn-secondary btn-sm" (click)="selectAllProducts()">Select all</button>
+        </div>
+        <div class="ptd-copies">
+          <span class="ptd-label" style="margin:0">Copies:</span>
+          <button class="btn btn-secondary btn-sm" (click)="decreaseCopies()">−</button>
+          <input type="number" min="1" [(ngModel)]="numberOfCopies" />
+          <button class="btn btn-secondary btn-sm" (click)="increaseCopies()">+</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ══ RIGHT: preview ══ -->
+    <section class="ptd-preview-wrap">
+      <div class="ptd-toolbar">
+        <button class="ibtn ibtn--primary ibtn--sm" (click)="generatePreview()"><span class="material-symbols-outlined">visibility</span> Generate preview</button>
+        <button class="ibtn ibtn--secondary ibtn--sm" (click)="printTags()"><span class="material-symbols-outlined">print</span> Print</button>
+        <button class="ibtn ibtn--secondary ibtn--sm" (click)="saveServerPdf()" [disabled]="rendering"><span class="material-symbols-outlined">picture_as_pdf</span> {{ rendering ? 'Rendering…' : 'Save PDF' }}</button>
+        <span class="ptd-toolbar-info">{{ previewInfo }}</span>
+      </div>
+
+      <div class="ptd-canvas">
+        @if (previewItems.length === 0) {
+          <div class="ptd-canvas-empty">
+            <div class="ptd-canvas-empty-ic"><span class="material-symbols-outlined">sell</span></div>
+            <p>Select products and click <strong>Generate preview</strong>.</p>
+          </div>
+        } @else {
+          <div class="ptd-sheet">
+            @for (p of previewItems; track $index) {
+              <div class="ptd-tag" [class.ptd-tag-bordered]="showBorders" [style.width.mm]="labelWidth" [style.height.mm]="isLabelPaper ? labelHeight : null">
+                @if (showProductName) { <div class="ptd-tag-name" [style.font-size.pt]="productNameSize">{{ p.name }}</div> }
+                @if (showPrice) { <div class="ptd-tag-price" [style.font-size.pt]="priceSize">{{ currencyPrefix }}{{ p.price | number:'1.0-0' }}</div> }
+                @if (showBarcode) {
+                  @if (barcodeUrl(p)) { <img class="ptd-tag-barcode-img" [src]="barcodeUrl(p)" [style.height.px]="barcodeHeight" /> }
+                  @else { <div class="ptd-tag-barcode" [style.height.px]="barcodeHeight"></div> }
+                  <div class="ptd-tag-barcode-text">{{ p.barcode }}</div>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </section>
+  </div>
+</div>

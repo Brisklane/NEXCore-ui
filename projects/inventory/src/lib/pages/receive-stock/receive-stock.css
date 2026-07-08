@@ -1,0 +1,93 @@
+@import '../shared-styles.css';
+
+.form-card {
+  background: var(--bg-surface, #fff); border: 1px solid var(--border-default, #e8edf3);
+  border-radius: var(--radius, 16px); box-shadow: var(--shadow-sm); padding: 20px 22px; margin-bottom: 18px;
+}
+.card-title { font-size: 14px; font-weight: 700; color: var(--text-heading, #0f172a); }
+.req { color: var(--c-danger-text); }
+
+.form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group label { font-size: 12px; font-weight: 600; color: var(--text-secondary, #475569); text-transform: uppercase; letter-spacing: 0.04em; }
+.form-group input, .form-group select {
+  padding: 9px 12px; border: 1px solid var(--border-default, #e2e8f0); border-radius: 8px;
+  font-size: 14px; color: var(--text-heading, #0f172a); background: var(--bg-surface, #fff);
+}
+.form-group input:focus-visible, .form-group select:focus-visible { outline: none; box-shadow: var(--focus-ring); border-color: var(--accent, #2b7fff); }
+
+.lines-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 22px 0 12px; }
+.lines-totals { font-size: 13px; color: var(--text-secondary, #64748b); }
+.lines-totals strong { color: var(--text-heading, #0f172a); }
+
+.line-card {
+  background: var(--bg-surface, #fff); border: 1px solid var(--border-default, #e8edf3);
+  border-radius: var(--radius, 14px); box-shadow: var(--shadow-sm); padding: 16px 18px; margin-bottom: 12px;
+}
+.line-top { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.line-num {
+  width: 28px; height: 28px; flex-shrink: 0; border-radius: 8px; margin-bottom: 3px;
+  display: grid; place-items: center; font-size: 12px; font-weight: 700;
+  background: var(--c-brand-surface); color: var(--accent, #2b7fff);
+}
+.line-item { flex: 1 1 320px; min-width: 220px; display: flex; align-items: center; gap: 10px; }
+.line-item select {
+  flex: 1; padding: 9px 12px; border: 1px solid var(--border-default, #e2e8f0); border-radius: 8px;
+  font-size: 14px; background: var(--bg-surface, #fff); color: var(--text-heading, #0f172a); min-width: 0;
+}
+.line-item select:focus-visible { outline: none; box-shadow: var(--focus-ring); border-color: var(--accent, #2b7fff); }
+.line-qty, .line-cost { display: flex; flex-direction: column; gap: 4px; }
+.line-qty label, .line-cost label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted, #94a3b8); }
+.line-qty input, .line-cost input { width: 110px; padding: 9px 11px; border: 1px solid var(--border-default, #e2e8f0); border-radius: 8px; font-size: 14px; background: var(--bg-surface, #fff); color: var(--text-heading, #0f172a); }
+.line-qty input:disabled { background: var(--bg-muted, #f1f5f9); color: var(--text-secondary, #64748b); }
+.line-qty input:focus-visible, .line-cost input:focus-visible { outline: none; box-shadow: var(--focus-ring); border-color: var(--accent, #2b7fff); }
+
+.line-capture { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border-default, #e8edf3); }
+.capture-label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 650; color: var(--text-secondary, #475569); margin-bottom: 8px; }
+.capture-label .material-symbols-outlined { font-size: 17px; color: var(--accent, #2b7fff); }
+.line-capture textarea {
+  width: 100%; box-sizing: border-box; padding: 10px 12px; font-size: 13px; font-family: 'Consolas', ui-monospace, monospace;
+  border: 1px solid var(--border-strong, #cbd5e1); border-radius: 8px; resize: vertical; color: var(--text-heading, #0f172a); background: var(--bg-surface, #fff);
+}
+.line-capture textarea:focus-visible { outline: none; box-shadow: var(--focus-ring); border-color: var(--accent, #2b7fff); }
+.capture-hint { margin-top: 6px; font-size: 12px; color: var(--accent, #2b7fff); font-weight: 600; }
+.line-capture-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+
+.add-line-btn { margin-top: 4px; }
+
+/* ── Goods Receipt UX polish ─────────────────────────────────────────────────── */
+.gr-page { padding-bottom: 84px; }               /* room for the sticky action bar */
+
+.gr-card-title { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; color: var(--text-heading, #0f172a); margin-bottom: 16px; }
+.gr-step {
+  width: 24px; height: 24px; flex-shrink: 0; border-radius: 7px; display: grid; place-items: center;
+  font-size: 13px; font-weight: 800; color: #fff; background: var(--accent, #2b7fff);
+}
+.gr-lines-head { display: flex; align-items: center; gap: 12px; margin: 22px 0 12px; }
+.gr-count-chip {
+  font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px;
+  background: var(--bg-subtle, #f1f5f9); color: var(--text-secondary, #64748b);
+}
+
+.line-mini-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted, #94a3b8); }
+.line-card-empty { border-style: dashed; }
+.line-item { flex-direction: column; align-items: stretch; gap: 5px; }
+.line-item > select { width: 100%; }
+.line-total { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; min-width: 92px; }
+.line-total-val { font-size: 15px; font-weight: 800; color: var(--text-heading, #0f172a); font-variant-numeric: tabular-nums; padding-top: 4px; }
+.capture-hint { display: flex; align-items: center; gap: 5px; }
+.capture-hint .material-symbols-outlined { font-size: 16px; color: var(--c-success-text, #16a34a); }
+
+/* Sticky bottom action bar */
+.gr-actionbar {
+  position: sticky; bottom: 0; z-index: 20; margin: 20px -4px -4px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  padding: 14px 20px; background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-default, #e8edf3); border-radius: 14px;
+  box-shadow: 0 -6px 24px rgba(15, 23, 42, 0.08);
+}
+.gr-totals { display: flex; gap: 28px; }
+.gr-total { display: flex; flex-direction: column; gap: 1px; }
+.gr-total-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary, #64748b); }
+.gr-total-value { font-size: 20px; font-weight: 800; color: var(--text-heading, #0f172a); font-variant-numeric: tabular-nums; }
+.gr-actions { display: flex; gap: 10px; }

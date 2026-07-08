@@ -1,0 +1,42 @@
+<div class="page-container">
+
+  <app-page-header title="Spend by Category" subtitle="Where procurement budget is going, grouped by procurement category">
+    <button class="btn btn-secondary" (click)="load()" [disabled]="loading">↻ Refresh</button>
+  </app-page-header>
+
+  <app-alert type="error" [message]="error"></app-alert>
+
+  <div class="helper-box">
+    <span class="helper-icon">ℹ️</span>
+    <div>Confirmed purchase order lines are grouped by their <strong>procurement category</strong>. Use this to spot
+      concentration of spend, identify candidates for framework agreements, and steer budget. Uncategorized lines are grouped
+      under <strong>Uncategorized</strong> — tag them on the category master to improve accuracy.</div>
+  </div>
+
+  @if (data) {
+    <div class="kpi-grid">
+      <div class="kpi-card accent"><span class="kpi-label">Total Spend</span><span class="kpi-value">{{ data.totalSpend | number:'1.0-0' }}</span><span class="kpi-sub">{{ currency }}</span></div>
+      <div class="kpi-card"><span class="kpi-label">Categories</span><span class="kpi-value">{{ data.categories.length }}</span></div>
+    </div>
+
+    <div class="report-grid">
+      <div class="report-card">
+        <h3>Spend Distribution</h3>
+        <lib-donut-chart [data]="points" [currency]="currency" caption="Total Spend"></lib-donut-chart>
+      </div>
+      <div class="report-card">
+        <h3>Spend by Category</h3>
+        <lib-bar-chart [data]="points" [currency]="currency"></lib-bar-chart>
+      </div>
+    </div>
+
+    <div class="report-card">
+      <h3>Category Detail</h3>
+      <app-data-table [sortableAll]="true" [columns]="columns" [data]="data.categories" [loading]="loading"
+        emptyMessage="No categorized spend yet."></app-data-table>
+    </div>
+  } @else if (!loading) {
+    <div class="empty-state">No spend data available yet.</div>
+  }
+
+</div>

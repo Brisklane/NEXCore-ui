@@ -1,0 +1,303 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">call</span></div>
+      <div>
+        <h1>Calls</h1>
+        <p class="inv-hero-sub">Log completed calls and schedule upcoming ones</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> Log / Schedule Call</button>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="kpi-strip">
+    <div class="kpi-card kpi-brand"><div class="kpi-top"><span class="kpi-label">Total Calls</span><span class="kpi-icon"><span class="material-symbols-outlined">call</span></span></div><div class="kpi-value">{{ total }}</div></div>
+    <div class="kpi-card kpi-cyan"><div class="kpi-top"><span class="kpi-label">Outbound</span><span class="kpi-icon"><span class="material-symbols-outlined">call_made</span></span></div><div class="kpi-value">{{ outbound }}</div></div>
+    <div class="kpi-card kpi-violet"><div class="kpi-top"><span class="kpi-label">Inbound</span><span class="kpi-icon"><span class="material-symbols-outlined">call_received</span></span></div><div class="kpi-value">{{ inbound }}</div></div>
+    <div class="kpi-card kpi-amber"><div class="kpi-top"><span class="kpi-label">Scheduled</span><span class="kpi-icon"><span class="material-symbols-outlined">event</span></span></div><div class="kpi-value">{{ scheduled }}</div></div>
+    <div class="kpi-card kpi-success"><div class="kpi-top"><span class="kpi-label">Completed</span><span class="kpi-icon"><span class="material-symbols-outlined">check_circle</span></span></div><div class="kpi-value">{{ completed }}</div></div>
+    <div class="kpi-card kpi-danger"><div class="kpi-top"><span class="kpi-label">Overdue</span><span class="kpi-icon"><span class="material-symbols-outlined">warning</span></span></div><div class="kpi-value">{{ overdue }}</div></div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editingCall ? 'Edit Call' : 'Log / Schedule a Call' }}</h3>
+      <form class="activity-form">
+
+        <!-- Mode toggle -->
+        <div class="mode-bar">
+          <span class="mode-label">Call Type</span>
+          <div class="mode-toggle">
+            <button type="button" class="mode-btn" [class.active]="formCallMode === 'log'" (click)="formCallMode = 'log'">Log a Call</button>
+            <button type="button" class="mode-btn" [class.active]="formCallMode === 'schedule'" (click)="formCallMode = 'schedule'">Schedule Call</button>
+          </div>
+        </div>
+
+        <!-- About -->
+        <div class="form-section">
+          <div class="section-header"><h4>About</h4></div>
+          <div class="form-grid">
+            <div class="form-group form-group-full">
+              <label>Subject <span class="required">*</span></label>
+              <input type="text" [(ngModel)]="formSubject" name="subject" placeholder="What was this call about?" />
+            </div>
+            <div class="form-group form-group-full">
+              <label>Comments</label>
+              <textarea [(ngModel)]="formComments" name="comments" rows="3" placeholder="Call notes, key points discussed..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Name -->
+        <div class="form-section">
+          <div class="section-header"><h4>Name</h4></div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Type</label>
+              <select [(ngModel)]="formNameType" name="nameType" (ngModelChange)="onNameTypeChange()">
+                @for (o of nameTypeOptions; track o) { <option [value]="o">{{ o }}</option> }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>{{ formNameType }}</label>
+              <crm-lookup-dropdown
+                [(ngModel)]="formNameId"
+                name="nameId"
+                [options]="nameOptions"
+                [placeholder]="'Select ' + formNameType"
+                [label]="formNameType"
+              ></crm-lookup-dropdown>
+            </div>
+          </div>
+        </div>
+
+        <!-- Related To -->
+        <div class="form-section">
+          <div class="section-header"><h4>Related To</h4></div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Type</label>
+              <select [(ngModel)]="formRelatedToType" name="relatedToType" (ngModelChange)="onRelatedToTypeChange()">
+                @for (o of relatedToTypeOptions; track o) { <option [value]="o">{{ o }}</option> }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>{{ formRelatedToType }}</label>
+              <crm-lookup-dropdown
+                [(ngModel)]="formRelatedToId"
+                name="relatedToId"
+                [options]="relatedToOptions"
+                [placeholder]="'Select ' + formRelatedToType"
+                [label]="formRelatedToType"
+              ></crm-lookup-dropdown>
+            </div>
+          </div>
+        </div>
+
+        <!-- Call Details -->
+        <div class="form-section">
+          <div class="section-header"><h4>Call Details</h4></div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Direction</label>
+              <select [(ngModel)]="formCallType" name="callType">
+                <option value="">Select</option>
+                @for (o of callTypeOptions; track o) { <option [value]="o">{{ o }}</option> }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Purpose</label>
+              <select [(ngModel)]="formCallPurpose" name="callPurpose">
+                <option value="">Select</option>
+                @for (o of callPurposeOptions; track o) { <option [value]="o">{{ o }}</option> }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Result</label>
+              <select [(ngModel)]="formCallResult" name="callResult">
+                <option value="">Select</option>
+                @for (o of callResultOptions; track o) { <option [value]="o">{{ o }}</option> }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Duration (minutes)</label>
+              <input type="number" [(ngModel)]="formDurationMinutes" name="duration" min="1" placeholder="e.g. 15" />
+            </div>
+            <div class="form-group">
+              <label>Priority</label>
+              <select [(ngModel)]="formPriority" name="priority">
+                @for (o of priorityOptions; track o) { <option [value]="o">{{ o }}</option> }
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Schedule (disabled when Log a Call) -->
+        <div class="form-section" [class.section-muted]="!isSchedule">
+          <div class="section-header">
+            <h4>Schedule</h4>
+            @if (!isSchedule) { <span class="section-hint">Only active for "Schedule Call"</span> }
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Due Date</label>
+              <input type="date" [(ngModel)]="formDueDate" name="dueDate" [disabled]="!isSchedule" />
+            </div>
+            <div class="form-group">
+              <label>Due Time</label>
+              <input type="time" [(ngModel)]="formDueTime" name="dueTime" [disabled]="!isSchedule" />
+            </div>
+          </div>
+        </div>
+
+      </form>
+      <div class="form-actions">
+        @if (editingCall) { <button class="ibtn ibtn--danger" style="margin-right:auto" (click)="deleteCall(editingCall.id)"><span class="material-symbols-outlined">delete</span> Delete</button> }
+        <button class="ibtn ibtn--secondary" (click)="cancelForm()">Cancel</button>
+        <button class="ibtn ibtn--primary" [disabled]="!formSubject.trim()" (click)="saveCall()"><span class="material-symbols-outlined">save</span> {{ editingCall ? 'Update Call' : (isSchedule ? 'Schedule Call' : 'Log Call') }}</button>
+      </div>
+    </div>
+  } @else if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else {
+
+    <!-- Open / Scheduled Calls -->
+    <div class="sub-section">
+      <div class="sub-section-header open-header">
+        <h4>Scheduled &amp; Active Calls</h4>
+        <span class="count-chip">{{ openCallsCount }}</span>
+      </div>
+      <div class="filter-bar">
+        <input type="text" class="filter-search" placeholder="Search open calls..."
+          [(ngModel)]="openCallsSearch" name="openCallsSearch" (input)="onOpenCallsSearch()" />
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th>Direction</th>
+              <th>Purpose</th>
+              <th>Result</th>
+              <th>Duration</th>
+              <th>Name</th>
+              <th>Related To</th>
+              <th>Due Date</th>
+              <th>Priority</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of pagedOpenCalls; track c.id) {
+              <tr [class.row-overdue]="isOverdue(c)">
+                <td class="cell-primary">{{ c.subject }}</td>
+                <td>{{ c.callType || '—' }}</td>
+                <td>{{ c.callPurpose || '—' }}</td>
+                <td>{{ c.callResult || '—' }}</td>
+                <td>{{ c.durationMinutes ? c.durationMinutes + ' min' : '—' }}</td>
+                <td>{{ getNameDisplay(c) }}</td>
+                <td>{{ getRelatedDisplay(c) }}</td>
+                <td [class.overdue-date]="isOverdue(c)">
+                  {{ c.dueDate ? (c.dueDate | date:'MMM d, y, h:mm a') : '—' }}
+                </td>
+                <td><span class="badge {{ getPriorityClass(c.priority) }}">{{ c.priority || 'Normal' }}</span></td>
+                <td class="actions-cell">
+                  <button class="btn-done" (click)="markDone(c)">Done</button>
+                  <button class="btn-icon" title="Edit" (click)="openEditForm(c)">✏️</button>
+                  <button class="btn-icon btn-icon-danger" title="Delete" (click)="deleteCall(c.id)">🗑️</button>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="10" class="empty-row">No active calls.</td></tr>
+            }
+          </tbody>
+        </table>
+        <div class="pagination-bar">
+          <div class="pagination-info">
+            <span>Rows per page:</span>
+            <select [(ngModel)]="openCallsPageSize" name="openCallsPageSize" (change)="onOpenCallsPageSizeChange()">
+              @for (opt of pageSizeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+            </select>
+            <span>Showing {{ openCallsFirstEntry }} to {{ openCallsLastEntry }} of {{ openCallsTotal }}</span>
+          </div>
+          <div class="pagination-controls">
+            <button class="btn-page" [disabled]="openCallsPage <= 1" (click)="goToOpenCallsPage(openCallsPage - 1)">&#8249; Prev</button>
+            <span class="page-indicator">Page {{ openCallsPage }} of {{ openCallsTotalPages }}</span>
+            <button class="btn-page" [disabled]="openCallsPage >= openCallsTotalPages" (click)="goToOpenCallsPage(openCallsPage + 1)">Next &#8250;</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Completed Calls -->
+    <div class="sub-section">
+      <div class="sub-section-header done-header">
+        <h4>Completed Calls</h4>
+        <span class="count-chip">{{ closedCallsCount }}</span>
+      </div>
+      <div class="filter-bar">
+        <input type="text" class="filter-search" placeholder="Search completed calls..."
+          [(ngModel)]="closedCallsSearch" name="closedCallsSearch" (input)="onClosedCallsSearch()" />
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th>Direction</th>
+              <th>Purpose</th>
+              <th>Result</th>
+              <th>Duration</th>
+              <th>Name</th>
+              <th>Related To</th>
+              <th>Logged</th>
+              <th>Priority</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of pagedClosedCalls; track c.id) {
+              <tr class="row-done">
+                <td class="cell-primary">{{ c.subject }}</td>
+                <td>{{ c.callType || '—' }}</td>
+                <td>{{ c.callPurpose || '—' }}</td>
+                <td>{{ c.callResult || '—' }}</td>
+                <td>{{ c.durationMinutes ? c.durationMinutes + ' min' : '—' }}</td>
+                <td>{{ getNameDisplay(c) }}</td>
+                <td>{{ getRelatedDisplay(c) }}</td>
+                <td>{{ c.dueDate ? (c.dueDate | date:'MMM d, y, h:mm a') : 'Logged' }}</td>
+                <td><span class="badge {{ getPriorityClass(c.priority) }}">{{ c.priority || 'Normal' }}</span></td>
+                <td class="actions-cell">
+                  <button class="btn-icon" title="Edit" (click)="openEditForm(c)">✏️</button>
+                  <button class="btn-icon btn-icon-danger" title="Delete" (click)="deleteCall(c.id)">🗑️</button>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="10" class="empty-row">No completed calls yet.</td></tr>
+            }
+          </tbody>
+        </table>
+        <div class="pagination-bar">
+          <div class="pagination-info">
+            <span>Rows per page:</span>
+            <select [(ngModel)]="closedCallsPageSize" name="closedCallsPageSize" (change)="onClosedCallsPageSizeChange()">
+              @for (opt of pageSizeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+            </select>
+            <span>Showing {{ closedCallsFirstEntry }} to {{ closedCallsLastEntry }} of {{ closedCallsTotal }}</span>
+          </div>
+          <div class="pagination-controls">
+            <button class="btn-page" [disabled]="closedCallsPage <= 1" (click)="goToClosedCallsPage(closedCallsPage - 1)">&#8249; Prev</button>
+            <span class="page-indicator">Page {{ closedCallsPage }} of {{ closedCallsTotalPages }}</span>
+            <button class="btn-page" [disabled]="closedCallsPage >= closedCallsTotalPages" (click)="goToClosedCallsPage(closedCallsPage + 1)">Next &#8250;</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  }
+</div>

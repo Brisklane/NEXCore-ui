@@ -1,0 +1,74 @@
+<div class="container">
+  <h2>Employee Contracts</h2>
+
+  <div *ngIf="error" class="error">{{ error }}</div>
+
+  <button (click)="openCreateForm()" class="btn btn-primary">+ New Contract</button>
+
+  <table class="table" *ngIf="!loading && contracts.length > 0">
+    <thead>
+      <tr>
+        <th>Employee ID</th>
+        <th>Start Date</th>
+        <th>End Date</th>
+        <th>Type</th>
+        <th>Salary</th>
+        <th>Currency</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let contract of contracts">
+        <td>{{ contract.employeeId }}</td>
+        <td>{{ contract.startDate | date:'short' }}</td>
+        <td>{{ contract.endDate | date:'short' }}</td>
+        <td>{{ contract.contractType }}</td>
+        <td>{{ contract.salary }}</td>
+        <td>{{ contract.currency }}</td>
+        <td>
+          <button (click)="openEditForm(contract)" class="btn btn-sm btn-secondary">Edit</button>
+          <button (click)="deleteContract(contract)" class="btn btn-sm btn-danger">Delete</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p *ngIf="!loading && contracts.length === 0">No contracts found.</p>
+  <p *ngIf="loading">Loading...</p>
+
+  <div *ngIf="showForm" class="form-container">
+    <h3>{{ editingContract ? 'Edit' : 'Create' }} Contract</h3>
+    <form (ngSubmit)="saveContract()">
+      <div class="form-group">
+        <label>Employee ID:</label>
+        <input type="text" [(ngModel)]="formEmployeeId" name="employeeId" required />
+      </div>
+      <div class="form-group">
+        <label>Start Date:</label>
+        <input type="date" [(ngModel)]="formStartDate" name="startDate" required />
+      </div>
+      <div class="form-group">
+        <label>End Date:</label>
+        <input type="date" [(ngModel)]="formEndDate" name="endDate" />
+      </div>
+      <div class="form-group">
+        <label>Contract Type:</label>
+        <input type="text" [(ngModel)]="formContractType" name="contractType" />
+      </div>
+      <div class="form-group">
+        <label>Salary:</label>
+        <input type="number" [(ngModel)]="formSalary" name="salary" min="0" />
+      </div>
+      <div class="form-group">
+        <label>Currency:</label>
+        <input type="text" [(ngModel)]="formCurrency" name="currency" />
+      </div>
+      <div class="form-group">
+        <label>Notes:</label>
+        <textarea [(ngModel)]="formNotes" name="notes"></textarea>
+      </div>
+      <button type="submit" class="btn btn-success">Save</button>
+      <button type="button" (click)="cancelForm()" class="btn btn-secondary">Cancel</button>
+    </form>
+  </div>
+</div>

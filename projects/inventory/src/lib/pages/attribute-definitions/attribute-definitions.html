@@ -1,0 +1,65 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">tune</span></div>
+      <div>
+        <h1>Attributes</h1>
+        <p class="inv-hero-sub">Product attributes and variant-defining properties</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Attribute</button>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="md-split">
+    <div class="md-list">
+      <div class="md-list-head">
+        <span class="inv-search"><span class="material-symbols-outlined">search</span><input type="text" placeholder="Search attributes…" [(ngModel)]="filterSearch" (ngModelChange)="onSearchInput()" (keyup.enter)="applyFilters()" /></span>
+        <div class="md-list-head-row"><select class="inv-select" [(ngModel)]="filterStatus" (ngModelChange)="applyFilters()"><option value="">All Statuses</option><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+      </div>
+      <div class="md-list-body">
+        @if (loading) {
+          @for (s of [0,1,2,3,4]; track s) { <div class="md-rec"><span class="skeleton sk-circle" style="width:34px;height:34px"></span><div style="flex:1"><span class="skeleton sk-line" style="width:70%"></span></div></div> }
+        } @else if (items.length === 0) {
+          <div class="inv-empty" style="padding:36px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">tune</span></div><div class="inv-empty-title">No attributes found</div><div class="inv-empty-text">Add your first attribute.</div></div>
+        } @else {
+          @for (item of displayItems; track item.id) {
+            <button class="md-rec" [class.selected]="editingItem?.id === item.id" [class.row-new]="item.id === highlighter.id" (click)="openEditForm(item)">
+              <span class="md-rec-ico">{{ (item.name || item.code || '?').charAt(0) }}</span>
+              <div class="md-rec-main"><span class="md-rec-title">{{ item.name || '—' }}@if (item.isVariant) { <span class="track-badge track-badge--serial" style="margin-left:6px">Variant</span> }</span><span class="md-rec-sub"><span class="md-rec-code">{{ item.code }}</span>@if (item.dataType) { · {{ item.dataType }} }</span></div>
+              <span class="md-rec-status" [class.on]="item.isActive" [class.off]="!item.isActive"></span>
+            </button>
+          }
+        }
+      </div>
+      @if (totalCount > 0) {
+        <div class="md-list-foot"><span>{{ (page - 1) * pageSize + 1 }}–{{ page * pageSize < totalCount ? page * pageSize : totalCount }} of {{ totalCount | number }}</span><div class="md-pager"><button class="btn-page" (click)="goToPage(page - 1)" [disabled]="page <= 1">Prev</button><button class="btn-page" (click)="goToPage(page + 1)" [disabled]="page >= totalPages">Next</button></div></div>
+      }
+    </div>
+
+    <div class="md-detail">
+      @if (showForm) {
+        <div class="md-detail-head"><span class="md-detail-title">{{ editingItem ? 'Edit Attribute' : 'New Attribute' }}</span><button class="icon-btn" title="Close" (click)="cancelForm()"><span class="material-symbols-outlined">close</span></button></div>
+        <div class="md-detail-body">
+          <div class="form-grid">
+            <div class="form-group"><label>Code</label><input type="text" [(ngModel)]="formCode" placeholder="Auto-generated" readonly /></div>
+            <div class="form-group"><label>Name</label><input type="text" [(ngModel)]="formName" placeholder="e.g. Material" /></div>
+            <div class="form-group"><label>Data Type</label><select [(ngModel)]="formDataType"><option value="">— Select —</option>@for (t of attributeDataTypes; track t.value) { <option [value]="t.value">{{ t.label }}</option> }</select></div>
+            <div class="form-group"><label>Unit</label><input type="text" [(ngModel)]="formUnit" placeholder="e.g. cm, kg" /></div>
+            <div class="form-group form-group-full"><label>Allowed Values</label><textarea [(ngModel)]="formAllowedValues" rows="2" placeholder="Comma-separated, e.g. Cotton, Wool, Silk"></textarea></div>
+            <div class="form-group"><label>Display Order</label><input type="number" [(ngModel)]="formDisplayOrder" min="0" /></div>
+            <div class="form-check-row"><label><input type="checkbox" [(ngModel)]="formIsRequired" /> Required</label></div>
+            <div class="form-check-row"><label><input type="checkbox" [(ngModel)]="formIsVariant" /> Variant-defining</label></div>
+            <div class="form-check-row"><label><input type="checkbox" [(ngModel)]="formIsActive" /> Active</label></div>
+          </div>
+          <div class="form-actions"><button class="ibtn ibtn--secondary" (click)="cancelForm()">Cancel</button><button class="ibtn ibtn--primary" (click)="save()"><span class="material-symbols-outlined">save</span> {{ editingItem ? 'Save changes' : 'Create attribute' }}</button></div>
+        </div>
+      } @else {
+        <div class="md-empty"><div class="md-empty-icon"><span class="material-symbols-outlined">tune</span></div><div class="md-empty-title">Manage attributes</div><div class="md-empty-text">Select an attribute to edit, or add a new one.</div><button class="btn-brand" style="margin-top:8px" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Attribute</button></div>
+      }
+    </div>
+  </div>
+</div>

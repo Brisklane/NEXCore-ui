@@ -1,0 +1,432 @@
+<div class="page-container">
+
+  @if (!showForm && !viewingArticle) {
+    <!-- ── List view ─────────────────────────────────────────────────── -->
+    <div class="inv-hero">
+      <div class="inv-hero-titles">
+        <div class="inv-hero-mark"><span class="material-symbols-outlined">article</span></div>
+        <div>
+          <h1>Knowledge Articles</h1>
+          <p class="inv-hero-sub">Manage knowledge base articles and documentation</p>
+        </div>
+      </div>
+      <div class="inv-hero-actions">
+        <button class="btn-brand" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Article</button>
+      </div>
+    </div>
+
+    @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+    <div class="filter-bar">
+      <input
+        type="text"
+        class="filter-search"
+        placeholder="Search articles..."
+        [(ngModel)]="searchTerm"
+        (input)="onSearchChange()"
+      />
+    </div>
+
+    @if (loading) {
+      <div class="loading-spinner">Loading...</div>
+    } @else {
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Article #</th>
+              <th>Title</th>
+              <th>Type</th>
+              <th>Category</th>
+              <th>Status</th>
+              <th>Version</th>
+              <th>Published</th>
+              <th>Created</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of filteredArticles; track a.id) {
+              <tr>
+                <td>{{ a.articleNumber }}</td>
+                <td class="ka-title-link" (click)="openArticleView(a)">{{ a.title }}</td>
+                <td>{{ a.articleType }}</td>
+                <td>{{ a.categoryGroup }}</td>
+                <td>{{ statusLabels[a.status] }}</td>
+                <td>{{ a.versionNumber }}</td>
+                <td>{{ a.publishedDate | date:'mediumDate' }}</td>
+                <td>{{ a.createdAt | date:'mediumDate' }}</td>
+                <td class="actions-cell">
+                  <button class="btn-icon" title="Edit" (click)="openEditForm(a)">✏️</button>
+                  <button class="btn-icon" title="Publish" (click)="publishArticle(a.id)">📢</button>
+                  <button class="btn-icon" title="Archive" (click)="archiveArticle(a.id)">📦</button>
+                  <button class="btn-icon btn-icon-danger" title="Delete" (click)="deleteArticle(a.id)">🗑️</button>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="9" class="empty-row">No articles found.</td></tr>
+            }
+          </tbody>
+        </table>
+
+        <div class="pagination-bar">
+          <div class="pagination-info">
+            <span>Rows per page:</span>
+            <select [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+              @for (opt of pageSizeOptions; track opt) {
+                <option [value]="opt">{{ opt }}</option>
+              }
+            </select>
+            <span>Showing {{ firstEntry }} to {{ lastEntry }} of {{ totalCount }} entries</span>
+          </div>
+          <div class="pagination-controls">
+            <button class="btn-page" [disabled]="page <= 1" (click)="goToPage(page - 1)">&#8249; Prev</button>
+            <span class="page-indicator">Page {{ page }} of {{ totalPages }}</span>
+            <button class="btn-page" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next &#8250;</button>
+          </div>
+        </div>
+      </div>
+    }
+  }
+
+  @if (viewingArticle && !showForm) {
+    <!-- ── Article reader ────────────────────────────────────────────── -->
+    <div class="ka-reader">
+
+      <!-- Top nav bar -->
+      <div class="ka-reader-nav">
+        <button class="ka-nav-back" (click)="closeArticleView()">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+          Knowledge Articles
+        </button>
+        <div class="ka-nav-actions">
+          <button class="btn btn-secondary" (click)="closeArticleView()">Back to List</button>
+          <button class="btn btn-primary" (click)="openEditFormFromView()">✏️ Edit Article</button>
+        </div>
+      </div>
+
+      <!-- Hero banner -->
+      <div class="ka-hero">
+        <div class="ka-hero-top">
+          <div class="ka-hero-chips">
+            @if (viewingArticle.articleType) {
+              <span class="ka-hero-chip">{{ viewingArticle.articleType }}</span>
+            }
+            @if (viewingArticle.categoryGroup) {
+              <span class="ka-hero-chip">{{ viewingArticle.categoryGroup }}</span>
+            }
+          </div>
+          <span class="ka-hero-status-badge"
+            [class.ka-hero-status-published]="viewingArticle.status === 1"
+            [class.ka-hero-status-archived]="viewingArticle.status === 2">
+            <span class="ka-status-dot"></span>
+            {{ statusLabels[viewingArticle.status] }}
+          </span>
+        </div>
+
+        <h1 class="ka-hero-title">{{ viewingArticle.title }}</h1>
+
+        <div class="ka-hero-meta">
+          @if (viewingArticle.publishedDate) {
+            <span>Published {{ viewingArticle.publishedDate | date:'MMMM d, y' }}</span>
+            <span class="ka-hero-dot">·</span>
+          }
+          <span>Created {{ viewingArticle.createdAt | date:'MMMM d, y' }}</span>
+          <span class="ka-hero-dot">·</span>
+          <span>Version {{ viewingArticle.versionNumber }}</span>
+        </div>
+      </div>
+
+      <!-- Content layout: body + sidebar -->
+      <div class="ka-content-layout">
+
+        <!-- Article body card -->
+        <div class="ka-body-card">
+          @if (viewingArticle.body) {
+            <div class="ka-article-body" [innerHTML]="safeArticleBody"></div>
+          } @else {
+            <div class="ka-no-content">
+              <div class="ka-no-content-icon">📄</div>
+              <div class="ka-no-content-text">No content written yet.</div>
+              <button class="btn btn-primary" style="margin-top:16px" (click)="openEditFormFromView()">
+                Write Content
+              </button>
+            </div>
+          }
+        </div>
+
+        <!-- Info sidebar -->
+        <div class="ka-info-sidebar">
+          <div class="ka-info-sidebar-title">Article Details</div>
+
+          @if (viewingArticle.articleNumber) {
+            <div class="ka-info-row">
+              <span class="ka-info-label">Article Number</span>
+              <span class="ka-info-value">{{ viewingArticle.articleNumber }}</span>
+            </div>
+          }
+          <div class="ka-info-row">
+            <span class="ka-info-label">Status</span>
+            <span class="ka-info-value">
+              <span class="ka-inline-badge"
+                [class.ka-badge-draft]="viewingArticle.status === 0"
+                [class.ka-badge-published]="viewingArticle.status === 1"
+                [class.ka-badge-archived]="viewingArticle.status === 2">
+                {{ statusLabels[viewingArticle.status] }}
+              </span>
+            </span>
+          </div>
+          @if (viewingArticle.articleType) {
+            <div class="ka-info-row">
+              <span class="ka-info-label">Type</span>
+              <span class="ka-info-value">{{ viewingArticle.articleType }}</span>
+            </div>
+          }
+          @if (viewingArticle.categoryGroup) {
+            <div class="ka-info-row">
+              <span class="ka-info-label">Category</span>
+              <span class="ka-info-value">{{ viewingArticle.categoryGroup }}</span>
+            </div>
+          }
+          <div class="ka-info-row">
+            <span class="ka-info-label">Version</span>
+            <span class="ka-info-value">{{ viewingArticle.versionNumber }}</span>
+          </div>
+          @if (viewingArticle.publishedDate) {
+            <div class="ka-info-row">
+              <span class="ka-info-label">Published</span>
+              <span class="ka-info-value">{{ viewingArticle.publishedDate | date:'MMM d, y' }}</span>
+            </div>
+          }
+          <div class="ka-info-row">
+            <span class="ka-info-label">Created</span>
+            <span class="ka-info-value">{{ viewingArticle.createdAt | date:'MMM d, y' }}</span>
+          </div>
+          @if (viewingArticle.urlName) {
+            <div class="ka-info-row">
+              <span class="ka-info-label">URL Name</span>
+              <span class="ka-info-value ka-url-name">{{ viewingArticle.urlName }}</span>
+            </div>
+          }
+          <div class="ka-info-row">
+            <span class="ka-info-label">Visibility</span>
+            <span class="ka-info-value">
+              <span class="ka-vis-tag">&#10003; Internal</span>
+              @if (viewingArticle.isVisibleInCsp) {
+                <span class="ka-vis-tag">&#10003; Customer</span>
+              }
+            </span>
+          </div>
+
+          <div class="ka-sidebar-actions">
+            <button class="btn btn-primary ka-sidebar-btn" (click)="openEditFormFromView()">✏️ Edit Article</button>
+            <button class="btn btn-secondary ka-sidebar-btn" (click)="closeArticleView()">← Back to List</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  @if (showForm) {
+    <!-- ── Article editor ─────────────────────────────────────────────── -->
+    <div class="ka-editor">
+
+      <!-- Editor header bar -->
+      <div class="ka-editor-header">
+        <div class="ka-breadcrumb">
+          <span class="ka-back-link" (click)="cancelForm()">Knowledge Articles</span>
+          <span class="ka-breadcrumb-sep">›</span>
+          <span class="ka-breadcrumb-current">{{ editingArticle ? 'Edit Article' : 'New Article' }}</span>
+        </div>
+        <div class="ka-header-actions">
+          <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+          <button class="btn btn-primary"
+            [disabled]="!formTitle.trim() || !formUrlName.trim() || !formArticleType || !formCategoryGroup"
+            (click)="saveArticle()">
+            {{ editingArticle ? 'Update' : 'Save' }}
+          </button>
+        </div>
+      </div>
+
+      @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+      <!-- Information section -->
+      <div class="ka-section">
+        <div class="ka-section-title">Information</div>
+        <div class="ka-section-body">
+
+          <div class="ka-field">
+            <label class="ka-label"><span class="ka-required">*</span>Title</label>
+            <input
+              type="text"
+              class="ka-input"
+              [(ngModel)]="formTitle"
+              name="title"
+              (input)="onTitleChange()"
+              (blur)="titleTouched = true"
+              [class.ka-input-error]="titleTouched && !formTitle.trim()" />
+            @if (titleTouched && !formTitle.trim()) {
+              <div class="ka-field-error">Error: Complete this field.</div>
+            }
+          </div>
+
+          <div class="ka-field">
+            <label class="ka-label"><span class="ka-required">*</span>URL Name</label>
+            <input
+              type="text"
+              class="ka-input"
+              [(ngModel)]="formUrlName"
+              name="urlName"
+              (input)="urlNameManuallyEdited = true"
+              (blur)="urlNameTouched = true"
+              [class.ka-input-error]="urlNameTouched && !formUrlName.trim()" />
+            @if (urlNameTouched && !formUrlName.trim()) {
+              <div class="ka-field-error">Error: Complete this field.</div>
+            }
+          </div>
+
+          <div class="ka-two-col">
+            <div class="ka-field">
+              <label class="ka-label"><span class="ka-required">*</span>Article Type</label>
+              <select
+                class="ka-select"
+                [(ngModel)]="formArticleType"
+                name="articleType"
+                (blur)="articleTypeTouched = true"
+                [class.ka-input-error]="articleTypeTouched && !formArticleType">
+                <option value="">— Select type —</option>
+                @for (opt of articleTypeOptions; track opt) {
+                  <option [value]="opt">{{ opt }}</option>
+                }
+              </select>
+              @if (articleTypeTouched && !formArticleType) {
+                <div class="ka-field-error">Error: Complete this field.</div>
+              }
+            </div>
+
+            <div class="ka-field">
+              <label class="ka-label"><span class="ka-required">*</span>Category</label>
+              <select
+                class="ka-select"
+                [(ngModel)]="formCategoryGroup"
+                name="categoryGroup"
+                (blur)="categoryTouched = true"
+                [class.ka-input-error]="categoryTouched && !formCategoryGroup">
+                <option value="">— Select category —</option>
+                @for (opt of categoryOptions; track opt) {
+                  <option [value]="opt">{{ opt }}</option>
+                }
+              </select>
+              @if (categoryTouched && !formCategoryGroup) {
+                <div class="ka-field-error">Error: Complete this field.</div>
+              }
+            </div>
+          </div>
+
+          <div class="ka-field">
+            <label class="ka-label">Article Body</label>
+            <div class="ka-rich-editor">
+
+              <!-- Toolbar -->
+              <div class="ka-toolbar">
+                <div class="ka-tool-group">
+                  <button type="button" class="ka-tool-btn" [class.ka-tool-active]="isBold"
+                    title="Bold" (mousedown)="$event.preventDefault(); execFormat('bold')">
+                    <b>B</b>
+                  </button>
+                  <button type="button" class="ka-tool-btn ka-tool-italic" [class.ka-tool-active]="isItalic"
+                    title="Italic" (mousedown)="$event.preventDefault(); execFormat('italic')">
+                    <i>I</i>
+                  </button>
+                  <button type="button" class="ka-tool-btn ka-tool-underline" [class.ka-tool-active]="isUnderline"
+                    title="Underline" (mousedown)="$event.preventDefault(); execFormat('underline')">
+                    <u>U</u>
+                  </button>
+                  <button type="button" class="ka-tool-btn ka-tool-strike" [class.ka-tool-active]="isStrike"
+                    title="Strikethrough" (mousedown)="$event.preventDefault(); execFormat('strikethrough')">
+                    <s>S</s>
+                  </button>
+                </div>
+
+                <span class="ka-tool-sep"></span>
+
+                <div class="ka-tool-group">
+                  <button type="button" class="ka-tool-btn" [class.ka-tool-active]="isAlignLeft"
+                    title="Align Left" (mousedown)="$event.preventDefault(); execFormat('justifyLeft')">
+                    <svg width="16" height="14" viewBox="0 0 16 14" fill="currentColor">
+                      <rect x="0" y="0"  width="16" height="2" rx="1"/>
+                      <rect x="0" y="6"  width="10" height="2" rx="1"/>
+                      <rect x="0" y="12" width="16" height="2" rx="1"/>
+                    </svg>
+                  </button>
+                  <button type="button" class="ka-tool-btn" [class.ka-tool-active]="isAlignCenter"
+                    title="Center" (mousedown)="$event.preventDefault(); execFormat('justifyCenter')">
+                    <svg width="16" height="14" viewBox="0 0 16 14" fill="currentColor">
+                      <rect x="0" y="0"  width="16" height="2" rx="1"/>
+                      <rect x="3" y="6"  width="10" height="2" rx="1"/>
+                      <rect x="0" y="12" width="16" height="2" rx="1"/>
+                    </svg>
+                  </button>
+                  <button type="button" class="ka-tool-btn" [class.ka-tool-active]="isAlignRight"
+                    title="Align Right" (mousedown)="$event.preventDefault(); execFormat('justifyRight')">
+                    <svg width="16" height="14" viewBox="0 0 16 14" fill="currentColor">
+                      <rect x="0" y="0"  width="16" height="2" rx="1"/>
+                      <rect x="6" y="6"  width="10" height="2" rx="1"/>
+                      <rect x="0" y="12" width="16" height="2" rx="1"/>
+                    </svg>
+                  </button>
+                  <button type="button" class="ka-tool-btn" [class.ka-tool-active]="isAlignJustify"
+                    title="Justify" (mousedown)="$event.preventDefault(); execFormat('justifyFull')">
+                    <svg width="16" height="14" viewBox="0 0 16 14" fill="currentColor">
+                      <rect x="0" y="0"  width="16" height="2" rx="1"/>
+                      <rect x="0" y="6"  width="16" height="2" rx="1"/>
+                      <rect x="0" y="12" width="16" height="2" rx="1"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Editable content area -->
+              <div class="ka-body-editor"
+                   contenteditable="true"
+                   #bodyEditor
+                   data-placeholder="Write your article content here..."
+                   (input)="onBodyInput($event)"
+                   (keyup)="updateToolbarState()"
+                   (mouseup)="updateToolbarState()"
+                   (click)="updateToolbarState()">
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Visibility section -->
+      <div class="ka-section">
+        <div class="ka-section-title">Visibility</div>
+        <div class="ka-visibility-grid">
+
+          <div class="ka-vis-item">
+            <div class="ka-vis-label">Visible In Internal App</div>
+            <div class="ka-vis-value ka-vis-checked">&#10003;</div>
+          </div>
+
+          <div class="ka-vis-item ka-vis-item-highlight">
+            <div class="ka-vis-label">Visible to Customer</div>
+            <div class="ka-vis-value">
+              <input type="checkbox" class="ka-checkbox" [(ngModel)]="formIsVisibleInCsp" name="visibleToCustomer" />
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  }
+
+</div>

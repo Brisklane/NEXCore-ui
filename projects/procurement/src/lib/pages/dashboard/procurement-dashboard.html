@@ -1,0 +1,136 @@
+<div class="dsh prc-dsh">
+
+  <!-- Spotlight banner -->
+  <div class="dsh-banner">
+    <div class="dsh-banner-l">
+      <span class="dsh-eyebrow"><span class="material-symbols-outlined">shopping_cart</span> Procurement · Purchasing</span>
+      <h1>Procurement Dashboard</h1>
+      <p class="dsh-banner-sub">$1.9M in committed spend, 14 purchase orders awaiting approval, and 6 goods receipts pending.</p>
+    </div>
+    <div class="dsh-banner-r">
+      <div class="dsh-fig">
+        <div class="dsh-fig-val">$8.4M</div>
+        <div class="dsh-fig-label">Spend YTD</div>
+      </div>
+      <div class="dsh-fig-sep"></div>
+      <div class="dsh-fig">
+        <div class="dsh-fig-val">6.2%</div>
+        <div class="dsh-fig-label">Savings</div>
+      </div>
+      <button class="dsh-cta" (click)="go('/procurement/purchase-order')"><span class="material-symbols-outlined">add</span> New PO</button>
+    </div>
+  </div>
+
+  <!-- Bento -->
+  <div class="dsh-bento">
+
+    <!-- Stat tiles -->
+    <div class="dsh-tile dsh-stat span-3 hover" *ngFor="let s of stats" [ngClass]="s.color">
+      <div class="dsh-stat-ico"><span class="material-symbols-outlined">{{ s.icon }}</span></div>
+      <div class="dsh-stat-label">{{ s.label }}</div>
+      <div class="dsh-stat-val">{{ s.value }}</div>
+      <div class="dsh-stat-foot">
+        <span class="dsh-delta" [ngClass]="s.dir"><span class="material-symbols-outlined">{{ s.dir === 'up' ? 'arrow_upward' : 'arrow_downward' }}</span>{{ s.delta }}</span>
+        {{ s.foot }}
+      </div>
+    </div>
+
+    <!-- Spend trend area chart -->
+    <div class="dsh-tile span-8">
+      <div class="dsh-th">
+        <div class="dsh-th-title"><span class="dsh-th-ico"><span class="material-symbols-outlined">monitoring</span></span> Spend Trend</div>
+        <span class="dsh-th-hint">Last 8 months · in $K</span>
+      </div>
+      <svg class="dsh-chart" viewBox="0 0 600 200" preserveAspectRatio="none" style="height:190px;">
+        <defs>
+          <linearGradient id="prcArea" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#2b7fff" stop-opacity="0.28"/>
+            <stop offset="1" stop-color="#2b7fff" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <line x1="0" y1="45" x2="600" y2="45" stroke="var(--border-light,#f1f5f9)" stroke-width="1"/>
+        <line x1="0" y1="97" x2="600" y2="97" stroke="var(--border-light,#f1f5f9)" stroke-width="1"/>
+        <line x1="0" y1="150" x2="600" y2="150" stroke="var(--border-light,#f1f5f9)" stroke-width="1"/>
+        <path d="M0,150 L85,120 L170,135 L255,90 L340,75 L425,97 L510,45 L595,30 L595,180 L0,180 Z" fill="url(#prcArea)"/>
+        <path d="M0,150 L85,120 L170,135 L255,90 L340,75 L425,97 L510,45 L595,30" fill="none" stroke="#2b7fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="595" cy="30" r="4.5" fill="#2b7fff" stroke="#fff" stroke-width="2"/>
+      </svg>
+      <div class="dsh-chart-x"><span *ngFor="let x of spendX">{{ x }}</span></div>
+    </div>
+
+    <!-- Spend by category donut -->
+    <div class="dsh-tile span-4">
+      <div class="dsh-th">
+        <div class="dsh-th-title"><span class="dsh-th-ico"><span class="material-symbols-outlined">donut_small</span></span> Spend by Category</div>
+      </div>
+      <div class="dsh-donut-wrap">
+        <div class="dsh-donut">
+          <svg width="138" height="138" viewBox="0 0 138 138">
+            <circle cx="69" cy="69" r="40" fill="none" stroke="var(--bg-muted,#f1f5f9)" stroke-width="16"/>
+            <circle *ngFor="let c of categories" cx="69" cy="69" r="40" fill="none" [attr.stroke]="c.color" stroke-width="16"
+                    [attr.stroke-dasharray]="c.dash" [attr.stroke-dashoffset]="c.off" transform="rotate(-90 69 69)"/>
+          </svg>
+          <div class="dsh-donut-center">
+            <div class="dsh-donut-num">$8.4M</div>
+            <div class="dsh-donut-cap">YTD</div>
+          </div>
+        </div>
+        <div class="dsh-legend">
+          <div class="dsh-leg" *ngFor="let c of categories">
+            <span class="dsh-leg-dot" [style.background]="c.color"></span>
+            <span class="dsh-leg-label">{{ c.label }}</span>
+            <span class="dsh-leg-val">{{ c.count }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top vendors -->
+    <div class="dsh-tile span-4">
+      <div class="dsh-th">
+        <div class="dsh-th-title"><span class="dsh-th-ico"><span class="material-symbols-outlined">store</span></span> Top Vendors</div>
+        <a class="dsh-link" (click)="go('/procurement/vendors')">View all</a>
+      </div>
+      <div class="dsh-list">
+        <div class="dsh-li" *ngFor="let v of vendors">
+          <div class="dsh-li-av">{{ v.ini }}</div>
+          <div class="dsh-li-main">
+            <div class="dsh-li-title">{{ v.name }}</div>
+            <div class="dsh-li-sub">{{ v.sub }}</div>
+          </div>
+          <div class="dsh-li-val">{{ v.val }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PO status -->
+    <div class="dsh-tile span-4">
+      <div class="dsh-th">
+        <div class="dsh-th-title"><span class="dsh-th-ico"><span class="material-symbols-outlined">list_alt</span></span> PO Status</div>
+        <a class="dsh-link" (click)="go('/procurement/purchase-orders')">View</a>
+      </div>
+      <div style="margin-top:2px;">
+        <div class="dsh-prog-row" *ngFor="let p of poStatus">
+          <span class="dsh-prog-label">{{ p.label }}</span>
+          <span class="dsh-prog-val">{{ p.count }}</span>
+          <div class="dsh-prog-track"><div class="dsh-prog-fill" [ngClass]="p.cls" [style.width.%]="p.pct"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AP aging -->
+    <div class="dsh-tile span-4">
+      <div class="dsh-th">
+        <div class="dsh-th-title"><span class="dsh-th-ico"><span class="material-symbols-outlined">account_balance</span></span> AP Aging</div>
+        <span class="dsh-th-hint">Outstanding</span>
+      </div>
+      <div class="dsh-vbars">
+        <div class="dsh-vbar-col" *ngFor="let a of aging">
+          <div class="dsh-vbar" [class.muted]="a.cap === '90+'" [style.height.%]="a.pct"></div>
+          <span class="dsh-vbar-cap">{{ a.cap }}</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

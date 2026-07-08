@@ -1,0 +1,80 @@
+<div class="page-container">
+
+  <app-page-header icon="description" title="Vendor Documents" subtitle="Compliance certificates, licences and expiry tracking">
+    <button class="btn btn-secondary" (click)="loadExpiring()">⏰ Expiring (30d)</button>
+    <button class="btn btn-primary" (click)="openCreate()" [disabled]="!selectedVendorId">+ Add Document</button>
+  </app-page-header>
+
+  <app-alert type="error"   [message]="error"></app-alert>
+  <app-alert type="success" [message]="success"></app-alert>
+
+  <div class="help-box"><span class="help-icon">ℹ️</span><span>Track vendor <strong>compliance documents</strong> such as trade licenses, tax certificates and insurance. Set an <strong>Expiry Date</strong> (or mark <strong>Never Expires</strong>) and a <strong>Reminder Days</strong> window so documents nearing expiry surface under <strong>Expiring (30d)</strong>. Mark each document <strong>Verified</strong> once its authenticity is confirmed.</span></div>
+
+  <div class="filters-bar">
+    <select class="filter-input" [(ngModel)]="selectedVendorId" (ngModelChange)="onVendorChange()">
+      <option value="">-- Select Vendor --</option>
+      @for (opt of vendorOptions; track opt.value) { <option [ngValue]="opt.value">{{ opt.label }}</option> }
+    </select>
+    @if (viewMode === 'expiring') {
+      <span class="mode-pill">Showing documents expiring within 30 days across all vendors</span>
+    }
+  </div>
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editing ? 'Edit Document' : 'Add Document' }}</h3>
+      <div class="form-grid">
+        <app-select label="Document Type" [options]="docTypeOptions" [(ngModel)]="form.documentType" placeholder=""></app-select>
+        <app-input label="Document Name" required placeholder="e.g. Trade License 2026"
+                   [(ngModel)]="form.documentName" [error]="submitted ? errors.documentName : ''"></app-input>
+        <app-input label="Document Number" placeholder="Certificate or reference number" [(ngModel)]="form.documentNumber"></app-input>
+        <app-input label="Issued By" placeholder="Issuing authority" [(ngModel)]="form.issuedBy"></app-input>
+        <app-input label="Issue Date" type="date" [(ngModel)]="form.issuedAt"></app-input>
+        <app-input label="Expiry Date" type="date" [(ngModel)]="form.expiryDate"
+                   [error]="submitted ? errors.expiryDate : ''"></app-input>
+        <app-input label="Reminder Days" type="number" [min]="0" placeholder="30"
+                   [(ngModel)]="form.reminderDays" [error]="submitted ? errors.reminderDays : ''"></app-input>
+        <div class="form-group form-check-row">
+          <label><input type="checkbox" [(ngModel)]="form.neverExpires" /> Never Expires</label>
+        </div>
+        <app-input label="File Name" placeholder="document.pdf" [(ngModel)]="form.fileName"></app-input>
+        <app-input label="File Path / URL" placeholder="Path or URL to document" [(ngModel)]="form.filePath"></app-input>
+        <div class="form-group-full">
+          <app-textarea label="Notes" [rows]="2" placeholder="Notes" [(ngModel)]="form.notes"></app-textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()" [disabled]="saving">{{ editing ? 'Save' : 'Add Document' }}</button>
+      </div>
+    </div>
+  }
+
+  @if (viewMode === 'vendor' && !selectedVendorId) {
+    <div class="empty-row" style="padding:40px;text-align:center;color:#94a3b8">Select a vendor above to view their documents.</div>
+  } @else {
+    <app-data-table [sortableAll]="true"
+      [columns]="columns"
+      [data]="documents"
+      [actions]="actions"
+      [loading]="loading"
+      [highlightRowId]="highlighter.id"
+      emptyMessage="No documents found."
+      (rowAction)="onRowAction($event)">
+    </app-data-table>
+  }
+
+</div>
+
+@if (showDeleteConfirm) {
+  <div class="modal-overlay">
+    <div class="modal-box">
+      <h4>Delete Document</h4>
+      <p>Delete <strong>{{ deleteTarget?.documentName }}</strong>? This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showDeleteConfirm = false">Cancel</button>
+        <button class="btn btn-danger" (click)="confirmDelete()">Delete</button>
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,96 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">tune</span></div>
+      <div>
+        <h1>Procurement Settings</h1>
+        <p class="inv-hero-sub">Company-wide procurement configuration</p>
+      </div>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (success) { <div class="alert alert-success">{{ success }}</div> }
+
+  <div class="help-box">
+    <span class="help-icon">ℹ️</span>
+    <span>These company-wide defaults drive automation across procurement: the <strong>default currency</strong>,
+    <strong>payment terms</strong> and <strong>lead time</strong> pre-fill new purchase orders and vendors, while the
+    <strong>approval routing</strong> and <strong>3-way matching</strong> controls decide which documents need sign-off
+    and how invoices are validated against POs and receipts.</span>
+  </div>
+
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else if (settings) {
+    <div class="form-panel">
+      <div class="form-grid">
+        <div class="form-group form-group-full"><strong class="section-title">Purchase Order Controls</strong></div>
+        <div class="form-group">
+          <div class="form-check-row"><label><input type="checkbox" [(ngModel)]="settings.requireRequisitionForPO" /> Require Requisition before PO</label></div>
+        </div>
+        <div class="form-group">
+          <label>RFQ Mandatory Above Amount</label>
+          <input type="number" [(ngModel)]="settings.rfqMandatoryAboveAmount" placeholder="No limit" step="0.01" min="0" />
+        </div>
+
+        <div class="form-group form-group-full"><strong class="section-title">Invoice Matching</strong></div>
+        <div class="form-group">
+          <div class="form-check-row"><label><input type="checkbox" [(ngModel)]="settings.enable3WayMatching" /> Enable 3-Way Matching</label></div>
+        </div>
+        <div class="form-group">
+          <div class="form-check-row"><label><input type="checkbox" [(ngModel)]="settings.enforceInvoicePOTolerance" /> Enforce Invoice PO Tolerance</label></div>
+        </div>
+        <div class="form-group">
+          <label>Invoice PO Tolerance %</label>
+          <input type="number" [(ngModel)]="settings.invoicePOTolerancePercent" placeholder="0" step="0.01" min="0" max="100" />
+        </div>
+
+        <div class="form-group form-group-full"><strong class="section-title">Defaults</strong></div>
+        <div class="form-group">
+          <label>Default Payment Terms</label>
+          <select [(ngModel)]="settings.defaultPaymentTerms">
+            @for (opt of paymentTermOptions; track opt.value) { <option [value]="opt.value">{{ opt.label }}</option> }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Default Currency</label>
+          <select [(ngModel)]="settings.defaultCurrencyCode">
+            <option value="">-- Select currency --</option>
+            @for (opt of currencyOptions; track opt.value) { <option [value]="opt.value">{{ opt.label }}</option> }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Default Lead Time (days)</label>
+          <input type="number" [(ngModel)]="settings.defaultLeadTimeDays" placeholder="7" min="0" />
+        </div>
+
+        <div class="form-group form-group-full"><strong class="section-title">Vendor Onboarding</strong></div>
+        <div class="form-group">
+          <div class="form-check-row"><label><input type="checkbox" [(ngModel)]="settings.requireVendorApproval" /> Require Vendor Approval</label></div>
+        </div>
+        <div class="form-group">
+          <div class="form-check-row"><label><input type="checkbox" [(ngModel)]="settings.requireVendorBankVerification" /> Require Bank Account Verification</label></div>
+        </div>
+
+        <div class="form-group form-group-full"><strong class="section-title">Communication</strong></div>
+        <div class="form-group">
+          <div class="form-check-row"><label><input type="checkbox" [(ngModel)]="settings.sendPOToVendorByEmail" /> Send PO to Vendor by Email</label></div>
+        </div>
+        <div class="form-group">
+          <div class="form-check-row"><label><input type="checkbox" [(ngModel)]="settings.sendRFQToVendorByEmail" /> Send RFQ to Vendor by Email</label></div>
+        </div>
+        <div class="form-group">
+          <label>PO Approval Reminder Days</label>
+          <input type="number" [(ngModel)]="settings.poApprovalReminderDays" placeholder="3" min="0" />
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" (click)="save()" [disabled]="saving">{{ saving ? 'Saving...' : 'Save Settings' }}</button>
+      </div>
+    </div>
+  } @else {
+    <div class="alert alert-error">Settings not found. Please check the API.</div>
+  }
+</div>

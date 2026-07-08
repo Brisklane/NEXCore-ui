@@ -1,0 +1,346 @@
+@import '../shared-styles.css';
+
+*, *::before, *::after { box-sizing: border-box; }
+
+.kanban-page {
+  padding: 20px;
+  font-family: 'Segoe UI', sans-serif;
+  color: #1a1a2e;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   PAGE HEADER
+   ════════════════════════════════════════════════════════════════════ */
+
+/* shared-styles.css provides .page-header, h2, .subtitle */
+
+/* Right-side container holds meta-text and closed-lost zone in same spot */
+.header-right {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 220px;
+  min-height: 44px;
+}
+
+.meta-text {
+  font-size: 13px;
+  color: #555;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+.meta-text.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── Closed Lost drop zone ────────────────────────────────────────── */
+/* Lives in the page-header right side. Always display:flex so CDK    */
+/* can find it; hidden via opacity until isDragging is true.          */
+.closed-lost-drop {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  /* always in layout, hidden */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  /* style — no border, bigger */
+  background: #fee2e2;
+  border: none;
+  border-radius: 10px;
+  padding: 11px 26px;
+  color: #c0392b;
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  min-width: 160px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.closed-lost-drop.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+/* Highlight when card hovers over it */
+.closed-lost-drop.cdk-drop-list-receiving {
+  background: #fca5a5;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   BOARD WRAPPER
+   ════════════════════════════════════════════════════════════════════ */
+.board       { width: 100%; overflow-x: auto; }
+.board-inner { min-width: 900px; }
+
+/* ════════════════════════════════════════════════════════════════════
+   PIPELINE HEADER CHIPS
+   ════════════════════════════════════════════════════════════════════ */
+.pipeline-header {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  height: 62px;
+}
+
+.stage-chip {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 14px 0 24px;
+  background: #1565C0;
+  color: #fff;
+  user-select: none;
+  transition: filter 0.15s;
+}
+.stage-chip:hover { filter: brightness(1.08); }
+
+.stage-chip.chip-first {
+  border-radius: 30px 0 0 30px;
+  padding-left: 18px;
+  clip-path: polygon(0% 0%, calc(100% - 15px) 0%, 100% 50%, calc(100% - 15px) 100%, 0% 100%);
+}
+.stage-chip.chip-middle {
+  clip-path: polygon(0% 0%, calc(100% - 15px) 0%, 100% 50%, calc(100% - 15px) 100%, 0% 100%, 15px 50%);
+  margin-left: -14px;
+  padding-left: 30px;
+}
+.stage-chip.chip-last {
+  clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 15px 50%);
+  margin-left: -14px;
+  padding-left: 30px;
+  border-radius: 0 30px 30px 0;
+}
+
+.stage-chip:nth-child(1) { z-index: 5; }
+.stage-chip:nth-child(2) { z-index: 4; }
+.stage-chip:nth-child(3) { z-index: 3; }
+.stage-chip:nth-child(4) { z-index: 2; }
+.stage-chip:nth-child(5) { z-index: 1; }
+
+.stage-top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 400;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+.stage-badge {
+  background: rgba(255,255,255,.28);
+  border-radius: 12px;
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   KANBAN COLUMNS  (the col IS the cdkDropList)
+   ════════════════════════════════════════════════════════════════════ */
+.columns-wrapper {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  background: #fff;
+  border: 1px solid #e2e6ea;
+  border-top: none;
+  align-items: stretch;
+}
+
+.col {
+  border-right: 1px solid #e2e6ea;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 10px;
+  min-height: 480px;
+  transition: background 0.15s;
+}
+.col:last-child { border-right: none; }
+.col.col-won    { background: #f0fdf4; }
+
+.col.cdk-drop-list-receiving          { background: #e8f0fe; }
+.col.col-won.cdk-drop-list-receiving  { background: #dcfce7; }
+
+.col-amount {
+  text-align: center;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1a8a6e;
+  letter-spacing: -0.3px;
+  pointer-events: none;
+  flex-shrink: 0;
+  margin-bottom: 4px;
+}
+
+.empty-col {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 12px;
+  border: 2px dashed #e2e6ea;
+  border-radius: 6px;
+  min-height: 120px;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   DEAL CARDS
+   ════════════════════════════════════════════════════════════════════ */
+.deal-card {
+  background: #fff;
+  border: 1px solid #d0d7de;
+  border-radius: 8px;
+  padding: 10px 10px 8px;
+  cursor: grab;
+  transition: box-shadow 0.15s, transform 0.15s;
+  user-select: none;
+  flex-shrink: 0;
+  /* allow dropdown menu to overflow card bounds */
+  overflow: visible;
+}
+.deal-card:hover {
+  box-shadow: 0 3px 10px rgba(0,0,0,.10);
+  transform: translateY(-1px);
+}
+.deal-card.card-won {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+/* CDK: element that follows the cursor */
+.deal-card.cdk-drag-preview {
+  cursor: grabbing;
+  border-color: #1565C0;
+  box-shadow:
+    8px 8px 0 rgba(255,255,255,.55),
+    8px 8px 0 1px rgba(180,200,230,.60),
+    0 10px 28px rgba(0,0,0,.18);
+}
+.deal-card.cdk-drag-animating {
+  transition: transform 200ms ease;
+}
+.cdk-drop-list-dragging .deal-card:not(.cdk-drag-placeholder) {
+  transition: transform 200ms ease;
+}
+
+/* Placeholder shown at the insertion point during drag */
+.drag-placeholder {
+  background: #e8f0fe;
+  border: 2px dashed #1565C0;
+  border-radius: 8px;
+  min-height: 88px;
+  flex-shrink: 0;
+}
+
+/* ── Card rows ────────────────────────────────────────────────────── */
+.card-row1 {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  gap: 6px;
+}
+
+.card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1565C0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-stage-label {
+  font-size: 12px;
+  color: #555;
+  margin-bottom: 4px;
+}
+
+.card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #f1f5f9;
+}
+.card-date   { font-size: 11px; color: #666; }
+.card-amount { font-size: 12px; font-weight: 700; color: #1e293b; }
+
+/* ════════════════════════════════════════════════════════════════════
+   STAGE-SELECT DROPDOWN ON DEAL CARDS
+   ════════════════════════════════════════════════════════════════════ */
+.dd-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* Trigger button — circle with centered chevron-down */
+.dd-trigger {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid #c8d0d8;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s, border-color 0.15s;
+  /* The SVG chevron is centered by flexbox; no extra offset needed */
+}
+.dd-trigger:hover,
+.dd-trigger.dd-open {
+  background: #eff6ff;
+  border-color: #1565C0;
+}
+.dd-trigger svg {
+  /* nudge chevron to optical center — it reads slightly high without this */
+  margin-top: 1px;
+}
+
+/* Dropdown menu */
+.dd-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 3000;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.13);
+  min-width: 168px;
+  overflow: hidden;
+  /* prevent this element from being caught by CDK drag detection */
+  pointer-events: all;
+}
+
+.dd-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  font-size: 13px;
+  color: #1e293b;
+  cursor: pointer;
+  transition: background 0.1s;
+  white-space: nowrap;
+}
+.dd-item:hover       { background: #f1f5f9; }
+.dd-item.dd-current  {
+  background: #eff6ff;
+  color: #1565C0;
+  font-weight: 600;
+}
+
+.dd-check { flex-shrink: 0; }

@@ -1,0 +1,510 @@
+/*
+  HR page styles.
+  The common design system (buttons, table, badges, forms, etc.) lives in:
+  projects/nexcore/src/shared-module-styles.css  (loaded globally via styles.css)
+
+  Add only HR-specific overrides below.
+*/
+
+.page-container {
+  padding: 24px;
+  font-family: 'Segoe UI', Roboto, sans-serif;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.page-header h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-heading, #1e293b);
+}
+
+.page-header .subtitle {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+}
+
+/* Buttons */
+.btn {
+  padding: 9px 18px;
+  border: none;
+  border-radius: var(--radius-sm, 8px);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.2s ease, background 0.2s, filter 0.2s;
+}
+.btn:active { transform: translateY(1px); }
+
+.btn-primary {
+  background: var(--brand-grad, linear-gradient(135deg, #22c7e6, #2b7fff));
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(43, 127, 255, 0.25);
+}
+.btn-primary:hover { filter: brightness(1.05); box-shadow: 0 6px 16px rgba(43, 127, 255, 0.32); }
+
+.btn-secondary {
+  background: var(--bg-surface, #fff);
+  color: var(--text-primary, #334155);
+  border: 1px solid var(--border-default, #e2e8f0);
+}
+.btn-secondary:hover { background: var(--bg-muted, #f1f5f9); }
+
+.btn-danger {
+  background: #ef4444;
+  color: #fff;
+}
+.btn-danger:hover { background: #dc2626; }
+
+.btn-success {
+  background: #22c55e;
+  color: #fff;
+}
+.btn-success:hover { background: #16a34a; }
+
+.btn-warning {
+  background: #f59e0b;
+  color: #fff;
+}
+.btn-warning:hover { background: #d97706; }
+
+.btn-sm {
+  padding: 4px 12px;
+  font-size: 12px;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+}
+.btn-icon-danger { color: #ef4444; }
+
+/* Alert */
+.alert {
+  padding: 10px 16px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+.alert-error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+.alert-success {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+/* Form Panel */
+.form-panel {
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-default, #e2e8f0);
+  border-radius: var(--radius, 12px);
+  box-shadow: var(--shadow-sm);
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.form-panel h3 {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-heading, #1e293b);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #475569);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 9px 12px;
+  border: 1px solid var(--border-default, #e2e8f0);
+  border-radius: var(--radius-sm, 8px);
+  font-size: 14px;
+  color: var(--text-heading, #1e293b);
+  background: var(--bg-surface, #fff);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--accent, #2b7fff);
+  box-shadow: 0 0 0 3px var(--accent-soft, rgba(43, 127, 255, 0.12));
+}
+
+.form-check-row {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 20px !important;
+}
+
+.form-check-row label {
+  text-transform: none;
+  font-weight: 400;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  justify-content: flex-end;
+}
+
+/* Table */
+.table-container {
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-default, #e2e8f0);
+  border-radius: var(--radius, 12px);
+  box-shadow: var(--shadow-sm);
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead th {
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid var(--border-default, #e2e8f0);
+  background: var(--bg-subtle, #f8fafc);
+  white-space: nowrap;
+}
+
+tbody td {
+  padding: 12px 16px;
+  font-size: 14px;
+  color: var(--text-primary, #334155);
+  border-bottom: 1px solid var(--border-light, #f1f5f9);
+}
+
+tbody tr:hover {
+  background: var(--bg-subtle, #f8fafc);
+}
+
+.actions-cell {
+  display: flex;
+  gap: 4px;
+}
+
+.empty-row {
+  text-align: center;
+  color: var(--text-muted, #94a3b8);
+  padding: 32px 16px !important;
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.badge-yes { background: #dbeafe; color: #1d4ed8; }
+.badge-active { background: #dcfce7; color: #15803d; }
+.badge-inactive { background: #fef2f2; color: #b91c1c; }
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border-default, #e2e8f0);
+  margin-bottom: 24px;
+}
+.tab-btn {
+  padding: 10px 24px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary, #64748b);
+  transition: color 0.15s, border-color 0.15s;
+}
+.tab-btn:hover { color: var(--text-heading, #1e293b); }
+.tab-active { color: var(--accent, #2b7fff) !important; border-bottom-color: var(--accent, #2b7fff) !important; }
+
+.loading-spinner {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-secondary, #64748b);
+}
+
+/* Filters bar */
+.filters-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filters-bar select,
+.filters-bar input {
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong, #cbd5e1);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+/* Selected table row (lookup types) */
+.selected-row {
+  background: #eff6ff !important;
+  outline: 2px solid var(--accent, #2b7fff);
+  outline-offset: -2px;
+}
+
+/* Clickable text cell */
+.link-cell {
+  color: var(--accent, #2b7fff);
+  cursor: pointer;
+  font-weight: 500;
+  text-decoration: none;
+}
+.link-cell:hover { text-decoration: underline; }
+
+/* Section divider between lookup types and values panels */
+.section-divider {
+  border: none;
+  border-top: 2px solid #e2e8f0;
+  margin: 28px 0 0;
+}
+
+/* Type label in sub-section header */
+.type-label {
+  color: var(--accent, #2b7fff);
+  font-weight: 600;
+}
+
+/* Lookup page tabs */
+.lookup-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 2px solid var(--border-default, #e2e8f0);
+  margin-bottom: 20px;
+}
+
+.lookup-tab {
+  padding: 10px 24px;
+  border: none;
+  background: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary, #64748b);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.lookup-tab:hover { color: var(--text-heading, #1e293b); }
+.lookup-tab.active {
+  color: var(--accent, #2b7fff);
+  border-bottom-color: var(--accent, #2b7fff);
+  font-weight: 600;
+}
+
+/* Tab toolbar (header row inside a tab) */
+.tab-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+/* Lookup type selector bar */
+.lookup-type-selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-subtle, #f8fafc);
+  border: 1px solid var(--border-default, #e2e8f0);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.selector-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary, #475569);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+}
+
+.selector-select {
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong, #cbd5e1);
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--text-heading, #1e293b);
+  background: var(--bg-surface, #fff);
+  min-width: 280px;
+  flex: 1;
+}
+.selector-select:focus {
+  outline: none;
+  border-color: var(--accent, #2b7fff);
+  box-shadow: 0 0 0 3px rgba(43, 127, 255, 0.12);
+}
+
+.selector-meta {
+  font-size: 12px;
+  color: var(--text-muted, #94a3b8);
+  white-space: nowrap;
+}
+
+/* Lookup empty state */
+.lookup-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--text-secondary, #64748b);
+}
+.lookup-empty-state p { margin: 0; font-size: 14px; }
+
+/* Inline code chip (for codes like APPLICATION_STATUS) */
+code.code-chip {
+  background: var(--bg-muted, #f1f5f9);
+  color: var(--text-secondary, #475569);
+  font-size: 12px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+}
+
+/* Row number cell */
+.row-num {
+  color: var(--text-muted, #94a3b8);
+  font-size: 12px;
+  width: 36px;
+}
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NexCore premium design uplift (appended 2026-07-03)
+   Restyles the shared legacy primitives so every page in this module adopts the
+   modern look at once. These rules sit at the end of the file, so they override
+   the earlier clone definitions at equal specificity. Uses global theme tokens
+   (--accent, --radius, --shadow-*, --bg-*, --border-*, --text-*) with fallbacks.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Page header ─────────────────────────────────────────────────────────── */
+.page-header { align-items: flex-start; margin-bottom: 22px; padding-bottom: 0; border-bottom: none; }
+.page-header h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: var(--text-heading, #0f172a); }
+.page-header .subtitle { font-size: 13.5px; color: var(--text-secondary, #64748b); }
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.btn {
+  border-radius: 10px; font-weight: 600; font-size: 13.5px; padding: 9px 16px;
+  transition: background .14s ease, box-shadow .14s ease, transform .05s ease, filter .14s ease;
+}
+.btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(43, 127, 255, .28); }
+.btn-primary { background: var(--accent, #2b7fff); color: #fff; border: 1px solid transparent; box-shadow: 0 1px 2px rgba(43, 127, 255, .25); }
+.btn-primary:hover { filter: brightness(1.05); box-shadow: 0 6px 16px rgba(43, 127, 255, .32); }
+.btn-secondary { background: var(--bg-surface, #fff); color: var(--text-heading, #0f172a); border: 1px solid var(--border-default, #e2e8f0); }
+.btn-secondary:hover { background: var(--bg-subtle, #f8fafc); border-color: var(--border-strong, #cbd5e1); }
+.btn-danger { background: #ef4444; color: #fff; border: 1px solid transparent; }
+.btn-danger:hover { background: #dc2626; }
+.btn-sm { padding: 6px 12px; font-size: 12.5px; border-radius: 8px; }
+.btn-icon { border-radius: 9px; transition: background .13s ease, color .13s ease; }
+.btn-icon:hover { background: var(--bg-subtle, #f1f5f9); }
+
+/* ── Data tables → premium card ──────────────────────────────────────────── */
+.table-container {
+  border: 1px solid var(--border-default, #e8edf3); border-radius: 16px; overflow: hidden;
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(15, 23, 42, .06)); background: var(--bg-surface, #fff);
+}
+.table-container table { border-collapse: collapse; width: 100%; }
+.table-container thead th {
+  background: var(--bg-subtle, #f8fafc); font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--text-secondary, #64748b); padding: 13px 16px;
+  border-bottom: 1px solid var(--border-default, #e8edf3);
+}
+.table-container tbody td { padding: 12px 16px; border-bottom: 1px solid var(--border-light, #f1f5f9); font-size: 13.5px; }
+.table-container tbody tr { transition: background .12s ease; }
+.table-container tbody tr:hover { background: color-mix(in srgb, var(--accent, #2b7fff) 4%, transparent); }
+.table-container tbody tr:last-child td { border-bottom: none; }
+
+/* ── Status badges → semantic pills ──────────────────────────────────────── */
+.badge {
+  border-radius: 999px; font-size: 11.5px; font-weight: 600; padding: 3px 10px;
+  display: inline-flex; align-items: center; gap: 5px; line-height: 1.4;
+}
+.badge-active, .badge-yes, .badge-posted, .badge-approved, .badge-success { background: #dcfce7; color: #15803d; }
+.badge-inactive, .badge-no, .badge-cancelled, .badge-rejected, .badge-danger { background: #fef2f2; color: #b91c1c; }
+.badge-draft, .badge-pending, .badge-warning { background: #fef3c7; color: #92400e; }
+
+/* ── Filter bar inputs ───────────────────────────────────────────────────── */
+.filters-bar input, .filters-bar select, .filter-search input, .filter-select {
+  border-radius: 9px; border: 1px solid var(--border-default, #e2e8f0);
+}
+.filters-bar input:focus-visible, .filters-bar select:focus-visible,
+.filter-search input:focus-visible, .filter-select:focus-visible {
+  outline: none; box-shadow: 0 0 0 3px rgba(43, 127, 255, .20); border-color: var(--accent, #2b7fff);
+}
+
+/* ── Form primitives ─────────────────────────────────────────────────────── */
+.form-panel { border-radius: 16px; border: 1px solid var(--border-default, #e8edf3); box-shadow: var(--shadow-sm, 0 1px 3px rgba(15, 23, 42, .06)); }
+.form-control, .form-group input, .form-group select, .form-group textarea {
+  border-radius: 9px; border: 1px solid var(--border-default, #e2e8f0);
+}
+.form-control:focus-visible, .form-group input:focus-visible,
+.form-group select:focus-visible, .form-group textarea:focus-visible {
+  outline: none; box-shadow: 0 0 0 3px rgba(43, 127, 255, .18); border-color: var(--accent, #2b7fff);
+}
+
+/* ── Pagination ──────────────────────────────────────────────────────────── */
+.btn-page { border-radius: 8px; border: 1px solid var(--border-default, #e2e8f0); transition: background .12s ease; }
+.btn-page:hover:not(:disabled) { background: var(--bg-subtle, #f8fafc); }

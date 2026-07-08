@@ -1,0 +1,325 @@
+﻿@import '../shared-styles.css';
+
+/* ── Phone split field ─────────────────────────────────── */
+.phone-field-wrap {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.phone-field-wrap:focus-within {
+  border-color: var(--accent, #2b7fff);
+  box-shadow: 0 0 0 3px rgba(43, 127, 255, 0.12);
+}
+
+.phone-field-wrap.field-disabled {
+  background: #f8fafc;
+  opacity: 0.65;
+}
+
+.phone-dial-badge {
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  background: #f1f5f9;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 600;
+  border-right: 1px solid #cbd5e1;
+  user-select: none;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.phone-number-input {
+  flex: 1;
+  border: none;
+  border-radius: 0;
+  outline: none;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: #1e293b;
+  background: transparent;
+  width: 0;
+}
+
+.phone-number-input.no-prefix {
+  border-radius: 6px;
+}
+
+.phone-number-input:disabled {
+  cursor: not-allowed;
+  color: #94a3b8;
+}
+
+.phone-number-input::placeholder {
+  color: #94a3b8;
+}
+
+/* Form panel */
+.form-panel {
+  background: var(--bg-subtle, #f8fafc);
+  border: 1px solid var(--border-default, #e2e8f0);
+  border-radius: 8px;
+  box-shadow: none;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.form-panel > h3 {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-heading, #1e293b);
+}
+
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-section {
+  margin: 0;
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-default, #e2e8f0);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.section-header {
+  margin-bottom: 12px;
+}
+
+.section-header h4 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #475569);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.form-grid,
+.name-grid {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.name-grid {
+  display: grid;
+}
+
+.form-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #475569);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.form-control {
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong, #cbd5e1);
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--text-heading, #1e293b);
+  background: var(--bg-surface, #fff);
+  transition: border-color 0.2s;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--accent, #2b7fff);
+  box-shadow: 0 0 0 3px rgba(43, 127, 255, 0.12);
+}
+
+.form-group-full {
+  grid-column: 1 / -1;
+}
+
+.form-group-checkbox {
+  padding-top: 12px;
+}
+
+.required {
+  color: #ef4444;
+  margin-left: 2px;
+}
+
+.error-text {
+  font-size: 12px;
+  color: #ef4444;
+  margin-top: 4px;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 100px;
+  line-height: 1.5;
+}
+
+/* Lookup field */
+.lookup-field {
+  position: relative;
+}
+
+.lookup-input {
+  padding-left: 32px !important;
+  padding-right: 65px !important;
+}
+
+.lookup-icon {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  transform: translateY(-50%);
+  color: var(--text-secondary, #64748b);
+  font-size: 14px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.lookup-tag {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #eef5ff;
+  color: var(--accent, #2b7fff);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  z-index: 2;
+  white-space: nowrap;
+}
+
+.lookup-help {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+}
+
+.form-actions {
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.form-actions .btn {
+  padding: 8px 18px;
+  font-size: 13px;
+}
+
+/* Material autocomplete */
+:host ::ng-deep .mdc-text-field {
+  height: 36px !important;
+}
+
+:host ::ng-deep .mdc-text-field__input {
+  padding: 8px 12px !important;
+  font-size: 14px !important;
+  font-family: 'Segoe UI', Roboto, sans-serif !important;
+  color: var(--text-heading, #1e293b) !important;
+}
+
+:host ::ng-deep .mdc-text-field__input::placeholder {
+  color: var(--text-secondary, #64748b) !important;
+  font-size: 14px !important;
+  opacity: 1 !important;
+}
+
+:host ::ng-deep .mat-mdc-form-field-focus-overlay {
+  background-color: transparent;
+}
+
+:host ::ng-deep .mat-mdc-autocomplete-panel {
+  border: 1px solid var(--border-default, #e2e8f0);
+  border-radius: 8px;
+  background-color: #fff !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  padding: 6px;
+}
+
+:host ::ng-deep .cdk-overlay-pane .mat-mdc-autocomplete-panel,
+:host ::ng-deep .mat-mdc-autocomplete-panel.mdc-menu-surface {
+  background-color: #fff !important;
+  opacity: 1 !important;
+}
+
+:host ::ng-deep .mat-mdc-option {
+  font-size: 14px;
+  min-height: 56px;
+  border-radius: 6px;
+  background-color: #fff;
+}
+
+:host ::ng-deep .mat-mdc-option.mdc-list-item--selected,
+:host ::ng-deep .mat-mdc-option:hover {
+  background-color: #eef5ff;
+}
+
+.lookup-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 0;
+}
+
+.lookup-option-title {
+  color: var(--text-heading, #1e293b);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.lookup-option-meta {
+  color: var(--text-secondary, #64748b);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.lookup-option-empty .lookup-option-title {
+  font-weight: 500;
+}
+
+:host ::ng-deep .mdc-checkbox__native-control:enabled:checked ~ .mdc-checkbox__background,
+:host ::ng-deep .mdc-checkbox__native-control:enabled:indeterminate ~ .mdc-checkbox__background {
+  border-color: var(--accent, #2b7fff);
+  background-color: var(--accent, #2b7fff);
+}
+
+@media (max-width: 768px) {
+  .form-grid,
+  .name-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .form-actions .btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-container {
+    padding: 12px;
+  }
+}

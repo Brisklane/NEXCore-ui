@@ -1,0 +1,571 @@
+<section class="company-settings">
+  <div class="page-header">
+    <div>
+      <h2>Manage Company</h2>
+      <p class="subtitle">Company profile, contact details, branches and business units.</p>
+    </div>
+  </div>
+
+  <div class="company-card scroll-card">
+
+    <p class="field-error top-error" *ngIf="errors?.api">{{ errors.api }}</p>
+
+    <!-- MAP MODAL (NEW) -->
+    <div class="map-overlay" *ngIf="showMapModal">
+      <div class="map-modal">
+        <div class="map-topbar">
+          <input
+            class="map-search"
+            [(ngModel)]="mapSearchQuery"
+            (keyup.enter)="searchOnMapManageCompany()"
+            placeholder="Search"
+          />
+          <button type="button" class="secondary-btn" (click)="searchOnMapManageCompany()">Search</button>
+          <button type="button" class="map-close" (click)="closeMapModal()">✕</button>
+        </div>
+
+        <div id="leafletMapManageCompany" class="map-canvas"></div>
+
+        <button
+          type="button"
+          class="main-btn map-confirm-btn"
+          (click)="confirmLocationManageCompany()"
+          [disabled]="!selectedLatLng"
+        >
+          Confirm
+        </button>
+      </div>
+    </div>
+
+    <div class="center-popup-overlay" *ngIf="toastMessage">
+      <div class="center-popup">
+        <button class="popup-close" (click)="toastMessage=''">×</button>
+        <div class="success-icon">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M9 16.2l-3.5-3.5L4 14.2l5 5 12-12-1.5-1.5L9 16.2z"></path>
+          </svg>
+        </div>
+        <h3 class="success-title">Update Successful</h3>
+        <p class="success-sub">{{ toastMessage }}</p>
+      </div>
+    </div>
+
+    <div class="tab-bar mc-tab-bar">
+      <button type="button" class="tab-btn" [class.tab-btn-active]="activeTab === 'profile'" (click)="setTab('profile')">
+        <span class="material-symbols-outlined tab-ico">apartment</span> Company Profile
+      </button>
+      <button type="button" class="tab-btn" [class.tab-btn-active]="activeTab === 'contact'" (click)="setTab('contact')">
+        <span class="material-symbols-outlined tab-ico">contact_phone</span> Contact &amp; Location
+      </button>
+      <button type="button" class="tab-btn" [class.tab-btn-active]="activeTab === 'structure'" (click)="setTab('structure')">
+        <span class="material-symbols-outlined tab-ico">account_tree</span> Branches &amp; Business Units
+        <span class="count-badge mc-tab-count">{{ branches.length }}</span>
+      </button>
+    </div>
+
+    <div class="form-grid" *ngIf="activeTab === 'profile'">
+      <!-- Company Name -->
+      <div class="field">
+        <label>Company Name <span>*</span></label>
+        <input
+          type="text"
+          [(ngModel)]="companyName"
+          name="companyName"
+          (ngModelChange)="autoFillBranchAndBusinessUnit(); clearError('companyName')"
+        />
+        <p class="field-error" *ngIf="errors?.companyName">{{ errors.companyName }}</p>
+      </div>
+
+      <!-- Legal Name -->
+      <div class="field">
+        <label>Legal Name <span>*</span></label>
+        <input
+          type="text"
+          [(ngModel)]="legalName"
+          name="legalName"
+          (ngModelChange)="clearError('legalName')"
+        />
+        <p class="field-error" *ngIf="errors?.legalName">{{ errors.legalName }}</p>
+      </div>
+
+      <!-- Contact Person -->
+      <div class="field">
+        <label>Contact Person <span>*</span></label>
+        <input
+          type="text"
+          [(ngModel)]="contactPerson"
+          name="contactPerson"
+          (ngModelChange)="autoFillBranchAndBusinessUnit(); clearError('contactPerson')"
+        />
+        <p class="field-error" *ngIf="errors?.contactPerson">{{ errors.contactPerson }}</p>
+      </div>
+
+      <!-- Address -->
+      <div class="field">
+        <label>Address <span>*</span></label>
+        <input
+          type="text"
+          [(ngModel)]="address"
+          name="address"
+          (ngModelChange)="autoFillBranchAndBusinessUnit(); clearError('address')"
+        />
+        <p class="field-error" *ngIf="errors?.address">{{ errors.address }}</p>
+      </div>
+
+      <!-- Preferred Currency -->
+      <div class="field">
+        <label>Preferred Currency <span>*</span></label>
+        <select
+          [(ngModel)]="preferredCurrency"
+          name="preferredCurrency"
+          (ngModelChange)="clearError('preferredCurrency')"
+        >
+          <option value="">Select currency</option>
+          <option>PKR</option>
+          <option>USD</option>
+          <option>AED</option>
+        </select>
+        <p class="field-error" *ngIf="errors?.preferredCurrency">{{ errors.preferredCurrency }}</p>
+      </div>
+
+      <!-- Postal Code -->
+      <div class="field">
+        <label>Postal Code <span>*</span></label>
+        <input
+          type="text"
+          [(ngModel)]="postalCode"
+          name="postalCode"
+          (ngModelChange)="autoFillBranchAndBusinessUnit(); clearError('postalCode')"
+        />
+        <p class="field-error" *ngIf="errors?.postalCode">{{ errors.postalCode }}</p>
+      </div>
+
+      <!-- Country -->
+      <div class="field">
+        <label>Country <span>*</span></label>
+        <select [(ngModel)]="country" name="country" (ngModelChange)="onCountrySelected($event)">
+          <option value="">Select Country</option>
+          <option *ngFor="let c of countryOptions" [value]="c">{{ c }}</option>
+        </select>
+        <p class="field-error" *ngIf="errors?.country">{{ errors.country }}</p>
+      </div>
+
+      <!-- State -->
+      <div class="field">
+        <label>State <span>*</span></label>
+        <select [(ngModel)]="state" name="state" (ngModelChange)="onStateSelected($event)">
+          <option value="">Select State</option>
+          <option *ngFor="let s of stateOptions" [value]="s">{{ s }}</option>
+        </select>
+        <p class="field-error" *ngIf="errors?.state">{{ errors.state }}</p>
+      </div>
+
+      <!-- City -->
+      <div class="field">
+        <label>City <span>*</span></label>
+        <select [(ngModel)]="city" name="city" (ngModelChange)="autoFillBranchAndBusinessUnit(); clearError('city')">
+          <option value="">Select City</option>
+          <option *ngFor="let c of cityOptions" [value]="c">{{ c }}</option>
+        </select>
+        <p class="field-error" *ngIf="errors?.city">{{ errors.city }}</p>
+      </div>
+
+      <!-- Company Code -->
+      <div class="field">
+        <label>Company Code</label>
+        <input
+          type="text"
+          [(ngModel)]="companyCode"
+          name="companyCode"
+          (ngModelChange)="onCompanyCodeChange()"
+          placeholder="Auto generated if left empty"
+        />
+        <p class="field-error" *ngIf="errors?.companyCode">{{ errors.companyCode }}</p>
+      </div>
+
+      <!-- Company Logo -->
+      <div class="field">
+        <label>Company Logo</label>
+        <div class="file-upload-wrapper logo-wrap">
+          <label for="companyLogoInput" class="file-upload-btn">Choose File</label>
+          <div class="logo-preview" *ngIf="companyLogoPreview">
+            <img [src]="companyLogoPreview" alt="Company Logo Preview" />
+          </div>
+        </div>
+        <input
+          id="companyLogoInput"
+          type="file"
+          class="hidden-file-input"
+          accept="image/*"
+          (change)="onCompanyLogoSelected($event)"
+        />
+        <p class="field-error" *ngIf="errors?.companyLogo">{{ errors.companyLogo }}</p>
+      </div>
+    </div>
+
+    <div class="form-grid" *ngIf="activeTab === 'contact'">
+      <!-- Locations header -->
+      <div class="field full">
+        <div class="location-header">
+          <label>Locations ⓘ</label>
+          <button type="button" class="add-location-btn" (click)="addLocation()">+ Add Location</button>
+        </div>
+      </div>
+
+      <!-- Coordinates (UPDATED LIKE REGISTER) -->
+      <div class="field full" *ngFor="let coord of coordinatesList; let i = index">
+        <label>Coordinates</label>
+
+        <div class="coord-input-wrap">
+          <input
+            type="text"
+            [(ngModel)]="coord.value"
+            [name]="'coordinates' + i"
+            (ngModelChange)="autoFillBranchAndBusinessUnit(); clearError('coordinates' + i)"
+            placeholder="Tap to pick location"
+            class="coord-input"
+          />
+
+          <button type="button" class="coord-icon-btn" (click)="openMapModal(i)" aria-label="Pick location">
+            <i class="fa-solid fa-location-dot"></i>
+          </button>
+
+          <button
+            type="button"
+            class="remove-btn remove-inside"
+            (click)="removeLocation(i)"
+            *ngIf="coordinatesList.length > 1"
+            aria-label="Remove"
+          >
+            ✖
+          </button>
+        </div>
+
+        <p class="field-error" *ngIf="errors && errors['coordinates' + i]">{{ errors['coordinates' + i] }}</p>
+        <p class="location-success" *ngIf="pickedMessages[i]">{{ pickedMessages[i] }}</p>
+      </div>
+
+      <!-- Radius -->
+      <div class="field">
+        <label>Radius (meters)</label>
+        <input type="text" [(ngModel)]="radius" name="radius" (ngModelChange)="clearError('radius')" />
+        <p class="field-error" *ngIf="errors?.radius">{{ errors.radius }}</p>
+      </div>
+
+      <!-- Company Email -->
+      <div class="field">
+        <label>Company Email <span>*</span></label>
+        <input
+          type="email"
+          [(ngModel)]="companyEmail"
+          name="companyEmail"
+          (ngModelChange)="autoFillBranchAndBusinessUnit(); clearError('companyEmail')"
+        />
+        <p class="field-error" *ngIf="errors?.companyEmail">{{ errors.companyEmail }}</p>
+      </div>
+
+      <!-- Registration No -->
+      <div class="field">
+        <label>Registration No <span>*</span></label>
+        <input
+          type="text"
+          [(ngModel)]="registrationNo"
+          name="registrationNo"
+          (ngModelChange)="clearError('registrationNo')"
+        />
+        <p class="field-error" *ngIf="errors?.registrationNo">{{ errors.registrationNo }}</p>
+      </div>
+
+      <!-- Phone -->
+      <div class="field">
+        <label>Phone Number <span>*</span></label>
+        <div class="phone-group">
+          <div class="custom-dropdown" (click)="toggleCompanyPhoneDropdown($event)">
+            <div class="dropdown-selected">
+              <img [src]="selectedPhoneCountry.flagUrl" alt="" class="flag-img" />
+              <span>{{ selectedPhoneCountry.code }}</span>
+              <span class="arrow-down">▼</span>
+            </div>
+            <div class="dropdown-list" *ngIf="showPhoneDropdown">
+              <div class="dropdown-item" *ngFor="let c of countries" (click)="selectCompanyPhoneCountry(c, $event)">
+                <img [src]="c.flagUrl" alt="" class="flag-img" />
+                <span>{{ c.name }} ({{ c.code }})</span>
+              </div>
+            </div>
+          </div>
+          <input
+            type="text"
+            [(ngModel)]="phoneNumber"
+            name="phoneNumber"
+            (ngModelChange)="autoFillBranchAndBusinessUnit(); clearError('phoneNumber')"
+          />
+        </div>
+        <p class="field-error" *ngIf="errors?.phoneNumber">{{ errors.phoneNumber }}</p>
+      </div>
+
+      <!-- Mobile -->
+      <div class="field">
+        <label>Mobile Number <span>*</span></label>
+        <div class="phone-group">
+          <div class="custom-dropdown" (click)="toggleMobilePhoneDropdown($event)">
+            <div class="dropdown-selected">
+              <img [src]="selectedMobileCountry.flagUrl" alt="" class="flag-img" />
+              <span>{{ selectedMobileCountry.code }}</span>
+              <span class="arrow-down">▼</span>
+            </div>
+            <div class="dropdown-list" *ngIf="showMobileDropdown">
+              <div class="dropdown-item" *ngFor="let c of countries" (click)="selectMobilePhoneCountry(c, $event)">
+                <img [src]="c.flagUrl" alt="" class="flag-img" />
+                <span>{{ c.name }} ({{ c.code }})</span>
+              </div>
+            </div>
+          </div>
+          <input type="text" [(ngModel)]="mobileNumber" name="mobileNumber" (ngModelChange)="clearError('mobileNumber')" />
+        </div>
+        <p class="field-error" *ngIf="errors?.mobileNumber">{{ errors.mobileNumber }}</p>
+      </div>
+
+      <!-- Website -->
+      <div class="field">
+        <label>Website <span>*</span></label>
+        <input type="text" [(ngModel)]="website" name="website" (ngModelChange)="clearError('website')" />
+        <p class="field-error" *ngIf="errors?.website">{{ errors.website }}</p>
+      </div>
+
+      <!-- Fax -->
+      <div class="field">
+        <label>Fax</label>
+        <div class="phone-group">
+          <div class="custom-dropdown" (click)="toggleFaxPhoneDropdown($event)">
+            <div class="dropdown-selected">
+              <img [src]="selectedFaxCountry.flagUrl" alt="" class="flag-img" />
+              <span>{{ selectedFaxCountry.code }}</span>
+              <span class="arrow-down">▼</span>
+            </div>
+            <div class="dropdown-list" *ngIf="showFaxDropdown">
+              <div class="dropdown-item" *ngFor="let c of countries" (click)="selectFaxPhoneCountry(c, $event)">
+                <img [src]="c.flagUrl" alt="" class="flag-img" />
+                <span>{{ c.name }} ({{ c.code }})</span>
+              </div>
+            </div>
+          </div>
+          <input type="text" [(ngModel)]="fax" name="fax" (ngModelChange)="clearError('fax')" />
+        </div>
+        <p class="field-error" *ngIf="errors?.fax">{{ errors.fax }}</p>
+      </div>
+    </div>
+
+    <div class="form-grid" *ngIf="activeTab === 'structure'">
+      <!-- Branch Section (unchanged) -->
+      <div class="collapsible-section full">
+        <div class="section-header" (click)="toggleBranchContainer()">
+          <span>Branches <span class="count-badge">{{ branches.length }}</span></span>
+          <span class="arrow">{{ showBranchSection ? '▲' : '▼' }}</span>
+        </div>
+
+        <div class="section-body" *ngIf="showBranchSection">
+          <div *ngFor="let b of branches; let i = index" class="branch-card">
+            <div class="row-title">
+              <div class="title-chip" [class.main-chip]="i === 0">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1.5"></rect><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2"></path></svg>
+                Branch {{ i + 1 }}<span *ngIf="i === 0" class="main-tag">Main</span>
+              </div>
+              <div class="row-actions">
+                <button type="button" class="remove-btn-action" *ngIf="branches.length > 1" (click)="removeBranch(i)" title="Remove Branch">✖ Remove</button>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <div class="field">
+                <label>Branch Name <span>*</span></label>
+                <input type="text" [(ngModel)]="b.name" [name]="'branchName' + i" (ngModelChange)="clearError('branchName' + i)" />
+                <p class="field-error" *ngIf="errors && errors['branchName' + i]">{{ errors['branchName' + i] }}</p>
+              </div>
+
+              <div class="field">
+                <label>Branch Code</label>
+                <input type="text" [(ngModel)]="b.code" [name]="'branchCode' + i" (ngModelChange)="clearError('branchCode' + i)" />
+                <p class="field-error" *ngIf="errors && errors['branchCode' + i]">{{ errors['branchCode' + i] }}</p>
+              </div>
+
+              <div class="field">
+                <label>Branch Type</label>
+                <input type="text" [(ngModel)]="b.branchType" [name]="'branchType' + i" />
+              </div>
+
+              <div class="field">
+                <label>Branch Phone Number</label>
+                <div class="phone-group">
+                  <div class="custom-dropdown" (click)="toggleBranchPhoneDropdown(i, $event)">
+                    <div class="dropdown-selected">
+                      <img [src]="b.phoneCountry?.flagUrl" alt="" class="flag-img" />
+                      <span>{{ b.phoneCountry?.code }}</span>
+                      <span class="arrow-down">▼</span>
+                    </div>
+                    <div class="dropdown-list" *ngIf="b.showPhoneDropdown">
+                      <div class="dropdown-item" *ngFor="let c of countries" (click)="selectBranchPhoneCountry(i, c, $event)">
+                        <img [src]="c.flagUrl" alt="" class="flag-img" />
+                        <span>{{ c.name }} ({{ c.code }})</span>
+                      </div>
+                    </div>
+                  </div>
+                  <input type="text" [(ngModel)]="b.phoneNumber" [name]="'branchPhone' + i" />
+                </div>
+              </div>
+
+              <div class="field">
+                <label>Branch Email</label>
+                <input type="email" [(ngModel)]="b.email" [name]="'branchEmail' + i" (ngModelChange)="clearError('branchEmail' + i)" />
+                <p class="field-error" *ngIf="errors && errors['branchEmail' + i]">{{ errors['branchEmail' + i] }}</p>
+              </div>
+
+              <div class="field">
+                <label>Manager Name</label>
+                <input type="text" [(ngModel)]="b.managerName" [name]="'branchManager' + i" />
+              </div>
+
+              <div class="field full">
+                <label>Street Address</label>
+                <input type="text" [(ngModel)]="b.streetAddress" [name]="'branchStreet' + i" />
+              </div>
+
+              <div class="field">
+                <label>City</label>
+                <input type="text" [(ngModel)]="b.city" [name]="'branchCity' + i" />
+              </div>
+
+              <div class="field">
+                <label>State</label>
+                <input type="text" [(ngModel)]="b.state" [name]="'branchState' + i" />
+              </div>
+
+              <div class="field">
+                <label>Postal Code</label>
+                <input type="text" [(ngModel)]="b.postalCode" [name]="'branchPostal' + i" />
+              </div>
+
+              <div class="field">
+                <label>Latitude</label>
+                <input type="text" [(ngModel)]="b.latitude" [name]="'branchLat' + i" />
+              </div>
+
+              <div class="field">
+                <label>Longitude</label>
+                <input type="text" [(ngModel)]="b.longitude" [name]="'branchLng' + i" />
+              </div>
+
+              <div class="field">
+                <label>Branch Logo</label>
+                <div class="file-upload-wrapper logo-wrap">
+                  <label [for]="'branchLogoInput' + i" class="file-upload-btn">Choose File</label>
+                  <div class="logo-preview" *ngIf="b.branchLogoPreview || b.branchLogo">
+                    <img [src]="b.branchLogoPreview || ('data:image/*;base64,' + b.branchLogo)" alt="Branch Logo Preview" />
+                  </div>
+                </div>
+                <input
+                  [id]="'branchLogoInput' + i"
+                  type="file"
+                  class="hidden-file-input"
+                  accept="image/*"
+                  (change)="onBranchLogoSelected($event, i)"
+                />
+              </div>
+
+              <div class="field">
+                <label>Is Active</label>
+                <select [(ngModel)]="b.isActive" [name]="'branchIsActive' + i">
+                  <option [ngValue]="true">Active</option>
+                  <option [ngValue]="false">Inactive</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="collapsible-section nested-section">
+              <div class="section-header bu-header" (click)="toggleBUContainer(b)">
+                <span>Business Units <span class="count-badge">{{ b.businessUnits.length }}</span></span>
+                <span class="arrow">{{ b.showBUSection ? '▲' : '▼' }}</span>
+              </div>
+
+              <div class="section-body" *ngIf="b.showBUSection">
+                <div *ngFor="let bu of b.businessUnits; let j = index" class="bu-card">
+                  <div class="row-title">
+                    <div class="title-chip bu-chip">
+                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg>
+                      Business Unit {{ j + 1 }}
+                    </div>
+                    <div class="row-actions">
+                      <button type="button" class="remove-btn-action" *ngIf="b.businessUnits.length > 1" (click)="removeBusinessUnit(b, j)" title="Remove BU">✖ Remove</button>
+                    </div>
+                  </div>
+
+                  <div class="form-grid">
+                    <div class="field">
+                      <label>Unit Name <span>*</span></label>
+                      <input type="text" [(ngModel)]="bu.name" [name]="'buName' + i + '_' + j" (ngModelChange)="clearError('buName' + i + '_' + j)" />
+                      <p class="field-error" *ngIf="errors && errors['buName' + i + '_' + j]">{{ errors['buName' + i + '_' + j] }}</p>
+                    </div>
+
+                    <div class="field">
+                      <label>Unit Code</label>
+                      <input type="text" [(ngModel)]="bu.code" [name]="'buCode' + i + '_' + j" (ngModelChange)="clearError('buCode' + i + '_' + j)" />
+                      <p class="field-error" *ngIf="errors && errors['buCode' + i + '_' + j]">{{ errors['buCode' + i + '_' + j] }}</p>
+                    </div>
+
+                    <div class="field">
+                      <label>Unit Type</label>
+                      <input type="text" [(ngModel)]="bu.unitType" [name]="'buType' + i + '_' + j" />
+                    </div>
+
+                    <div class="field">
+                      <label>Manager Name</label>
+                      <input type="text" [(ngModel)]="bu.managerName" [name]="'buManager' + i + '_' + j" />
+                    </div>
+
+                    <div class="field">
+                      <label>Manager Email</label>
+                      <input
+                        type="email"
+                        [(ngModel)]="bu.managerEmail"
+                        [name]="'buEmail' + i + '_' + j"
+                        (ngModelChange)="clearError('buManagerEmail' + i + '_' + j)"
+                      />
+                      <p class="field-error" *ngIf="errors && errors['buManagerEmail' + i + '_' + j]">{{ errors['buManagerEmail' + i + '_' + j] }}</p>
+                    </div>
+
+                    <div class="field">
+                      <label>Is Active</label>
+                      <select [(ngModel)]="bu.isActive" [name]="'buIsActive' + i + '_' + j">
+                        <option [ngValue]="true">Active</option>
+                        <option [ngValue]="false">Inactive</option>
+                      </select>
+                    </div>
+
+                    <div class="field full">
+                      <label>Description</label>
+                      <input type="text" [(ngModel)]="bu.description" [name]="'buDesc' + i + '_' + j" />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="repeater-footer">
+                  <button type="button" class="add-btn-primary" (click)="addBusinessUnit(b)">+ Add Business Unit</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="repeater-footer">
+            <button type="button" class="add-btn-primary" (click)="addBranch()">+ Add Branch</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions-center mc-save-bar">
+      <button class="main-btn" type="button" (click)="saveChanges()" [disabled]="isSaving">
+        {{ isSaving ? 'Saving...' : 'Save Changes' }}
+      </button>
+    </div>
+  </div>
+</section>

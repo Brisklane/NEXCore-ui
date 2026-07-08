@@ -1,0 +1,12 @@
+﻿@import '../shared-styles.css';
+
+.form-control-readonly {
+	display: flex;
+	align-items: center;
+	min-height: 38px;
+	padding: 8px 12px;
+	background: var(--bg-subtle, #f8fafc);
+	border: 1px solid var(--border-strong, #cbd5e1);
+	border-radius: 6px;
+	color: var(--text-primary, #334155);
+}

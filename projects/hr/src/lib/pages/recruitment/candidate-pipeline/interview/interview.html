@@ -1,0 +1,72 @@
+<div class="container">
+  <h2>Interviews</h2>
+
+  <div *ngIf="error" class="error">{{ error }}</div>
+
+  <button (click)="openCreateForm()" class="btn btn-primary">+ New Interview</button>
+
+  <table class="table" *ngIf="!loading && interviews.length > 0">
+    <thead>
+      <tr>
+        <th>Application ID</th>
+        <th>Scheduled At</th>
+        <th>Format</th>
+        <th>Status</th>
+        <th>Rating</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let interview of interviews">
+        <td>{{ interview.applicationId }}</td>
+        <td>{{ interview.scheduledAt | date:'short' }}</td>
+        <td>{{ interview.format }}</td>
+        <td>{{ interview.status }}</td>
+        <td>{{ interview.rating }}</td>
+        <td>
+          <button (click)="openEditForm(interview)" class="btn btn-sm btn-secondary">Edit</button>
+          <button (click)="deleteInterview(interview)" class="btn btn-sm btn-danger">Delete</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p *ngIf="!loading && interviews.length === 0">No interviews found.</p>
+  <p *ngIf="loading">Loading...</p>
+
+  <div *ngIf="showForm" class="form-container">
+    <h3>{{ editingInterview ? 'Edit' : 'Create' }} Interview</h3>
+    <form (ngSubmit)="saveInterview()">
+      <div class="form-group">
+        <label>Application ID:</label>
+        <input type="text" [(ngModel)]="formApplicationId" name="applicationId" required />
+      </div>
+      <div class="form-group">
+        <label>Scheduled At:</label>
+        <input type="datetime-local" [(ngModel)]="formScheduledAt" name="scheduledAt" />
+      </div>
+      <div class="form-group">
+        <label>Format:</label>
+        <input type="text" [(ngModel)]="formFormat" name="format" />
+      </div>
+      <div class="form-group">
+        <label>Status:</label>
+        <input type="text" [(ngModel)]="formStatus" name="status" />
+      </div>
+      <div class="form-group">
+        <label>Interviewer IDs (comma separated):</label>
+        <input type="text" [(ngModel)]="formInterviewerIds" name="interviewerIds" />
+      </div>
+      <div class="form-group">
+        <label>Feedback:</label>
+        <textarea [(ngModel)]="formFeedback" name="feedback"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Rating:</label>
+        <input type="number" [(ngModel)]="formRating" name="rating" min="0" />
+      </div>
+      <button type="submit" class="btn btn-success">Save</button>
+      <button type="button" (click)="cancelForm()" class="btn btn-secondary">Cancel</button>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,584 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">storefront</span></div>
+      <div>
+        <h1>POS Stores</h1>
+        <p class="inv-hero-sub">Manage point-of-sale store locations</p>
+      </div>
+    </div>
+    <button class="btn-brand" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> Add Store</button>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (successMsg) { <div class="alert alert-success">{{ successMsg }}</div> }
+
+  <!-- ── Create / Edit form ───────────────────────────────── -->
+  @if (showForm) {
+    <div class="form-panel">
+      <!-- Panel header -->
+      <div class="form-panel-header">
+        <h3>{{ editingStore ? 'Edit — ' + editingStore.tradingName : 'New POS Store' }}</h3>
+      </div>
+
+      <!-- Tab bar -->
+      <div class="tab-bar">
+        <button class="tab-btn" [class.active]="activeTab === 'info'"     (click)="activeTab = 'info'">Info</button>
+        <button class="tab-btn" [class.active]="activeTab === 'config'"   (click)="activeTab = 'config'">Config</button>
+        <button class="tab-btn" [class.active]="activeTab === 'online'"   (click)="activeTab = 'online'">Online &amp; Delivery</button>
+        <button class="tab-btn" [class.active]="activeTab === 'location'" (click)="activeTab = 'location'">Location &amp; Media</button>
+        @if (editingStore) {
+          <button class="tab-btn" [class.active]="activeTab === 'status'" (click)="activeTab = 'status'">Status</button>
+          <button class="tab-btn" [class.active]="activeTab === 'vendor'" (click)="activeTab = 'vendor'; resetVendorForm(); loadVendorProfile(editingStore.id)">Vendor Profile</button>
+        }
+      </div>
+
+      <!-- ── TAB: Info ────────────────────────────────────── -->
+      @if (activeTab === 'info') {
+        <div class="tab-content">
+          <!-- Basic details -->
+          <div class="form-section">
+            <div class="form-section-title">Basic Details</div>
+            <div class="form-grid form-grid-3">
+              <div class="form-group" style="grid-column: 1 / span 2">
+                <label>Trading Name *</label>
+                <input type="text" [(ngModel)]="formTradingName" placeholder="e.g. Downtown Café" />
+              </div>
+              <div class="form-group">
+                <label>Native Language Name</label>
+                <input type="text" [(ngModel)]="formNativeLanguageName" placeholder="e.g. ڈاؤن ٹاؤن کیفے" />
+              </div>
+              @if (!editingStore) {
+                <div class="form-group">
+                  <label>Store Code *</label>
+                  <input type="text" [(ngModel)]="formStoreCode" placeholder="e.g. STR-001" />
+                </div>
+              }
+              <div class="form-group">
+                <label>Store Type</label>
+                <select [(ngModel)]="formStoreType">
+                  @for (t of storeTypes; track t) {
+                    <option [value]="t">{{ t }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Store Format</label>
+                <select [(ngModel)]="formStoreFormat">
+                  @for (f of storeFormats; track f) {
+                    <option [value]="f">{{ f }}</option>
+                  }
+                </select>
+              </div>
+              <!-- Phone with country code -->
+              <div class="form-group" style="grid-column: 1 / -1">
+                <label>Phone Number</label>
+                <div class="phone-group">
+                  <div class="phone-country-selector" (click)="showPhoneDropdown = !showPhoneDropdown">
+                    <img [src]="flagUrl(formPhoneCountry)" class="flag-img" alt="" />
+                    <span class="dial-code">{{ dialCode(formPhoneCountry) }}</span>
+                    <span class="arrow-down">▾</span>
+                    @if (showPhoneDropdown) {
+                      <div class="phone-dropdown" (click)="$event.stopPropagation()">
+                        @for (c of allCountries; track c.code) {
+                          <div class="phone-dropdown-item" (click)="formPhoneCountry = c; showPhoneDropdown = false">
+                            <img [src]="flagUrl(c)" class="flag-img" alt="" />
+                            <span>{{ c.name }}</span>
+                            <span class="dial-code-sm">{{ dialCode(c) }}</span>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                  <input type="tel" [(ngModel)]="formPhone" placeholder="e.g. 300 1234567" class="phone-input" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Address -->
+          <div class="form-section" style="margin-top:16px">
+            <div class="form-section-title" style="display:flex;align-items:center;gap:10px;">
+              Address
+              <button type="button" class="btn btn-secondary btn-sm" (click)="detectFromIp()" [disabled]="detectingIpLocation" style="font-size:11px;">
+                &#127759; {{ detectingIpLocation ? 'Detecting…' : 'Detect from IP' }}
+              </button>
+            </div>
+            <div class="form-grid form-grid-3">
+              <div class="form-group">
+                <label>Country</label>
+                <select [(ngModel)]="formCountryCode" (ngModelChange)="onCountrySelected($event)">
+                  <option value="">— Select Country —</option>
+                  @for (c of allCountries; track c.code) {
+                    <option [value]="c.code">{{ c.flagEmoji }} {{ c.name }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>{{ loadedSubdivisions[0]?.subdivisionType ?? 'State / Province' }}</label>
+                <select [(ngModel)]="formSubdivisionCode" (ngModelChange)="onStateSelected($event)"
+                        [disabled]="!formCountryCode || loadingSubdivisions">
+                  <option value="">{{ loadingSubdivisions ? 'Loading…' : '— Select —' }}</option>
+                  @for (s of loadedSubdivisions; track s.code) {
+                    <option [value]="s.code">{{ s.name }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>City</label>
+                <select [(ngModel)]="formCity" (ngModelChange)="onCitySelected($event)"
+                        [disabled]="!formSubdivisionCode || loadingCities">
+                  <option value="">{{ loadingCities ? 'Loading…' : '— Select City —' }}</option>
+                  @for (c of loadedCities; track c.id) {
+                    <option [value]="c.name">{{ c.name }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- ── TAB: Config ──────────────────────────────────── -->
+      @if (activeTab === 'config') {
+        <div class="tab-content">
+          <div class="form-section">
+            <div class="form-section-title">Defaults</div>
+            <div class="form-grid form-grid-3">
+              <div class="form-group">
+                <label>Default Warehouse</label>
+                <select [(ngModel)]="formDefaultWarehouseId">
+                  <option value="">-- None --</option>
+                  @for (w of warehouses; track w.id) {
+                    <option [value]="w.id">{{ w.name }}{{ w.code ? ' (' + w.code + ')' : '' }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Default Price List</label>
+                <select [(ngModel)]="formDefaultPriceListId">
+                  <option value="">-- None --</option>
+                  @for (pl of priceLists; track pl.id) {
+                    <option [value]="pl.id">{{ pl.name }}{{ pl.code ? ' (' + pl.code + ')' : '' }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- ── TAB: Online & Delivery ───────────────────────── -->
+      @if (activeTab === 'online') {
+        <div class="tab-content">
+          <div class="form-section">
+            <div class="form-section-title">Online Ordering</div>
+            <div class="form-grid form-grid-3">
+              <div class="form-group">
+                <label>Online Ordering Enabled</label>
+                <select [(ngModel)]="formIsOnlineOrderingEnabled">
+                  <option [ngValue]="true">Yes</option>
+                  <option [ngValue]="false">No</option>
+                </select>
+              </div>
+              @if (!editingStore) {
+                <div class="form-group">
+                  <label>Accepts Online Pickup</label>
+                  <select [(ngModel)]="formAcceptsOnlinePickup">
+                    <option [ngValue]="true">Yes</option>
+                    <option [ngValue]="false">No</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Has Delivery</label>
+                  <select [(ngModel)]="formHasDelivery">
+                    <option [ngValue]="true">Yes</option>
+                    <option [ngValue]="false">No</option>
+                  </select>
+                </div>
+              }
+            </div>
+          </div>
+          <div class="form-section" style="margin-top:16px">
+            <div class="form-section-title">Fulfillment Settings</div>
+            <div class="form-grid form-grid-3">
+              <div class="form-group">
+                <label>Est. Prep Time (min)</label>
+                <input type="number" [(ngModel)]="formEstimatedPrepTimeMinutes" placeholder="e.g. 30" min="0" />
+              </div>
+              <div class="form-group">
+                <label>Min Online Order Amount</label>
+                <input type="number" [(ngModel)]="formMinOnlineOrderAmount" placeholder="0.00" min="0" step="0.01" />
+              </div>
+              <div class="form-group">
+                <label>Max Delivery Radius (km)</label>
+                <input type="number" [(ngModel)]="formMaxDeliveryRadiusKm" placeholder="e.g. 10" min="0" step="0.1" />
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- ── TAB: Location & Media ────────────────────────── -->
+      @if (activeTab === 'location') {
+        <div class="tab-content">
+          <div class="form-section">
+            <div class="form-section-title">Pin Location</div>
+            <div class="form-grid form-grid-3">
+              <div class="form-group">
+                <label>Latitude</label>
+                <input type="number" [(ngModel)]="formLatitude" placeholder="e.g. 33.7294" step="0.000001" />
+              </div>
+              <div class="form-group">
+                <label>Longitude</label>
+                <input type="number" [(ngModel)]="formLongitude" placeholder="e.g. 73.0931" step="0.000001" />
+              </div>
+              <div class="form-group" style="display:flex;align-items:flex-end;">
+                <button class="btn btn-secondary btn-sm" (click)="useMyLocation()" [disabled]="detectingLocation">
+                  &#127759; {{ detectingLocation ? 'Detecting…' : 'Use My Location' }}
+                </button>
+              </div>
+              @if (formLatitude !== null && formLongitude !== null) {
+                <div class="form-group">
+                  <a [href]="getMapUrl(formLatitude!, formLongitude!)" target="_blank" class="map-link">
+                    &#128205; View on Map
+                  </a>
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="form-section" style="margin-top:16px">
+            <div class="form-section-title">Media</div>
+            <div class="form-grid form-grid-3">
+              <div class="form-group" style="grid-column: 1 / -1">
+                <label>Logo URL</label>
+                <input type="text" [(ngModel)]="formOnlineLogoUrl" placeholder="https://…/logo.png" />
+              </div>
+              <div class="form-group" style="grid-column: 1 / -1">
+                <label>Banner URL</label>
+                <input type="text" [(ngModel)]="formOnlineBannerUrl" placeholder="https://…/banner.jpg" />
+              </div>
+              @if (formOnlineLogoUrl) {
+                <div class="form-group">
+                  <label>Logo Preview</label>
+                  <img [src]="formOnlineLogoUrl" alt="Logo" style="height:48px;border-radius:6px;border:1px solid #e2e8f0;" />
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- ── TAB: Status (edit only) ──────────────────────── -->
+      @if (activeTab === 'status' && editingStore) {
+        <div class="tab-content">
+          <div class="form-section">
+            <div class="form-section-title">Online Status</div>
+            <div class="form-grid form-grid-3">
+              <div class="form-group">
+                <label>Online Status</label>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
+                  @for (s of onlineStatuses; track s) {
+                    <button [class]="statusPillClass(s)" (click)="formOnlineStatus = s" type="button">{{ s }}</button>
+                  }
+                </div>
+              </div>
+              <div class="form-group" style="grid-column: 1 / -1">
+                <label>Status Note</label>
+                <input type="text" [(ngModel)]="formOnlineStatusNote" placeholder="e.g. Closed for renovation" />
+              </div>
+            </div>
+          </div>
+          <div class="form-section" style="margin-top:16px">
+            <div class="form-section-title">Store State</div>
+            <div class="form-grid form-grid-3">
+              <div class="form-group">
+                <label>Active</label>
+                <select [(ngModel)]="formIsActive">
+                  <option [ngValue]="true">Yes</option>
+                  <option [ngValue]="false">No</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- ── TAB: Vendor Profile (edit only) ──────────────── -->
+      @if (activeTab === 'vendor' && editingStore) {
+        <div class="tab-content vendor-tab-content">
+          @if (vendorError) { <div class="alert alert-error">{{ vendorError }}</div> }
+          @if (vendorSuccessMsg) { <div class="alert alert-success">{{ vendorSuccessMsg }}</div> }
+
+          @if (vendorLoading) {
+            <div class="loading-spinner">Loading vendor profile…</div>
+          } @else {
+            <!-- Status bar -->
+            @if (vendorProfile) {
+              <div class="vendor-status-bar">
+                <span class="vendor-status-label">Status:</span>
+                <span [class]="vendorStatusClass(vendorProfile.onboardingStatus)">
+                  {{ vendorProfile.onboardingStatus ?? 'NotStarted' }}
+                </span>
+                @if (vendorProfile.onboardingStatus === 'InProgress' || vendorProfile.onboardingStatus === 'Rejected' || vendorProfile.onboardingStatus === null) {
+                  <button class="btn btn-primary btn-sm" (click)="submitVendorApplication()" style="margin-left:auto;">
+                    Submit for Review
+                  </button>
+                }
+              </div>
+            }
+
+            <!-- Vendor sub-tabs -->
+            <div class="vendor-tab-bar">
+              <button class="vendor-tab-btn" [class.active]="vendorTab === 'owner'"    (click)="vendorTab = 'owner'">Owner</button>
+              <button class="vendor-tab-btn" [class.active]="vendorTab === 'business'" (click)="vendorTab = 'business'">Business</button>
+              <button class="vendor-tab-btn" [class.active]="vendorTab === 'banking'"  (click)="vendorTab = 'banking'">Banking</button>
+              <button class="vendor-tab-btn" [class.active]="vendorTab === 'social'"   (click)="vendorTab = 'social'">Social &amp; Photos</button>
+            </div>
+
+            <!-- Owner -->
+            @if (vendorTab === 'owner') {
+              <div class="form-section">
+                <div class="form-grid form-grid-3">
+                  <div class="form-group">
+                    <label>Owner Name</label>
+                    <input type="text" [(ngModel)]="vpOwnerName" placeholder="Full legal name" />
+                  </div>
+                  <div class="form-group">
+                    <label>Owner CNIC</label>
+                    <input type="text" [(ngModel)]="vpOwnerCnic" placeholder="e.g. 12345-1234567-1" />
+                  </div>
+                  <div class="form-group">
+                    <label>Owner Phone</label>
+                    <input type="text" [(ngModel)]="vpOwnerPhone" placeholder="+92…" />
+                  </div>
+                  <div class="form-group">
+                    <label>Owner Email</label>
+                    <input type="email" [(ngModel)]="vpOwnerEmail" placeholder="owner@example.com" />
+                  </div>
+                  <div class="form-group" style="grid-column: 1 / -1">
+                    <label>CNIC Front Doc URL</label>
+                    <input type="text" [(ngModel)]="vpCnicFrontDocUrl" placeholder="https://…/cnic-front.jpg" />
+                  </div>
+                  <div class="form-group" style="grid-column: 1 / -1">
+                    <label>CNIC Back Doc URL</label>
+                    <input type="text" [(ngModel)]="vpCnicBackDocUrl" placeholder="https://…/cnic-back.jpg" />
+                  </div>
+                </div>
+              </div>
+            }
+
+            <!-- Business -->
+            @if (vendorTab === 'business') {
+              <div class="form-section">
+                <div class="form-section-title">Business Information</div>
+                <div class="form-grid form-grid-3">
+                  <div class="form-group">
+                    <label>Business Name</label>
+                    <input type="text" [(ngModel)]="vpBusinessName" placeholder="Registered business name" />
+                  </div>
+                  <div class="form-group">
+                    <label>Registration Number</label>
+                    <input type="text" [(ngModel)]="vpBusinessRegistrationNumber" placeholder="e.g. REG-12345" />
+                  </div>
+                  <div class="form-group" style="grid-column: 1 / -1">
+                    <label>Business Description</label>
+                    <textarea [(ngModel)]="vpBusinessDescription" placeholder="Brief description" rows="3"></textarea>
+                  </div>
+                </div>
+              </div>
+              <div class="form-section" style="margin-top:16px">
+                <div class="form-section-title">Food License</div>
+                <div class="form-grid form-grid-3">
+                  <div class="form-group">
+                    <label>License Number</label>
+                    <input type="text" [(ngModel)]="vpFoodLicenseNumber" placeholder="e.g. FL-2024-001" />
+                  </div>
+                  <div class="form-group">
+                    <label>Expiry Date</label>
+                    <input type="date" [(ngModel)]="vpFoodLicenseExpiry" />
+                  </div>
+                  <div class="form-group" style="grid-column: 1 / -1">
+                    <label>License Doc URL</label>
+                    <input type="text" [(ngModel)]="vpFoodLicenseDocUrl" placeholder="https://…/license.pdf" />
+                  </div>
+                </div>
+              </div>
+            }
+
+            <!-- Banking -->
+            @if (vendorTab === 'banking') {
+              <div class="form-section">
+                <div class="form-grid form-grid-3">
+                  <div class="form-group">
+                    <label>Bank Name</label>
+                    <input type="text" [(ngModel)]="vpBankName" placeholder="e.g. HBL" />
+                  </div>
+                  <div class="form-group">
+                    <label>Branch</label>
+                    <input type="text" [(ngModel)]="vpBankBranch" placeholder="Branch name" />
+                  </div>
+                  <div class="form-group">
+                    <label>Account Title</label>
+                    <input type="text" [(ngModel)]="vpAccountTitle" placeholder="Account holder name" />
+                  </div>
+                  <div class="form-group">
+                    <label>Account Number</label>
+                    <input type="text" [(ngModel)]="vpAccountNumber" placeholder="Account number" />
+                  </div>
+                  <div class="form-group" style="grid-column: 1 / -1">
+                    <label>IBAN</label>
+                    <input type="text" [(ngModel)]="vpIbanNumber" placeholder="PK…" />
+                  </div>
+                </div>
+              </div>
+            }
+
+            <!-- Social & Photos -->
+            @if (vendorTab === 'social') {
+              <div class="form-section">
+                <div class="form-grid form-grid-3">
+                  <div class="form-group">
+                    <label>Facebook URL</label>
+                    <input type="text" [(ngModel)]="vpFacebookUrl" placeholder="https://facebook.com/…" />
+                  </div>
+                  <div class="form-group">
+                    <label>Instagram URL</label>
+                    <input type="text" [(ngModel)]="vpInstagramUrl" placeholder="https://instagram.com/…" />
+                  </div>
+                  <div class="form-group">
+                    <label>TikTok URL</label>
+                    <input type="text" [(ngModel)]="vpTiktokUrl" placeholder="https://tiktok.com/@…" />
+                  </div>
+                  <div class="form-group">
+                    <label>WhatsApp Number</label>
+                    <input type="text" [(ngModel)]="vpWhatsappNumber" placeholder="+92…" />
+                  </div>
+                  <div class="form-group" style="grid-column: 1 / -1">
+                    <label>Storefront Photo URL</label>
+                    <input type="text" [(ngModel)]="vpStoreFrontPhotoUrl" placeholder="https://…/storefront.jpg" />
+                  </div>
+                  @if (vpStoreFrontPhotoUrl) {
+                    <div class="form-group">
+                      <label>Preview</label>
+                      <img [src]="vpStoreFrontPhotoUrl" alt="Storefront" style="height:80px;border-radius:6px;border:1px solid #e2e8f0;object-fit:cover;" />
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+
+            <div class="form-actions" style="margin-top:20px">
+              <button class="btn btn-primary" (click)="saveVendorProfile()" [disabled]="vendorSaving">
+                {{ vendorSaving ? 'Saving…' : 'Save Vendor Profile' }}
+              </button>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Form actions (shown on all tabs except vendor) -->
+      @if (activeTab !== 'vendor') {
+        <div class="form-actions">
+          <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+          <button class="btn btn-primary" (click)="save()">
+            {{ editingStore ? 'Update Store' : 'Create Store' }}
+          </button>
+        </div>
+      } @else {
+        <div class="form-actions">
+          <button class="btn btn-secondary" (click)="cancelForm()">Close</button>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ── Search & list ───────────────────────────────────── -->
+  <div class="filters-bar">
+    <input type="text" [(ngModel)]="searchQuery" placeholder="Search by name, code, type or format…" style="flex:1;" />
+    <span class="filter-count">{{ filteredStores.length }} record(s)</span>
+  </div>
+
+  <div class="table-container">
+    @if (loading) {
+      <div class="loading-spinner">Loading stores…</div>
+    } @else {
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" [class.sorted]="sortBy === 'tradingName'" (click)="sort('tradingName')">Name / Code <span class="sort-icon">{{ sortBy === 'tradingName' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'storeType'" (click)="sort('storeType')">Type / Format <span class="sort-icon">{{ sortBy === 'storeType' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'isOnlineOrderingEnabled'" (click)="sort('isOnlineOrderingEnabled')">Online Ordering <span class="sort-icon">{{ sortBy === 'isOnlineOrderingEnabled' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Fulfillment</th>
+            <th>Location</th>
+            <th class="sortable" [class.sorted]="sortBy === 'onlineStatus'" (click)="sort('onlineStatus')">Status <span class="sort-icon">{{ sortBy === 'onlineStatus' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (store of filteredStores; track store.id) {
+            <tr [class.row-new]="store.id === highlighter.id">
+              <td>
+                <div style="font-weight:500;">{{ store.tradingName ?? '—' }}</div>
+                @if (store.nativeLanguageName) {
+                  <div style="font-size:12px;color:#64748b;">{{ store.nativeLanguageName }}</div>
+                }
+                <div style="font-size:11px;color:#94a3b8;font-family:monospace;">{{ store.storeCode }}</div>
+              </td>
+              <td style="font-size:12px;">
+                <div>{{ fromInt(storeTypeToInt, store.storeType, '—') }}</div>
+                <div style="color:#94a3b8;">{{ fromInt(storeFormatToInt, store.storeFormat, '') }}</div>
+              </td>
+              <td>
+                <span [class]="store.isOnlineOrderingEnabled ? 'badge badge-accepted' : 'badge badge-cancelled'">
+                  {{ store.isOnlineOrderingEnabled ? 'Enabled' : 'Disabled' }}
+                </span>
+                @if (store.estimatedPrepTimeMinutes) {
+                  <div style="font-size:11px;color:#94a3b8;margin-top:3px;">{{ store.estimatedPrepTimeMinutes }} min prep</div>
+                }
+              </td>
+              <td style="font-size:12px;">
+                @if (store.acceptsOnlinePickup) {
+                  <div style="color:#15803d;">&#10003; Pickup</div>
+                }
+                @if (store.hasDelivery) {
+                  <div style="color:#15803d;">&#10003; Delivery</div>
+                }
+                @if (!store.acceptsOnlinePickup && !store.hasDelivery) {
+                  <span style="color:#94a3b8;">In-store only</span>
+                }
+              </td>
+              <td>
+                @if (store.latitude != null && store.longitude != null) {
+                  <a [href]="getMapUrl(store.latitude!, store.longitude!)" target="_blank" class="map-link">
+                    &#128205; {{ store.latitude | number:'1.4-4' }}, {{ store.longitude | number:'1.4-4' }}
+                  </a>
+                } @else {
+                  <span style="color:#94a3b8;font-size:12px;">—</span>
+                }
+              </td>
+              <td>
+                <span [class]="onlineStatusClass(store.onlineStatus)">
+                  {{ fromInt(onlineStatusToInt, store.onlineStatus, 'Offline') }}
+                </span>
+                <br />
+                <span [class]="store.isActive ? 'badge badge-accepted' : 'badge badge-cancelled'"
+                  style="margin-top:3px;display:inline-block;">
+                  {{ store.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td class="actions-cell">
+                <button class="btn btn-secondary btn-sm" (click)="openEditForm(store)" title="Edit">✎</button>
+                <button class="btn btn-secondary btn-sm" (click)="openVendorTab(store)" title="Vendor Profile">🏪</button>
+                <button class="btn btn-danger btn-sm" (click)="deleteStore(store.id)" title="Delete">✕</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="7" style="text-align:center;padding:32px;color:#94a3b8;">No POS stores found.</td></tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+</div>

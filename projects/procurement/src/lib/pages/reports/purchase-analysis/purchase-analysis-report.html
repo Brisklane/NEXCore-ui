@@ -1,0 +1,50 @@
+<div class="page-container">
+
+  <app-page-header title="Purchase Analysis" subtitle="Purchase order volume, value &amp; trend across confirmed procurement">
+    <button class="btn btn-secondary" (click)="load()" [disabled]="loading">↻ Refresh</button>
+  </app-page-header>
+
+  <app-alert type="error" [message]="error"></app-alert>
+
+  <div class="helper-box">
+    <span class="helper-icon">ℹ️</span>
+    <div>This view summarizes <strong>confirmed purchase orders</strong> (drafts and cancelled orders are excluded).
+      <strong>Outstanding</strong> is the value ordered but not yet invoiced. Use the monthly trend to spot seasonality and the
+      top-vendor breakdown to focus negotiation efforts.</div>
+  </div>
+
+  @if (data) {
+    <div class="kpi-grid">
+      <div class="kpi-card accent"><span class="kpi-label">Total Orders</span><span class="kpi-value">{{ data.totalOrders }}</span><span class="kpi-sub">{{ data.openOrders }} still open</span></div>
+      <div class="kpi-card"><span class="kpi-label">Total Value</span><span class="kpi-value">{{ data.totalValue | number:'1.0-0' }}</span><span class="kpi-sub">{{ currency }}</span></div>
+      <div class="kpi-card"><span class="kpi-label">Avg Order Value</span><span class="kpi-value">{{ data.averageOrderValue | number:'1.0-0' }}</span><span class="kpi-sub">{{ currency }}</span></div>
+      <div class="kpi-card good"><span class="kpi-label">Invoiced</span><span class="kpi-value">{{ data.invoicedValue | number:'1.0-0' }}</span><span class="kpi-sub">{{ currency }}</span></div>
+      <div class="kpi-card warn"><span class="kpi-label">Outstanding</span><span class="kpi-value">{{ data.outstandingValue | number:'1.0-0' }}</span><span class="kpi-sub">awaiting invoice</span></div>
+    </div>
+
+    <div class="report-grid">
+      <div class="report-card">
+        <h3>Value by Order Status</h3>
+        <lib-donut-chart [data]="statusPoints" [currency]="currency" caption="Total Value"></lib-donut-chart>
+      </div>
+      <div class="report-card">
+        <h3>Top Vendors by Spend</h3>
+        <lib-bar-chart [data]="vendorPoints" [currency]="currency"></lib-bar-chart>
+      </div>
+    </div>
+
+    <div class="report-card">
+      <h3>Monthly Purchase Trend (last 12 months)</h3>
+      <lib-bar-chart [data]="trendPoints" [currency]="currency"></lib-bar-chart>
+    </div>
+
+    <div class="report-card">
+      <h3>Top Vendor Detail</h3>
+      <app-data-table [sortableAll]="true" [columns]="vendorColumns" [data]="vendorPoints.length ? data.topVendors : []"
+        [loading]="loading" emptyMessage="No vendor activity in range."></app-data-table>
+    </div>
+  } @else if (!loading) {
+    <div class="empty-state">No purchase data available yet.</div>
+  }
+
+</div>

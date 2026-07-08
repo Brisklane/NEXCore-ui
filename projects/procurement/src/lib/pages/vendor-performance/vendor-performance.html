@@ -1,0 +1,96 @@
+<div class="page-container">
+
+  <app-page-header icon="star_rate" title="Vendor Performance" subtitle="Periodic KPI scorecards — delivery, quality, price &amp; compliance">
+    <button class="btn btn-primary" (click)="openCreate()">+ New Scorecard</button>
+  </app-page-header>
+
+  <app-alert type="error"   [message]="error"></app-alert>
+  <app-alert type="success" [message]="success"></app-alert>
+
+  <div class="help-box"><span class="help-icon">ℹ️</span><span>A <strong>scorecard</strong> rates a vendor over a period across five KPIs (each <strong>0–100</strong>): <strong>On-Time Delivery</strong> (% of orders received by the promised date), <strong>Quality Score</strong> (% accepted without rejection), <strong>Price Compliance</strong> (% billed at the agreed price), <strong>Responsiveness</strong> (speed of quotes &amp; replies) and <strong>Document Accuracy</strong> (correctness of invoices &amp; paperwork). The <strong>Overall Rating</strong> is a weighted blend — On-Time 30%, Quality 30%, Price 20%, Responsiveness 10%, Document Accuracy 10% — banded as <strong>Good ≥ 85</strong>, <strong>Fair 60–84</strong>, <strong>Poor &lt; 60</strong>.</span></div>
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editing ? 'Edit Scorecard' : 'New Scorecard' }}</h3>
+      <div class="form-grid">
+        <app-select label="Vendor" required [options]="vendorOptions" [(ngModel)]="form.vendorId"
+                    placeholder="-- Select vendor --" [error]="submitted ? errors.vendorId : ''"></app-select>
+        <app-input label="Period From" type="date" [(ngModel)]="form.periodFrom"
+                   [error]="submitted ? errors.periodFrom : ''"></app-input>
+        <app-input label="Period To" type="date" [(ngModel)]="form.periodTo"
+                   [error]="submitted ? errors.periodTo : ''"></app-input>
+      </div>
+
+      <h4 class="section-title">KPIs (0–100)</h4>
+      <div class="form-grid">
+        <app-input label="On-Time Delivery %" type="number" [min]="0" [max]="100" [step]="0.1" [(ngModel)]="form.onTimeDeliveryRate"></app-input>
+        <app-input label="Quality Score" type="number" [min]="0" [max]="100" [step]="0.1" [(ngModel)]="form.qualityScore"></app-input>
+        <app-input label="Price Compliance %" type="number" [min]="0" [max]="100" [step]="0.1" [(ngModel)]="form.priceComplianceRate"></app-input>
+        <app-input label="Responsiveness" type="number" [min]="0" [max]="100" [step]="0.1" [(ngModel)]="form.responsivenessScore"></app-input>
+        <app-input label="Document Accuracy" type="number" [min]="0" [max]="100" [step]="0.1" [(ngModel)]="form.documentAccuracyScore"></app-input>
+        <div class="form-group">
+          <label>Overall Rating (computed)</label>
+          <div class="overall-preview" [class.good]="previewOverall >= 85" [class.mid]="previewOverall >= 60 && previewOverall < 85" [class.bad]="previewOverall < 60">
+            {{ previewOverall.toFixed(2) }}
+          </div>
+        </div>
+      </div>
+
+      <h4 class="section-title">Volumes</h4>
+      <div class="form-grid">
+        <app-input label="Total Orders" type="number" [min]="0" [(ngModel)]="form.totalOrders"></app-input>
+        <app-input label="Late Deliveries" type="number" [min]="0" [(ngModel)]="form.lateDeliveries"></app-input>
+        <app-input label="Quality Rejections" type="number" [min]="0" [(ngModel)]="form.qualityRejections"></app-input>
+        <app-input label="Invoice Discrepancies" type="number" [min]="0" [(ngModel)]="form.invoiceDiscrepancies"></app-input>
+        <app-input label="Total Purchase Value" type="number" [min]="0" [step]="0.01" [(ngModel)]="form.totalPurchaseValue"></app-input>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group-full">
+          <app-textarea label="Comments" [rows]="2" placeholder="Evaluation notes" [(ngModel)]="form.comments"></app-textarea>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()" [disabled]="saving">{{ editing ? 'Save' : 'Record Scorecard' }}</button>
+      </div>
+    </div>
+  }
+
+  <div class="filters-bar">
+    <span class="filter-search">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search vendor…" [(ngModel)]="search" />
+      @if (search) { <button class="search-clear" title="Clear search" (click)="search = ''">×</button> }
+    </span>
+    <select class="filter-input" [(ngModel)]="vendorFilter">
+      <option value="">All vendors</option>
+      @for (opt of vendorOptions; track opt.value) { <option [ngValue]="opt.value">{{ opt.label }}</option> }
+    </select>
+  </div>
+
+  <app-data-table [sortableAll]="true"
+    [columns]="columns"
+    [data]="filteredScorecards"
+    [actions]="actions"
+    [loading]="loading"
+    [highlightRowId]="highlighter.id"
+    emptyMessage="No performance scorecards yet."
+    (rowAction)="onRowAction($event)">
+  </app-data-table>
+
+</div>
+
+@if (showDeleteConfirm) {
+  <div class="modal-overlay">
+    <div class="modal-box">
+      <h4>Delete Scorecard</h4>
+      <p>Delete the scorecard for <strong>{{ deleteTarget?.vendorName }}</strong>?</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showDeleteConfirm = false">Cancel</button>
+        <button class="btn btn-danger" (click)="confirmDelete()">Delete</button>
+      </div>
+    </div>
+  </div>
+}

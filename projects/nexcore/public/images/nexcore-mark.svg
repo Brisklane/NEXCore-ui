@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <defs>
+    <linearGradient id="nmG" x1="14" y1="24" x2="106" y2="96" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2b7fff"/>
+      <stop offset="0.55" stop-color="#22b6e6"/>
+      <stop offset="1" stop-color="#2fd6c3"/>
+    </linearGradient>
+  </defs>
+  <!-- hexagon frame -->
+  <path d="M60 10 L104 34 L104 86 L60 110 L16 86 L16 34 Z"
+        stroke="url(#nmG)" stroke-width="8.5" stroke-linejoin="round"/>
+  <!-- interior diagonal (the "N") -->
+  <path d="M16 86 L104 34" stroke="url(#nmG)" stroke-width="8.5" stroke-linecap="round"/>
+  <!-- connection nodes -->
+  <g fill="url(#nmG)">
+    <circle cx="60" cy="10" r="8.5"/>
+    <circle cx="104" cy="34" r="8.5"/>
+    <circle cx="104" cy="86" r="8.5"/>
+    <circle cx="60" cy="110" r="8.5"/>
+    <circle cx="16" cy="86" r="8.5"/>
+    <circle cx="16" cy="34" r="8.5"/>
+    <circle cx="60" cy="60" r="7.5"/>
+  </g>
+</svg>
