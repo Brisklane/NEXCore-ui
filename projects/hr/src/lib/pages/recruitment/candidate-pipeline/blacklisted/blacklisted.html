@@ -1,0 +1,44 @@
+<div class="container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">person_search</span></div>
+      <div>
+        <h1>Blacklisted Candidates</h1>
+        <p class="inv-hero-sub">Candidate details will display here before status filtering is added.</p>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="error" class="alert alert-error">{{ error }}</div>
+  <div *ngIf="loading" class="loading-spinner">Loading...</div>
+
+  <div *ngIf="!loading" class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Phone</th>
+          <th>Current Company</th>
+          <th>Source</th>
+          <th>Experience</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let c of candidates">
+          <td>{{ c.candidateCode || '—' }}</td>
+          <td>{{ c.firstName || '—' }} {{ c.lastName || '' }}</td>
+          <td>{{ c.email || '—' }}</td>
+          <td>{{ c.phone || '—' }}</td>
+          <td>{{ c.currentCompany || '—' }}</td>
+          <td>{{ getSourceLabel(c.source) }}</td>
+          <td>{{ c.totalExperienceYears != null ? c.totalExperienceYears + ' yrs' : '—' }}</td>
+          <td>{{ getStatusLabel(c) }}</td>
+        </tr>
+        <tr *ngIf="candidates.length === 0"><td colspan="8" class="empty-row">No candidates found.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>

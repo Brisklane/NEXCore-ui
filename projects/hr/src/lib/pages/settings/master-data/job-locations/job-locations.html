@@ -1,0 +1,108 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">work</span></div>
+      <div>
+        <h1>Job Locations</h1>
+        <p class="inv-hero-sub">Manage office and work locations for job postings</p>
+      </div>
+    </div>
+    <button class="btn btn-primary" (click)="openCreateForm()">+ New Location</button>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editingLocation ? 'Edit Location' : 'Create Location' }}</h3>
+      @if (saveError) { <div class="alert alert-error">{{ saveError }}</div> }
+      <div class="form-grid">
+        @if (!editingLocation) {
+          <div class="form-group">
+            <label>Location Code</label>
+            <input type="text" [(ngModel)]="formCode" placeholder="e.g. LOC-KHI" maxlength="20" />
+          </div>
+        }
+        <div class="form-group">
+          <label>Location Name *</label>
+          <input type="text" [(ngModel)]="formName" placeholder="e.g. Karachi Head Office" />
+        </div>
+        <div class="form-group">
+          <label>City</label>
+          <input type="text" [(ngModel)]="formCity" placeholder="City" />
+        </div>
+        <div class="form-group">
+          <label>State / Province</label>
+          <input type="text" [(ngModel)]="formState" placeholder="State or Province" />
+        </div>
+        <div class="form-group">
+          <label>Postal Code</label>
+          <input type="text" [(ngModel)]="formPostalCode" placeholder="Postal Code" maxlength="20" />
+        </div>
+        <div class="form-group">
+          <label>Country</label>
+          <input type="text" [(ngModel)]="formCountry" placeholder="e.g. Pakistan" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Address</label>
+        <textarea [(ngModel)]="formAddress" rows="2" placeholder="Full address"></textarea>
+      </div>
+      @if (editingLocation) {
+        <div class="form-group form-check-row">
+          <label><input type="checkbox" [(ngModel)]="formIsActive" /> Active</label>
+        </div>
+      }
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()" [disabled]="saving">Cancel</button>
+        <button class="btn btn-primary" (click)="saveLocation()" [disabled]="saving">
+          {{ saving ? 'Saving…' : (editingLocation ? 'Update' : 'Create') }}
+        </button>
+      </div>
+    </div>
+  }
+
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Code</th>
+            <th>Name</th>
+            <th>City</th>
+            <th>State</th>
+            <th>Country</th>
+            <th>Status</th>
+            <th class="actions-cell">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (loc of locations; track loc.id; let i = $index) {
+            <tr>
+              <td class="row-num">{{ i + 1 }}</td>
+              <td><code class="code-chip">{{ loc.locationCode || '—' }}</code></td>
+              <td>{{ loc.locationName || '—' }}</td>
+              <td>{{ loc.city || '—' }}</td>
+              <td>{{ loc.stateProvince || '—' }}</td>
+              <td>{{ loc.country || '—' }}</td>
+              <td>
+                <span class="badge" [class.badge-active]="loc.isActive" [class.badge-inactive]="!loc.isActive">
+                  {{ loc.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td class="actions-cell">
+                <button class="btn-icon" title="Edit" (click)="openEditForm(loc)">✏️</button>
+                <button class="btn-icon" title="Delete" (click)="deleteLocation(loc)">🗑️</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="8" class="empty-row">No job locations found. Click "+ New Location" to add one.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

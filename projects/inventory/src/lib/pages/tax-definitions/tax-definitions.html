@@ -1,0 +1,64 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">percent</span></div>
+      <div>
+        <h1>Tax Rates</h1>
+        <p class="inv-hero-sub">Tax rates applied to sales and purchase transactions</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Tax Rate</button>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="md-split">
+    <div class="md-list">
+      <div class="md-list-head">
+        <span class="inv-search"><span class="material-symbols-outlined">search</span><input type="text" placeholder="Search tax rates…" [(ngModel)]="filterSearch" (ngModelChange)="onSearchInput()" (keyup.enter)="applyFilters()" /></span>
+        <div class="md-list-head-row"><select class="inv-select" [(ngModel)]="filterStatus" (ngModelChange)="applyFilters()"><option value="">All Statuses</option><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+      </div>
+      <div class="md-list-body">
+        @if (loading) {
+          @for (s of [0,1,2,3,4]; track s) { <div class="md-rec"><span class="skeleton sk-circle" style="width:34px;height:34px"></span><div style="flex:1"><span class="skeleton sk-line" style="width:70%"></span></div></div> }
+        } @else if (items.length === 0) {
+          <div class="inv-empty" style="padding:36px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">percent</span></div><div class="inv-empty-title">No tax rates found</div><div class="inv-empty-text">Add your first tax rate.</div></div>
+        } @else {
+          @for (item of displayItems; track item.id) {
+            <button class="md-rec" [class.selected]="editingItem?.id === item.id" [class.row-new]="item.id === highlighter.id" (click)="openEditForm(item)">
+              <span class="md-rec-ico">{{ item.rate != null ? item.rate + '%' : (item.name || '?').charAt(0) }}</span>
+              <div class="md-rec-main"><span class="md-rec-title">{{ item.name || '—' }}</span><span class="md-rec-sub"><span class="md-rec-code">{{ item.code }}</span>@if (item.taxType) { · {{ item.taxType }} }</span></div>
+              <span class="md-rec-status" [class.on]="item.isActive" [class.off]="!item.isActive"></span>
+            </button>
+          }
+        }
+      </div>
+      @if (totalCount > 0) {
+        <div class="md-list-foot"><span>{{ (page - 1) * pageSize + 1 }}–{{ page * pageSize < totalCount ? page * pageSize : totalCount }} of {{ totalCount | number }}</span><div class="md-pager"><button class="btn-page" (click)="goToPage(page - 1)" [disabled]="page <= 1">Prev</button><button class="btn-page" (click)="goToPage(page + 1)" [disabled]="page >= totalPages">Next</button></div></div>
+      }
+    </div>
+
+    <div class="md-detail">
+      @if (showForm) {
+        <div class="md-detail-head"><span class="md-detail-title">{{ editingItem ? 'Edit Tax Rate' : 'New Tax Rate' }}</span><button class="icon-btn" title="Close" (click)="cancelForm()"><span class="material-symbols-outlined">close</span></button></div>
+        <div class="md-detail-body">
+          <div class="form-grid">
+            <div class="form-group"><label>Code</label><input type="text" [(ngModel)]="formCode" placeholder="Auto-generated" readonly /></div>
+            <div class="form-group"><label>Name</label><input type="text" [(ngModel)]="formName" placeholder="e.g. Standard VAT" /></div>
+            <div class="form-group"><label>Tax Type</label><select [(ngModel)]="formTaxType"><option value="">— Select —</option>@for (t of taxTypes; track t.value) { <option [value]="t.value">{{ t.label }}</option> }</select></div>
+            <div class="form-group"><label>Rate (%)</label><input type="number" [(ngModel)]="formRate" min="0" step="0.01" /></div>
+            <div class="form-check-row"><label><input type="checkbox" [(ngModel)]="formApplyOnSales" /> Apply on sales</label></div>
+            <div class="form-check-row"><label><input type="checkbox" [(ngModel)]="formApplyOnPurchases" /> Apply on purchases</label></div>
+            <div class="form-check-row"><label><input type="checkbox" [(ngModel)]="formIsInclusive" /> Price-inclusive</label></div>
+            <div class="form-check-row"><label><input type="checkbox" [(ngModel)]="formIsActive" /> Active</label></div>
+          </div>
+          <div class="form-actions"><button class="ibtn ibtn--secondary" (click)="cancelForm()">Cancel</button><button class="ibtn ibtn--primary" (click)="save()"><span class="material-symbols-outlined">save</span> {{ editingItem ? 'Save changes' : 'Create tax rate' }}</button></div>
+        </div>
+      } @else {
+        <div class="md-empty"><div class="md-empty-icon"><span class="material-symbols-outlined">percent</span></div><div class="md-empty-title">Manage tax rates</div><div class="md-empty-text">Select a tax rate to edit, or add a new one.</div><button class="btn-brand" style="margin-top:8px" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Tax Rate</button></div>
+      }
+    </div>
+  </div>
+</div>

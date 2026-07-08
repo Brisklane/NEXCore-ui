@@ -1,0 +1,191 @@
+<div class="epi-wrap">
+  <input
+    type="text"
+    class="epi-input"
+    [(ngModel)]="searchText"
+    [placeholder]="placeholder"
+    [disabled]="disabled"
+    (focus)="onFocus()"
+    (input)="onInput()"
+    (blur)="onBlur()"
+    autocomplete="off"
+  />
+
+  @if (showDropdown) {
+    <div class="epi-dropdown">
+      @if (dropdownLoading) {
+        <div class="epi-empty"><span class="epi-dot-load"></span> Searching…</div>
+      }
+      @if (!dropdownLoading && suggestions.length === 0) {
+        <div class="epi-empty">No {{ entityLabel }} found</div>
+      }
+      @for (item of suggestions; track item.id) {
+        <div class="epi-option" (mousedown)="selectSuggestion(item)">
+          <span class="epi-opt-av">{{ dropdownAvatar(item) }}</span>
+          <div class="epi-opt-fields">
+            @for (field of displayFields; track field.key) {
+              @if (fieldValue(item, field.key)) {
+                @switch (field.style) {
+                  @case ('code') {
+                    <span class="epi-field-code">{{ fieldValue(item, field.key) }}</span>
+                  }
+                  @case ('badge') {
+                    <span class="epi-field-badge">{{ fieldValue(item, field.key) }}</span>
+                  }
+                  @default {
+                    <span class="epi-field-name">{{ fieldValue(item, field.key) }}</span>
+                  }
+                }
+              }
+            }
+          </div>
+        </div>
+      }
+      @if (allowCreate && searchText.trim()) {
+        <div class="epi-option epi-option-create" (mousedown)="onCreateRequested()">
+          <span class="epi-create-icon">+</span>
+          <div class="epi-create-body">
+            <span class="epi-create-label">Create new {{ entityLabel }}</span>
+            <div class="epi-create-preview-row">
+              <div class="epi-create-preview-cell">
+                <span class="epi-create-preview-cap">CODE</span>
+                @if (effectiveCreateCode) {
+                  <span class="epi-create-preview-val">
+                    <code class="epi-create-code">{{ effectiveCreateCode }}</code>
+                    <span [class]="codeAlreadyExists ? 'epi-code-status epi-code-taken' : 'epi-code-status epi-code-ok'">
+                      {{ codeAlreadyExists ? 'taken' : 'available' }}
+                    </span>
+                  </span>
+                } @else {
+                  <span class="epi-create-preview-val epi-create-muted">auto</span>
+                }
+              </div>
+              <div class="epi-create-preview-cell">
+                <span class="epi-create-preview-cap">NAME</span>
+                @if (isTypedNumeric) {
+                  <span class="epi-create-preview-val epi-create-muted">
+                    {{ createDefaultName || ('…' + createNameSuffix) }}
+                  </span>
+                } @else {
+                  <span class="epi-create-preview-val">{{ searchText }}{{ createNameSuffix }}</span>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+      <button type="button" class="epi-more" (mousedown)="openPicker()">
+        <span class="material-symbols-outlined">manage_search</span> Browse all {{ entityLabel }}
+      </button>
+    </div>
+  }
+</div>
+
+@if (showPicker) {
+  <div class="epi-overlay" (click)="closePicker()">
+    <div class="epi-card" (click)="$event.stopPropagation()">
+
+      <!-- Header -->
+      <div class="epi-card-head">
+        <div class="epi-card-head-title">
+          <span class="epi-head-ico"><span class="material-symbols-outlined">manage_search</span></span>
+          <div>
+            <h4>{{ entityLabel }}</h4>
+            <span class="epi-head-sub">Search and select a record</span>
+          </div>
+        </div>
+        <div class="epi-card-head-actions">
+          @if (allowCreate) {
+            <button type="button" class="epi-add-btn" (click)="onCreateFromPicker()">
+              <span class="material-symbols-outlined">add</span> Add {{ entityLabel }}
+            </button>
+          }
+          <button type="button" class="epi-close-btn" (click)="closePicker()" title="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Search -->
+      <div class="epi-card-toolbar">
+        <div class="epi-search-wrap">
+          <span class="epi-search-ico"><span class="material-symbols-outlined">search</span></span>
+          <input
+            type="text"
+            class="epi-search-input"
+            [(ngModel)]="pickerSearch"
+            (input)="onPickerSearchChange()"
+            [placeholder]="'Search ' + entityLabel + '…'"
+          />
+          <kbd class="epi-kbd">ESC</kbd>
+        </div>
+      </div>
+
+      <!-- Results as rich record rows -->
+      <div class="epi-results">
+        @if (pickerLoading) {
+          <div class="epi-state"><span class="epi-spinner"></span> Loading {{ entityLabel }}…</div>
+        } @else if (pickerTotal === 0) {
+          <div class="epi-state epi-state-empty">
+            <span class="material-symbols-outlined">search_off</span>
+            <p>No {{ entityLabel }} found</p>
+            <span class="epi-state-hint">Try a different search term</span>
+          </div>
+        } @else {
+          @for (item of pickerPageItems; track item.id) {
+            <button type="button" class="epi-row" (click)="selectFromPicker(item)">
+              <span class="epi-row-av">{{ rowAvatar(item) }}</span>
+              <div class="epi-row-main">
+                <div class="epi-row-title">{{ nameColumn ? fieldValue(item, nameColumn.key) : '' }}</div>
+                @if (metaColumns.length) {
+                  <div class="epi-row-meta">
+                    @for (col of metaColumns; track col.key) {
+                      @if (fieldValue(item, col.key)) {
+                        <span class="epi-meta">{{ fieldValue(item, col.key) }}</span>
+                      }
+                    }
+                  </div>
+                }
+              </div>
+              @if (badgeColumns.length) {
+                <div class="epi-row-badges">
+                  @for (col of badgeColumns; track col.key) {
+                    @if (fieldValue(item, col.key)) {
+                      <span class="epi-cell-badge">{{ fieldValue(item, col.key) }}</span>
+                    }
+                  }
+                </div>
+              }
+              <span class="epi-row-chev"><span class="material-symbols-outlined">chevron_right</span></span>
+            </button>
+          }
+        }
+      </div>
+
+      <!-- Footer: count + pager -->
+      <div class="epi-card-foot">
+        <span class="epi-foot-count">
+          @if (pickerTotal) { Showing <strong>{{ pickerStart }}–{{ pickerEnd }}</strong> of {{ pickerTotal }} }
+          @else { No results }
+        </span>
+        <div class="epi-pagination-controls">
+          @if (pickerLoading) { <span class="epi-spinner"></span> }
+          <button
+            type="button"
+            class="epi-page-btn"
+            (click)="goToPickerPage(pickerPage - 1)"
+            [disabled]="!pickerHasPreviousPage || pickerLoading"
+          ><span class="material-symbols-outlined">chevron_left</span></button>
+          <span class="epi-page-stat">Page {{ pickerPage }}</span>
+          <button
+            type="button"
+            class="epi-page-btn"
+            (click)="goToPickerPage(pickerPage + 1)"
+            [disabled]="!pickerHasNextPage || pickerLoading"
+          ><span class="material-symbols-outlined">chevron_right</span></button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+}

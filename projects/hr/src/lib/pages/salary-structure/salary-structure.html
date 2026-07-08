@@ -1,0 +1,93 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">payments</span></div>
+      <div>
+        <h1>Salary Structures</h1>
+        <p class="inv-hero-sub">Manage employee compensation packages</p>
+      </div>
+    </div>
+    <button class="btn btn-primary" (click)="openCreateForm()">+ New Salary Structure</button>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editingStructure ? 'Edit Salary Structure' : 'Create Salary Structure' }}</h3>
+      <div class="form-grid">
+        @if (!editingStructure) {
+          <div class="form-group">
+            <label>Employee ID *</label>
+            <input type="text" [(ngModel)]="formEmployeeId" placeholder="Employee ID" />
+          </div>
+        }
+        <div class="form-group">
+          <label>Basic Salary *</label>
+          <input type="number" [(ngModel)]="formBasicSalary" min="0" />
+        </div>
+        <div class="form-group">
+          <label>Currency</label>
+          <input type="text" [(ngModel)]="formCurrency" placeholder="USD" />
+        </div>
+        <div class="form-group">
+          <label>Effective From *</label>
+          <input type="date" [(ngModel)]="formEffectiveFrom" />
+        </div>
+        <div class="form-group">
+          <label>Effective To</label>
+          <input type="date" [(ngModel)]="formEffectiveTo" />
+        </div>
+        @if (editingStructure) {
+          <div class="form-group form-check-row">
+            <label><input type="checkbox" [(ngModel)]="formIsActive" /> Active</label>
+          </div>
+        }
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="saveStructure()">{{ editingStructure ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Employee ID</th>
+            <th>Basic Salary</th>
+            <th>Effective From</th>
+            <th>Effective To</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of structures; track s.id) {
+            <tr>
+              <td>{{ s.employeeId }}</td>
+              <td>{{ s.basicSalary | number }} {{ s.currency }}</td>
+              <td>{{ s.effectiveFrom | date:'mediumDate' }}</td>
+              <td>{{ s.effectiveTo ? (s.effectiveTo | date:'mediumDate') : '—' }}</td>
+              <td>
+                <span class="badge" [class.badge-active]="s.isActive" [class.badge-inactive]="!s.isActive">
+                  {{ s.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td>
+                <button class="btn btn-sm btn-secondary" (click)="openEditForm(s)">Edit</button>
+                <button class="btn btn-sm btn-danger" (click)="deleteStructure(s)">Delete</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="6" class="empty-state">No salary structures found.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

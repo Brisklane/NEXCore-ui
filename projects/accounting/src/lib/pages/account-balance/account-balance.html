@@ -1,0 +1,98 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">account_balance_wallet</span></div>
+      <div>
+        <h1>Account Balances</h1>
+        <p class="inv-hero-sub">Query account balances by account and/or fiscal period</p>
+      </div>
+    </div>
+  </div>
+
+  @if (error) {
+    <div class="alert alert-error">{{ error }}</div>
+  }
+
+  <!-- Filters -->
+  <div class="filters-bar">
+    <div class="form-group">
+      <label for="filterMode">Filter By</label>
+      <select id="filterMode" [(ngModel)]="filterMode">
+        <option value="account">Account</option>
+        <option value="period">Fiscal Period</option>
+        <option value="both">Account + Period</option>
+      </select>
+    </div>
+
+    @if (filterMode === 'account' || filterMode === 'both') {
+      <div class="form-group">
+        <label for="accountId">Account ID</label>
+        <input id="accountId" type="text" [(ngModel)]="accountId" placeholder="Enter ledger account ID" />
+      </div>
+    }
+
+    @if (filterMode === 'period' || filterMode === 'both') {
+      <div class="form-group">
+        <label for="periodId">Fiscal Period ID</label>
+        <input id="periodId" type="text" [(ngModel)]="periodId" placeholder="Enter fiscal period ID" />
+      </div>
+    }
+
+    <button class="btn btn-primary" (click)="search()">Search</button>
+  </div>
+
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else if (balances.length > 0) {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" [class.sorted]="sortBy === 'ledgerAccountId'" (click)="sort('ledgerAccountId')">Account ID <span class="sort-icon">{{ sortBy === 'ledgerAccountId' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'fiscalPeriodId'" (click)="sort('fiscalPeriodId')">Period ID <span class="sort-icon">{{ sortBy === 'fiscalPeriodId' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'openingBalance'" (click)="sort('openingBalance')">Opening Balance <span class="sort-icon">{{ sortBy === 'openingBalance' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'debitTotal'" (click)="sort('debitTotal')">Debit Total <span class="sort-icon">{{ sortBy === 'debitTotal' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'creditTotal'" (click)="sort('creditTotal')">Credit Total <span class="sort-icon">{{ sortBy === 'creditTotal' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'closingBalance'" (click)="sort('closingBalance')">Closing Balance <span class="sort-icon">{{ sortBy === 'closingBalance' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'balanceType'" (click)="sort('balanceType')">Balance Type <span class="sort-icon">{{ sortBy === 'balanceType' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (b of displayBalances; track b.id) {
+            <tr>
+              <td>{{ b.ledgerAccountId }}</td>
+              <td>{{ b.fiscalPeriodId }}</td>
+              <td class="number-cell">{{ b.openingBalance | number:'1.2-2' }}</td>
+              <td class="number-cell">{{ b.debitTotal | number:'1.2-2' }}</td>
+              <td class="number-cell">{{ b.creditTotal | number:'1.2-2' }}</td>
+              <td class="number-cell" style="font-weight:600;">{{ b.closingBalance | number:'1.2-2' }}</td>
+              <td>{{ b.balanceType ?? '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      @if (filterMode !== 'both' && balances.length > 0) {
+        <div class="pagination-bar">
+          <div class="pagination-info">
+            <span>Rows per page:</span>
+            <select [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+              @for (opt of pageSizeOptions; track opt) {
+                <option [value]="opt">{{ opt }}</option>
+              }
+            </select>
+            <span>
+              {{ (page - 1) * pageSize + 1 }}–{{ page * pageSize > totalCount ? totalCount : page * pageSize }}
+              of {{ totalCount }}
+            </span>
+          </div>
+          <div class="pagination-controls">
+            <button class="btn-page" [disabled]="page <= 1" (click)="goToPage(page - 1)">&#8249; Prev</button>
+            <span class="page-indicator">Page {{ page }} of {{ totalPages }}</span>
+            <button class="btn-page" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next &#8250;</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

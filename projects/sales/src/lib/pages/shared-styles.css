@@ -1,0 +1,479 @@
+﻿/*
+  Sales page styles.
+*/
+
+.page-container {
+  padding: 24px;
+  font-family: 'Segoe UI', Roboto, sans-serif;
+}
+
+@media (max-width: 600px) {
+  .page-container { padding: 14px; }
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.page-header h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-heading, #1e293b);
+}
+
+.page-header .subtitle {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+}
+
+.btn {
+  padding: 9px 18px;
+  border: none;
+  border-radius: var(--radius-sm, 8px);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.2s ease, background 0.2s, filter 0.2s;
+}
+.btn:active { transform: translateY(1px); }
+
+.btn-primary {
+  background: var(--brand-grad, linear-gradient(135deg, #22c7e6, #2b7fff));
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(43, 127, 255, 0.25);
+}
+.btn-primary:hover { filter: brightness(1.05); box-shadow: 0 6px 16px rgba(43, 127, 255, 0.32); }
+.btn-secondary {
+  background: var(--bg-surface, #fff);
+  color: var(--text-primary, #334155);
+  border: 1px solid var(--border-default, #e2e8f0);
+}
+.btn-secondary:hover { background: var(--bg-muted, #f1f5f9); }
+.btn-danger { background: #ef4444; color: #fff; }
+.btn-danger:hover { background: #dc2626; }
+.btn-warning { background: #f59e0b; color: #fff; }
+.btn-warning:hover { background: #d97706; }
+.btn-success { background: #22c55e; color: #fff; }
+.btn-success:hover { background: #16a34a; }
+.btn-sm { padding: 4px 12px; font-size: 12px; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.alert {
+  padding: 10px 16px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+.alert-error { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+.alert-success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+
+.form-panel {
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-default, #e2e8f0);
+  border-radius: var(--radius, 12px);
+  box-shadow: var(--shadow-sm);
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.form-panel h3 {
+  margin: 0 0 16px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-heading, #1e293b);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-group label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary, #475569);
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 9px 11px;
+  border: 1px solid var(--border-default, #e2e8f0);
+  border-radius: var(--radius-sm, 8px);
+  font-size: 13px;
+  color: var(--text-heading, #1e293b);
+  background: var(--bg-surface, #fff);
+  color-scheme: light;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--accent, #2b7fff);
+  box-shadow: 0 0 0 3px var(--accent-soft, rgba(43, 127, 255, 0.12));
+}
+
+.form-group select option {
+  color: var(--text-heading, #1e293b);
+  background: var(--bg-surface, #fff);
+}
+
+.form-group textarea { resize: vertical; min-height: 60px; }
+
+.form-check-row {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  grid-column: 1 / -1;
+}
+
+.form-check-row label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  justify-content: flex-end;
+}
+
+.filters-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filters-bar select,
+.filters-bar input {
+  padding: 9px 11px;
+  border: 1px solid var(--border-default, #e2e8f0);
+  border-radius: var(--radius-sm, 8px);
+  font-size: 13px;
+  color: var(--text-heading, #1e293b);
+  background: var(--bg-surface, #fff);
+  color-scheme: light;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.filters-bar select:focus,
+.filters-bar input:focus {
+  outline: none;
+  border-color: var(--accent, #2b7fff);
+  box-shadow: 0 0 0 3px var(--accent-soft, rgba(43, 127, 255, 0.12));
+}
+
+.filters-bar select option {
+  color: var(--text-heading, #1e293b);
+  background: var(--bg-surface, #fff);
+}
+
+.table-container {
+  overflow-x: auto;
+  border-radius: var(--radius, 12px);
+  border: 1px solid var(--border-default, #e2e8f0);
+  box-shadow: var(--shadow-sm);
+  background: var(--bg-surface, #fff);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+thead tr { background: var(--bg-muted, #f1f5f9); }
+th { padding: 10px 14px; text-align: left; font-weight: 600; color: var(--text-secondary, #475569); white-space: nowrap; }
+td { padding: 10px 14px; color: var(--text-primary, #334155); border-top: 1px solid #f1f5f9; }
+tbody tr:hover { background: var(--bg-subtle, #f8fafc); }
+
+.actions-cell { display: flex; gap: 6px; }
+
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge-active, .badge-yes { background: #dcfce7; color: #15803d; }
+.badge-inactive, .badge-no { background: #fee2e2; color: #b91c1c; }
+.badge-draft { background: var(--bg-muted, #f1f5f9); color: var(--text-secondary, #475569); }
+.badge-sent { background: #dbeafe; color: #1d4ed8; }
+.badge-accepted { background: #dcfce7; color: #15803d; }
+.badge-rejected { background: #fee2e2; color: #b91c1c; }
+.badge-expired { background: #fef9c3; color: #92400e; }
+.badge-pending { background: #fef9c3; color: #92400e; }
+.badge-shipped { background: #dbeafe; color: #1d4ed8; }
+.badge-delivered { background: #dcfce7; color: #15803d; }
+.badge-cancelled { background: #fee2e2; color: #b91c1c; }
+.badge-confirmed { background: #dbeafe; color: #1d4ed8; }
+.badge-overdue { background: #fee2e2; color: #b91c1c; }
+.badge-placed { background: #e0e7ff; color: #4338ca; }
+.badge-processing { background: #fef9c3; color: #92400e; }
+.badge-pendingapproval { background: #fef3c7; color: #b45309; }
+.badge-approved { background: #dcfce7; color: #15803d; }
+.badge-readyforpickup { background: #e0e7ff; color: #4338ca; }
+.badge-outfordelivery { background: #dbeafe; color: #1d4ed8; }
+.badge-partiallydelivered { background: #cffafe; color: #0e7490; }
+.badge-invoiced { background: #f0fdf4; color: #166534; }
+.badge-paid { background: #dcfce7; color: #15803d; }
+.badge-partiallypaid { background: #fef9c3; color: #92400e; }
+.badge-onhold { background: #fef2f2; color: #b91c1c; }
+.badge-rejected { background: #fee2e2; color: #b91c1c; }
+.badge-returned { background: #fdf4ff; color: #7e22ce; }
+.badge-refunded { background: #f3e8ff; color: #6d28d9; }
+.badge-closed { background: var(--bg-muted, #f1f5f9); color: var(--text-secondary, #475569); }
+
+/* ── Channel badges ────────────────────────────────── */
+.channel-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ch-online     { background: #dbeafe; color: #1d4ed8; }   /* blue — Online / Mobile */
+.ch-webpos     { background: #ede9fe; color: #5b21b6; }   /* purple — Web POS */
+.ch-android    { background: #e0e7ff; color: #3730a3; }   /* indigo — Android POS */
+.ch-pos        { background: #f3e8ff; color: #6d28d9; }   /* violet — In-Store POS */
+.ch-phone      { background: #ffedd5; color: #c2410c; }   /* orange — Phone */
+.ch-b2b        { background: #ccfbf1; color: #0f766e; }   /* teal — B2B */
+.ch-portal     { background: #cffafe; color: #0e7490; }   /* cyan — Portal */
+.ch-marketplace{ background: #fef9c3; color: #92400e; }   /* amber — Marketplace */
+.ch-partner    { background: #dcfce7; color: #15803d; }   /* green — Partner */
+.ch-default    { background: var(--bg-muted, #f1f5f9); color: var(--text-secondary, #475569); }   /* gray — Other / Direct */
+
+/* Catch-all: every select in the page renders with visible text regardless of container */
+.page-container select {
+  color: var(--text-heading, #1e293b);
+  background: var(--bg-surface, #fff);
+  color-scheme: light;
+}
+.page-container select option {
+  color: var(--text-heading, #1e293b);
+  background: var(--bg-surface, #fff);
+}
+
+.loading-spinner {
+  text-align: center;
+  padding: 32px;
+  color: var(--text-muted, #94a3b8);
+  font-size: 14px;
+}
+
+.detail-panel {
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-default, #e2e8f0);
+  border-radius: var(--radius, 12px);
+  box-shadow: var(--shadow-sm);
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.detail-panel h3 {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.detail-grid {
+  display: grid;
+  /* auto-fit (not auto-fill) so cards expand to fill the row instead of leaving
+     empty phantom columns and dead space on the right. */
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.detail-item label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted, #94a3b8);
+  text-transform: uppercase;
+}
+
+.detail-item p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--text-heading, #1e293b);
+}
+
+/* ─── Detail panel: header / sections / label-value rows ─────────────────── */
+.detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border-default, #e2e8f0);
+  flex-wrap: wrap;
+}
+.detail-header h3 {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-heading, #1e293b);
+}
+.detail-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.detail-header-title .detail-qt-name {
+  color: var(--text-muted, #64748b);
+  font-size: 13px;
+}
+.detail-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.detail-section {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-default, #e2e8f0);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.detail-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted, #94a3b8);
+  margin-bottom: 8px;
+}
+
+.detail-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 7px 0;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border-subtle, #f1f5f9);
+}
+.detail-row:last-child { border-bottom: none; }
+.detail-row > span:first-child {
+  color: var(--text-muted, #64748b);
+  white-space: nowrap;
+}
+.detail-row > span:last-child {
+  color: var(--text-heading, #1e293b);
+  font-weight: 500;
+  text-align: right;
+}
+
+.detail-row-total {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 2px solid var(--border-default, #e2e8f0);
+  border-bottom: none;
+}
+.detail-row-total > span:first-child,
+.detail-row-total > span:last-child {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-heading, #1e293b);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NexCore premium design uplift (appended 2026-07-03)
+   Restyles the shared legacy primitives so every page in this module adopts the
+   modern look at once. These rules sit at the end of the file, so they override
+   the earlier clone definitions at equal specificity. Uses global theme tokens
+   (--accent, --radius, --shadow-*, --bg-*, --border-*, --text-*) with fallbacks.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Page header ─────────────────────────────────────────────────────────── */
+.page-header { align-items: flex-start; margin-bottom: 22px; padding-bottom: 0; border-bottom: none; }
+.page-header h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: var(--text-heading, #0f172a); }
+.page-header .subtitle { font-size: 13.5px; color: var(--text-secondary, #64748b); }
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.btn {
+  border-radius: 10px; font-weight: 600; font-size: 13.5px; padding: 9px 16px;
+  transition: background .14s ease, box-shadow .14s ease, transform .05s ease, filter .14s ease;
+}
+.btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(43, 127, 255, .28); }
+.btn-primary { background: var(--accent, #2b7fff); color: #fff; border: 1px solid transparent; box-shadow: 0 1px 2px rgba(43, 127, 255, .25); }
+.btn-primary:hover { filter: brightness(1.05); box-shadow: 0 6px 16px rgba(43, 127, 255, .32); }
+.btn-secondary { background: var(--bg-surface, #fff); color: var(--text-heading, #0f172a); border: 1px solid var(--border-default, #e2e8f0); }
+.btn-secondary:hover { background: var(--bg-subtle, #f8fafc); border-color: var(--border-strong, #cbd5e1); }
+.btn-danger { background: #ef4444; color: #fff; border: 1px solid transparent; }
+.btn-danger:hover { background: #dc2626; }
+.btn-sm { padding: 6px 12px; font-size: 12.5px; border-radius: 8px; }
+.btn-icon { border-radius: 9px; transition: background .13s ease, color .13s ease; }
+.btn-icon:hover { background: var(--bg-subtle, #f1f5f9); }
+
+/* ── Data tables → premium card ──────────────────────────────────────────── */
+.table-container {
+  border: 1px solid var(--border-default, #e8edf3); border-radius: 16px; overflow: hidden;
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(15, 23, 42, .06)); background: var(--bg-surface, #fff);
+}
+.table-container table { border-collapse: collapse; width: 100%; }
+.table-container thead th {
+  background: var(--bg-subtle, #f8fafc); font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--text-secondary, #64748b); padding: 13px 16px;
+  border-bottom: 1px solid var(--border-default, #e8edf3);
+}
+.table-container tbody td { padding: 12px 16px; border-bottom: 1px solid var(--border-light, #f1f5f9); font-size: 13.5px; }
+.table-container tbody tr { transition: background .12s ease; }
+.table-container tbody tr:hover { background: color-mix(in srgb, var(--accent, #2b7fff) 4%, transparent); }
+.table-container tbody tr:last-child td { border-bottom: none; }
+
+/* ── Status badges → semantic pills ──────────────────────────────────────── */
+.badge {
+  border-radius: 999px; font-size: 11.5px; font-weight: 600; padding: 3px 10px;
+  display: inline-flex; align-items: center; gap: 5px; line-height: 1.4;
+}
+.badge-active, .badge-yes, .badge-posted, .badge-approved, .badge-success { background: #dcfce7; color: #15803d; }
+.badge-inactive, .badge-no, .badge-cancelled, .badge-rejected, .badge-danger { background: #fef2f2; color: #b91c1c; }
+.badge-draft, .badge-pending, .badge-warning { background: #fef3c7; color: #92400e; }
+
+/* ── Filter bar inputs ───────────────────────────────────────────────────── */
+.filters-bar input, .filters-bar select, .filter-search input, .filter-select {
+  border-radius: 9px; border: 1px solid var(--border-default, #e2e8f0);
+}
+.filters-bar input:focus-visible, .filters-bar select:focus-visible,
+.filter-search input:focus-visible, .filter-select:focus-visible {
+  outline: none; box-shadow: 0 0 0 3px rgba(43, 127, 255, .20); border-color: var(--accent, #2b7fff);
+}
+
+/* ── Form primitives ─────────────────────────────────────────────────────── */
+.form-panel { border-radius: 16px; border: 1px solid var(--border-default, #e8edf3); box-shadow: var(--shadow-sm, 0 1px 3px rgba(15, 23, 42, .06)); }
+.form-control, .form-group input, .form-group select, .form-group textarea {
+  border-radius: 9px; border: 1px solid var(--border-default, #e2e8f0);
+}
+.form-control:focus-visible, .form-group input:focus-visible,
+.form-group select:focus-visible, .form-group textarea:focus-visible {
+  outline: none; box-shadow: 0 0 0 3px rgba(43, 127, 255, .18); border-color: var(--accent, #2b7fff);
+}
+
+/* ── Pagination ──────────────────────────────────────────────────────────── */
+.btn-page { border-radius: 8px; border: 1px solid var(--border-default, #e2e8f0); transition: background .12s ease; }
+.btn-page:hover:not(:disabled) { background: var(--bg-subtle, #f8fafc); }

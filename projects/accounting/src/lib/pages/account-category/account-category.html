@@ -1,0 +1,52 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">category</span></div>
+      <div>
+        <h1>Account Categories</h1>
+        <p class="inv-hero-sub">Sub-classifications used when creating and categorising ledger accounts</p>
+      </div>
+    </div>
+  </div>
+
+  @if (error) {
+    <div class="alert alert-error">{{ error }}</div>
+  }
+
+  <div class="filters-bar">
+    <span class="filter-search">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search by name or description…" [(ngModel)]="filterSearch" (ngModelChange)="onSearchInput()" (keyup.enter)="applyFilters()" />
+      @if (filterSearch) { <button class="search-clear" title="Clear search" (click)="filterSearch = ''; applyFilters()">×</button> }
+    </span>
+  </div>
+
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" [class.sorted]="sortBy === 'name'" (click)="sort('name')">Category Name <span class="sort-icon">{{ sortBy === 'name' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'type'" (click)="sort('type')">Type <span class="sort-icon">{{ sortBy === 'type' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'normalBalance'" (click)="sort('normalBalance')">Normal Balance <span class="sort-icon">{{ sortBy === 'normalBalance' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (cat of categories; track cat.id) {
+            <tr>
+              <td><strong>{{ cat.name }}</strong></td>
+              <td><span class="badge">{{ cat.type }}</span></td>
+              <td>{{ cat.normalBalance }}</td>
+              <td>{{ cat.description ?? '—' }}</td>
+            </tr>
+          } @empty {
+            <tr><td colspan="4" class="empty-row">No categories found.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

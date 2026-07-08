@@ -1,0 +1,157 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">schedule</span></div>
+      <div>
+        <h1>Work Center Shifts</h1>
+        <p class="inv-hero-sub">Configure shifts and availability for manufacturing work centers.</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" type="button" (click)="openCreate()" [disabled]="!workCenters.length">
+        <span class="material-symbols-outlined">add</span> New Shift
+      </button>
+    </div>
+  </div>
+
+  <div class="toolbar-row">
+    <div class="toolbar-group">
+      <label>Filter by Work Center</label>
+      <select [(ngModel)]="selectedWorkCenterId" (ngModelChange)="onWorkCenterChange($event)">
+        <option value="">All Work Centers</option>
+        @for (center of workCenters; track center.id) {
+          <option [value]="center.id">{{ center.name }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  @if (error) {
+    <div class="alert alert-error">{{ error }}</div>
+  }
+
+  @if (info) {
+    <div class="alert alert-info">{{ info }}</div>
+  }
+
+  @if (selectedWorkCenterId) {
+    <div class="alert alert-info">
+      Showing shifts for: <strong>{{ getSelectedWorkCenterName() }}</strong>
+    </div>
+  }
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editing ? 'Edit Shift' : 'Create Shift' }}</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Shift Name *</label>
+          <input type="text" [(ngModel)]="formShiftName" placeholder="Morning Shift" />
+          @if (getShiftNameError()) {
+            <small class="field-error">{{ getShiftNameError() }}</small>
+          }
+        </div>
+        <div class="form-group">
+          <label>Work Center *</label>
+          <select [(ngModel)]="formWorkCenterId">
+            @for (center of workCenters; track center.id) {
+              <option [value]="center.id">{{ center.name }}</option>
+            }
+          </select>
+          @if (getWorkCenterError()) {
+            <small class="field-error">{{ getWorkCenterError() }}</small>
+          }
+        </div>
+        <div class="form-group">
+          <label>Start Time</label>
+          <input type="time" [(ngModel)]="formStartTime" />
+          @if (getStartTimeError()) {
+            <small class="field-error">{{ getStartTimeError() }}</small>
+          }
+        </div>
+        <div class="form-group">
+          <label>End Time</label>
+          <input type="time" [(ngModel)]="formEndTime" />
+          @if (getEndTimeError()) {
+            <small class="field-error">{{ getEndTimeError() }}</small>
+          }
+        </div>
+        <div class="form-group">
+          <label>Working Days</label>
+          <div class="days-checkbox-group">
+            @for (day of allDays; track day) {
+              <label class="day-checkbox">
+                <input type="checkbox" [(ngModel)]="formSelectedDays[day.value]" [name]="'day_' + day.value" /> {{ day.label }}
+              </label>
+            }
+          </div>
+          @if (getWorkingDaysError()) {
+            <small class="field-error">{{ getWorkingDaysError() }}</small>
+          }
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" type="button" (click)="cancel()">Cancel</button>
+        <button class="btn btn-primary" type="button" (click)="save()" [disabled]="loading">
+          {{ editing ? 'Update' : 'Create' }}
+        </button>
+      </div>
+    </div>
+  }
+
+  @if (!workCenters.length) {
+    <div class="alert alert-info">
+      No work centers available. Please create a work center first.
+    </div>
+  }
+
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th class="sortable" [class.sorted]="sortBy === 'shiftName'" (click)="sort('shiftName')">Shift <span class="sort-icon">{{ sortBy === 'shiftName' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+          <th class="sortable" [class.sorted]="sortBy === 'workCenterId'" (click)="sort('workCenterId')">Work Center <span class="sort-icon">{{ sortBy === 'workCenterId' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+          <th class="sortable" [class.sorted]="sortBy === 'startTime'" (click)="sort('startTime')">Start <span class="sort-icon">{{ sortBy === 'startTime' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+          <th class="sortable" [class.sorted]="sortBy === 'endTime'" (click)="sort('endTime')">End <span class="sort-icon">{{ sortBy === 'endTime' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+          <th class="sortable" [class.sorted]="sortBy === 'workingDays'" (click)="sort('workingDays')">Days <span class="sort-icon">{{ sortBy === 'workingDays' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of pagedShifts; track row.id) {
+          <tr [class.row-new]="row.id === highlighter.id">
+            <td>{{ row.shiftName }}</td>
+            <td>{{ getWorkCenterName(row.workCenterId) }}</td>
+            <td>{{ row.startTime }}</td>
+            <td>{{ row.endTime }}</td>
+            <td>{{ row.workingDays }}</td>
+            <td class="actions-cell">
+              <button class="btn-icon" type="button" (click)="openEdit(row)">✏️</button>
+              <button class="btn-icon" type="button" (click)="delete(row)">🗑️</button>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="6" class="empty-row">No shifts found for this work center.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    @if (shifts.length > 0) {
+      <div class="pagination-bar">
+        <div class="pagination-info">
+          Rows per page:
+          <select [(ngModel)]="shiftPageSize" (ngModelChange)="onShiftPageSizeChange()">
+            @for (s of pageSizeOptions; track s) { <option [value]="s">{{ s }}</option> }
+          </select>
+          <span>Showing {{ (shiftPage - 1) * shiftPageSize + 1 }} to {{ shiftPage * shiftPageSize < shifts.length ? shiftPage * shiftPageSize : shifts.length }} of {{ shifts.length }} entries</span>
+        </div>
+        <div class="pagination-controls">
+          <button class="btn-page" (click)="goToShiftPage(shiftPage - 1)" [disabled]="shiftPage <= 1">Prev</button>
+          <span class="page-indicator">Page {{ shiftPage }} of {{ shiftTotalPages }}</span>
+          <button class="btn-page" (click)="goToShiftPage(shiftPage + 1)" [disabled]="shiftPage >= shiftTotalPages">Next</button>
+        </div>
+      </div>
+    }
+  </div>
+</div>

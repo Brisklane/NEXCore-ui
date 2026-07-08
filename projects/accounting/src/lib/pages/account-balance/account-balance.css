@@ -1,0 +1,6 @@
+@import '../shared-styles.css';
+
+.number-cell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

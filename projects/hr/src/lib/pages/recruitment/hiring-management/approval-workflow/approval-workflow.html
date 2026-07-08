@@ -1,0 +1,217 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">schema</span></div>
+      <div>
+        <h1>Approval Workflow</h1>
+        <p class="inv-hero-sub">View and act on approval requests</p>
+      </div>
+    </div>
+    <button class="btn btn-primary" (click)="openSubmitForm()">+ Submit Approval Request</button>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  @if (showSubmitForm) {
+    <div class="form-panel">
+      <h3>Submit New Approval Request</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Entity Type *</label>
+          <input type="text" [(ngModel)]="submitEntityType" placeholder="e.g. JobRequisition" />
+        </div>
+        <div class="form-group">
+          <label>Entity ID *</label>
+          <input type="text" [(ngModel)]="submitEntityId" placeholder="UUID of the entity" />
+        </div>
+        <div class="form-group">
+          <label>Workflow Config</label>
+          <select [(ngModel)]="submitWorkflowConfigId">
+            <option value="">— Auto-detect from config —</option>
+            @for (w of workflows; track w.id) {
+              <option [value]="w.id">{{ w.workflowName }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Requested By Employee ID *</label>
+          <input type="text" [(ngModel)]="submitRequestedByEmployeeId" placeholder="Employee UUID" />
+        </div>
+        <div class="form-group">
+          <label>Subject Title</label>
+          <input type="text" [(ngModel)]="submitSubjectTitle" placeholder="e.g. Software Engineer Requisition" />
+        </div>
+        <div class="form-group">
+          <label>Summary</label>
+          <input type="text" [(ngModel)]="submitSummary" placeholder="Brief description" />
+        </div>
+        <div class="form-group">
+          <label>Comments</label>
+          <input type="text" [(ngModel)]="submitComments" placeholder="Optional comments" />
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="closeSubmitForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="submitNewApproval()">Submit</button>
+      </div>
+    </div>
+  }
+
+  <div class="approval-layout">
+    <!-- Left: Approval Request List -->
+    <div class="approval-list">
+      @if (loading) {
+        <div class="loading-spinner">Loading...</div>
+      } @else {
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Subject</th>
+                <th>Entity Type</th>
+                <th>Status</th>
+                <th>Level</th>
+                <th>Requested</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (a of approvals; track a.id) {
+                <tr [class.selected-row]="selectedApproval?.id === a.id">
+                  <td>{{ a.approvalRequestCode }}</td>
+                  <td>{{ a.approvalSubjectTitle ?? a.approvalDisplayName }}</td>
+                  <td>{{ a.entityType }}</td>
+                  <td><span class="status-badge">{{ a.overallStatusLabel }}</span></td>
+                  <td>{{ a.currentLevel }} / {{ a.totalLevels }}</td>
+                  <td>{{ a.requestedAt | date:'shortDate' }}</td>
+                  <td>
+                    <button class="btn btn-sm btn-secondary" (click)="selectApproval(a)">View</button>
+                    <button class="btn btn-sm btn-danger" (click)="cancelApproval(a)">Cancel</button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="7" class="empty-cell">No approval requests found.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+
+    <!-- Right: Detail Panel -->
+    @if (selectedApproval) {
+      <div class="approval-detail">
+        <div class="detail-header">
+          <h3>{{ selectedApproval.approvalSubjectTitle ?? selectedApproval.approvalRequestCode }}</h3>
+          <button class="btn btn-sm btn-secondary" (click)="selectedApproval = null">Close</button>
+        </div>
+
+        <div class="detail-meta">
+          <p><strong>Code:</strong> {{ selectedApproval.approvalRequestCode }}</p>
+          <p><strong>Entity:</strong> {{ selectedApproval.entityType }} — {{ selectedApproval.entityId }}</p>
+          <p><strong>Status:</strong> {{ selectedApproval.overallStatusLabel }}</p>
+          <p><strong>Level:</strong> {{ selectedApproval.currentLevel }} / {{ selectedApproval.totalLevels }}</p>
+          <p><strong>Workflow:</strong> {{ getWorkflowName(selectedApproval.workflowConfigId) }}</p>
+          @if (selectedApproval.approvalSummary) {
+            <p><strong>Summary:</strong> {{ selectedApproval.approvalSummary }}</p>
+          }
+          @if (selectedApproval.comments) {
+            <p><strong>Comments:</strong> {{ selectedApproval.comments }}</p>
+          }
+        </div>
+
+        <!-- Steps -->
+        @if (selectedApproval.steps && selectedApproval.steps.length > 0) {
+          <div class="steps-section">
+            <h4>Approval Steps</h4>
+            <table>
+              <thead>
+                <tr>
+                  <th>Level</th>
+                  <th>Approver Type</th>
+                  <th>Status</th>
+                  <th>Action Date</th>
+                  <th>Comments</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (step of selectedApproval.steps; track step.id) {
+                  <tr [class.current-step]="step.stepLevel === selectedApproval.currentLevel">
+                    <td>{{ step.stepLevel }}</td>
+                    <td>{{ step.approverType }}</td>
+                    <td><span class="status-badge">{{ step.statusLabel }}</span></td>
+                    <td>{{ step.actionDate ? (step.actionDate | date:'short') : '—' }}</td>
+                    <td>{{ step.comments }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+        <!-- Approve / Reject Actions -->
+        @if (!actionMode) {
+          <div class="action-buttons">
+            <button class="btn btn-success" (click)="startApprove()">Approve Current Step</button>
+            <button class="btn btn-danger" (click)="startReject()">Reject Current Step</button>
+          </div>
+        }
+
+        @if (actionMode === 'approve') {
+          <div class="form-panel">
+            <h4>Approve Step</h4>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Approver *</label>
+                <select [(ngModel)]="actionApproverEmployeeId">
+                  <option value="">-- Select Employee --</option>
+                  @for (e of employees; track e.id) {
+                    <option [value]="e.id">{{ e.firstName }} {{ e.lastName }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Comments</label>
+                <input type="text" [(ngModel)]="actionComments" placeholder="Optional comments" />
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-secondary" (click)="cancelAction()">Cancel</button>
+              <button class="btn btn-success" (click)="submitApprove()">Confirm Approve</button>
+            </div>
+          </div>
+        }
+
+        @if (actionMode === 'reject') {
+          <div class="form-panel">
+            <h4>Reject Step</h4>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Approver *</label>
+                <select [(ngModel)]="actionApproverEmployeeId">
+                  <option value="">-- Select Employee --</option>
+                  @for (e of employees; track e.id) {
+                    <option [value]="e.id">{{ e.firstName }} {{ e.lastName }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Rejection Reason</label>
+                <input type="text" [(ngModel)]="actionRejectionReason" placeholder="Reason for rejection" />
+              </div>
+              <div class="form-group">
+                <label>Comments</label>
+                <input type="text" [(ngModel)]="actionComments" placeholder="Optional comments" />
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-secondary" (click)="cancelAction()">Cancel</button>
+              <button class="btn btn-danger" (click)="submitReject()">Confirm Reject</button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>

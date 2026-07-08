@@ -1,0 +1,110 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">work</span></div>
+      <div>
+        <h1>Job Templates</h1>
+        <p class="inv-hero-sub">Manage reusable job template definitions</p>
+      </div>
+    </div>
+    <button class="btn btn-primary" (click)="openCreateForm()">+ New Template</button>
+  </div>
+
+  <div *ngIf="error" class="alert alert-error">{{ error }}</div>
+
+  <div *ngIf="showForm" class="form-panel">
+    <h3>{{ editingTemplate ? 'Edit Template' : 'Create Template' }}</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Template Code *</label>
+        <input type="text" [(ngModel)]="formTemplateCode" placeholder="e.g. SE_DEV" />
+      </div>
+      <div class="form-group">
+        <label>Template Name *</label>
+        <input type="text" [(ngModel)]="formTemplateName" placeholder="Template name" />
+      </div>
+      <div class="form-group">
+        <label>Job Title *</label>
+        <input type="text" [(ngModel)]="formJobTitle" placeholder="Job title" />
+      </div>
+      <div class="form-group">
+        <label>Department</label>
+        <select [(ngModel)]="formDepartmentId">
+          <option value="">-- Select Department --</option>
+          <option *ngFor="let d of departments" [value]="d.id">{{ d.name }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Designation</label>
+        <select [(ngModel)]="formDesignationId">
+          <option value="">-- Select Designation --</option>
+          <option *ngFor="let d of designations" [value]="d.id">{{ d.name }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Employment Type</label>
+        <select [(ngModel)]="formEmploymentType">
+          <option value="">-- Select Employment Type --</option>
+          <option *ngFor="let type of employmentTypes" [value]="type">{{ type }}</option>
+        </select>
+      </div>
+      <div class="form-group form-group-full">
+        <label>Description</label>
+        <textarea [(ngModel)]="formDescription" rows="3" placeholder="Optional description"></textarea>
+      </div>
+      <div class="form-group form-group-full checkbox-group">
+        <label>
+          <input type="checkbox" [(ngModel)]="formIsActive" /> Active
+        </label>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+      <button class="btn btn-primary" (click)="saveTemplate()">{{ editingTemplate ? 'Update' : 'Create' }}</button>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loading-spinner">Loading...</div>
+
+  <ng-container *ngIf="!loading">
+    <div *ngIf="templates.length > 0; else noTemplates">
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Name</th>
+              <th>Job Title</th>
+              <th>Department</th>
+              <th>Designation</th>
+              <th>Employment</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let template of templates">
+              <td>{{ template.templateCode }}</td>
+              <td>{{ template.templateName }}</td>
+              <td>{{ template.jobTitle }}</td>
+              <td>{{ getDepartmentName(template.departmentId) }}</td>
+              <td>{{ getDesignationName(template.designationId) }}</td>
+              <td>{{ template.employmentType || '—' }}</td>
+              <td><span class="badge badge-status">{{ template.isActive ? 'Active' : 'Inactive' }}</span></td>
+              <td>
+                <button class="btn btn-sm btn-secondary" (click)="openEditForm(template)">Edit</button>
+                <button class="btn btn-sm btn-danger" (click)="deleteTemplate(template)">Delete</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <ng-template #noTemplates>
+      <div class="empty-state">
+        <p>No templates found. Create one to get started.</p>
+      </div>
+    </ng-template>
+  </ng-container>
+</div>

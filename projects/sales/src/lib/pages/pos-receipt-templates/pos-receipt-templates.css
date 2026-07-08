@@ -1,0 +1,101 @@
+@import '../shared-styles.css';
+
+.form-group-full { grid-column: 1 / -1; }
+
+/* ── Logo field ─────────────────────────────────────────── */
+.logo-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.logo-upload-btn { cursor: pointer; margin: 0; }
+.logo-inline {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8fafc;
+}
+.logo-thumb { max-height: 40px; max-width: 120px; object-fit: contain; border-radius: 4px; }
+.logo-inline-tag { font-size: 12px; color: #64748b; }
+
+.section-title {
+  margin: 18px 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.toggles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px 16px;
+}
+
+.toggle-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* ── Two-column form + live preview ───────────────────────────────────────── */
+.rt-layout { display: flex; gap: 24px; align-items: flex-start; }
+.rt-fields { flex: 1; min-width: 0; }
+.rt-preview-pane { flex: 0 0 auto; position: sticky; top: 16px; }
+.rt-preview-label {
+  font-size: 13px; font-weight: 600; color: #475569; text-transform: uppercase;
+  letter-spacing: .04em; margin-bottom: 8px;
+}
+.rt-preview-note { font-size: 11px; color: #94a3b8; margin-top: 8px; max-width: 320px; }
+
+@media (max-width: 900px) {
+  .rt-layout { flex-direction: column; }
+  .rt-preview-pane { position: static; align-self: center; }
+}
+
+/* ── Receipt mock ─────────────────────────────────────────────────────────── */
+.rt-receipt {
+  background: #fff; color: #1f2937; border: 1px solid #e2e8f0;
+  box-shadow: 0 6px 20px rgba(0,0,0,.08); border-radius: 4px;
+  padding: 14px 12px; font-family: 'Courier New', monospace; font-size: 12px;
+  line-height: 1.45; max-width: 100%;
+}
+.rt-logo { display: block; max-height: 48px; margin: 0 auto 8px; object-fit: contain; }
+.rt-biz { text-align: center; font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+.rt-c { text-align: center; }
+.rt-msg { margin: 6px 0; font-style: italic; }
+.rt-policy { font-size: 11px; color: #64748b; margin-top: 4px; }
+.rt-save { color: #15803d; font-weight: 600; margin-top: 4px; }
+.rt-hr { border-top: 1px dashed #cbd5e1; margin: 8px 0; }
+.rt-meta, .rt-row, .rt-line { display: flex; justify-content: space-between; gap: 8px; }
+.rt-line-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rt-total { font-weight: 700; font-size: 13px; margin-top: 4px; }
+.rt-barcode { text-align: center; font-size: 18px; letter-spacing: -1px; margin-top: 8px; }
+.rt-qr {
+  width: 56px; height: 56px; margin: 8px auto 0; border: 2px solid #1f2937;
+  display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;
+}
+
+/* ── Premium config-card uplift (POS pages) ─────────────────────────────── */
+.page-container .form-panel {
+  border-radius: 18px;
+  border: 1px solid var(--border-default, #e8edf3);
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(15, 23, 42, .06));
+  background: var(--bg-surface, #fff);
+  padding: 20px 22px;
+}
+.page-container .form-panel > h3,
+.page-container .form-panel-header {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 15px; font-weight: 750; color: var(--text-heading, #0f172a);
+  padding-bottom: 12px; margin-bottom: 16px;
+  border-bottom: 1px solid var(--border-light, #f1f5f9);
+}
+.page-container .ds-section-title,
+.page-container .form-section-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--accent, #2b7fff);
+}
+.page-container .ds-preview-pane {
+  border-radius: 14px;
+  background: var(--bg-subtle, #f8fafc);
+  border: 1px solid var(--border-default, #e8edf3);
+}
+.page-container .ds-preview-sample { color: var(--accent, #2b7fff); }

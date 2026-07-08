@@ -1,0 +1,208 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">insights</span></div>
+      <div>
+        <h1>Campaign Performance</h1>
+        <p class="inv-hero-sub">See which campaigns are generating leads and how budget is being used</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="ibtn ibtn--secondary" (click)="loadData()" [disabled]="loading">
+        <span class="material-symbols-outlined">refresh</span> {{ loading ? 'Loading...' : 'Refresh' }}
+      </button>
+    </div>
+  </div>
+
+  @if (error) {
+    <div class="alert alert-error">{{ error }}</div>
+  }
+
+  @if (loading) {
+    <div class="loading-spinner">
+      <div class="spinner"></div>
+      <p>Loading campaign data...</p>
+    </div>
+  } @else {
+
+    <!-- KPI Summary Cards -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-icon kpi-icon-indigo">
+          <span class="material-symbols-outlined">campaign</span>
+        </div>
+        <div class="kpi-body">
+          <div class="kpi-value">{{ totalCampaigns }}</div>
+          <div class="kpi-label">Total Campaigns</div>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon kpi-icon-green">
+          <span class="material-symbols-outlined">check_circle</span>
+        </div>
+        <div class="kpi-body">
+          <div class="kpi-value">{{ activeCampaigns }}</div>
+          <div class="kpi-label">Active Campaigns</div>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon kpi-icon-purple">
+          <span class="material-symbols-outlined">person_add</span>
+        </div>
+        <div class="kpi-body">
+          <div class="kpi-value">{{ totalLeads }}</div>
+          <div class="kpi-label">Total Leads Generated</div>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon kpi-icon-amber">
+          <span class="material-symbols-outlined">emoji_events</span>
+        </div>
+        <div class="kpi-body">
+          @if (topCampaign) {
+            <div class="kpi-value">{{ topCampaign.leadCount }}</div>
+            <div class="kpi-label" [title]="topCampaign.campaign.campaignName ?? ''">
+              Best: {{ topCampaign.campaign.campaignName || 'Unnamed' }}
+            </div>
+          } @else {
+            <div class="kpi-value">—</div>
+            <div class="kpi-label">Top Campaign</div>
+          }
+        </div>
+      </div>
+    </div>
+
+    @if (stats.length === 0) {
+      <div class="empty-state">
+        <p>No campaign data yet. Create campaigns and assign leads from the Leads page to start tracking performance.</p>
+      </div>
+    } @else {
+
+      <!-- Leads per Campaign — horizontal bar chart -->
+      <div class="section-card">
+        <div class="section-card-header">
+          <h3 class="section-title">Leads Generated per Campaign</h3>
+          <span class="section-hint">Sorted by lead count — highest first</span>
+        </div>
+
+        <div class="chart-container">
+          @for (stat of stats; track stat.campaign.id) {
+            <div class="chart-row">
+              <div class="chart-label-col">
+                <span class="chart-name" [title]="stat.campaign.campaignName ?? ''">
+                  {{ stat.campaign.campaignName || 'Unnamed' }}
+                </span>
+                @if (stat.campaign.type) {
+                  <span class="chart-type-badge">{{ stat.campaign.type }}</span>
+                }
+              </div>
+              <div class="chart-bar-track">
+                <div
+                  class="chart-bar"
+                  [style.width.%]="getBarWidth(stat.leadCount)"
+                  [class.chart-bar-zero]="stat.leadCount === 0"
+                ></div>
+              </div>
+              <div class="chart-count-col">
+                <span class="chart-count">{{ stat.leadCount }}</span>
+                <span class="chart-count-unit">lead{{ stat.leadCount !== 1 ? 's' : '' }}</span>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="chart-legend">
+          <span class="chart-legend-swatch"></span>
+          Leads assigned via "Add to Campaign"
+        </div>
+      </div>
+
+      <!-- Campaign Breakdown Table -->
+      <div class="section-card">
+        <div class="section-card-header">
+          <h3 class="section-title">Campaign Breakdown</h3>
+        </div>
+
+        <div class="table-scroll">
+          <table class="perf-table">
+            <thead>
+              <tr>
+                <th>Campaign</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Leads</th>
+                <th>Budgeted Cost</th>
+                <th>Actual Cost</th>
+                <th>Budget Used</th>
+                <th>Expected Revenue</th>
+                <th>Dates</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (stat of stats; track stat.campaign.id) {
+                <tr>
+                  <td>
+                    <div class="cell-primary">{{ stat.campaign.campaignName || 'Unnamed' }}</div>
+                    <div class="cell-sub">
+                      <span class="active-dot" [class.active-dot-on]="stat.campaign.active"></span>
+                      {{ stat.campaign.active ? 'Active' : 'Inactive' }}
+                    </div>
+                  </td>
+                  <td class="text-secondary">{{ stat.campaign.type || '—' }}</td>
+                  <td>
+                    <span class="status-chip" [ngClass]="getCampaignStatusClass(stat.campaign.status)">
+                      {{ stat.campaign.status || 'Unknown' }}
+                    </span>
+                  </td>
+                  <td>
+                    @if (stat.leadCount > 0) {
+                      <span class="leads-count">{{ stat.leadCount }}</span>
+                    } @else {
+                      <span class="text-muted">0</span>
+                    }
+                  </td>
+                  <td class="text-secondary">{{ formatCurrency(stat.campaign.budgetedCost) }}</td>
+                  <td class="text-secondary">{{ formatCurrency(stat.campaign.actualCost) }}</td>
+                  <td>
+                    @if (stat.campaign.budgetedCost && stat.campaign.budgetedCost > 0) {
+                      <div class="budget-wrap">
+                        <div class="budget-track">
+                          <div
+                            class="budget-bar"
+                            [ngClass]="getBudgetBarClass(stat.budgetUsedPct)"
+                            [style.width.%]="getBudgetBarWidth(stat.budgetUsedPct)"
+                          ></div>
+                        </div>
+                        <span class="budget-pct" [ngClass]="getBudgetBarClass(stat.budgetUsedPct)">
+                          {{ stat.budgetUsedPct }}%
+                        </span>
+                      </div>
+                    } @else {
+                      <span class="text-muted">—</span>
+                    }
+                  </td>
+                  <td class="text-secondary">{{ formatCurrency(stat.campaign.expectedRevenue) }}</td>
+                  <td class="text-secondary">
+                    @if (stat.campaign.startDate || stat.campaign.endDate) {
+                      <div class="date-range">
+                        <span>{{ formatDate(stat.campaign.startDate) }}</span>
+                        <span class="date-sep">→</span>
+                        <span>{{ formatDate(stat.campaign.endDate) }}</span>
+                      </div>
+                    } @else {
+                      —
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    }
+  }
+</div>

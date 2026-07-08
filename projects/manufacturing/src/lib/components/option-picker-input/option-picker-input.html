@@ -1,0 +1,96 @@
+<div class="ppi-wrap">
+  <input
+    #inputEl
+    type="text"
+    class="ppi-input"
+    [(ngModel)]="searchText"
+    [placeholder]="placeholder"
+    [disabled]="disabled"
+    (focus)="onFocus()"
+    (input)="onInput()"
+    (blur)="onBlur()"
+    autocomplete="off"
+  />
+</div>
+
+@if (showDropdown) {
+  <div class="ppi-dropdown" [ngStyle]="dropdownStyle">
+    @if (suggestions.length === 0) {
+      <div class="ppi-empty">No {{ entityLabel }} found</div>
+    }
+    @for (item of suggestions; track item.id) {
+      <div class="ppi-option" (mousedown)="selectSuggestion(item)">
+        <div class="ppi-option-inner">
+          <span class="ppi-name">{{ item.label }}</span>
+          @if (item.meta) {
+            <span class="ppi-meta-hint">{{ getMetaHint(item) }}</span>
+          }
+        </div>
+      </div>
+    }
+    <button type="button" class="ppi-more" (mousedown)="openPicker()">Search more...</button>
+  </div>
+}
+
+@if (showPicker) {
+  <div class="ppi-overlay" (click)="closePicker()">
+    <div class="ppi-card" (click)="$event.stopPropagation()">
+      <div class="ppi-card-head">
+        <h4>Search: {{ entityLabel }}</h4>
+        <button type="button" class="ppi-close-btn" (click)="closePicker()" title="Close">✕</button>
+      </div>
+      <div class="ppi-card-toolbar">
+        <input
+          type="text"
+          class="ppi-search-input"
+          [(ngModel)]="pickerSearch"
+          (input)="onPickerSearchChange()"
+          placeholder="Type to filter..."
+        />
+        <div class="ppi-page-stat">{{ pickerItems.length }} of {{ options.length }}</div>
+      </div>
+      <div class="ppi-table-wrap">
+        <table class="ppi-table">
+          <thead>
+            <tr>
+              @if (columns.length > 0) {
+                @for (col of columns; track col.key) {
+                  <th>{{ col.header }}</th>
+                }
+              } @else {
+                <th>{{ entityLabel }}</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @if (options.length === 0) {
+              <tr><td [attr.colspan]="columns.length || 1" class="ppi-empty-row">No {{ entityLabel }} available</td></tr>
+            } @else if (pickerItems.length === 0) {
+              <tr><td [attr.colspan]="columns.length || 1" class="ppi-empty-row">No matches found</td></tr>
+            } @else {
+              @for (item of pickerItems; track item.id) {
+                <tr class="ppi-select-row" (click)="selectFromPicker(item)">
+                  @if (columns.length > 0) {
+                    @for (col of columns; track col.key) {
+                      <td>
+                        @if (col.key === 'status') {
+                          <span class="ppi-status-badge" [class.ppi-badge-active]="item.meta?.[col.key] === 'Active'" [class.ppi-badge-inactive]="item.meta?.[col.key] !== 'Active'">
+                            {{ item.meta?.[col.key] || '—' }}
+                          </span>
+                        } @else {
+                          {{ item.meta?.[col.key] || '—' }}
+                        }
+                      </td>
+                    }
+                  } @else {
+                    <td>{{ item.label }}</td>
+                  }
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+}

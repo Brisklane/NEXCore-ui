@@ -1,0 +1,233 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">playlist_add</span></div>
+      <div>
+        <h1>Planned Orders</h1>
+        <p class="inv-hero-sub">MRP-generated and manual planned production orders</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreate()"><span class="material-symbols-outlined">add</span> New Planned Order</button>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="kpi-strip">
+    <div class="kpi-card kpi-brand"><div class="kpi-top"><span class="kpi-label">Total Orders</span><span class="kpi-icon"><span class="material-symbols-outlined">list_alt</span></span></div><div class="kpi-value">{{ totalCount }}</div></div>
+    <div class="kpi-card kpi-cyan"><div class="kpi-top"><span class="kpi-label">Planned</span><span class="kpi-icon"><span class="material-symbols-outlined">calendar_month</span></span></div><div class="kpi-value">{{ plannedCount }}</div></div>
+    <div class="kpi-card kpi-violet"><div class="kpi-top"><span class="kpi-label">Firmed</span><span class="kpi-icon"><span class="material-symbols-outlined">lock</span></span></div><div class="kpi-value">{{ firmedCount }}</div></div>
+    <div class="kpi-card kpi-amber"><div class="kpi-top"><span class="kpi-label">Released</span><span class="kpi-icon"><span class="material-symbols-outlined">rocket_launch</span></span></div><div class="kpi-value">{{ releasedCount }}</div></div>
+    <div class="kpi-card kpi-success"><div class="kpi-top"><span class="kpi-label">Total Planned Qty</span><span class="kpi-icon"><span class="material-symbols-outlined">inventory_2</span></span></div><div class="kpi-value">{{ totalPlannedQty | number:'1.0-0' }}</div></div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (convertSuccess) { <div class="alert alert-success">{{ convertSuccess }}</div> }
+
+  <!-- Convert to Production Order Modal -->
+  @if (showConvertModal && convertingOrder) {
+    <div class="modal-overlay" (click)="cancelConvert()">
+      <div class="modal-panel" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Convert to Production Order</h3>
+          <button class="btn-icon" (click)="cancelConvert()">✕</button>
+        </div>
+
+        <div class="convert-summary">
+          <div class="summary-row">
+            <span class="summary-label">Product</span>
+            <span class="summary-value">{{ getProductDisplayLabel(convertingOrder.productId, convertingOrder.productName) }}</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Source</span>
+            <span class="summary-value">{{ convertingOrder.sourceType || '—' }}</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Required By</span>
+            <span class="summary-value">{{ convertingOrder.requiredDate | date:'mediumDate' }}</span>
+          </div>
+        </div>
+
+        @if (convertError) { <div class="alert alert-error">{{ convertError }}</div> }
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Quantity to Produce *</label>
+            <input type="number" [(ngModel)]="convertQty" min="1" />
+          </div>
+          <div class="form-group">
+            <label>Bill of Material *</label>
+            <lib-option-picker-input
+              [options]="convertBomOptions"
+              [value]="convertBomLabel"
+              [entityLabel]="'Bill of Material'"
+              [columns]="bomColumns"
+              placeholder="Search BOM..."
+              (optionSelected)="onConvertBomSelected($event)"
+            />
+            @if (convertBomOptions.length === 0) {
+              <span class="field-note">No BOM found for this product. Create one first.</span>
+            }
+          </div>
+          <div class="form-group">
+            <label>Routing *</label>
+            <lib-option-picker-input
+              [options]="convertRoutingOptions"
+              [value]="convertRoutingLabel"
+              [entityLabel]="'Routing'"
+              [columns]="routingColumns"
+              placeholder="Search Routing..."
+              (optionSelected)="onConvertRoutingSelected($event)"
+            />
+          </div>
+          <div class="form-group">
+            <label>Start Date</label>
+            <input type="date" [(ngModel)]="convertStartDate" />
+          </div>
+          <div class="form-group">
+            <label>End / Due Date</label>
+            <input type="date" [(ngModel)]="convertEndDate" />
+          </div>
+          <div class="form-group form-group-wide">
+            <label>Notes</label>
+            <textarea [(ngModel)]="convertNotes" rows="2"></textarea>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn btn-secondary" (click)="cancelConvert()" [disabled]="convertLoading">Cancel</button>
+          <button class="btn btn-primary" (click)="confirmConvert()" [disabled]="convertLoading">
+            {{ convertLoading ? 'Creating...' : 'Convert to Production Order' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <div class="ux-help-box" role="note">
+    <strong>MRP Guidance</strong>
+    Planned orders should be generated from demand and constraints, then firmed/released with minimal manual overrides.
+  </div>
+
+  <div class="row-legend" role="note">
+    <span class="legend-swatch legend-overdue"></span>
+    <span>Highlighted rows indicate overdue planned orders (required date has passed and status is still Planned or Firmed).</span>
+  </div>
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editing ? 'Edit Planned Order' : 'Create Planned Order' }}</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Product *</label>
+          <lib-product-picker-input
+            [value]="productDisplayText"
+            [disabled]="!!editing"
+            placeholder="Type product code or name..."
+            (productSelected)="onProductSelected($event)"
+          />
+        </div>
+        <div class="form-group">
+          <label>Planned Quantity *</label>
+          <input type="number" [(ngModel)]="formQuantity" min="1" />
+        </div>
+        <div class="form-group">
+          <label>Required Date</label>
+          <input type="date" [(ngModel)]="formPlannedEnd" />
+        </div>
+        <div class="form-group">
+          <label>Source</label>
+          <select [(ngModel)]="formSource">
+            <option value="">-- Select Source --</option>
+            @for (s of sourceOptions; track s) { <option [value]="s">{{ s }}</option> }
+          </select>
+        </div>
+        @if (editing) {
+          <div class="form-group">
+            <label>Status</label>
+            <select [(ngModel)]="formStatus">@for (s of statusOptions; track s) { <option [value]="s">{{ s }}</option> }</select>
+          </div>
+        }
+        <div class="form-group form-group-wide">
+          <label>Notes</label>
+          <textarea [(ngModel)]="formNotes" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancel()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()">{{ editing ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <input type="text" class="filter-search" [(ngModel)]="filterSearch" (ngModelChange)="onFilterChange()" placeholder="Search by product or source..." />
+    <select class="filter-select" [(ngModel)]="filterStatus" (ngModelChange)="onFilterChange()">
+      <option value="all">All Statuses</option>
+      @for (s of statusOptions; track s) { <option [value]="s">{{ s }}</option> }
+    </select>
+    <span class="filter-count">{{ filteredItems.length }} of {{ totalCount }}</span>
+  </div>
+
+  @if (loading) { <div class="loading-spinner">Loading...</div> } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" [class.sorted]="sortBy === 'productName'" (click)="sort('productName')">Product <span class="sort-icon">{{ sortBy === 'productName' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'plannedQty'" (click)="sort('plannedQty')">Planned Qty <span class="sort-icon">{{ sortBy === 'plannedQty' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'requiredDate'" (click)="sort('requiredDate')">Required Date <span class="sort-icon">{{ sortBy === 'requiredDate' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'sourceType'" (click)="sort('sourceType')">Source <span class="sort-icon">{{ sortBy === 'sourceType' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'status'" (click)="sort('status')">Status <span class="sort-icon">{{ sortBy === 'status' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'notes'" (click)="sort('notes')">Notes <span class="sort-icon">{{ sortBy === 'notes' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of displayRows; track row.id) {
+            <tr [class.row-overdue]="isOverdue(row)" [class.row-new]="row.id === highlighter.id">
+              <td>
+                <div class="cell-primary">{{ getProductDisplayLabel(row.productId, row.productName) }}</div>
+                @if (!row.productName && !hasProductCatalogLabel(row.productId)) { <div class="cell-secondary guid-hint">Product profile missing</div> }
+              </td>
+              <td>{{ row.plannedQty | number:'1.0-2' }}</td>
+              <td [class.overdue-date]="isOverdue(row)">{{ row.requiredDate | date:'mediumDate' }}</td>
+              <td>{{ row.sourceType || '—' }}</td>
+              <td><span class="badge {{ getStatusClass(row.status) }}">{{ row.status }}</span></td>
+              <td class="cell-notes">{{ row.notes || '—' }}</td>
+              <td class="actions-cell">
+                @if (row.status === 'Planned' || row.status === 'Draft') {
+                  <button class="btn-xs btn-action" (click)="quickUpdateStatus(row, 'Firmed')">Firm</button>
+                }
+                @if (row.status === 'Firmed') {
+                  <button class="btn-xs btn-convert" (click)="openConvertModal(row)">Convert to PO</button>
+                }
+                <button class="btn-icon" (click)="openEdit(row)" title="Edit">✏️</button>
+                <button class="btn-icon" (click)="delete(row)" title="Delete">🗑️</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="7" class="empty-row">No planned orders found</td></tr>
+          }
+        </tbody>
+      </table>
+      @if (filteredItems.length > 0) {
+        <div class="pagination-bar">
+          <div class="pagination-info">
+            <span>Rows per page:</span>
+            <select [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+              @for (opt of pageSizeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+            </select>
+            <span>Showing {{ (page - 1) * pageSize + 1 }} to {{ page * pageSize > totalCount ? totalCount : page * pageSize }} of {{ totalCount }} entries</span>
+          </div>
+          <div class="pagination-controls">
+            <button class="btn-page" [disabled]="page <= 1" (click)="goToPage(page - 1)">&#8249; Prev</button>
+            <span class="page-indicator">Page {{ page }} of {{ totalPages }}</span>
+            <button class="btn-page" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next &#8250;</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

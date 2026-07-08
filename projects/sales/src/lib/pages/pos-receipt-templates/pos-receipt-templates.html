@@ -1,0 +1,234 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">receipt</span></div>
+      <div>
+        <h1>Receipt Templates</h1>
+        <p class="inv-hero-sub">Headers, footers and layout for thermal receipts, HTML receipts and invoice documents</p>
+      </div>
+    </div>
+    <button class="btn-brand" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> Add Template</button>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (successMsg) { <div class="alert alert-success">{{ successMsg }}</div> }
+
+  <!-- ── Create / Edit form ───────────────────────────────── -->
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editing ? 'Edit Template' : 'New Template' }}</h3>
+
+      <div class="rt-layout">
+      <div class="rt-fields">
+
+      <h4 class="section-title">General</h4>
+      <div class="form-grid form-grid-3">
+        <div class="form-group">
+          <label>Template Name *</label>
+          <input type="text" [(ngModel)]="form.templateName" placeholder="e.g. Main store 80mm" />
+        </div>
+        <div class="form-group">
+          <label>Paper Size</label>
+          <select [(ngModel)]="form.paperSize">
+            @for (p of paperSizes; track p) { <option [value]="p">{{ p }}</option> }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Default</label>
+          <select [(ngModel)]="form.isDefault">
+            <option [ngValue]="false">No</option>
+            <option [ngValue]="true">Yes</option>
+          </select>
+        </div>
+      </div>
+
+      <h4 class="section-title">Header</h4>
+      <div class="form-grid form-grid-3">
+        <div class="form-group">
+          <label>Business Name</label>
+          <input type="text" [(ngModel)]="form.headerBusinessName" />
+        </div>
+        <div class="form-group">
+          <label>Logo</label>
+          @if (logoPreviewSrc) {
+            <div class="logo-inline">
+              <img class="logo-thumb" [src]="logoPreviewSrc" alt="logo" />
+              <span class="logo-inline-tag">{{ pendingLogoFile ? 'Pending upload' : 'Current logo' }}</span>
+            </div>
+          } @else {
+            <span class="logo-inline-tag">No logo</span>
+          }
+          <div class="logo-actions">
+            <label class="btn btn-secondary btn-sm logo-upload-btn">
+              ⬆ Upload
+              <input type="file" accept="image/*" (change)="onLogoSelected($event)" hidden />
+            </label>
+            @if (companyLogoDataUrl) {
+              <button type="button" class="btn btn-secondary btn-sm" (click)="useCompanyLogo()">Use company logo</button>
+            }
+            @if (logoPreviewSrc) {
+              <button type="button" class="btn btn-secondary btn-sm" (click)="clearLogo()">Clear</button>
+            }
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Tax Registration #</label>
+          <input type="text" [(ngModel)]="form.taxRegistrationNumber" />
+        </div>
+        <div class="form-group">
+          <label>Address Line 1</label>
+          <input type="text" [(ngModel)]="form.headerAddressLine1" />
+        </div>
+        <div class="form-group">
+          <label>Address Line 2</label>
+          <input type="text" [(ngModel)]="form.headerAddressLine2" />
+        </div>
+        <div class="form-group">
+          <label>Phone</label>
+          <input type="text" [(ngModel)]="form.headerPhone" />
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="text" [(ngModel)]="form.headerEmail" />
+        </div>
+        <div class="form-group">
+          <label>Website</label>
+          <input type="text" [(ngModel)]="form.headerWebsite" />
+        </div>
+        <div class="form-group form-group-full">
+          <label>Header Message</label>
+          <input type="text" [(ngModel)]="form.headerMessage" placeholder="Shown under the header" />
+        </div>
+      </div>
+
+      <h4 class="section-title">Footer</h4>
+      <div class="form-grid">
+        <div class="form-group form-group-full">
+          <label>Footer Message</label>
+          <input type="text" [(ngModel)]="form.footerMessage" placeholder="e.g. Thank you for shopping with us" />
+        </div>
+        <div class="form-group form-group-full">
+          <label>Return Policy</label>
+          <input type="text" [(ngModel)]="form.returnPolicy" />
+        </div>
+      </div>
+
+      <h4 class="section-title">Show / hide</h4>
+      <div class="toggles-grid">
+        @for (t of toggles; track t.key) {
+          <label class="toggle-item">
+            <input type="checkbox" [(ngModel)]="form[t.key]" />
+            {{ t.label }}
+          </label>
+        }
+      </div>
+
+      </div><!-- /.rt-fields -->
+
+      <!-- ── Live preview ──────────────────────────────────── -->
+      <div class="rt-preview-pane">
+        <div class="rt-preview-label">Live preview</div>
+        <div class="rt-receipt" [style.width.px]="previewWidthPx">
+          @if (logoPreviewSrc) {
+            <img class="rt-logo" [src]="logoPreviewSrc" alt="logo" />
+          }
+          @if (form.headerBusinessName) { <div class="rt-biz">{{ form.headerBusinessName }}</div> }
+          @if (form.headerAddressLine1) { <div class="rt-c">{{ form.headerAddressLine1 }}</div> }
+          @if (form.headerAddressLine2) { <div class="rt-c">{{ form.headerAddressLine2 }}</div> }
+          @if (form.headerPhone) { <div class="rt-c">Tel: {{ form.headerPhone }}</div> }
+          @if (form.headerEmail) { <div class="rt-c">{{ form.headerEmail }}</div> }
+          @if (form.headerWebsite) { <div class="rt-c">{{ form.headerWebsite }}</div> }
+          @if (form.taxRegistrationNumber) { <div class="rt-c">Tax #: {{ form.taxRegistrationNumber }}</div> }
+          @if (form.headerMessage) { <div class="rt-c rt-msg">{{ form.headerMessage }}</div> }
+
+          <div class="rt-hr"></div>
+          <div class="rt-meta">
+            <span>{{ sample.receiptNo }}</span><span>{{ sample.date }}</span>
+          </div>
+          @if (form.showCashierName) { <div class="rt-meta"><span>Cashier</span><span>{{ sample.cashier }}</span></div> }
+          @if (form.showCustomerName) { <div class="rt-meta"><span>Customer</span><span>{{ sample.customer }}</span></div> }
+          <div class="rt-hr"></div>
+
+          @for (l of sample.lines; track l.name) {
+            <div class="rt-line">
+              <span class="rt-line-name">{{ l.qty }} x {{ l.name }}</span>
+              <span>{{ (l.qty * l.price) | number:'1.2-2' }}</span>
+            </div>
+          }
+
+          <div class="rt-hr"></div>
+          <div class="rt-row"><span>Subtotal</span><span>{{ sampleSubtotal | number:'1.2-2' }}</span></div>
+          @if (form.showDiscountLine) {
+            <div class="rt-row"><span>Discount</span><span>-{{ sample.discount | number:'1.2-2' }}</span></div>
+          }
+          @if (form.showTaxBreakdown) {
+            <div class="rt-row"><span>Tax ({{ sample.taxRate }}%)</span><span>{{ sampleTax | number:'1.2-2' }}</span></div>
+          }
+          <div class="rt-row rt-total"><span>TOTAL</span><span>{{ sampleTotal | number:'1.2-2' }}</span></div>
+          @if (form.showSavingsAmount && sample.discount > 0) {
+            <div class="rt-c rt-save">You saved {{ sample.discount | number:'1.2-2' }}</div>
+          }
+          @if (form.showLoyaltyPoints) {
+            <div class="rt-c">Points earned: {{ sample.points }}</div>
+          }
+
+          <div class="rt-hr"></div>
+          @if (form.footerMessage) { <div class="rt-c rt-msg">{{ form.footerMessage }}</div> }
+          @if (form.returnPolicy) { <div class="rt-c rt-policy">{{ form.returnPolicy }}</div> }
+          @if (form.showBarcode) { <div class="rt-barcode">▌▍▌▎▌▌▍▌▎▍▌▌▎▌▍▌</div><div class="rt-c">{{ sample.receiptNo }}</div> }
+          @if (form.showQrCode) { <div class="rt-qr">▣ QR</div> }
+        </div>
+        <div class="rt-preview-note">Sample data — actual receipts use live transaction values.</div>
+      </div>
+
+      </div><!-- /.rt-layout -->
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()">{{ editing ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  <!-- ── Templates table ───────────────────────────────────── -->
+  @if (loading) {
+    <div class="loading-spinner">Loading templates…</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" [class.sorted]="sortBy === 'templateName'" (click)="sort('templateName')">Template <span class="sort-icon">{{ sortBy === 'templateName' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'paperSize'" (click)="sort('paperSize')">Paper <span class="sort-icon">{{ sortBy === 'paperSize' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'headerBusinessName'" (click)="sort('headerBusinessName')">Header <span class="sort-icon">{{ sortBy === 'headerBusinessName' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'isDefault'" (click)="sort('isDefault')">Default <span class="sort-icon">{{ sortBy === 'isDefault' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (t of displayTemplates; track t.id) {
+            <tr [class.row-new]="t.id === highlighter.id">
+              <td style="font-weight:500;">{{ t.templateName ?? '—' }}</td>
+              <td style="font-size:12px;color:#64748b;">{{ t.paperSize }}</td>
+              <td style="font-size:12px;color:#64748b;">{{ t.headerBusinessName ?? '—' }}</td>
+              <td>
+                @if (t.isDefault) {
+                  <span class="badge badge-accepted">Default</span>
+                } @else {
+                  <button class="btn btn-secondary btn-sm" (click)="setDefault(t)">Set default</button>
+                }
+              </td>
+              <td class="actions-cell">
+                <button class="btn btn-secondary btn-sm" (click)="openEditForm(t)" title="Edit">✎</button>
+                <button class="btn btn-danger btn-sm" (click)="remove(t)" title="Delete" [disabled]="t.isDefault">✕</button>
+              </td>
+            </tr>
+          }
+          @empty {
+            <tr><td colspan="5" style="text-align:center;padding:32px;color:#94a3b8;">No templates yet.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

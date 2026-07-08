@@ -1,0 +1,179 @@
+<div class="page-container">
+
+  <app-page-header icon="shopping_cart" [title]="title" [subtitle]="subtitle">
+    @if (isAllView) {
+      <button class="btn btn-primary" (click)="openCreateForm()">+ New Purchase Order</button>
+    }
+  </app-page-header>
+
+  <app-alert type="error"   [message]="error"></app-alert>
+  <app-alert type="success" [message]="success"></app-alert>
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editingOrder ? 'Edit Purchase Order — ' + editingOrder.orderNumber : 'New Purchase Order' }}</h3>
+
+      <div class="tab-bar">
+        <button [class]="formTab === 'details' ? 'tab-btn tab-btn-active' : 'tab-btn'" (click)="formTab = 'details'">Details</button>
+        <button [class]="formTab === 'lines' ? 'tab-btn tab-btn-active' : 'tab-btn'" (click)="formTab = 'lines'">Lines ({{ formLines.length }})</button>
+        <button [class]="formTab === 'notes' ? 'tab-btn tab-btn-active' : 'tab-btn'" (click)="formTab = 'notes'">Terms &amp; Delivery</button>
+      </div>
+
+      @if (formTab === 'details') {
+        <div class="help-box"><span class="help-icon">ℹ️</span><span>A purchase order moves through <strong>Draft → Confirmed → Sent → Acknowledged → Received → Invoiced → Closed</strong>. The <strong>order number</strong> and all <strong>totals</strong> are generated automatically. <strong>Incoterms</strong> define how delivery and cost responsibility are split between you and the vendor.</span></div>
+        <div class="form-grid">
+          <app-select label="Vendor" required [options]="vendorOptions" [(ngModel)]="form.vendorId" (ngModelChange)="onVendorChange($event)"
+                      [error]="submitted ? errors.vendorId : ''" placeholder="-- Select vendor --"></app-select>
+          <app-input label="Vendor Reference" placeholder="Vendor's PO ref" [(ngModel)]="form.vendorReference"></app-input>
+          <app-input label="Order Date" required type="date" [(ngModel)]="form.orderDate" [error]="submitted ? errors.orderDate : ''"></app-input>
+          <app-input label="Expected Delivery" type="date" [(ngModel)]="form.expectedDeliveryDate"></app-input>
+          <app-select label="Currency" [options]="currencyOptions" [(ngModel)]="form.currencyCode" placeholder=""></app-select>
+          <app-input label="Exchange Rate" type="number" [min]="0" [step]="0.0001" [(ngModel)]="form.exchangeRate"></app-input>
+          <app-select label="Payment Terms" [options]="paymentTermOptions" [(ngModel)]="form.paymentTerms" placeholder=""></app-select>
+          <app-select label="Incoterm" [options]="incotermOptions" [(ngModel)]="form.incoterm" placeholder="-- None --"></app-select>
+          <app-input label="Incoterm Location" placeholder="e.g. Port of Karachi" [(ngModel)]="form.incotermLocation"></app-input>
+          <app-input label="Shipping Amount" type="number" [min]="0" [step]="0.01" [(ngModel)]="form.shippingAmount"></app-input>
+        </div>
+      }
+
+      @if (formTab === 'lines') {
+        @if (submitted && errors.lines) { <div class="alert alert-error">{{ errors.lines }}</div> }
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th><th>Description</th><th style="text-align:right">Qty</th><th>UoM</th>
+                <th style="text-align:right">Unit Price</th><th style="text-align:right">Disc %</th><th style="text-align:right">Tax %</th>
+                <th>Category</th><th style="text-align:right">Line Total</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (l of formLines; track $index; let i = $index) {
+                <tr>
+                  <td>{{ l.itemCode || '—' }}</td>
+                  <td>{{ l.itemDescription }}</td>
+                  <td style="text-align:right">{{ l.quantity }}</td>
+                  <td>{{ l.unitOfMeasureName || '—' }}</td>
+                  <td style="text-align:right">{{ l.unitPrice | number:'1.2-2' }}</td>
+                  <td style="text-align:right">{{ l.discountPercent ?? 0 }}</td>
+                  <td style="text-align:right">{{ l.taxPercent ?? 0 }}</td>
+                  <td>{{ categoryName(l.procurementCategoryId) }}</td>
+                  <td style="text-align:right">{{ lineTotal(l) | number:'1.2-2' }}</td>
+                  <td style="text-align:center"><button type="button" class="btn-remove" (click)="removeLine(i)">✕</button></td>
+                </tr>
+              } @empty { <tr><td colspan="10" class="empty-row">No lines added yet.</td></tr> }
+            </tbody>
+          </table>
+        </div>
+        @if (formLines.length) {
+          <div class="totals-panel">
+            <div class="totals-row"><span>Subtotal</span><span>{{ formLinesTotal | number:'1.2-2' }} {{ form.currencyCode }}</span></div>
+            <div class="totals-row"><span>Shipping</span><span>{{ (form.shippingAmount || 0) | number:'1.2-2' }} {{ form.currencyCode }}</span></div>
+            <div class="totals-row totals-grand"><span>Total</span><span>{{ (formLinesTotal + (form.shippingAmount || 0)) | number:'1.2-2' }} {{ form.currencyCode }}</span></div>
+          </div>
+        }
+
+        <h4 class="section-title">Add Line</h4>
+        <div class="form-grid line-add-grid">
+          <div class="form-group">
+            <label>Item</label>
+            <lib-entity-picker-input
+              [apiUrl]="itemApiUrl" [value]="newLine.itemCode || ''"
+              [displayFields]="itemDisplayFields" [columns]="itemColumns" [pickerPageSize]="25"
+              entityLabel="Item" placeholder="Search items…" (itemSelected)="onLineItemSelect($event)">
+            </lib-entity-picker-input>
+          </div>
+          <app-input label="Description" placeholder="Item description" [(ngModel)]="newLine.itemDescription"></app-input>
+          <app-input label="Quantity" type="number" [min]="0" placeholder="1" [(ngModel)]="newLine.quantity"></app-input>
+          <app-select label="UoM" [options]="uomOptions" [(ngModel)]="newLine.unitOfMeasureId" placeholder="-- Unit --"></app-select>
+          <app-input label="Unit Price" type="number" [min]="0" [step]="0.01" placeholder="0.00" [(ngModel)]="newLine.unitPrice"></app-input>
+          <app-input label="Discount %" type="number" [min]="0" [max]="100" placeholder="0" [(ngModel)]="newLine.discountPercent"></app-input>
+          <app-input label="Tax %" type="number" [min]="0" [max]="100" placeholder="0" [(ngModel)]="newLine.taxPercent"></app-input>
+          <app-select label="Category" [options]="categoryOptions" [(ngModel)]="newLine.procurementCategoryId" placeholder="-- None --"></app-select>
+          <div class="form-group form-check-row">
+            <button type="button" class="btn btn-secondary" (click)="addLine()">+ Add Line</button>
+          </div>
+        </div>
+      }
+
+      @if (formTab === 'notes') {
+        <div class="form-grid">
+          <app-input label="Delivery Street" placeholder="Street" [(ngModel)]="form.deliveryStreet"></app-input>
+          <app-input label="Delivery City" placeholder="City" [(ngModel)]="form.deliveryCity"></app-input>
+          <app-input label="Delivery State" placeholder="State" [(ngModel)]="form.deliveryState"></app-input>
+          <app-input label="Delivery Postal Code" placeholder="Postal code" [(ngModel)]="form.deliveryPostalCode"></app-input>
+          <app-input label="Delivery Country" placeholder="Country" [(ngModel)]="form.deliveryCountry"></app-input>
+          <div class="form-group-full">
+            <app-textarea label="Terms & Conditions" [rows]="3" placeholder="Terms and conditions" [(ngModel)]="form.termsAndConditions"></app-textarea>
+          </div>
+          <div class="form-group-full">
+            <app-textarea label="Notes" [rows]="2" placeholder="Notes visible to vendor" [(ngModel)]="form.notes"></app-textarea>
+          </div>
+          <div class="form-group-full">
+            <app-textarea label="Internal Notes" [rows]="2" placeholder="Internal notes" [(ngModel)]="form.internalNotes"></app-textarea>
+          </div>
+        </div>
+      }
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="saveOrder()" [disabled]="saving">{{ editingOrder ? 'Save Changes' : 'Create Order' }}</button>
+      </div>
+    </div>
+  }
+
+  <div class="filters-bar">
+    <span class="filter-search">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search by order # or vendor…" [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
+      @if (search) { <button class="search-clear" title="Clear search" (click)="search = ''; onSearchChange()">×</button> }
+    </span>
+    <select class="filter-input" [(ngModel)]="statusFilter" (ngModelChange)="onStatusChange()">
+      <option [ngValue]="''">All statuses</option>
+      @for (opt of statusFilterOptions; track opt.value) { <option [ngValue]="opt.value">{{ opt.label }}</option> }
+    </select>
+  </div>
+
+  <app-data-table [sortableAll]="true"
+    [columns]="columns" [data]="orders" [actions]="actions" [loading]="loading"
+    [highlightRowId]="highlighter.id"
+    [totalCount]="totalCount" [page]="page" [pageSize]="pageSize"
+    [sortBy]="sortBy" [sortDirection]="sortDirection"
+    (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)" (sortChange)="onSortChange($event)"
+    emptyMessage="No purchase orders found." (rowAction)="onRowAction($event)">
+  </app-data-table>
+
+</div>
+
+@if (showCancelModal) {
+  <div class="modal-overlay">
+    <div class="modal-box">
+      <h4>Cancel Purchase Order</h4>
+      <div class="form-group">
+        <label>Cancellation Reason <span style="color:#ef4444">*</span></label>
+        <textarea [(ngModel)]="cancellationReason" rows="3" placeholder="Reason for cancellation"
+                  [style.border-color]="cancelSubmitted && !cancellationReason.trim() ? '#ef4444' : null"></textarea>
+        @if (cancelSubmitted && !cancellationReason.trim()) {
+          <span style="color:#ef4444;font-size:12px;margin-top:3px;display:block">A cancellation reason is required.</span>
+        }
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showCancelModal = false">Close</button>
+        <button class="btn btn-danger" (click)="confirmCancel()">Cancel Order</button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showDeleteConfirm) {
+  <div class="modal-overlay">
+    <div class="modal-box">
+      <h4>Delete Purchase Order</h4>
+      <p>Delete <strong>{{ deleteTarget?.orderNumber }}</strong>? This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showDeleteConfirm = false">Cancel</button>
+        <button class="btn btn-danger" (click)="confirmDelete()">Delete</button>
+      </div>
+    </div>
+  </div>
+}

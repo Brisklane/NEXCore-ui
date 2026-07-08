@@ -1,0 +1,284 @@
+<div class="cv-backdrop" (click)="!convertSuccess && cancel()">
+  <div class="cv-dialog" (click)="$event.stopPropagation()">
+
+    <!-- ══════════════════════════════════════════════════════
+         SUCCESS SCREEN  (shown after conversion completes)
+         ══════════════════════════════════════════════════════ -->
+    @if (convertSuccess) {
+      <div class="cv-success-screen">
+
+        <div class="cv-success-circle">
+          <svg width="44" height="44" viewBox="0 0 44 44" fill="none"
+               stroke="#fff" stroke-width="3.5" stroke-linecap="round"
+               stroke-linejoin="round">
+            <polyline points="8,22 18,33 36,12"/>
+          </svg>
+        </div>
+
+        <h3 class="cv-success-heading">Lead Converted Successfully!</h3>
+        <p class="cv-success-desc">
+          An <strong>Account</strong>, <strong>Contact</strong>, and
+          <strong>Deal</strong> have been created and linked together.
+        </p>
+
+        <div class="cv-success-tags">
+          <span class="cv-stag cv-stag-account">🏢 Account</span>
+          <span class="cv-stag cv-stag-contact">👤 Contact</span>
+          <span class="cv-stag cv-stag-deal">💼 Deal</span>
+        </div>
+
+        <button class="cv-success-btn" (click)="onSuccessOk()">
+          Back to Leads
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+               stroke-linejoin="round" style="margin-left:6px;vertical-align:middle">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+
+      </div>
+    }
+
+    <!-- ══════════════════════════════════════════════════════
+         FORM  (shown while converting)
+         ══════════════════════════════════════════════════════ -->
+    @if (!convertSuccess) {
+
+      <!-- ── Header ────────────────────────────────────────────────── -->
+      <div class="cv-header">
+        <div class="cv-header-main">
+          <div class="cv-header-icon">✨</div>
+          <div>
+            <h3 class="cv-title">Convert Lead</h3>
+            <p class="cv-subtitle">
+              Converting <strong>{{ getLeadName() }}</strong> —
+              review and adjust details before confirming
+            </p>
+          </div>
+        </div>
+        <button class="cv-close" (click)="cancel()" title="Cancel">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
+               stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <line x1="1" y1="1" x2="13" y2="13"/>
+            <line x1="13" y1="1" x2="1"  y2="13"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- ── What will be created banner ─────────────────────────────── -->
+      <div class="cv-will-create">
+        <div class="cv-tag cv-tag-account">🏢 Account</div>
+        <div class="cv-arrow">→</div>
+        <div class="cv-tag cv-tag-contact">👤 Contact</div>
+        <div class="cv-plus">+</div>
+        <div class="cv-tag cv-tag-deal">💼 Deal</div>
+        <div class="cv-will-note">will be created and linked together</div>
+      </div>
+
+      <!-- ── Body (scrollable) ──────────────────────────────────────── -->
+      <div class="cv-body">
+        <form [formGroup]="form">
+          <div class="cv-sections">
+
+            <!-- ACCOUNT ──────────────────────────────────────────────── -->
+            <div class="cv-section cv-section-account">
+              <div class="cv-section-header">
+                <span class="cv-section-dot dot-account"></span>
+                Account
+              </div>
+              <div class="cv-fields">
+
+                <div class="cv-field cv-field-full">
+                  <label class="cv-label">Account Name <span class="req">*</span></label>
+                  <input class="cv-input"
+                         [class.cv-input-err]="form.get('accountName')?.invalid && form.get('accountName')?.touched"
+                         type="text" formControlName="accountName" placeholder="Company name"/>
+                </div>
+
+                <div class="cv-field">
+                  <label class="cv-label">Phone</label>
+                  <input class="cv-input" type="text" formControlName="accountPhone" placeholder="Phone number"/>
+                </div>
+
+                <div class="cv-field">
+                  <label class="cv-label">Website</label>
+                  <input class="cv-input" type="text" formControlName="accountWebsite" placeholder="https://"/>
+                </div>
+
+                <!-- Industry — read-only from lead, shown only if provided -->
+                @if (lead.industry) {
+                  <div class="cv-field cv-field-full">
+                    <label class="cv-label">Industry</label>
+                    <div class="cv-readonly">{{ lead.industry }}</div>
+                  </div>
+                }
+
+                <div class="cv-field cv-field-full">
+                  <label class="cv-label">Street</label>
+                  <input class="cv-input" type="text" formControlName="accountStreet" placeholder="Street address"/>
+                </div>
+
+                <!-- Country → State → City → Postal (hierarchical order)
+                     Country & State are read-only from lead, shown only if provided -->
+                @if (lead.country) {
+                  <div class="cv-field">
+                    <label class="cv-label">Country</label>
+                    <div class="cv-readonly">{{ lead.country }}</div>
+                  </div>
+                }
+
+                @if (lead.state) {
+                  <div class="cv-field">
+                    <label class="cv-label">State / Province</label>
+                    <div class="cv-readonly">{{ lead.state }}</div>
+                  </div>
+                }
+
+                <div class="cv-field">
+                  <label class="cv-label">City</label>
+                  <input class="cv-input" type="text" formControlName="accountCity" placeholder="City"/>
+                </div>
+
+                <div class="cv-field">
+                  <label class="cv-label">Postal Code</label>
+                  <input class="cv-input" type="text" formControlName="accountPostal" placeholder="Postal code"/>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- CONTACT ──────────────────────────────────────────────── -->
+            <div class="cv-section cv-section-contact">
+              <div class="cv-section-header">
+                <span class="cv-section-dot dot-contact"></span>
+                Contact
+              </div>
+              <div class="cv-fields">
+
+                <div class="cv-field">
+                  <label class="cv-label">First Name <span class="req">*</span></label>
+                  <input class="cv-input"
+                         [class.cv-input-err]="form.get('contactFirstName')?.invalid && form.get('contactFirstName')?.touched"
+                         type="text" formControlName="contactFirstName" placeholder="First name"/>
+                </div>
+
+                <div class="cv-field">
+                  <label class="cv-label">Last Name <span class="req">*</span></label>
+                  <input class="cv-input"
+                         [class.cv-input-err]="form.get('contactLastName')?.invalid && form.get('contactLastName')?.touched"
+                         type="text" formControlName="contactLastName" placeholder="Last name"/>
+                </div>
+
+                <div class="cv-field cv-field-full">
+                  <label class="cv-label">Title</label>
+                  <input class="cv-input" type="text" formControlName="contactTitle" placeholder="Job title"/>
+                </div>
+
+                <div class="cv-field cv-field-full">
+                  <label class="cv-label">Email</label>
+                  <input class="cv-input" type="email" formControlName="contactEmail" placeholder="Email address"/>
+                </div>
+
+                <div class="cv-field cv-field-full">
+                  <label class="cv-label">Phone</label>
+                  <input class="cv-input" type="text" formControlName="contactPhone" placeholder="Phone number"/>
+                </div>
+
+                <div class="cv-field cv-field-full">
+                  <label class="cv-check-label">
+                    <input type="checkbox" formControlName="contactEmailOptOut"/>
+                    <span>Email Opt-Out</span>
+                  </label>
+                </div>
+
+                <div class="cv-info-row">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                       stroke="#1565C0" stroke-width="2" stroke-linecap="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="16" x2="12" y2="12"/>
+                    <line x1="12" y1="8" x2="12.01" y2="8"/>
+                  </svg>
+                  Contact will be linked to the account above
+                </div>
+
+              </div>
+            </div>
+
+            <!-- DEAL ─────────────────────────────────────────────────── -->
+            <div class="cv-section cv-section-deal">
+              <div class="cv-section-header">
+                <span class="cv-section-dot dot-deal"></span>
+                Deal
+              </div>
+              <div class="cv-fields">
+
+                <div class="cv-field cv-field-full">
+                  <label class="cv-label">Opportunity Name <span class="req">*</span></label>
+                  <input class="cv-input"
+                         [class.cv-input-err]="form.get('dealName')?.invalid && form.get('dealName')?.touched"
+                         type="text" formControlName="dealName" placeholder="Deal / opportunity name"/>
+                </div>
+
+                <div class="cv-field">
+                  <label class="cv-label">Amount ($)</label>
+                  <input class="cv-input" type="number" formControlName="dealAmount"
+                         placeholder="0" min="0" step="0.01"/>
+                </div>
+
+                <div class="cv-field">
+                  <label class="cv-label">Close Date <span class="req">*</span></label>
+                  <input class="cv-input" type="date" formControlName="dealCloseDate"/>
+                </div>
+
+                <div class="cv-field cv-field-full">
+                  <label class="cv-label">Stage <span class="req">*</span></label>
+                  <select class="cv-input" formControlName="dealStage">
+                    @for (s of dealStageOptions; track s) {
+                      <option [value]="s">{{ s }}</option>
+                    }
+                  </select>
+                </div>
+
+                <div class="cv-info-row">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                       stroke="#1565C0" stroke-width="2" stroke-linecap="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="16" x2="12" y2="12"/>
+                    <line x1="12" y1="8" x2="12.01" y2="8"/>
+                  </svg>
+                  Deal will be linked to the account above
+                </div>
+
+              </div>
+            </div>
+
+          </div><!-- /cv-sections -->
+        </form>
+      </div><!-- /cv-body -->
+
+      <!-- ── Footer ────────────────────────────────────────────────── -->
+      <div class="cv-footer">
+        @if (error) {
+          <div class="cv-error">{{ error }}</div>
+        }
+        <div class="cv-footer-actions">
+          <button class="btn btn-secondary" (click)="cancel()" [disabled]="converting">
+            Cancel
+          </button>
+          <button class="btn btn-primary cv-btn-convert"
+                  (click)="confirm()"
+                  [disabled]="converting || form.invalid">
+            @if (converting) {
+              <span class="cv-spinner"></span>
+              Converting…
+            } @else {
+              ✨ Convert Lead
+            }
+          </button>
+        </div>
+      </div>
+
+    }<!-- /!convertSuccess -->
+
+  </div><!-- /cv-dialog -->
+</div><!-- /cv-backdrop -->

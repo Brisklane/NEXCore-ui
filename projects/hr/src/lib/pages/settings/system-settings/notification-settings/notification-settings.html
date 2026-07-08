@@ -1,0 +1,19 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">tune</span></div>
+      <div>
+        <h1>Notification Settings</h1>
+        <p class="inv-hero-sub">Configure notification preferences</p>
+      </div>
+    </div>
+    </div>
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else {
+    <div class="empty-state">
+      <p>Notification settings coming soon...</p>
+    </div>
+  }
+</div>

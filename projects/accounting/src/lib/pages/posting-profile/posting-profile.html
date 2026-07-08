@@ -1,0 +1,78 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">rule</span></div>
+      <div>
+        <h1>Posting Profiles</h1>
+        <p class="inv-hero-sub">View account posting rules by module and transaction type</p>
+      </div>
+    </div>
+  </div>
+
+  @if (error) {
+    <div class="alert alert-error">{{ error }}</div>
+  }
+
+  <!-- Filter -->
+  <div class="filters-bar">
+    <div class="form-group">
+      <label for="moduleName">Module</label>
+      <select id="moduleName" [(ngModel)]="moduleName">
+        <option value="">-- Select Module --</option>
+        @for (mod of moduleOptions; track mod) {
+          <option [value]="mod">{{ mod }}</option>
+        }
+      </select>
+    </div>
+    <button class="btn btn-primary" (click)="searchByModule()">Search</button>
+  </div>
+
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else if (profiles.length > 0) {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" [class.sorted]="sortBy === 'moduleName'" (click)="sort('moduleName')">Module <span class="sort-icon">{{ sortBy === 'moduleName' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'transactionType'" (click)="sort('transactionType')">Transaction Type <span class="sort-icon">{{ sortBy === 'transactionType' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'debitAccountId'" (click)="sort('debitAccountId')">Debit Account ID <span class="sort-icon">{{ sortBy === 'debitAccountId' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'creditAccountId'" (click)="sort('creditAccountId')">Credit Account ID <span class="sort-icon">{{ sortBy === 'creditAccountId' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'taxAccountId'" (click)="sort('taxAccountId')">Tax Account ID <span class="sort-icon">{{ sortBy === 'taxAccountId' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'isActive'" (click)="sort('isActive')">Active <span class="sort-icon">{{ sortBy === 'isActive' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'description'" (click)="sort('description')">Description <span class="sort-icon">{{ sortBy === 'description' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of displayProfiles; track p.id) {
+            <tr>
+              <td>{{ p.moduleName }}</td>
+              <td>{{ p.transactionType }}</td>
+              <td class="id-cell">{{ p.debitAccountId }}</td>
+              <td class="id-cell">{{ p.creditAccountId }}</td>
+              <td class="id-cell">{{ p.taxAccountId ?? '—' }}</td>
+              <td><span class="badge" [class.badge-active]="p.isActive" [class.badge-inactive]="!p.isActive">{{ p.isActive ? 'Active' : 'Inactive' }}</span></td>
+              <td>{{ p.description ?? '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      @if (profiles.length > 0) {
+        <div class="pagination-bar">
+          <div class="pagination-info">
+            <span>Rows per page:</span>
+            <select [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+              @for (opt of pageSizeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+            </select>
+            <span>{{ (page - 1) * pageSize + 1 }}–{{ page * pageSize > totalCount ? totalCount : page * pageSize }} of {{ totalCount }}</span>
+          </div>
+          <div class="pagination-controls">
+            <button class="btn-page" [disabled]="page <= 1" (click)="goToPage(page - 1)">&#8249; Prev</button>
+            <span class="page-indicator">Page {{ page }} of {{ totalPages }}</span>
+            <button class="btn-page" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next &#8250;</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

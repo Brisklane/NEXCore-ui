@@ -1,0 +1,81 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">badge</span></div>
+      <div>
+        <h1>Labor Rates</h1>
+        <p class="inv-hero-sub">Hourly labor rates used by standard costing and actual cost recommendations</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreate()"><span class="material-symbols-outlined">add</span> New Labor Rate</button>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="alert alert-info" role="note">
+    Rules with an <strong>LR-</strong> code prefix are treated as labor rates by Standard Cost. The <strong>Rate Per Hour</strong> is
+    multiplied by the product's routing labor-hours to produce labor cost — so routing operations must exist for a non-zero result.
+    Use <strong>Scope = All</strong> to apply the rate across all work centers, or enter a specific work center code to limit it.
+  </div>
+
+  <div class="md-split">
+    <div class="md-list">
+      <div class="md-list-head">
+        <span class="inv-search"><span class="material-symbols-outlined">search</span><input type="text" [(ngModel)]="filterSearch" (ngModelChange)="onFilterChange()" placeholder="Search rates…" /></span>
+        <div class="md-list-head-row"><select class="inv-select" [(ngModel)]="filterStatus" (ngModelChange)="onFilterChange()"><option value="all">All Statuses</option><option value="active">Active Only</option><option value="inactive">Inactive Only</option></select></div>
+      </div>
+      <div class="md-list-body">
+        @if (loading) {
+          @for (s of [0,1,2,3]; track s) { <div class="md-rec"><span class="skeleton sk-circle" style="width:34px;height:34px"></span><div style="flex:1"><span class="skeleton sk-line" style="width:70%"></span></div></div> }
+        } @else if (filteredItems.length === 0) {
+          <div class="inv-empty" style="padding:36px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">badge</span></div><div class="inv-empty-title">No labor rates</div><div class="inv-empty-text">Create your first labor rate.</div></div>
+        } @else {
+          @for (row of pagedItems; track row.id) {
+            <button class="md-rec" [class.selected]="editing?.id === row.id" [class.row-new]="row.id === highlighter.id" (click)="openEdit(row)">
+              <span class="md-rec-ico">{{ row.value | number:'1.0-0' }}</span>
+              <div class="md-rec-main"><span class="md-rec-title">{{ row.name || '—' }}</span><span class="md-rec-sub"><span class="md-rec-code">{{ row.code }}</span> · {{ row.appliesTo || 'Labor:All' }}</span></div>
+              <span class="md-rec-status" [class.on]="row.isActive" [class.off]="!row.isActive"></span>
+            </button>
+          }
+        }
+      </div>
+      @if (filteredItems.length > 0) {
+        <div class="md-list-foot"><span>{{ (page - 1) * pageSize + 1 }}–{{ page * pageSize < filteredItems.length ? page * pageSize : filteredItems.length }} of {{ filteredItems.length }}</span><div class="md-pager"><button class="btn-page" (click)="goToPage(page - 1)" [disabled]="page <= 1">Prev</button><button class="btn-page" (click)="goToPage(page + 1)" [disabled]="page >= totalPages">Next</button></div></div>
+      }
+    </div>
+
+    <div class="md-detail">
+      @if (showForm) {
+        <div class="md-detail-head">
+          <span class="md-detail-title">{{ editing ? 'Edit Labor Rate' : 'New Labor Rate' }}</span>
+          <button class="icon-btn" title="Close" (click)="cancel()"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="md-detail-body">
+          <div class="form-grid">
+            <div class="form-group"><label>Rate Code <span class="auto-label">auto</span></label><input type="text" [ngModel]="formCode" readonly class="input-readonly" /></div>
+            <div class="form-group"><label>Rate Name *</label><input type="text" [(ngModel)]="formName" placeholder="e.g. Assembly Labor" /></div>
+            <div class="form-group"><label>Rate Per Hour *</label><input type="number" [(ngModel)]="formRatePerHour" min="0" step="0.01" /></div>
+            <div class="form-group"><label>Scope</label><input type="text" [(ngModel)]="formWorkCenterScope" placeholder="All or Work Center Code" /></div>
+            <div class="form-group"><label>Effective From</label><input type="date" [(ngModel)]="formEffectiveFrom" /></div>
+            <div class="form-group"><label>Effective To</label><input type="date" [(ngModel)]="formEffectiveTo" /></div>
+            @if (editing) { <div class="form-group form-check-row"><label><input type="checkbox" [(ngModel)]="formIsActive" /> Active</label></div> }
+          </div>
+          <div class="form-actions">
+            @if (editing) { <button class="ibtn ibtn--danger" style="margin-right:auto" (click)="delete(editing)"><span class="material-symbols-outlined">delete</span> Delete</button> }
+            <button class="ibtn ibtn--secondary" (click)="cancel()">Cancel</button>
+            <button class="ibtn ibtn--primary" (click)="save()"><span class="material-symbols-outlined">save</span> {{ editing ? 'Update' : 'Create' }}</button>
+          </div>
+        </div>
+      } @else {
+        <div class="md-empty">
+          <div class="md-empty-icon"><span class="material-symbols-outlined">badge</span></div>
+          <div class="md-empty-title">Manage labor rates</div>
+          <div class="md-empty-text">Select a labor rate to edit, or create a new one.</div>
+          <button class="btn-brand" style="margin-top:8px" (click)="openCreate()"><span class="material-symbols-outlined">add</span> New Labor Rate</button>
+        </div>
+      }
+    </div>
+  </div>
+</div>

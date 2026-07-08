@@ -1,0 +1,228 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">request_quote</span></div>
+      <div>
+        <h1>Quotations</h1>
+        <p class="inv-hero-sub">Manage sales quotations</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Quotation</button>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (successMsg) { <div class="alert alert-success">{{ successMsg }}</div> }
+
+  <div class="md-split">
+    <!-- ══ LEFT: quotation rows ══ -->
+    <div class="md-list">
+      <div class="md-list-head">
+        <span class="inv-search"><span class="material-symbols-outlined">search</span><input type="text" [(ngModel)]="searchQuery" placeholder="Search quotations…" /></span>
+        <div class="md-list-head-row">
+          <select class="inv-select" [(ngModel)]="statusFilter"><option value="">All Statuses</option>@for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }</select>
+        </div>
+      </div>
+      <div class="md-list-body">
+        @if (loading) {
+          @for (s of [0,1,2,3]; track s) { <div class="md-rec"><span class="skeleton sk-circle" style="width:34px;height:34px"></span><div style="flex:1"><span class="skeleton sk-line" style="width:70%"></span></div></div> }
+        } @else if (filtered.length === 0) {
+          <div class="inv-empty" style="padding:36px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">request_quote</span></div><div class="inv-empty-title">No quotations</div><div class="inv-empty-text">Create your first quotation.</div></div>
+        } @else {
+          @for (q of filtered; track q.id) {
+            <button class="md-rec" [class.selected]="selectedQuotation?.id === q.id" [class.row-new]="q.id === highlighter.id" (click)="viewQuotation(q)">
+              <span class="md-rec-ico"><span class="material-symbols-outlined" style="font-size:17px">request_quote</span></span>
+              <div class="md-rec-main"><span class="md-rec-title">{{ q.quotationNumber || '—' }}</span><span class="md-rec-sub">{{ q.contactName || '—' }} · {{ q.totalAmount | number:'1.0-2' }}</span></div>
+              <span [class]="badgeClass(q.status)">{{ normStatus(q.status) }}</span>
+            </button>
+          }
+        }
+      </div>
+    </div>
+
+    <!-- ══ RIGHT: create form | detail | empty ══ -->
+    <div class="md-detail">
+      @if (showForm) {
+        <div class="md-detail-head">
+          <span class="md-detail-title">New Quotation @if (form.lines.length > 0) { <span class="form-total-badge">{{ formTotal | number:'1.2-2' }}</span> }</span>
+          <button class="icon-btn" title="Close" (click)="cancelForm()"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="md-detail-body">
+          <div class="tab-bar">
+            <button class="tab-btn" [class.active]="activeTab === 'info'" (click)="activeTab = 'info'">Info</button>
+            <button class="tab-btn" [class.active]="activeTab === 'lines'" (click)="activeTab = 'lines'">Lines @if (form.lines.length > 0) { <span class="tab-badge">{{ form.lines.length }}</span> }</button>
+          </div>
+
+          @if (activeTab === 'info') {
+            <div class="form-grid form-grid-3">
+              <div class="form-group"><label>Quotation Name</label><input type="text" [(ngModel)]="form.quotationName" placeholder="Optional name" /></div>
+              <div class="form-group" style="grid-column: 2 / span 2">
+                <label>Customer *</label>
+                <lib-entity-picker-input [options]="contactPickerOptions" [value]="form.contactName || ''" [displayFields]="contactDisplayFields" [columns]="contactColumns" [pickerPageSize]="25" [allowCreate]="true" entityLabel="Customer" placeholder="Search customers..." (itemSelected)="onContactPicked($event)" (createRequested)="openQuickCreateContact($event)" />
+              </div>
+              <div class="form-group"><label>Valid Until</label><input type="date" [(ngModel)]="form.validUntil" /></div>
+              <div class="form-group"><label>Price List</label><select [(ngModel)]="form.priceListId"><option value="">-- None --</option>@for (pl of priceLists; track pl.id) { <option [value]="pl.id">{{ pl.name }}{{ pl.code ? ' (' + pl.code + ')' : '' }}</option> }</select></div>
+              <div class="form-group"><label>Currency *</label><select [(ngModel)]="form.currencyCode">@for (cur of currencies; track cur.code) { <option [value]="cur.code">{{ cur.code }}{{ cur.name ? ' — ' + cur.name : '' }}</option> }</select></div>
+              <div class="form-group">
+                <label>Payment Terms</label>
+                <select [(ngModel)]="form.paymentTerms">
+                  <option [ngValue]="0">Immediate</option><option [ngValue]="1">Net 15</option><option [ngValue]="2">Net 30</option><option [ngValue]="3">Net 45</option><option [ngValue]="4">Net 60</option><option [ngValue]="5">Net 90</option><option [ngValue]="6">2/10 Net 30</option><option [ngValue]="7">End of Month</option><option [ngValue]="8">Cash on Delivery</option><option [ngValue]="9">Advance Payment</option>
+                </select>
+              </div>
+              <div class="form-group" style="grid-column: 1 / -1"><label>Notes</label><textarea [(ngModel)]="form.notes" placeholder="Optional notes" rows="2"></textarea></div>
+            </div>
+          }
+
+          @if (activeTab === 'lines') {
+            <div class="items-section">
+              <table class="items-table">
+                <thead><tr><th>Item</th><th>Qty</th><th>Unit Price</th><th>Disc %</th><th>Line Total</th><th></th></tr></thead>
+                <tbody>
+                  @for (line of form.lines; track $index) {
+                    <tr>
+                      <td>{{ line.productName || itemName(line.productId) }}</td>
+                      <td>
+                        {{ line.quantity }}
+                        @if (availableFor(line.productId) !== null) {
+                          @if (isOverStock(line.productId, line.quantity)) { <small class="stock-label stock-warn">Only {{ availableFor(line.productId) }} available</small> }
+                          @else { <small class="stock-label stock-ok">{{ availableFor(line.productId) }} available</small> }
+                        }
+                      </td>
+                      <td>{{ line.unitPrice | number:'1.2-2' }}</td>
+                      <td>{{ line.discountPercentage ?? 0 }}%</td>
+                      <td>{{ lineTotal(line) | number:'1.2-2' }}</td>
+                      <td><button class="icon-btn danger" (click)="removeLine($index)"><span class="material-symbols-outlined">close</span></button></td>
+                    </tr>
+                  }
+                  <tr class="items-add-row-inline">
+                    <td><lib-entity-picker-input [options]="itemPickerOptions" [value]="newLine.productName || ''" [displayFields]="itemDisplayFields" [columns]="itemColumns" [pickerPageSize]="25" entityLabel="Item" placeholder="Search items..." (itemSelected)="onItemSelect($event['id'])" /></td>
+                    <td>
+                      <input type="number" [(ngModel)]="newLine.quantity" min="1" class="item-input-num" [class.input-error]="isOverStock(newLine.productId, newLine.quantity)" />
+                      @if (newLine.productId) {
+                        @if (isStockLoading(newLine.productId)) { <small class="stock-label">Checking stock…</small> }
+                        @else if (availableFor(newLine.productId) !== null) {
+                          @if (isOverStock(newLine.productId, newLine.quantity)) { <small class="stock-label stock-warn">Only {{ availableFor(newLine.productId) }} available</small> }
+                          @else { <small class="stock-label stock-ok">{{ availableFor(newLine.productId) }} available</small> }
+                        }
+                      }
+                    </td>
+                    <td><input type="number" [(ngModel)]="newLine.unitPrice" min="0" step="0.01" class="item-input-num" /></td>
+                    <td><input type="number" [(ngModel)]="newLine.discountPercentage" min="0" max="100" class="item-input-num" /></td>
+                    <td></td>
+                    <td><button class="ibtn ibtn--sm ibtn--primary" (click)="addLine()"><span class="material-symbols-outlined">add</span> Add</button></td>
+                  </tr>
+                </tbody>
+                @if (form.lines.length > 0) {
+                  <tfoot><tr><td colspan="4" style="text-align:right;font-weight:600">Total</td><td style="font-weight:700">{{ formTotal | number:'1.2-2' }}</td><td></td></tr></tfoot>
+                }
+              </table>
+            </div>
+          }
+
+          <div class="form-actions">
+            <button class="ibtn ibtn--secondary" (click)="cancelForm()">Cancel</button>
+            <button class="ibtn ibtn--primary" (click)="saveQuotation()" [disabled]="saving"><span class="material-symbols-outlined">save</span> {{ saving ? 'Saving...' : 'Create Quotation' }}</button>
+          </div>
+        </div>
+      } @else if (selectedQuotation) {
+        <div class="md-detail-head">
+          <span class="md-detail-title">{{ selectedQuotation.quotationNumber || 'Quotation' }} <span [class]="badgeClass(selectedQuotation.status)">{{ normStatus(selectedQuotation.status) }}</span></span>
+          <div style="display:flex;gap:6px;align-items:center">
+            @if (normStatus(selectedQuotation.status) === 'Draft') {
+              <button class="ibtn ibtn--sm ibtn--primary" (click)="sendQuotation(selectedQuotation.id)"><span class="material-symbols-outlined">send</span> Send</button>
+            }
+            @if (normStatus(selectedQuotation.status) === 'Sent') {
+              <button class="ibtn ibtn--sm ibtn--secondary" (click)="acceptQuotation(selectedQuotation.id)"><span class="material-symbols-outlined">check</span> Accept</button>
+            }
+            @if (normStatus(selectedQuotation.status) === 'Draft') {
+              <button class="icon-btn danger" title="Delete" (click)="deleteQuotation(selectedQuotation.id)"><span class="material-symbols-outlined">delete</span></button>
+            }
+            <button class="icon-btn" title="Close" (click)="closeDetail()"><span class="material-symbols-outlined">close</span></button>
+          </div>
+        </div>
+        <div class="md-detail-body">
+          @if (selectedQuotation.quotationName) { <div style="margin-bottom:12px;font-weight:600;color:var(--text-heading)">{{ selectedQuotation.quotationName }}</div> }
+          <div class="detail-grid">
+            <div class="detail-section">
+              <div class="detail-section-title">Info</div>
+              <div class="detail-row"><span>Customer</span><span>{{ selectedQuotation.contactName || '—' }}</span></div>
+              <div class="detail-row"><span>Quotation Date</span><span>{{ selectedQuotation.quotationDate | date:'mediumDate' }}</span></div>
+              <div class="detail-row"><span>Valid Until</span><span>{{ selectedQuotation.validUntil ? (selectedQuotation.validUntil | date:'mediumDate') : '—' }}</span></div>
+              <div class="detail-row"><span>PO #</span><span>{{ selectedQuotation.customerPONumber || '—' }}</span></div>
+              <div class="detail-row"><span>Payment Terms</span><span>{{ paymentTermsLabel(selectedQuotation.paymentTerms) }}</span></div>
+            </div>
+            <div class="detail-section">
+              <div class="detail-section-title">Financials</div>
+              <div class="detail-row"><span>Subtotal</span><span>{{ selectedQuotation.subtotalAmount | number:'1.2-2' }}</span></div>
+              <div class="detail-row"><span>Discount</span><span>{{ selectedQuotation.discountAmount | number:'1.2-2' }}</span></div>
+              <div class="detail-row"><span>Tax</span><span>{{ selectedQuotation.taxAmount | number:'1.2-2' }}</span></div>
+              <div class="detail-row detail-row-total"><span>Total</span><span>{{ selectedQuotation.totalAmount | number:'1.2-2' }}</span></div>
+            </div>
+          </div>
+          @if (selectedQuotation.lines?.length > 0) {
+            <div class="detail-section" style="margin-top:16px">
+              <div class="detail-section-title">Line Items</div>
+              <table class="items-table">
+                <thead><tr><th>Item</th><th>Qty</th><th>Unit Price</th><th>Disc %</th><th>Tax</th><th>Total</th></tr></thead>
+                <tbody>
+                  @for (line of selectedQuotation.lines; track line.id) {
+                    <tr>
+                      <td>{{ line.productName || line.productCode || line.productId }}</td>
+                      <td>{{ line.quantity }}</td>
+                      <td>{{ line.unitPrice | number:'1.2-2' }}</td>
+                      <td>{{ line.discountPercentage }}%</td>
+                      <td>{{ line.taxCategory ?? '—' }}</td>
+                      <td>{{ line.totalAmount | number:'1.2-2' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="md-empty">
+          <div class="md-empty-icon"><span class="material-symbols-outlined">request_quote</span></div>
+          <div class="md-empty-title">Quotation details</div>
+          <div class="md-empty-text">Select a quotation to view it, or create a new one.</div>
+          <button class="btn-brand" style="margin-top:8px" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Quotation</button>
+        </div>
+      }
+    </div>
+  </div>
+
+  @if (showQuickContact) {
+    <div class="qc-modal-overlay" (click)="cancelQuickContact()">
+      <div class="qc-modal-card" (click)="$event.stopPropagation()">
+        <div class="qc-modal-head">
+          <h4>Add New Customer</h4>
+          <button type="button" class="qc-modal-close" (click)="cancelQuickContact()" title="Close">✕</button>
+        </div>
+        <div class="qc-modal-body">
+          <p class="qc-modal-hint">Capture the essentials now — you can complete the rest later from the CRM module.</p>
+          @if (qcError) { <div class="qc-error">{{ qcError }}</div> }
+          <div class="qc-form-grid">
+            <div class="form-group"><label>First Name *</label><input type="text" [(ngModel)]="qcFirst" placeholder="First name" /></div>
+            <div class="form-group"><label>Last Name</label><input type="text" [(ngModel)]="qcLast" placeholder="Last name" /></div>
+            <div class="form-group"><label>Phone</label><input type="text" [(ngModel)]="qcPhone" placeholder="Phone" /></div>
+            <div class="form-group"><label>Email</label><input type="email" [(ngModel)]="qcEmail" placeholder="name@email.com" /></div>
+            <div class="form-group">
+              <label>Country</label>
+              <select [ngModel]="qcCountry" (ngModelChange)="onQcCountryChange($event)"><option value="">Select country…</option>@for (c of qcCountryList; track c.code) { <option [value]="c.code">{{ c.name }}</option> }</select>
+            </div>
+            <div class="form-group">
+              <label>City</label>
+              <select [(ngModel)]="qcCity" [disabled]="!qcCountry || qcLoadingCities"><option value="">{{ qcLoadingCities ? 'Loading cities…' : (qcCountry ? 'Select city…' : 'Select a country first') }}</option>@for (city of qcCities; track city.id) { <option [value]="city.name">{{ city.name }}</option> }</select>
+            </div>
+            <div class="form-group qc-span-2"><label>Mailing Address</label><input type="text" [(ngModel)]="qcStreet" placeholder="Street / address" /></div>
+          </div>
+        </div>
+        <div class="qc-modal-foot">
+          <button type="button" class="btn btn-secondary" (click)="cancelQuickContact()">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="saveQuickContact()" [disabled]="qcSaving">{{ qcSaving ? 'Saving…' : 'Create Customer' }}</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

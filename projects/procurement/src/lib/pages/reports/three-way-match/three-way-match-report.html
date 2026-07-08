@@ -1,0 +1,39 @@
+<div class="page-container">
+
+  <app-page-header title="3-Way Match" subtitle="Reconcile purchase order, goods receipt &amp; vendor invoice before payment">
+    <button class="btn btn-secondary" (click)="load()" [disabled]="loading">↻ Refresh</button>
+  </app-page-header>
+
+  <app-alert type="error" [message]="error"></app-alert>
+
+  <div class="helper-box">
+    <span class="helper-icon">ℹ️</span>
+    <div>A three-way match compares what was <strong>ordered</strong> (PO), what was <strong>received</strong> (GRN), and what was
+      <strong>invoiced</strong> (vendor bill). When all three agree the invoice is safe to pay. <strong>Exceptions</strong> are
+      invoices where these amounts diverge — review them before releasing payment.</div>
+  </div>
+
+  @if (data) {
+    <div class="kpi-grid">
+      <div class="kpi-card accent"><span class="kpi-label">Total Invoices</span><span class="kpi-value">{{ data.totalInvoices }}</span></div>
+      <div class="kpi-card good"><span class="kpi-label">Fully Matched</span><span class="kpi-value">{{ data.fullyMatched }}</span></div>
+      <div class="kpi-card warn"><span class="kpi-label">Partially Matched</span><span class="kpi-value">{{ data.partiallyMatched }}</span></div>
+      <div class="kpi-card"><span class="kpi-label">Not Matched</span><span class="kpi-value">{{ data.notMatched }}</span></div>
+      <div class="kpi-card bad"><span class="kpi-label">Exceptions</span><span class="kpi-value">{{ data.exceptions }}</span><span class="kpi-sub">need review</span></div>
+    </div>
+
+    <div class="report-card">
+      <h3>Invoices by Match Status</h3>
+      <lib-donut-chart [data]="statusPoints" [asCurrency]="false" caption="Invoices"></lib-donut-chart>
+    </div>
+
+    <div class="report-card">
+      <h3>Invoice Match Detail</h3>
+      <app-data-table [sortableAll]="true" [columns]="columns" [data]="data.rows" [loading]="loading"
+        emptyMessage="No invoices to match."></app-data-table>
+    </div>
+  } @else if (!loading) {
+    <div class="empty-state">No invoice data available yet.</div>
+  }
+
+</div>

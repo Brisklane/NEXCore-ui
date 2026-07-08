@@ -1,0 +1,108 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">badge</span></div>
+      <div>
+        <h1>Employee Contracts</h1>
+        <p class="inv-hero-sub">Manage employment agreements</p>
+      </div>
+    </div>
+    <button class="btn btn-primary" (click)="openCreateForm()">+ New Contract</button>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editingContract ? 'Edit Contract' : 'Create Contract' }}</h3>
+      <div class="form-grid">
+        @if (!editingContract) {
+          <div class="form-group">
+            <label>Employee ID *</label>
+            <input type="text" [(ngModel)]="formEmployeeId" placeholder="Employee ID" />
+          </div>
+          <div class="form-group">
+            <label>Start Date *</label>
+            <input type="date" [(ngModel)]="formStartDate" />
+          </div>
+        }
+        <div class="form-group">
+          <label>End Date</label>
+          <input type="date" [(ngModel)]="formEndDate" />
+        </div>
+        <div class="form-group">
+          <label>Contract Type *</label>
+          <select [(ngModel)]="formContractType">
+            <option value="permanent">Permanent</option>
+            <option value="fixed-term">Fixed-Term</option>
+            <option value="probation">Probation</option>
+            <option value="freelance">Freelance</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Salary *</label>
+          <input type="number" [(ngModel)]="formSalary" min="0" />
+        </div>
+        <div class="form-group">
+          <label>Currency</label>
+          <input type="text" [(ngModel)]="formCurrency" placeholder="USD" />
+        </div>
+        <div class="form-group">
+          <label>Notes</label>
+          <input type="text" [(ngModel)]="formNotes" placeholder="Additional notes" />
+        </div>
+        @if (editingContract) {
+          <div class="form-group form-check-row">
+            <label><input type="checkbox" [(ngModel)]="formIsActive" /> Active</label>
+          </div>
+        }
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="saveContract()">{{ editingContract ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Employee ID</th>
+            <th>Contract Type</th>
+            <th>Start Date</th>
+            <th>End Date</th>
+            <th>Salary</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of contracts; track c.id) {
+            <tr>
+              <td>{{ c.employeeId }}</td>
+              <td>{{ c.contractType }}</td>
+              <td>{{ c.startDate | date:'mediumDate' }}</td>
+              <td>{{ c.endDate ? (c.endDate | date:'mediumDate') : '—' }}</td>
+              <td>{{ c.salary | number }} {{ c.currency }}</td>
+              <td>
+                <span class="badge" [class.badge-active]="c.isActive" [class.badge-inactive]="!c.isActive">
+                  {{ c.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td>
+                <button class="btn btn-sm btn-secondary" (click)="openEditForm(c)">Edit</button>
+                <button class="btn btn-sm btn-danger" (click)="deleteContract(c)">Delete</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="7" class="empty-state">No contracts found.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

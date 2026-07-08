@@ -1,0 +1,305 @@
+/* Global styles — imports the shared design system used across all ERP modules */
+@import './shared-module-styles.css';
+
+/* =====================================================
+   Design Tokens — CSS Custom Properties
+   Light values on :root; dark overrides on body.theme-dark
+   ===================================================== */
+:root {
+  /* Backgrounds */
+  --bg-page:    #f6f8fb;
+  --bg-surface: #ffffff;
+  --bg-subtle:  #f8fafc;
+  --bg-muted:   #f1f5f9;
+
+  /* Borders */
+  --border-default: #e6eaf0;
+  --border-strong:  #cbd5e1;
+  --border-light:   #eef1f5;
+
+  /* Text */
+  --text-primary:   #1e293b;
+  --text-secondary: #64748b;
+  --text-muted:     #94a3b8;
+  --text-heading:   #0f172a;
+
+  /* Chrome (layout shell) */
+  --header-bg:          #ffffff;
+  --header-border:      #eef1f5;
+  --sidebar-bg:         #ffffff;
+  --sidebar-content-bg: #ffffff;
+  --sidebar-border:     #eef1f5;
+  /* Two-tier nav rail — light theme: clean light rail with dark icons/labels */
+  --rail-bg:            #ffffff;
+  --rail-border:        #e9edf3;
+  --rail-fg:            #64748b;   /* idle icon + label */
+  --rail-fg-hover:      #0f172a;   /* hover icon + label */
+  --rail-hover-bg:      rgba(15, 23, 42, 0.05);
+  --rail-label:         #64748b;
+  --rail-fg-active:     var(--accent, #2b7fff);   /* active module label */
+  --rail-sep:           rgba(15, 23, 42, 0.08);
+  --rail-chip-bg:       rgba(15, 23, 42, 0.04);
+  --rail-glow:          rgba(43, 127, 255, 0.05);
+
+  /* ===== NexCore brand ===== */
+  --brand-cyan:  #22c7e6;
+  --brand-blue:  #2b7fff;
+  --brand-violet:#7c5cff;
+  --brand-grad:  linear-gradient(135deg, #22c7e6 0%, #2b7fff 100%);
+  --brand-grad-soft: linear-gradient(135deg, rgba(34,199,230,.12), rgba(43,127,255,.12));
+
+  /* Accent (shared across themes) — repointed to brand blue */
+  --accent:       #2b7fff;
+  --accent-hover: #1f6ae6;
+  --accent-soft:  rgba(43, 127, 255, 0.10);
+  --ring:         rgba(43, 127, 255, 0.35);
+
+  /* Surface system */
+  --radius-sm: 8px;
+  --radius:    12px;
+  --radius-lg: 18px;
+  --radius-pill: 999px;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.06), 0 2px 6px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.10);
+
+  /* KPI / category accents */
+  --kpi-1: #2b7fff;  /* blue   */
+  --kpi-2: #22c7e6;  /* cyan   */
+  --kpi-3: #7c5cff;  /* violet */
+  --kpi-4: #f59e0b;  /* amber  */
+  --kpi-5: #10b981;  /* green  */
+  --kpi-6: #f43f5e;  /* rose   */
+  --pos:   #10b981;
+  --neg:   #f43f5e;
+
+  /* AI page */
+  --ai-user-bubble: #111827;
+
+  /* Sidebar link / icon colors */
+  --sidebar-link-color:      rgba(0, 0, 0, 0.70);
+  --sidebar-link-icon-color: rgba(0, 0, 0, 0.50);
+
+  /* ── POS Terminal ── */
+  --pos-logo-invert:   0;
+  --pos-page-bg:       #f4f5f7;
+  --pos-surface:       #ffffff;
+  --pos-surface-2:     #f8f9fb;
+  --pos-surface-3:     #f0f2f5;
+  --pos-border:        #e2e8f0;
+  --pos-border-2:      #c8d0db;
+  --pos-text:          #1e293b;
+  --pos-text-2:        #64748b;
+  --pos-text-3:        #94a3b8;
+  --pos-icon:          #1e293b;
+  --pos-search-bg:     rgba(0, 0, 0, 0.06);
+  --pos-item-hover:    #f0f4f8;
+  --pos-btn-bg:        #ffffff;
+  --pos-btn-hover:     #f0f2f5;
+  --pos-input-bg:      #f0f2f5;
+  --pos-input-border:  #c8d0db;
+  --pos-input-text:    #1e293b;
+  --pos-pin-bg:        #eef0f4;
+  --pos-pin-text:      #1e293b;
+  --pos-pin-key-bg:    #ffffff;
+  --pos-pin-key-bdr:   #c8d0db;
+  --pos-pin-key-hover: #e8ebf0;
+  --pos-pin-key-act:   #d8dde6;
+  --pos-pay-bg:        #f4f5f7;
+  --pos-pay-right:     #ffffff;
+}
+
+/* ── Midnight: deep navy/blue dark (electric, vivid) ── */
+body.theme-midnight {
+  --bg-page:    #0b1220;
+  --bg-surface: #111c30;
+  --bg-subtle:  #0f1a2c;
+  --bg-muted:   #16233c;
+
+  --border-default: #243349;
+  --border-strong:  #33455f;
+  --border-light:   #1c293f;
+
+  --text-primary:   #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted:     #64748b;
+  --text-heading:   #f1f5f9;
+
+  --header-bg:          #0d1729;
+  --header-border:      #1f2c42;
+  --sidebar-bg:         #0d1729;
+  --sidebar-content-bg: #0d1729;
+  --sidebar-border:     #1c2940;
+  /* Rail sits a shade below the panel so the two layers stay distinct */
+  --rail-bg:            #060b16;
+  --rail-border:        #1c2940;
+  --rail-fg:            #93a4bd;
+  --rail-fg-hover:      #ffffff;
+  --rail-hover-bg:      rgba(255, 255, 255, 0.08);
+  --rail-label:         #8194ad;
+  --rail-fg-active:     #ffffff;
+  --rail-sep:           rgba(255, 255, 255, 0.10);
+  --rail-chip-bg:       rgba(255, 255, 255, 0.06);
+  --rail-glow:          rgba(43, 127, 255, 0.16);
+
+  --brand-grad-soft: linear-gradient(135deg, rgba(34,199,230,.18), rgba(43,127,255,.18));
+  --accent:       #3b8cff;
+  --accent-hover: #5a9dff;
+  --accent-soft:  rgba(59, 140, 255, 0.16);
+  --ring:         rgba(59, 140, 255, 0.45);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.30);
+  --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.45);
+
+  --ai-user-bubble: #2b7fff;
+
+  --sidebar-link-color:      rgba(226, 232, 240, 0.75);
+  --sidebar-link-icon-color: rgba(226, 232, 240, 0.45);
+
+  /* ── POS Terminal ── */
+  --pos-logo-invert:   1;
+  --pos-page-bg:       #0b1220;
+  --pos-surface:       #111c30;
+  --pos-surface-2:     #0f1a2c;
+  --pos-surface-3:     #16233c;
+  --pos-border:        #243349;
+  --pos-border-2:      #33455f;
+  --pos-text:          #e2e8f0;
+  --pos-text-2:        #94a3b8;
+  --pos-text-3:        #64748b;
+  --pos-icon:          #f1f5f9;
+  --pos-search-bg:     rgba(255, 255, 255, 0.07);
+  --pos-item-hover:    #16233c;
+  --pos-btn-bg:        #16233c;
+  --pos-btn-hover:     #1e2f4a;
+  --pos-input-bg:      #0d1729;
+  --pos-input-border:  #33455f;
+  --pos-input-text:    #e2e8f0;
+  --pos-pin-bg:        #111c30;
+  --pos-pin-text:      #f1f5f9;
+  --pos-pin-key-bg:    #16233c;
+  --pos-pin-key-bdr:   #33455f;
+  --pos-pin-key-hover: #1e2f4a;
+  --pos-pin-key-act:   #0b1220;
+  --pos-pay-bg:        #0b1220;
+  --pos-pay-right:     #111c30;
+}
+
+/* ── Dark: neutral charcoal/graphite ── */
+body.theme-dark {
+  --bg-page:    #111111;
+  --bg-surface: #1c1c1e;
+  --bg-subtle:  #161616;
+  --bg-muted:   #252525;
+
+  --border-default: #2c2c2e;
+  --border-strong:  #3a3a3c;
+  --border-light:   #242424;
+
+  --text-primary:   #e5e5e7;
+  --text-secondary: #98989d;
+  --text-muted:     #636366;
+  --text-heading:   #f5f5f7;
+
+  --header-bg:          #161616;
+  --header-border:      #2c2c2e;
+  --sidebar-bg:         #1a1a1a;
+  --sidebar-content-bg: #1a1a1a;
+  --sidebar-border:     #2c2c2e;
+  /* Pure-black rail below the neutral-dark panel */
+  --rail-bg:            #000000;
+  --rail-border:        #2c2c2e;
+  --rail-fg:            #98989d;
+  --rail-fg-hover:      #ffffff;
+  --rail-hover-bg:      rgba(255, 255, 255, 0.08);
+  --rail-label:         #98989d;
+  --rail-fg-active:     #ffffff;
+  --rail-sep:           rgba(255, 255, 255, 0.10);
+  --rail-chip-bg:       rgba(255, 255, 255, 0.06);
+  --rail-glow:          rgba(43, 127, 255, 0.14);
+
+  --brand-grad-soft: linear-gradient(135deg, rgba(34,199,230,.14), rgba(43,127,255,.14));
+  --accent:       #3b8cff;
+  --accent-hover: #5a9dff;
+  --accent-soft:  rgba(59, 140, 255, 0.14);
+  --ring:         rgba(59, 140, 255, 0.40);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.65);
+
+  --ai-user-bubble: #2b7fff;
+
+  --sidebar-link-color:      rgba(229, 229, 231, 0.78);
+  --sidebar-link-icon-color: rgba(229, 229, 231, 0.45);
+
+  /* ── POS Terminal ── */
+  --pos-logo-invert:   1;
+  --pos-page-bg:       #111111;
+  --pos-surface:       #1c1c1e;
+  --pos-surface-2:     #222222;
+  --pos-surface-3:     #242424;
+  --pos-border:        #2c2c2e;
+  --pos-border-2:      #3a3a3c;
+  --pos-text:          #e5e5e7;
+  --pos-text-2:        #98989d;
+  --pos-text-3:        #636366;
+  --pos-icon:          #e5e5e7;
+  --pos-search-bg:     rgba(255, 255, 255, 0.06);
+  --pos-item-hover:    #252525;
+  --pos-btn-bg:        #252525;
+  --pos-btn-hover:     #2e2e30;
+  --pos-input-bg:      #1c1c1e;
+  --pos-input-border:  #3a3a3c;
+  --pos-input-text:    #e5e5e7;
+  --pos-pin-bg:        #1c1c1e;
+  --pos-pin-text:      #f5f5f7;
+  --pos-pin-key-bg:    #252525;
+  --pos-pin-key-bdr:   #3a3a3c;
+  --pos-pin-key-hover: #2e2e30;
+  --pos-pin-key-act:   #111111;
+  --pos-pay-bg:        #111111;
+  --pos-pay-right:     #1c1c1e;
+}
+
+/* ===== Reset browser defaults ===== */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+}
+
+/* ===== Global font family ===== */
+html, body, button, input, select, textarea {
+  font-family: 'Inter', sans-serif;
+}
+
+/* ===== Page background follows theme ===== */
+html {
+  background-color: var(--bg-page, #f8fbfd);
+  color-scheme: light;
+}
+
+body {
+  background-color: var(--bg-page, #f8fbfd);
+  color: var(--text-primary, #1e293b);
+}
+
+/* ===== Color-scheme for native controls ===== */
+body.theme-dark,
+body.theme-midnight {
+  color-scheme: dark;
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+}
+
+/* ===== Native select — readable in both themes ===== */
+select,
+select option {
+  color: var(--text-primary, #1e293b);
+  background: var(--bg-surface, #fff);
+}

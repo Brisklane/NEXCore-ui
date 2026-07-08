@@ -1,0 +1,140 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">warehouse</span></div>
+      <div>
+        <h1>Locations</h1>
+        <p class="inv-hero-sub">Storage locations, addresses and bin management</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Location</button>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="md-split">
+    <!-- ══ LEFT: location list ══ -->
+    <div class="md-list">
+      <div class="md-list-head">
+        <span class="inv-search"><span class="material-symbols-outlined">search</span><input type="text" placeholder="Search locations…" [(ngModel)]="filterSearch" (ngModelChange)="onSearchInput()" (keyup.enter)="applyFilters()" /></span>
+        <div class="md-list-head-row"><select class="inv-select" [(ngModel)]="filterStatus" (ngModelChange)="applyFilters()"><option value="">All Statuses</option><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+      </div>
+      <div class="md-list-body">
+        @if (loading) {
+          @for (s of [0,1,2,3,4]; track s) { <div class="md-rec"><span class="skeleton sk-circle" style="width:34px;height:34px"></span><div style="flex:1"><span class="skeleton sk-line" style="width:70%"></span></div></div> }
+        } @else if (items.length === 0) {
+          <div class="inv-empty" style="padding:36px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">warehouse</span></div><div class="inv-empty-title">No locations found</div><div class="inv-empty-text">Add your first location.</div></div>
+        } @else {
+          @for (item of displayItems; track item.id) {
+            <button class="md-rec" [class.selected]="editingItem?.id === item.id" [class.row-new]="item.id === highlighter.id" (click)="openEditForm(item)">
+              <span class="md-rec-ico"><span class="material-symbols-outlined" style="font-size:18px">warehouse</span></span>
+              <div class="md-rec-main"><span class="md-rec-title">{{ item.name || '—' }}</span><span class="md-rec-sub"><span class="md-rec-code">{{ item.code }}</span>@if (item.city) { · {{ item.city }} }@if (item.warehouseType) { · {{ item.warehouseType }} }</span></div>
+              <span class="md-rec-status" [class.on]="item.isActive" [class.off]="!item.isActive"></span>
+            </button>
+          }
+        }
+      </div>
+      @if (totalCount > 0) {
+        <div class="md-list-foot"><span>{{ (page - 1) * pageSize + 1 }}–{{ page * pageSize < totalCount ? page * pageSize : totalCount }} of {{ totalCount | number }}</span><div class="md-pager"><button class="btn-page" (click)="goToPage(page - 1)" [disabled]="page <= 1">Prev</button><button class="btn-page" (click)="goToPage(page + 1)" [disabled]="page >= totalPages">Next</button></div></div>
+      }
+    </div>
+
+    <!-- ══ RIGHT: create / edit form ══ -->
+    <div class="md-detail">
+      @if (showForm) {
+        <div class="md-detail-head">
+          <span class="md-detail-title">{{ editingItem ? 'Edit Location' : 'New Location' }}</span>
+          <button class="icon-btn" title="Close" (click)="cancelForm()"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="md-detail-body">
+          <div class="tab-bar">
+            <button [class]="formTab === 'info' ? 'tab-btn tab-btn-active' : 'tab-btn'" (click)="onTabChange('info')">Info</button>
+            @if (editingItem) {
+              <button [class]="formTab === 'bins' ? 'tab-btn tab-btn-active' : 'tab-btn'" (click)="onTabChange('bins')">
+                Bin Locations @if (bins.length > 0) { <span class="tab-count">{{ bins.length }}</span> }
+              </button>
+            }
+          </div>
+
+          @if (formTab === 'info') {
+            <div class="form-grid">
+              <div class="form-group"><label>Code</label><input type="text" [(ngModel)]="formCode" placeholder="Auto-generated" readonly class="input-readonly" /></div>
+              <div class="form-group"><label>Name *</label><input type="text" [(ngModel)]="formName" placeholder="Location name" [class.input-required]="!formName.trim()" /></div>
+              <div class="form-group"><label>Type</label><select [(ngModel)]="formWarehouseType"><option value="">-- Select --</option>@for (opt of warehouseTypes; track opt.value) { <option [value]="opt.value">{{ opt.label }}</option> }</select></div>
+              <div class="form-group"><label>Address</label><input type="text" [(ngModel)]="formAddress" placeholder="Street address" /></div>
+              <div class="form-group"><label>City</label><input type="text" [(ngModel)]="formCity" placeholder="City" /></div>
+              <div class="form-group"><label>Region / State</label><input type="text" [(ngModel)]="formRegion" placeholder="Region or state" /></div>
+              <div class="form-group"><label>Postal Code</label><input type="text" [(ngModel)]="formPostalCode" placeholder="Postal code" /></div>
+              <div class="form-group"><label>Country</label><input type="text" [(ngModel)]="formCountry" placeholder="Country" /></div>
+              @if (editingItem) {
+                <div class="form-check-row"><label><input type="checkbox" [(ngModel)]="formIsActive" /> Active</label></div>
+              }
+            </div>
+            <div class="form-actions">
+              <button class="ibtn ibtn--secondary" (click)="cancelForm()">Cancel</button>
+              <button class="ibtn ibtn--primary" (click)="save()"><span class="material-symbols-outlined">save</span> {{ editingItem ? 'Save changes' : 'Create location' }}</button>
+            </div>
+          }
+
+          @if (formTab === 'bins') {
+            @if (binError) { <div class="alert alert-error">{{ binError }}</div> }
+            @if (binsLoading) {
+              <div class="loading-spinner">Loading bins...</div>
+            } @else {
+              @if (bins.length > 0) {
+                <div class="table-container bins-table">
+                  <table>
+                    <thead><tr><th>Code</th><th>Name</th><th>Aisle</th><th>Rack</th><th>Level</th><th>Position</th><th>Capacity</th><th>Status</th><th></th></tr></thead>
+                    <tbody>
+                      @for (bin of bins; track bin.id) {
+                        <tr>
+                          <td><strong>{{ bin.code }}</strong></td>
+                          <td>{{ bin.name }}</td>
+                          <td>{{ bin.aisle || '—' }}</td>
+                          <td>{{ bin.rack || '—' }}</td>
+                          <td>{{ bin.level || '—' }}</td>
+                          <td>{{ bin.position || '—' }}</td>
+                          <td>{{ bin.capacity != null ? bin.capacity : '—' }}</td>
+                          <td><span [class]="bin.isActive ? 'badge badge-active' : 'badge badge-inactive'">{{ bin.isActive ? 'Active' : 'Inactive' }}</span></td>
+                          <td class="actions-cell"><button class="btn-icon btn-icon-danger" title="Delete bin" (click)="deleteBin(bin)">🗑️</button></td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              } @else {
+                <div class="bins-empty">No bin locations defined for this location.</div>
+              }
+
+              <div class="bins-add-section">
+                <h4>Add Bin Location</h4>
+                <div class="form-grid">
+                  <div class="form-group"><label>Code</label><input type="text" [(ngModel)]="newBin.code" placeholder="Auto-generated" readonly class="input-readonly" /></div>
+                  <div class="form-group"><label>Name</label><input type="text" [(ngModel)]="newBin.name" placeholder="Bin name" /></div>
+                  <div class="form-group"><label>Aisle</label><input type="text" [(ngModel)]="newBin.aisle" placeholder="A" /></div>
+                  <div class="form-group"><label>Rack</label><input type="text" [(ngModel)]="newBin.rack" placeholder="01" /></div>
+                  <div class="form-group"><label>Level</label><input type="text" [(ngModel)]="newBin.level" placeholder="01" /></div>
+                  <div class="form-group"><label>Position</label><input type="text" [(ngModel)]="newBin.position" placeholder="01" /></div>
+                  <div class="form-group"><label>Capacity</label><input type="number" [(ngModel)]="newBin.capacity" placeholder="0" min="0" /></div>
+                </div>
+                <div class="form-actions">
+                  <button class="ibtn ibtn--primary" (click)="addBin()"><span class="material-symbols-outlined">add</span> Add Bin</button>
+                  <button class="ibtn ibtn--secondary" (click)="cancelForm()">Close</button>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      } @else {
+        <div class="md-empty">
+          <div class="md-empty-icon"><span class="material-symbols-outlined">warehouse</span></div>
+          <div class="md-empty-title">Manage locations</div>
+          <div class="md-empty-text">Select a location to edit its details and bins, or add a new one.</div>
+          <button class="btn-brand" style="margin-top:8px" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Location</button>
+        </div>
+      }
+    </div>
+  </div>
+</div>

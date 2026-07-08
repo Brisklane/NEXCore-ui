@@ -1,0 +1,123 @@
+<div class="page-container md-page">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">inventory_2</span></div>
+      <div>
+        <h1>Products</h1>
+        <p class="inv-hero-sub">Your product catalog — SKUs, stock, pricing and unit-level tracking</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-ghost" (click)="load()"><span class="material-symbols-outlined">refresh</span> Refresh</button>
+      <button class="btn-brand" (click)="openCreate()"><span class="material-symbols-outlined">add</span> New Product</button>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="kpi-strip">
+    <div class="kpi-card kpi-brand">
+      <div class="kpi-top"><span class="kpi-label">Products</span><span class="kpi-icon"><span class="material-symbols-outlined">inventory_2</span></span></div>
+      <div class="kpi-value">{{ totalCount | number }}</div>
+      <div class="kpi-foot">Active product SKUs in catalog</div>
+    </div>
+    <div class="kpi-card kpi-success">
+      <div class="kpi-top"><span class="kpi-label">Stock Value</span><span class="kpi-icon"><span class="material-symbols-outlined">payments</span></span></div>
+      <div class="kpi-value" [class.is-muted]="kpiStockValue == null">{{ kpiStockValue == null ? '—' : (kpiStockValue | number:'1.0-0') }}</div>
+      <div class="kpi-foot">Valuation at average cost</div>
+    </div>
+    <div class="kpi-card kpi-amber">
+      <div class="kpi-top"><span class="kpi-label">Low Stock</span><span class="kpi-icon"><span class="material-symbols-outlined">warning</span></span></div>
+      <div class="kpi-value" [class.is-muted]="kpiLowStock === 0">{{ kpiLowStock | number }}</div>
+      <div class="kpi-foot">At or below reorder level</div>
+    </div>
+    <div class="kpi-card kpi-danger">
+      <div class="kpi-top"><span class="kpi-label">Out of Stock</span><span class="kpi-icon"><span class="material-symbols-outlined">error</span></span></div>
+      <div class="kpi-value" [class.is-muted]="kpiOutOfStock === 0">{{ kpiOutOfStock | number }}</div>
+      <div class="kpi-foot">Items needing replenishment</div>
+    </div>
+  </div>
+
+  <div class="md-split">
+    <!-- ══ LEFT: product list ══ -->
+    <div class="md-list">
+      <div class="md-list-toolbar">
+        <span class="inv-search">
+          <span class="material-symbols-outlined">search</span>
+          <input type="text" placeholder="Search products…" [(ngModel)]="filterSearch" (ngModelChange)="onSearchInput()" (keyup.enter)="applyFilters()" />
+        </span>
+        <div class="md-filter-row">
+          <select class="inv-select" [(ngModel)]="filterItemType" (ngModelChange)="applyFilters()" title="Filter by kind">
+            <option value="">All Kinds</option>
+            @for (opt of itemTypes; track opt.value) { <option [value]="opt.value">{{ opt.label }}</option> }
+          </select>
+          <select class="inv-select" [(ngModel)]="filterStatus" (ngModelChange)="applyFilters()">
+            <option value="">All Statuses</option><option value="active">Active</option><option value="inactive">Inactive</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="md-list-scroll">
+        @if (loading) {
+          @for (s of skeletonRows; track s) {
+            <div class="md-item"><span class="skeleton sk-circle" style="width:38px;height:38px"></span><div style="flex:1"><span class="skeleton sk-line" style="width:70%"></span><div style="height:6px"></div><span class="skeleton sk-line" style="width:40%"></span></div></div>
+          }
+        } @else if (items.length === 0) {
+          <div class="inv-empty" style="padding:40px 16px">
+            <div class="inv-empty-icon"><span class="material-symbols-outlined">inventory_2</span></div>
+            <div class="inv-empty-title">No products found</div>
+            <div class="inv-empty-text">Adjust your search, or add your first product.</div>
+            <button class="btn-brand" style="margin-top:8px" (click)="openCreate()"><span class="material-symbols-outlined">add</span> New Product</button>
+          </div>
+        } @else {
+          @for (item of displayItems; track item.id) {
+            <button class="md-item" [class.selected]="item.id === selectedId" [class.row-new]="item.id === highlighter.id" (click)="selectProduct(item)">
+              @if (primaryImageUrl(item)) {
+                <img class="md-thumb" [src]="primaryImageUrl(item)" [alt]="item.name ?? ''" (error)="onThumbError($event)" />
+              } @else {
+                <span class="md-thumb md-thumb-fallback" [style.background]="item.displayColorHex || null">{{ itemInitial(item) }}</span>
+              }
+              <div class="md-item-main">
+                <span class="md-item-name">{{ item.name || '—' }}</span>
+                <span class="md-item-sub">
+                  <span class="md-code">{{ item.code }}</span>
+                  <span class="md-track" [class.t-serial]="item.isSerialTracked" [class.t-lot]="!item.isSerialTracked && item.isBatchTracked">
+                    <span class="material-symbols-outlined">{{ item.isSerialTracked ? 'barcode' : (item.isBatchTracked ? 'inventory' : 'tag') }}</span>
+                    {{ item.isSerialTracked ? 'Serial' : (item.isBatchTracked ? 'Lot' : 'Qty') }}
+                  </span>
+                </span>
+              </div>
+              <div class="md-item-right">
+                <span class="md-qty">{{ available(item.id) | number:'1.0-0' }}</span>
+                <span class="md-dot" [class.d-in]="stockStatus(item)==='in'" [class.d-low]="stockStatus(item)==='low'" [class.d-out]="stockStatus(item)==='out'" [title]="stockStatus(item)==='out' ? 'Out of stock' : (stockStatus(item)==='low' ? 'Low stock' : 'In stock')"></span>
+              </div>
+            </button>
+          }
+        }
+      </div>
+
+      @if (totalCount > 0) {
+        <div class="md-list-foot">
+          <span>{{ (page - 1) * pageSize + 1 }}–{{ page * pageSize < totalCount ? page * pageSize : totalCount }} of {{ totalCount | number }}</span>
+          <div class="md-pager">
+            <button class="btn-page" (click)="goToPage(page - 1)" [disabled]="page <= 1">Prev</button>
+            <button class="btn-page" (click)="goToPage(page + 1)" [disabled]="page >= totalPages">Next</button>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- ══ RIGHT: selected product detail ══ -->
+    <div class="md-detail">
+      @if (selectedId) {
+        <lib-item-detail [embedded]="true" [itemIdInput]="selectedId" (closed)="clearSelection()"></lib-item-detail>
+      } @else {
+        <div class="md-empty">
+          <div class="md-empty-icon"><span class="material-symbols-outlined">touch_app</span></div>
+          <div class="md-empty-title">Select a product</div>
+          <div class="md-empty-text">Choose a product from the list to see its stock, pricing, serials/batches and movement history here.</div>
+        </div>
+      }
+    </div>
+  </div>
+</div>

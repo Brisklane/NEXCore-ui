@@ -1,0 +1,16 @@
+@import '../shared-styles.css';
+
+.filters-bar { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.filter-input { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; min-width: 220px; }
+.filter-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15); }
+
+.section-title { margin: 18px 0 8px; font-size: 14px; font-weight: 600; color: #334155; }
+.line-add-grid { margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e2e8f0; align-items: end; }
+.lines-total { text-align: right; font-size: 14px; font-weight: 600; color: #1e293b; padding: 8px 12px; background: #f1f5f9; border-radius: 6px; margin-top: 8px; }
+
+.helper-box {
+  display: flex; gap: 10px; align-items: flex-start;
+  background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af;
+  border-radius: 8px; padding: 12px 14px; font-size: 13px; line-height: 1.5; margin-bottom: 14px;
+}
+.helper-box .helper-icon { font-size: 15px; }

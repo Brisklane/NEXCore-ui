@@ -1,0 +1,152 @@
+<div class="page-container">
+
+  <app-page-header icon="request_quote" title="Request for Quotations" subtitle="Invite vendors to bid and compare offers">
+    <button class="btn btn-primary" (click)="openCreate()">+ New RFQ</button>
+  </app-page-header>
+
+  <app-alert type="error"   [message]="error"></app-alert>
+  <app-alert type="success" [message]="success"></app-alert>
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editing ? 'Edit RFQ — ' + editing.rfqNumber : 'New RFQ' }}</h3>
+
+      <div class="help-box"><span class="help-icon">ℹ️</span><span>An RFQ starts as a <strong>Draft</strong> where you add lines and invite vendors. Invited vendors only receive it when you click <strong>Send</strong>. As quotes arrive you <strong>evaluate</strong> them and <strong>Award</strong> the winner, which automatically creates a draft <strong>Purchase Order</strong>.</span></div>
+
+      <div class="tab-bar">
+        <button [class]="formTab === 'details' ? 'tab-btn tab-btn-active' : 'tab-btn'" (click)="formTab = 'details'">Details</button>
+        <button [class]="formTab === 'lines' ? 'tab-btn tab-btn-active' : 'tab-btn'" (click)="formTab = 'lines'">Lines ({{ formLines.length }})</button>
+        <button [class]="formTab === 'vendors' ? 'tab-btn tab-btn-active' : 'tab-btn'" (click)="formTab = 'vendors'">Vendors ({{ formVendorIds.length }})</button>
+      </div>
+
+      @if (formTab === 'details') {
+        <div class="form-grid">
+          <app-input label="Title" required placeholder="RFQ title"
+                     [(ngModel)]="form.title" [error]="submitted ? errors.title : ''"></app-input>
+          <app-input label="Submission Deadline" required type="date"
+                     [(ngModel)]="form.submissionDeadline" [error]="submitted ? errors.submissionDeadline : ''"></app-input>
+          <app-input label="Quotation Validity Date" type="date" [(ngModel)]="form.quotationValidityDate"></app-input>
+          <app-input label="Required Delivery Date" type="date" [(ngModel)]="form.requiredDeliveryDate"></app-input>
+          <app-select label="Currency" [options]="currencyOptions" [(ngModel)]="form.currencyCode" placeholder=""></app-select>
+          <div class="form-group-full">
+            <app-textarea label="Description" [rows]="2" placeholder="Scope / description" [(ngModel)]="form.description"></app-textarea>
+          </div>
+          <div class="form-group-full">
+            <app-textarea label="Terms & Conditions" [rows]="2" placeholder="Terms and conditions" [(ngModel)]="form.termsAndConditions"></app-textarea>
+          </div>
+          <div class="form-group-full">
+            <app-textarea label="Evaluation Criteria" [rows]="2" placeholder="How quotations will be evaluated" [(ngModel)]="form.evaluationCriteria"></app-textarea>
+          </div>
+        </div>
+      }
+
+      @if (formTab === 'lines') {
+        @if (submitted && errors.lines) { <div class="alert alert-error">{{ errors.lines }}</div> }
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr><th>Item</th><th>Description</th><th style="text-align:right">Qty</th><th>UoM</th><th style="text-align:right">Est. Price</th><th style="text-align:right">Est. Total</th><th>Category</th><th></th></tr>
+            </thead>
+            <tbody>
+              @for (l of formLines; track $index; let i = $index) {
+                <tr>
+                  <td>{{ l.itemCode || '—' }}</td>
+                  <td>{{ l.itemDescription }}</td>
+                  <td style="text-align:right">{{ l.quantity }}</td>
+                  <td>{{ l.unitOfMeasureName || '—' }}</td>
+                  <td style="text-align:right">{{ (l.estimatedUnitPrice ?? 0) | number:'1.2-2' }}</td>
+                  <td style="text-align:right">{{ lineEstTotal(l) | number:'1.2-2' }} {{ form.currencyCode }}</td>
+                  <td>{{ categoryName(l.procurementCategoryId) }}</td>
+                  <td style="text-align:center"><button type="button" class="btn-remove" (click)="removeLine(i)">✕</button></td>
+                </tr>
+              } @empty { <tr><td colspan="8" class="empty-row">No lines added yet.</td></tr> }
+            </tbody>
+          </table>
+        </div>
+        @if (formLines.length) { <div class="lines-total">Estimated Total: {{ formLinesTotal | number:'1.2-2' }} {{ form.currencyCode }}</div> }
+
+        <h4 class="section-title">Add Line</h4>
+        <div class="form-grid line-add-grid">
+          <div class="form-group">
+            <label>Item</label>
+            <lib-entity-picker-input
+              [apiUrl]="itemApiUrl" [value]="newLine.itemCode || ''"
+              [displayFields]="itemDisplayFields" [columns]="itemColumns" [pickerPageSize]="25"
+              entityLabel="Item" placeholder="Search items…" (itemSelected)="onLineItemSelect($event)">
+            </lib-entity-picker-input>
+          </div>
+          <app-input label="Description" placeholder="Item description" [(ngModel)]="newLine.itemDescription"></app-input>
+          <app-input label="Quantity" type="number" [min]="0" placeholder="1" [(ngModel)]="newLine.quantity"></app-input>
+          <app-select label="UoM" [options]="uomOptions" [(ngModel)]="newLine.unitOfMeasureId" placeholder="-- Unit --"></app-select>
+          <app-input label="Est. Unit Price" type="number" [min]="0" [step]="0.01" placeholder="0.00" [(ngModel)]="newLine.estimatedUnitPrice"></app-input>
+          <app-select label="Category" [options]="categoryOptions" [(ngModel)]="newLine.procurementCategoryId" placeholder="-- None --"></app-select>
+          <app-input label="Specifications" placeholder="Specs" [(ngModel)]="newLine.specifications"></app-input>
+          <div class="form-group form-check-row">
+            <button type="button" class="btn btn-secondary" (click)="addLine()">+ Add Line</button>
+          </div>
+        </div>
+      }
+
+      @if (formTab === 'vendors') {
+        @if (formVendorIds.length > 0) {
+          <div class="row-list">
+            @for (vid of formVendorIds; track vid; let i = $index) {
+              <div class="row-item">
+                <span class="row-tag">{{ vendorName(vid) }}</span>
+                <button type="button" class="btn-remove" (click)="removeVendor(i)">✕</button>
+              </div>
+            }
+          </div>
+        }
+        <div class="form-grid line-add-grid">
+          <app-select label="Invite Vendor" [options]="vendorOptions" [(ngModel)]="newVendorId" placeholder="-- Select vendor --"></app-select>
+          <div class="form-group form-check-row">
+            <button type="button" class="btn btn-secondary" (click)="addVendor()">+ Invite</button>
+          </div>
+        </div>
+        <p class="subtitle" style="margin-top:8px">Invited vendors will receive this RFQ when you Send it.</p>
+      }
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()" [disabled]="saving">{{ editing ? 'Save Changes' : 'Create RFQ' }}</button>
+      </div>
+    </div>
+  }
+
+  <div class="filters-bar">
+    <span class="filter-search">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search by title or number…" [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
+      @if (search) { <button class="search-clear" title="Clear search" (click)="search = ''; onSearchChange()">×</button> }
+    </span>
+    <select class="filter-input" [(ngModel)]="statusFilter" (ngModelChange)="onStatusChange()">
+      <option [ngValue]="''">All statuses</option>
+      @for (opt of statusFilterOptions; track opt.value) { <option [ngValue]="opt.value">{{ opt.label }}</option> }
+    </select>
+  </div>
+
+  <app-data-table [sortableAll]="true"
+    [columns]="columns" [data]="rfqs" [actions]="actions" [loading]="loading"
+    [totalCount]="totalCount" [page]="page" [pageSize]="pageSize"
+    [sortBy]="sortBy" [sortDirection]="sortDirection"
+    [highlightRowId]="highlighter.id"
+    emptyMessage="No RFQs found."
+    (rowAction)="onRowAction($event)"
+    (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)" (sortChange)="onSortChange($event)">
+  </app-data-table>
+
+</div>
+
+@if (showDeleteConfirm) {
+  <div class="modal-overlay">
+    <div class="modal-box">
+      <h4>Delete RFQ</h4>
+      <p>Delete <strong>{{ deleteTarget?.rfqNumber }}</strong>? This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showDeleteConfirm = false">Cancel</button>
+        <button class="btn btn-danger" (click)="confirmDelete()">Delete</button>
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,96 @@
+<div class="page-container">
+
+  <!-- ── Header ── -->
+  <app-page-header title="Dimensions" subtitle="Manage financial dimensions and view their values">
+    <button class="btn btn-primary" (click)="openCreateDimForm()">+ New Dimension</button>
+  </app-page-header>
+
+  <!-- ── Alerts ── -->
+  <app-alert type="error"   [message]="error"></app-alert>
+  <app-alert type="success" [message]="successMsg"></app-alert>
+
+  <!-- ── Create / Edit Form ── -->
+  @if (showDimForm) {
+    <app-form-panel [title]="editingDim ? 'Edit Dimension' : 'Create Dimension'">
+
+      <app-input label="Code *"        placeholder="Dimension code"
+                 [(ngModel)]="dimFormCode" [disabled]="!!editingDim"></app-input>
+      <app-input label="Name *"        placeholder="Dimension name"
+                 [(ngModel)]="dimFormName"></app-input>
+      <app-input label="Description"   placeholder="Description"
+                 [(ngModel)]="dimFormDescription"></app-input>
+
+      @if (editingDim) {
+        <div class="form-group form-check-row">
+          <label><input type="checkbox" [(ngModel)]="dimFormIsActive" /> Active</label>
+        </div>
+      }
+
+      <ng-container actions>
+        <button class="btn btn-secondary" (click)="cancelDimForm()">Cancel</button>
+        <button class="btn btn-primary"   (click)="saveDimension()">
+          {{ editingDim ? 'Update' : 'Create' }}
+        </button>
+      </ng-container>
+
+    </app-form-panel>
+  }
+
+  <!-- ── Dimension Values Detail Panel ── -->
+  @if (selectedDimension) {
+    <div class="detail-panel">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="margin:0;">{{ selectedDimension.name }} — Values</h3>
+        <button class="btn btn-secondary btn-sm" (click)="closeDetail()">✕ Close</button>
+      </div>
+
+      <div class="detail-grid">
+        <div class="detail-item"><label>Code</label>        <span>{{ selectedDimension.code ?? '—' }}</span></div>
+        <div class="detail-item"><label>Active</label>      <span>{{ selectedDimension.isActive ? 'Yes' : 'No' }}</span></div>
+        <div class="detail-item"><label>Description</label> <span>{{ selectedDimension.description ?? '—' }}</span></div>
+      </div>
+
+      <h4 style="margin:16px 0 8px;">Dimension Values</h4>
+
+      <app-data-table
+        [columns]="valColumns"
+        [data]="dimensionValues"
+        [totalCount]="valuesTotalCount"
+        [page]="valuesPage"
+        [pageSize]="valuesPageSize"
+        [pageSizeOptions]="pageSizeOptions"
+        [loading]="loadingValues"
+        (pageChange)="goToValuesPage($event)"
+        (pageSizeChange)="onValuePageSizeChange($event)">
+      </app-data-table>
+    </div>
+  }
+
+  <!-- ── Dimensions List ── -->
+  <div class="filters-bar">
+    <span class="filter-search">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search by code or name…" [(ngModel)]="filterSearch" (ngModelChange)="onSearchInput()" (keyup.enter)="applyFilters()" />
+      @if (filterSearch) { <button class="search-clear" title="Clear search" (click)="filterSearch = ''; applyFilters()">×</button> }
+    </span>
+  </div>
+
+  <app-data-table
+    [columns]="dimColumns"
+    [data]="dimensions"
+    [actions]="dimActions"
+    [totalCount]="totalCount"
+    [page]="page"
+    [pageSize]="pageSize"
+    [pageSizeOptions]="pageSizeOptions"
+    [loading]="loading"
+    [highlightRowId]="highlighter.id"
+    [sortBy]="sortBy"
+    [sortDirection]="sortDirection"
+    (sortChange)="onSortChange($event)"
+    (pageChange)="goToPage($event)"
+    (pageSizeChange)="onPageSizeChange($event)"
+    (rowAction)="onDimAction($event)">
+  </app-data-table>
+
+</div>

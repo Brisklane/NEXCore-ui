@@ -1,0 +1,1729 @@
+<!-- ═══════════════════════════════════════════════════
+     LOGIN SCREEN  (store selection → PIN → check-in)
+     ═══════════════════════════════════════════════════ -->
+@if (screen === 'login') {
+<div class="pin-screen pxl">
+
+  <!-- Branded side panel -->
+  <aside class="pxl-brand">
+    <div class="pxl-brand-inner">
+      <div class="pxl-brand-mark"><span class="material-symbols-outlined">point_of_sale</span></div>
+      <h1 class="pxl-brand-title">NexCore <span>POS</span></h1>
+      <p class="pxl-brand-sub">Fast, offline-ready point of sale for your stores.</p>
+      <div class="pxl-brand-feats">
+        <div class="pxl-feat"><span class="material-symbols-outlined">bolt</span> Lightning-fast checkout</div>
+        <div class="pxl-feat"><span class="material-symbols-outlined">wifi_off</span> Works offline, syncs later</div>
+        <div class="pxl-feat"><span class="material-symbols-outlined">insights</span> Live sales &amp; sessions</div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="pxl-main">
+
+  <!-- ── STEP 1 : Store selection ───────────────────── -->
+  @if (loginStep === 'store') {
+    <button class="pos-dashboard-btn" (click)="goToDashboard()">← Dashboard</button>
+    <div class="pin-logo-area">
+      <img src="/images/nexcore-logo.svg" alt="NexCore" />
+    </div>
+    <div class="pin-title">Select Store</div>
+
+    <!-- ── Connectivity / operating-mode banner ─────────── -->
+    @if (cfgPosMode === 'LocalFirst') {
+      <div class="store-conn-banner store-conn-mode">
+        <span class="store-conn-dot store-conn-dot-mode"></span>
+        <span class="store-conn-text">
+          <strong>Local-First Mode</strong> — till sells without internet
+          @if (isOnline) { <span class="store-conn-sub"> · Connected (syncing enabled)</span> }
+          @else { <span class="store-conn-sub"> · No connection (offline sales queued)</span> }
+        </span>
+      </div>
+    } @else if (cfgPosMode === 'OfflineFallback') {
+      <div class="store-conn-banner" [class.store-conn-offline]="!isOnline">
+        @if (isOnline) {
+          <span class="store-conn-dot store-conn-dot-online"></span>
+          <span class="store-conn-text"><strong>Online</strong> — Offline fallback ready if connection drops</span>
+        } @else {
+          <span class="store-conn-dot store-conn-dot-offline"></span>
+          <span class="store-conn-text"><strong>Offline Fallback Active</strong> — cash sales queued, will sync when reconnected</span>
+        }
+      </div>
+    } @else {
+      <div class="store-conn-banner" [class.store-conn-offline]="!isOnline">
+        @if (isOnline) {
+          <span class="store-conn-dot store-conn-dot-online"></span>
+          <span class="store-conn-text"><strong>Online</strong> — all features available</span>
+        } @else {
+          <span class="store-conn-dot store-conn-dot-offline"></span>
+          <span class="store-conn-text"><strong>Offline</strong> — server unreachable, connect to continue</span>
+        }
+      </div>
+    }
+
+    <!-- Sync for offline use (shown in non-Online mode while connected) -->
+    @if (cfgPosMode !== 'Online') {
+      <div class="store-sync-bar">
+        @if (isOnline) {
+          <button class="store-sync-btn" (click)="syncForOffline()" [disabled]="offlineSyncing">
+            <span class="store-sync-icon">⟳</span>
+            Sync for offline use
+          </button>
+        }
+        @if (lastSyncAt) {
+          <span class="store-sync-time">Last synced: {{ lastSyncAt | date:'shortTime' }}</span>
+        } @else {
+          <span class="store-sync-time store-sync-never">
+            @if (isOnline) { Not yet synced — press Sync before going offline }
+            @else { No data cached — connect to internet and sync first }
+          </span>
+        }
+      </div>
+    }
+
+    @if (error) { <div class="pin-error-banner">{{ error }}</div> }
+
+    @if (storesLoading) {
+      <div class="store-loading">Loading stores…</div>
+    } @else if (stores.length === 0) {
+      <div class="store-empty">
+        <div class="store-empty-icon">🏪</div>
+        <div class="store-empty-title">No stores found</div>
+        <div class="store-empty-sub">Add a POS store to start selling.</div>
+        <button class="store-empty-btn" (click)="goToStores()">＋ Add Store</button>
+      </div>
+    } @else {
+      <div class="store-grid">
+        @for (s of stores; track s.id) {
+          <div class="store-card" (click)="selectStore(s)">
+            <div class="store-card-top">
+              <div class="store-card-icon">🏪</div>
+              <div class="store-card-name">{{ s.tradingName ?? 'Store' }}</div>
+              @if (s.city ?? s.country) {
+                <div class="store-card-meta">{{ s.city ?? s.country }}</div>
+              }
+            </div>
+            @if (storeStatus(s.id); as stat) {
+              <div class="store-card-divider"></div>
+              <div class="store-card-status-row">
+                <span [class]="storeSessionClass(stat.status)">{{ storeSessionLabel(stat.status) }}</span>
+                @if (stat.openSessionCount > 0) {
+                  <span class="sc-session-count">{{ stat.openSessionCount }} session{{ stat.openSessionCount !== 1 ? 's' : '' }}</span>
+                }
+              </div>
+              <div class="store-card-stats">
+                <div class="scs-item">
+                  <div class="scs-value">{{ stat.todayTotalSales | number:'1.0-0' }}</div>
+                  <div class="scs-label">Today Sales</div>
+                </div>
+                <div class="scs-item">
+                  <div class="scs-value">{{ stat.todayTransactionCount }}</div>
+                  <div class="scs-label">Transactions</div>
+                </div>
+                <div class="scs-item">
+                  <div class="scs-value">{{ stat.openSessionCount }}</div>
+                  <div class="scs-label">Sessions</div>
+                </div>
+              </div>
+              @if (stat.activeCashierName) {
+                <div class="store-card-cashier">👤 {{ stat.activeCashierName }}</div>
+              }
+            } @else {
+              <div class="store-card-no-stats">Loading stats…</div>
+            }
+          </div>
+        }
+      </div>
+    }
+
+  }
+
+  <!-- ── STEP 2 : Terminal + PIN ──────────────────────── -->
+  @if (loginStep === 'pin') {
+    <button class="pos-dashboard-btn" (click)="backToStoreSelect()">‹ Back</button>
+    <div class="pin-logo-area">
+      <img src="/images/nexcore-logo.svg" alt="NexCore" style="width:260px;" />
+    </div>
+    <div class="pin-store-label" style="margin-bottom:6px;">{{ selectedStore?.tradingName }}</div>
+
+    @if (error) { <div class="pin-error-banner">{{ error }}</div> }
+
+    <!-- Terminal selector — hidden once PIN validated and session form appears -->
+    @if (!showOpenSessionForm) {
+      <div class="pin-terminal-row">
+        <label class="pin-label">Terminal</label>
+        @if (terminalsLoading) {
+          <div class="pin-terminal-loading">Loading terminals…</div>
+        } @else if (terminals.length === 0) {
+          <div class="pin-terminal-loading" style="color:#ef4444;">No active terminals for this store.</div>
+        } @else {
+          <select class="pin-terminal-select" [(ngModel)]="selectedTerminalId">
+            <option value="">— Select terminal —</option>
+            @for (t of terminals; track t.id) {
+              <option [value]="t.id">{{ t.terminalName ?? t.terminalCode ?? t.id }}</option>
+            }
+          </select>
+        }
+      </div>
+    }
+
+    <!-- PIN dots — only shown while entering PIN -->
+    @if (!showOpenSessionForm) {
+      <div class="pin-label" style="margin-top:24px;">Cashier PIN</div>
+      <div class="pin-dots">
+        @for (i of [0,1,2,3]; track i) {
+          <div class="pin-dot" [class.filled]="pinInput.length > i"></div>
+        }
+      </div>
+    }
+
+    <!-- Open session form (shown after PIN validated) -->
+    @if (showOpenSessionForm) {
+      <div class="checkin-panel">
+        <div class="checkin-title">Open Cash Session</div>
+        <div class="checkin-row">
+          <label>Opening Float{{ cfgRequireOpeningFloat ? ' *' : '' }}</label>
+          <div class="float-stepper">
+            <button class="float-step-btn" (click)="openingCash = Math.max(0, (+openingCash || 0) - 100)" tabindex="-1">−100</button>
+            <input id="openingCashInput" type="number" [(ngModel)]="openingCash" placeholder="0.00" min="0" step="100"
+                   class="checkin-input float-input" (keydown.enter)="doCheckIn()" />
+            <button class="float-step-btn float-step-add" (click)="openingCash = (+openingCash || 0) + 100" tabindex="-1">+100</button>
+          </div>
+        </div>
+        <div class="checkin-row">
+          <label>Notes (optional)</label>
+          <input type="text" [(ngModel)]="openingNotes" placeholder="Opening notes…" class="checkin-input"
+                 (keydown.enter)="doCheckIn()" />
+        </div>
+        <div class="checkin-btns">
+          <button class="checkin-ok" (click)="doCheckIn()">Open Session</button>
+        </div>
+      </div>
+    }
+
+    <!-- Numeric PIN pad -->
+    @if (!showOpenSessionForm) {
+      <div class="pin-numpad">
+        @for (k of ['1','2','3','4','5','6','7','8','9','','0','⌫']; track k) {
+          @if (k === '') {
+            <div class="pnk pnk-empty"></div>
+          } @else if (k === '⌫') {
+            <div class="pnk pnk-del" (click)="backspacePin()">⌫</div>
+          } @else {
+            <div class="pnk" (click)="appendPin(k)">{{ k }}</div>
+          }
+        }
+        <div class="pnk pnk-login" (click)="login()">
+          {{ loginLoading ? '…' : '→' }}
+        </div>
+      </div>
+    }
+  }
+
+  </div>
+</div>
+}
+
+
+<!-- ── Session expired — inline re-auth overlay ──────────────────────────── -->
+@if (showReauthOverlay) {
+<div class="reauth-overlay">
+  <div class="reauth-card">
+    <div class="reauth-icon">🔒</div>
+    <h3 class="reauth-title">Session Expired</h3>
+    <p class="reauth-sub">Your login session has expired. Enter your credentials to continue — your current sale is preserved.</p>
+    @if (reauthError) { <div class="reauth-error">{{ reauthError }}</div> }
+    <input class="reauth-input" type="email"    [(ngModel)]="reauthEmail"    placeholder="Email"    autocomplete="username"      [disabled]="reauthLoading" />
+    <input class="reauth-input" type="password" [(ngModel)]="reauthPassword" placeholder="Password" autocomplete="current-password" [disabled]="reauthLoading" (keyup.enter)="reauthenticate()" />
+    <button class="reauth-btn" (click)="reauthenticate()" [disabled]="reauthLoading">
+      @if (reauthLoading) { Signing in… } @else { Continue }
+    </button>
+  </div>
+</div>
+}
+
+<!-- ── Offline data sync overlay (global — shows over login AND terminal) ── -->
+@if (offlineSyncing) {
+<div class="offsync-overlay">
+  <div class="offsync-card">
+    <div class="offsync-icon">
+      <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" width="56" height="56">
+        <circle cx="24" cy="24" r="22" stroke="#27a9e3" stroke-width="3" opacity=".2"/>
+        <path d="M24 8 A16 16 0 0 1 40 24" stroke="#27a9e3" stroke-width="3" stroke-linecap="round">
+          <animateTransform attributeName="transform" type="rotate" from="0 24 24" to="360 24 24" dur="1s" repeatCount="indefinite"/>
+        </path>
+        <path d="M16 24l-4-4 4-4M32 24l4 4-4 4" stroke="#27a9e3" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="offsync-title">{{ screen === 'login' ? 'Syncing Data' : 'Preparing Offline Mode' }}</div>
+    <div class="offsync-sub">Downloading data so the till can work without internet…</div>
+
+    <!-- Progress bar -->
+    <div class="offsync-bar-wrap">
+      <div class="offsync-bar-fill" [style.width.%]="offlineSyncPercent"></div>
+    </div>
+    <div class="offsync-percent">{{ offlineSyncPercent }}%</div>
+
+    <!-- Steps -->
+    <div class="offsync-steps">
+      @for (step of offlineSyncSteps; track step.label) {
+        <div class="offsync-step" [class.offsync-step-done]="step.done">
+          <span class="offsync-step-icon">{{ step.done ? '✓' : '○' }}</span>
+          <span>{{ step.label }}</span>
+        </div>
+      }
+    </div>
+    <div class="offsync-note">{{ screen === 'login' ? 'You can use the POS offline after sync completes' : 'POS will open automatically when ready' }}</div>
+  </div>
+</div>
+}
+
+<!-- ═══════════════════════════════════════════════════
+     TERMINAL SCREEN
+     ═══════════════════════════════════════════════════ -->
+@if (screen === 'terminal') {
+
+<div class="layout ptx">
+
+  <!-- ════ COMMAND BAR (full width) ════ -->
+  <div class="ptx-cmd">
+    <button class="ptx-cmd-menu" title="Menu" (click)="showSideMenu = true">
+      <span class="material-symbols-outlined">menu</span>
+    </button>
+    <div class="ptx-cmd-brand">
+      <span class="ptx-brand-mark"><span class="material-symbols-outlined">point_of_sale</span></span>
+      <span class="ptx-brand-name">NexCore <b>POS</b></span>
+    </div>
+
+    @if (selectedStore?.isOnlineOrderingEnabled) {
+      <div class="ptx-modetabs">
+        <button class="ptx-mtab" [class.active]="posMode==='register'" (click)="setPosMode('register')">
+          <span class="material-symbols-outlined">point_of_sale</span> Register
+        </button>
+        <button class="ptx-mtab" [class.active]="posMode==='online-orders'" (click)="setPosMode('online-orders')">
+          <span class="material-symbols-outlined">shopping_bag</span> Orders
+          @if (pendingOnlineOrderCount > 0) { <span class="ptx-mtab-badge">{{ pendingOnlineOrderCount }}</span> }
+        </button>
+      </div>
+    }
+
+    <div class="ptx-search">
+      <span class="material-symbols-outlined ptx-search-ico">search</span>
+      <input id="posSearchInput" type="text" [(ngModel)]="searchQuery"
+             [placeholder]="menuLoading ? 'Loading products…' : 'Search or scan a product   (F3)'"
+             (ngModelChange)="showSearch = !!searchQuery; searchHighlightIndex = -1"
+             (focus)="showSearch = !!searchQuery"
+             (keydown.enter)="addFirstSearchResult()"
+             (keydown.arrowdown)="searchArrowDown($event)"
+             (keydown.arrowup)="searchArrowUp($event)"
+             (blur)="showSearch = false" />
+      @if (showSearch) {
+        <div class="ptx-search-drop">
+          @if (searchResults.length === 0) {
+            <div class="ptx-search-empty">No products found</div>
+          } @else {
+            @for (r of searchResults; track r.id; let i = $index) {
+              <div class="ptx-search-row" [class.highlighted]="searchHighlightIndex === i"
+                   (mousedown)="$event.preventDefault(); addItem(r); searchQuery=''; searchHighlightIndex=-1; showSearch=false">
+                <div class="ptx-sr-info">
+                  <span class="ptx-sr-name">{{ r.name }}</span>
+                  @if (r.code) { <span class="ptx-sr-code">{{ r.code }}</span> }
+                </div>
+                <span class="ptx-sr-price">{{ (r.prices?.[0]?.salePrice ?? 0) | number:'1.2-2' }}</span>
+              </div>
+            }
+          }
+        </div>
+      }
+    </div>
+
+    <div class="ptx-user">
+      <div class="ptx-user-main">
+        <span class="ptx-user-av"><span class="material-symbols-outlined">person</span></span>
+        <div class="ptx-user-text">
+          <div class="ptx-user-name">{{ loggedCashier?.displayName ?? loggedUser?.fullName ?? 'Cashier' }}</div>
+          @if (selectedStoreName() || selectedTerminalId) {
+            <div class="ptx-user-loc">
+              @if (selectedStoreName()) { <span>{{ selectedStoreName() }}</span> }
+              @if (selectedStoreName() && selectedTerminalId) { <span class="ptx-sep">·</span> }
+              @if (selectedTerminalId) { <span>{{ terminalName(selectedTerminalId) }}</span> }
+            </div>
+          }
+        </div>
+      </div>
+      <div class="ptx-user-tags">
+        @if (activeSession) { <span class="ptx-tag">Session {{ activeSession.sessionNumber ?? '' }}</span> }
+        <span class="ptx-tag ptx-conn" [class.off]="!isOnline"
+              [title]="isOnline ? 'Online' : 'Working offline — sales will sync when reconnected'">
+          <span class="ptx-conn-dot" [class.off]="!isOnline"></span>{{ isOnline ? 'Online' : 'Offline' }}
+        </span>
+        @if (unsyncedCount > 0) {
+          <span class="ptx-tag ptx-unsynced" title="Sales waiting to sync — click to review" (click)="openSyncPanel()">
+            <span class="material-symbols-outlined">sync</span> {{ unsyncedCount }}
+          </span>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ BODY : ticket + operations ════ -->
+  <div class="ptx-body">
+
+    <!-- LEFT : order ticket -->
+    <div class="ptx-ticket">
+
+      @if (inventoryStale) {
+        <div class="ptx-inv-banner">
+          <span><span class="material-symbols-outlined">warning</span> Server data changed — sync to refresh products &amp; prices.</span>
+          <button class="ptx-inv-sync" (click)="syncInventoryNow()">Sync now</button>
+        </div>
+      }
+
+      @if (posMode === 'register') {
+        <div class="ptx-ticket-head">
+          <div class="ptx-ticket-title"><span class="material-symbols-outlined">receipt_long</span> Current Order</div>
+          <span class="ptx-ticket-count">{{ cart.length }} item{{ cart.length === 1 ? '' : 's' }}</span>
+        </div>
+
+        <div class="ptx-lines">
+          @if (cart.length === 0) {
+            <div class="ptx-empty">
+              <span class="material-symbols-outlined">shopping_cart</span>
+              <p>Cart is empty</p>
+              <span class="ptx-empty-hint">Search or scan a product to begin</span>
+            </div>
+          } @else {
+            @for (item of cart; track item.inventoryItemId; let i = $index) {
+              <div class="ptx-line" [class.active]="selectedCartIndex === i" (click)="selectRow(i)">
+                <div class="ptx-line-idx">{{ i + 1 }}</div>
+                <div class="ptx-line-main">
+                  <div class="ptx-line-name">
+                    {{ item.itemName }}
+                    @if (hasPromotion(item)) { <span class="ptx-tag-promo">PROMO</span> }
+                    @if (isProducible(item.inventoryItemId)) { <span class="ptx-tag-mto" title="Cooked/assembled to order — a production order is created on payment">MTO</span> }
+                  </div>
+                  <div class="ptx-line-sub">{{ item.quantity }} × {{ lineUnitPrice(item) | number:'1.2-2' }}{{ item.sku ? '  ·  ' + item.sku : '' }}</div>
+                  @for (promo of promotionsFor(item); track promo.promotionId) {
+                    <div class="ptx-line-promo"><span class="material-symbols-outlined">sell</span> {{ promo.promotionName }} <span class="ptx-promo-amt">−{{ promo.discountAmount | number:'1.2-2' }}</span></div>
+                  }
+                </div>
+                <div class="ptx-line-amt">{{ lineAmount(item) | number:'1.2-2' }}</div>
+              </div>
+            }
+          }
+        </div>
+
+        <div class="ptx-summary">
+          @if (quoteWarnings.length) {
+            <div class="ptx-warnings">
+              @for (w of quoteWarnings; track w) { <div class="ptx-warning"><span class="material-symbols-outlined">warning</span> {{ w }}</div> }
+            </div>
+          }
+          <div class="ptx-total-line"><span>Subtotal</span><span>{{ subtotal | number:'1.2-2' }}</span></div>
+          @if (serverLineDiscount > 0) {
+            <div class="ptx-total-line disc"><span>Promotions</span><span>−{{ serverLineDiscount | number:'1.2-2' }}</span></div>
+          }
+          @if (quote?.couponCode) {
+            <div class="ptx-total-line disc"><span>Coupon {{ quote?.couponCode }}</span><span>−{{ couponDiscount | number:'1.2-2' }}</span></div>
+          }
+          @if (manualDiscountTotal > 0) {
+            <div class="ptx-total-line disc"><span>Discount</span><span>−{{ manualDiscountTotal | number:'1.2-2' }}</span></div>
+          }
+          <div class="ptx-total-line"><span>Tax</span><span>{{ totalTax | number:'1.2-2' }}</span></div>
+          <div class="ptx-grand">
+            <span>Total @if (quoteLoading) { <span class="ptx-quote-loading">…</span> }</span>
+            <span>{{ grandTotal | number:'1.2-2' }}</span>
+          </div>
+          <button class="ptx-charge" (click)="goToPayment()">
+            <span class="ptx-charge-l"><span class="material-symbols-outlined">bolt</span> Charge <kbd>F10</kbd></span>
+            <span class="ptx-charge-amt">{{ grandTotal | number:'1.2-2' }}</span>
+          </button>
+        </div>
+      }
+
+      @if (posMode === 'online-orders') {
+        <div class="oo-root">
+          <div class="oo-header">
+            <span class="oo-title">Online Orders</span>
+            @if (onlineOrdersLoading) { <span class="oo-spinner">↻</span> }
+            <span class="oo-poll-hint">auto-refresh 30s</span>
+            <button class="oo-refresh-btn" (click)="fetchOnlineOrders()">↺ Refresh</button>
+          </div>
+
+          @if (!onlineOrdersLoading && onlineOrders.length === 0) {
+            <div class="oo-empty">
+              <div style="font-size:52px;opacity:.3">🛍</div>
+              <p>No pending online orders</p>
+            </div>
+          } @else {
+            <div class="oo-list">
+              @for (order of onlineOrders; track order.id) {
+                <div class="oo-card">
+                  <div class="oo-card-head">
+                    <span class="oo-order-num">#{{ order.orderNumber ?? order.id.substring(0,8) }}</span>
+                    <span class="oo-age">{{ orderAge(order) }}</span>
+                    <span class="oo-status-badge" [class]="ooStatusClass(order.status)">{{ ooStatusLabel(order.status) }}</span>
+                  </div>
+                  <div class="oo-customer-row">
+                    <span class="oo-customer-name">{{ order.contactName || 'Walk-in' }}</span>
+                    @if (contactPhone(order)) {
+                      <a class="oo-phone-link" [href]="'tel:' + contactPhone(order)">📞 {{ contactPhone(order) }}</a>
+                    }
+                  </div>
+                  <div class="oo-items-row">
+                    @if (order.lines?.length) {
+                      @for (line of order.lines.slice(0, 3); track line.id) {
+                        <span class="oo-item-chip">{{ line.quantity }}× {{ line.productName ?? line.productCode }}</span>
+                      }
+                      @if (order.lines.length > 3) {
+                        <span class="oo-item-chip oo-item-more">+{{ order.lines.length - 3 }} more</span>
+                      }
+                    }
+                  </div>
+                  @if (order.notes) { <div class="oo-order-notes">📝 {{ order.notes }}</div> }
+                  <div class="oo-card-footer">
+                    <span class="oo-total">{{ order.totalAmount | number:'1.2-2' }}</span>
+                    @if (rejectingOrderId !== order.id) {
+                      <div class="oo-actions">
+                        @if (normOoStatus(order.status) === 'Placed' || normOoStatus(order.status) === 'PendingApproval') {
+                          <button class="oo-btn oo-btn-accept" (click)="acceptOrder(order)">✓ Accept</button>
+                          <button class="oo-btn oo-btn-start-reject" (click)="startReject(order)">✕ Reject</button>
+                        }
+                        @if (normOoStatus(order.status) === 'Processing' || normOoStatus(order.status) === 'Confirmed') {
+                          <button class="oo-btn oo-btn-ready" (click)="markReady(order)">Ready ▸</button>
+                        }
+                        @if (normOoStatus(order.status) === 'ReadyForPickup' || normOoStatus(order.status) === 'Shipped' || normOoStatus(order.status) === 'OutForDelivery') {
+                          <button class="oo-btn oo-btn-deliver" (click)="markDelivered(order)">✓ Delivered</button>
+                        }
+                        @if (order.contactId) {
+                          <button class="oo-btn oo-btn-contact" (click)="showContactInfo(order)">📞 Contact</button>
+                        }
+                      </div>
+                    } @else {
+                      <div class="oo-reject-inline">
+                        <input type="text" [(ngModel)]="rejectNote" placeholder="Reason (optional)"
+                               class="oo-reject-input" (keydown.enter)="confirmReject(order)" />
+                        <button class="oo-btn oo-btn-start-reject" (click)="confirmReject(order)">Confirm</button>
+                        <button class="oo-btn oo-btn-contact" (click)="cancelReject()">Cancel</button>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+
+    </div>
+
+    <!-- RIGHT : operations -->
+    @if (posMode === 'register') {
+    <div class="ptx-ops">
+
+      <div class="ptx-sec-label">Payment method</div>
+      <div class="ptx-pms">
+        @for (pm of paymentMethods; track pm.key) {
+          <button class="ptx-pm" [class.cash]="pm.key==='Cash'" [class.active]="paymentMethod===pm.key" (click)="paymentMethod=pm.key">
+            <span class="material-symbols-outlined">{{ pm.key==='Cash' ? 'payments' : 'credit_card' }}</span>
+            {{ pm.label }}
+          </button>
+        }
+      </div>
+
+      <div class="ptx-sec-label">Quick actions</div>
+      <div class="ptx-tiles">
+        <button class="ptx-tile danger" (click)="deleteSelectedItem()"><span class="ptx-tile-ico"><span class="material-symbols-outlined">backspace</span></span><span class="ptx-tile-lbl">Delete</span><kbd>Del</kbd></button>
+        <button class="ptx-tile" (click)="openQtyPad()"><span class="ptx-tile-ico"><span class="material-symbols-outlined">dialpad</span></span><span class="ptx-tile-lbl">Quantity</span><kbd>F4</kbd></button>
+        @if (cfgAllowDiscount) {
+          <button class="ptx-tile" (click)="openDiscountDialog()"><span class="ptx-tile-ico"><span class="material-symbols-outlined">percent</span></span><span class="ptx-tile-lbl">Discount</span><kbd>F2</kbd></button>
+        } @else {
+          <button class="ptx-tile is-disabled" disabled><span class="ptx-tile-ico"><span class="material-symbols-outlined">percent</span></span><span class="ptx-tile-lbl">Discount</span></button>
+        }
+        <button class="ptx-tile" (click)="openCommentPanel()"><span class="ptx-tile-ico"><span class="material-symbols-outlined">chat</span></span><span class="ptx-tile-lbl">Comment</span></button>
+        <button class="ptx-tile" (click)="showCustomerPanel=true"><span class="ptx-tile-ico"><span class="material-symbols-outlined">person</span></span><span class="ptx-tile-lbl">Customer</span></button>
+        <button class="ptx-tile" (click)="openProductGrid()"><span class="ptx-tile-ico"><span class="material-symbols-outlined">grid_view</span></span><span class="ptx-tile-lbl">Products</span><kbd>F6</kbd></button>
+      </div>
+
+      <div class="ptx-sec-label">Order &amp; till</div>
+      <div class="ptx-tiles">
+        <button class="ptx-tile" (click)="newSale()"><span class="ptx-tile-ico"><span class="material-symbols-outlined">add_shopping_cart</span></span><span class="ptx-tile-lbl">New Sale</span><kbd>F8</kbd></button>
+        <button class="ptx-tile" (click)="saveSale()"><span class="ptx-tile-ico"><span class="material-symbols-outlined">bookmark_add</span></span><span class="ptx-tile-lbl">Save</span><kbd>F9</kbd></button>
+        <button class="ptx-tile" (click)="openOpenSales()">
+          <span class="ptx-tile-ico"><span class="material-symbols-outlined">receipt_long</span>@if (openSales.length) { <span class="ptx-tile-badge">{{ openSales.length }}</span> }</span>
+          <span class="ptx-tile-lbl">Open sales</span>
+        </button>
+        <button class="ptx-tile" (click)="openSalesHistory()"><span class="ptx-tile-ico"><span class="material-symbols-outlined">assignment_return</span></span><span class="ptx-tile-lbl">Refund</span></button>
+        <button class="ptx-tile" (click)="showCashDrawer=true"><span class="ptx-tile-ico"><span class="material-symbols-outlined">account_balance_wallet</span></span><span class="ptx-tile-lbl">Cash drawer</span></button>
+        <button class="ptx-tile"><span class="ptx-tile-ico"><span class="material-symbols-outlined">swap_horiz</span></span><span class="ptx-tile-lbl">Transfer</span><kbd>F7</kbd></button>
+        <button class="ptx-tile" (click)="lockPOS()"><span class="ptx-tile-ico"><span class="material-symbols-outlined">lock</span></span><span class="ptx-tile-lbl">Lock</span><kbd>F1</kbd></button>
+        <button class="ptx-tile danger" (click)="voidOrder()"><span class="ptx-tile-ico"><span class="material-symbols-outlined">delete_forever</span></span><span class="ptx-tile-lbl">Void</span></button>
+        <button class="ptx-tile" (click)="showSideMenu = true"><span class="ptx-tile-ico"><span class="material-symbols-outlined">more_horiz</span></span><span class="ptx-tile-lbl">More</span></button>
+      </div>
+
+    </div>
+    }
+
+  </div>
+
+  @if (toast) { <div class="pos-toast">{{ toast }}</div> }
+
+  <!-- ── CONTACT INFO DIALOG ──────────────────────── -->
+  @if (contactInfoOrder) {
+    <div class="pos-overlay" (click)="closeContactInfo()">
+      <div class="pos-dialog" (click)="$event.stopPropagation()">
+        <div class="dlg-head">📞 Customer Contact <button class="dlg-close" (click)="closeContactInfo()">✕</button></div>
+        <div class="dlg-body">
+          <div style="font-size:17px;font-weight:600;margin-bottom:10px;">{{ contactInfoOrder.contactName || 'Walk-in' }}</div>
+          @if (contactPhone(contactInfoOrder)) {
+            <div style="margin-bottom:8px;">
+              📞 <a [href]="'tel:' + contactPhone(contactInfoOrder)" style="color:#27a9e3;font-size:15px;">{{ contactPhone(contactInfoOrder) }}</a>
+            </div>
+          }
+          @if (contactEmail(contactInfoOrder)) {
+            <div style="margin-bottom:8px;">
+              ✉ <a [href]="'mailto:' + contactEmail(contactInfoOrder)" style="color:#27a9e3;font-size:14px;">{{ contactEmail(contactInfoOrder) }}</a>
+            </div>
+          }
+          @if (contactInfoOrder.notes) {
+            <div style="margin-top:10px;font-size:13px;color:var(--pos-text-2);">📝 {{ contactInfoOrder.notes }}</div>
+          }
+          <div style="margin-top:10px;font-size:12px;color:var(--pos-text-3);">
+            Order #{{ contactInfoOrder.orderNumber ?? '—' }} · Total: {{ contactInfoOrder.totalAmount | number:'1.2-2' }}
+          </div>
+        </div>
+        <div class="dlg-footer">
+          <button class="dlg-ok" (click)="closeContactInfo()">Close</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── SIDE MENU ──────────────────────────────────── -->
+  @if (showSideMenu) {
+    <div class="side-overlay" (click)="showSideMenu = false"></div>
+    <div class="side-panel">
+
+      <div class="sp-header">
+        <div class="sp-title">{{ terminalName(selectedTerminalId) }} - {{ loggedCashier?.displayName ?? 'Admin' }}</div>
+        <div class="sp-close" (click)="showSideMenu = false">
+          <i class="fa-solid fa-arrow-right"></i>
+        </div>
+      </div>
+
+      <div class="sp-body">
+
+        <div class="sp-group">
+          <div class="sp-item" (click)="showSideMenu = false; goToDashboard()">
+            <i class="fa-solid fa-screwdriver-wrench"></i>
+            <span>Management</span>
+          </div>
+        </div>
+
+        <div class="sp-group">
+          <div class="sp-item" (click)="openSalesHistory()">
+            <i class="fa-solid fa-check-double"></i>
+            <span>View sales history</span>
+          </div>
+          <div class="sp-item" (click)="openOpenSales()">
+            <i class="fa-solid fa-layer-group"></i>
+            <span>View open sales</span>
+            @if (openSales.length) { <span class="sp-fkey">{{ openSales.length }}</span> }
+          </div>
+          <div class="sp-item" (click)="openCashDrawerFromMenu()">
+            <i class="fa-solid fa-box-open"></i>
+            <span>Cash In / Out</span>
+          </div>
+          <div class="sp-item" (click)="openSessionReport()">
+            <i class="fa-solid fa-receipt"></i>
+            <span>Session sales (X-Report)</span>
+          </div>
+          <div class="sp-item">
+            <i class="fa-solid fa-file-pen"></i>
+            <span>Credit payments</span>
+          </div>
+          <div class="sp-item" (click)="endOfDay()">
+            <i class="fa-solid fa-person-running"></i>
+            <span>End of day</span>
+          </div>
+
+          <div class="sp-section-title">User</div>
+
+          <div class="sp-item">
+            <i class="fa-regular fa-user"></i>
+            <span>{{ loggedCashier?.displayName ?? loggedUser?.fullName ?? 'User' }}</span>
+          </div>
+          <div class="sp-item" (click)="lockPOS()">
+            <i class="fa-solid fa-lock"></i>
+            <span>Lock / Switch Cashier</span>
+            <span class="sp-fkey">F1</span>
+          </div>
+          <div class="sp-item" (click)="endSession()">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span>End Session &amp; Sign out</span>
+            <span class="sp-fkey">F11</span>
+          </div>
+        </div>
+
+        <div class="sp-group">
+          <div class="sp-item">
+            <i class="fa-solid fa-bullhorn"></i>
+            <span>Feedback</span>
+          </div>
+          @if (pwaInstallPrompt) {
+            <div class="sp-item sp-item-install" (click)="installPwa()">
+              <i class="fa-solid fa-circle-down"></i>
+              <span>Install app</span>
+              <span class="sp-install-badge">PWA</span>
+            </div>
+          }
+        </div>
+
+      </div>
+
+      <div class="sp-footer">
+        <div class="sp-footer-btn" title="Offline sync status" (click)="showSideMenu = false; openSyncPanel()">
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+          @if (unsyncedCount > 0) { <span class="sp-sync-badge">{{ unsyncedCount }}</span> }
+        </div>
+        <div class="sp-footer-btn" title="POS settings (online / offline mode, receipt)" (click)="openSettings()">
+          <i class="fa-solid fa-gear"></i>
+        </div>
+        <div class="sp-footer-btn" title="Fullscreen" (click)="toggleFullscreen()">
+          <i class="fa-solid fa-expand"></i>
+        </div>
+        <div class="sp-footer-btn" title="End session &amp; sign out (F11)" (click)="showSideMenu = false; endSession()">
+          <i class="fa-solid fa-power-off"></i>
+        </div>
+      </div>
+
+    </div>
+  }
+
+  <!-- ── PRODUCT PICKER GRID (Odoo-style popup) ──────── -->
+  @if (showProductGrid) {
+    <div class="pg-overlay" (click)="closeProductGrid()">
+      <div class="pg-modal" (click)="$event.stopPropagation()">
+
+        <div class="pg-head">
+          <div class="pg-search">
+            <span class="pg-search-icon">⌕</span>
+            <input id="gridSearchInput" type="text" [(ngModel)]="gridSearch"
+                   (ngModelChange)="resetGridPage()"
+                   placeholder="Search products by name, code or barcode…" />
+          </div>
+          <button class="pg-close" (click)="closeProductGrid()">✕</button>
+        </div>
+
+        @if (cfgShowCategoryFilter) {
+          <div class="pg-cats">
+            <button class="pg-cat" [class.active]="selectedCategoryId === ''" (click)="selectCategory('')">All</button>
+            @for (c of posCategories; track c.id) {
+              <button class="pg-cat" [class.active]="selectedCategoryId === c.id" (click)="selectCategory(c.id)">
+                {{ c.name ?? c.code }}
+              </button>
+            }
+          </div>
+        }
+
+        <div class="pg-grid">
+          @if (gridProducts.length === 0) {
+            <div class="pg-empty">No products found.</div>
+          } @else {
+            @for (p of gridProducts; track p.id) {
+              <div class="pg-card" (click)="pickProduct(p)">
+                <div class="pg-thumb">
+                  @if (isProducible(p.id)) { <span class="pg-mto" title="Cooked/assembled to order — a production order is created on payment">MADE TO ORDER</span> }
+                  @if (itemImage(p); as img) {
+                    <img [src]="img" [alt]="p.name ?? ''" loading="lazy" />
+                  } @else {
+                    <div class="pg-thumb-ph">{{ (p.name ?? '?').charAt(0) }}</div>
+                  }
+                </div>
+                <div class="pg-name">{{ p.name }}</div>
+                @if (p.code) { <div class="pg-code">{{ p.code }}</div> }
+                <div class="pg-price">{{ itemPrice(p) | number:'1.2-2' }}</div>
+              </div>
+            }
+          }
+        </div>
+
+        @if (gridTotalCount > 0) {
+          <div class="pagination-bar">
+            <div class="pagination-info">
+              <span>Items per page:</span>
+              <select (change)="onGridPageSizeChange($event)">
+                @for (opt of gridPageSizeOptions; track opt) {
+                  <option [value]="opt" [selected]="opt === gridPageSize">{{ opt }}</option>
+                }
+              </select>
+              <span>{{ gridRangeLabel }}</span>
+            </div>
+            <div class="pagination-controls">
+              <button class="btn-page" type="button" [disabled]="gridPage <= 1" (click)="gridPrevPage()">
+                &#8249; Prev
+              </button>
+              <span class="page-indicator">Page {{ gridPage }} of {{ gridTotalPages }}</span>
+              <button class="btn-page" type="button" [disabled]="gridPage >= gridTotalPages" (click)="gridNextPage()">
+                Next &#8250;
+              </button>
+            </div>
+          </div>
+        }
+
+      </div>
+    </div>
+  }
+
+</div>
+}
+
+
+<!-- ═══════════════════════════════════════════════════
+     PAYMENT SCREEN
+     ═══════════════════════════════════════════════════ -->
+@if (screen === 'payment') {
+<div class="np-root" style="position:relative;">
+
+  <!-- ── Processing overlay — blocks all interaction while payment is in-flight ── -->
+  @if (processingPayment) {
+    <div class="pay-processing-overlay">
+      <div class="pay-processing-card">
+        <div class="pay-processing-icon">⟳</div>
+        <div class="pay-processing-label">Processing payment…</div>
+        <div class="pay-progress-bar-track">
+          <div class="pay-progress-bar-fill"></div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- LEFT: items + summary -->
+  <div class="np-items-panel">
+    <div class="np-panel-header">Items</div>
+    <div class="np-items-list">
+      @for (item of cart; track item.inventoryItemId) {
+        <div class="np-item">
+          <div class="np-item-row">
+            <span>{{ item.itemName }}@if (hasPromotion(item)) { <span class="promo-tag">PROMO</span> }</span>
+            <span>{{ lineAmount(item) | number:'1.2-2' }}</span>
+          </div>
+          <div class="np-item-sub">{{ item.quantity }} × {{ lineUnitPrice(item) | number:'1.2-2' }}</div>
+          @for (promo of promotionsFor(item); track promo.promotionId) {
+            <div class="product-promo">🏷 {{ promo.promotionName }} <span class="promo-amt">−{{ promo.discountAmount | number:'1.2-2' }}</span></div>
+          }
+        </div>
+      }
+    </div>
+    <div class="np-summary">
+      <div class="np-summary-row"><span>Subtotal</span><span>{{ subtotal | number:'1.2-2' }}</span></div>
+      @if (serverLineDiscount > 0) {
+        <div class="np-summary-row np-disc"><span>🏷 Promotions</span><span>-{{ serverLineDiscount | number:'1.2-2' }}</span></div>
+      }
+      @if (quote?.couponCode) {
+        <div class="np-summary-row np-disc"><span>Coupon {{ quote?.couponCode }}</span><span>-{{ couponDiscount | number:'1.2-2' }}</span></div>
+      }
+      @if (manualDiscountTotal > 0) {
+        <div class="np-summary-row np-disc"><span>Discount</span><span>-{{ manualDiscountTotal | number:'1.2-2' }}</span></div>
+      }
+      <div class="np-summary-row"><span>Tax</span><span>{{ totalTax | number:'1.2-2' }}</span></div>
+      <div class="np-total-row"><span>Total</span><span class="np-total-value">{{ grandTotal | number:'1.2-2' }}</span></div>
+    </div>
+  </div>
+
+  <!-- CENTER -->
+  <div class="np-main">
+    <div class="np-toolbar">
+      <button class="np-cancel" (click)="screen='terminal'">
+        <i class="fa-solid fa-xmark"></i> Cancel
+      </button>
+      <div class="np-top-actions">
+        @if (cfgAllowDiscount) {
+          <div class="np-action" (click)="openDiscountDialog()">
+            <i class="fa-solid fa-percent"></i> Discount
+          </div>
+        }
+        <div class="np-action" (click)="showCustomerPanel=true">
+          <i class="fa-solid fa-user"></i> {{ customerName || 'Customer' }}
+        </div>
+      </div>
+    </div>
+
+    @if (error) { <div class="np-error">{{ error }}</div> }
+
+    <div class="np-content">
+
+      <!-- payment types -->
+      <div class="np-types">
+        <div class="np-section-title">Payment type</div>
+        @for (pm of paymentMethods; track pm.key) {
+          <div class="np-type" [class.active]="paymentMethod===pm.key" (click)="selectPaymentType(pm.key)">{{ pm.label }}</div>
+        }
+        @if (cfgAllowSplitPayment) {
+          <div class="np-type" [class.active]="splitMode" (click)="selectPaymentType('Split')">Split payments</div>
+        }
+      </div>
+
+      <!-- payment info -->
+      <div class="np-info">
+        <div class="np-section-title">Payment{{ splitMode ? ' · Split' : '' }}</div>
+
+        <div class="np-amount-row">
+          <div class="np-amount-label">Total:</div>
+          <div class="np-amount-blue">{{ grandTotal | number:'1.2-2' }}</div>
+        </div>
+        <div class="np-amount-row">
+          <div class="np-amount-label">Paid: <i class="fa-solid fa-pen"></i></div>
+          <div class="np-amount">{{ amountTendered | number:'1.2-2' }}</div>
+        </div>
+        <div class="np-amount-row">
+          <div class="np-amount-label">Change:</div>
+          <div class="np-amount" [class.np-pos]="change > 0">{{ change | number:'1.2-2' }}</div>
+        </div>
+
+        @if (paymentMethod !== 'Cash') {
+          <input class="np-ref" type="text" [(ngModel)]="paymentReference"
+                 placeholder="Reference / Transaction ID (optional)" />
+        }
+
+        <input id="payTenderedInput" class="np-paid-input" type="number"
+               [(ngModel)]="amountTendered" (ngModelChange)="onTenderedInput()" placeholder="Enter amount paid" />
+
+        <div class="np-quick">
+          @for (a of quickAmounts; track a) {
+            <button class="np-qa" (click)="setTendered(a)">{{ a | number:'1.2-2' }}</button>
+          }
+        </div>
+
+        @if (splitMode) {
+          <div class="np-tenders">
+            @for (t of tenderLines; track $index) {
+              <div class="np-tender-row">
+                <span>{{ tenderLabel(t) }}{{ t.referenceNumber ? ' · ' + t.referenceNumber : '' }}</span>
+                <span>{{ t.amount | number:'1.2-2' }}</span>
+                <button class="np-tender-rm" (click)="removeTender($index)">✕</button>
+              </div>
+            }
+            <button class="np-add-tender" (click)="onPayEnter()">+ Add {{ paymentMethod }} tender</button>
+            <div class="np-tender-row np-remaining">
+              <span>Remaining</span>
+              <span [class.np-pos]="remainingToPay <= 0">{{ remainingToPay | number:'1.2-2' }}</span>
+              <span></span>
+            </div>
+          </div>
+        }
+
+        <label class="np-credit">
+          <input type="checkbox" [(ngModel)]="allowCredit" />
+          Allow credit / partial payment
+          @if (allowCredit && balanceDue > 0) {
+            <span class="np-balance">Balance due: {{ balanceDue | number:'1.2-2' }}</span>
+          }
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- KEYPAD -->
+  <div class="np-keypad">
+    <div class="np-key" (click)="payKey('1')">1</div>
+    <div class="np-key" (click)="payKey('2')">2</div>
+    <div class="np-key" (click)="payKey('3')">3</div>
+    <div class="np-key" (click)="payKey('back')"><i class="fa-solid fa-delete-left"></i></div>
+
+    <div class="np-key" (click)="payKey('4')">4</div>
+    <div class="np-key" (click)="payKey('5')">5</div>
+    <div class="np-key" (click)="payKey('6')">6</div>
+    <div class="np-key" (click)="payKey('C')">C</div>
+
+    <div class="np-key" (click)="payKey('7')">7</div>
+    <div class="np-key" (click)="payKey('8')">8</div>
+    <div class="np-key" (click)="payKey('9')">9</div>
+    <div class="np-key np-key-enter" [class.disabled]="processingPayment" (click)="payKey('enter')">
+      <i class="fa-solid fa-arrow-turn-down-left"></i>
+    </div>
+
+    <div class="np-key" (click)="payKey('-')">-</div>
+    <div class="np-key" (click)="payKey('0')">0</div>
+    <div class="np-key" (click)="payKey('.')">.</div>
+    <div class="np-key np-key-empty"></div>
+  </div>
+
+  <!-- ── SPLIT PAYMENT DIALOG ──────────────────────── -->
+  @if (showSplitDialog) {
+    <div class="sp-overlay">
+      <div class="sp-modal">
+
+        <!-- LEFT: add a payment type -->
+        <div class="sp-left">
+          <div class="sp-left-header">Add payment type</div>
+          <div class="sp-option" [class.active]="paymentMethod==='Cash'" (click)="addSplitTender('Cash')">Cash</div>
+          <div class="sp-option" [class.active]="paymentMethod==='Card'" (click)="addSplitTender('Card')">Card</div>
+          <div class="sp-option" [class.active]="paymentMethod==='Cheque'" (click)="addSplitTender('Cheque')">Check</div>
+        </div>
+
+        <!-- RIGHT: selected payments + totals -->
+        <div class="sp-right">
+          <div class="sp-right-header">
+            <div class="sp-title">Selected payment type</div>
+            <div class="sp-close" (click)="closeSplitDialog()"><i class="fa-solid fa-xmark"></i></div>
+          </div>
+
+          <div class="sp-content">
+            <div class="sp-desc">Choose payment types and amounts required for the current sale</div>
+
+            <div class="sp-selected">
+              @if (tenderLines.length === 0) {
+                <div class="sp-empty">No payments added yet — pick a payment type on the left.</div>
+              } @else {
+                @for (t of tenderLines; track $index) {
+                  <div class="sp-row">
+                    <div class="sp-method">{{ tenderLabel(t) }}</div>
+                    <input class="sp-amount" type="number" min="0"
+                           [ngModel]="t.amount" (ngModelChange)="updateTenderAmount($index, $event)" />
+                    <div class="sp-remove" (click)="removeTender($index)"><i class="fa-solid fa-xmark"></i></div>
+                  </div>
+                }
+              }
+            </div>
+
+            <div class="sp-totals">
+              <div class="sp-total-row"><div class="sp-label">Total:</div><div class="sp-blue">{{ grandTotal | number:'1.2-2' }}</div></div>
+              <div class="sp-total-row"><div class="sp-label">Paid:</div><div class="sp-black">{{ tenderedSoFar | number:'1.2-2' }}</div></div>
+              @if (remainingToPay > 0) {
+                <div class="sp-total-row"><div class="sp-label">Remaining:</div><div class="sp-rem">{{ remainingToPay | number:'1.2-2' }}</div></div>
+              }
+            </div>
+          </div>
+
+          <div class="sp-footer">
+            <button class="sp-btn sp-ok" [disabled]="processingPayment" (click)="confirmSplit()">
+              <i class="fa-solid fa-check"></i> OK
+            </button>
+            <button class="sp-btn sp-cancel" (click)="cancelSplit()">
+              <i class="fa-solid fa-xmark"></i> Cancel
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  }
+
+</div>
+}
+
+
+<!-- ═══════════════════════════════════════════════════
+     RECEIPT SCREEN
+     ═══════════════════════════════════════════════════ -->
+@if (screen === 'receipt') {
+<div class="rec-root">
+  <div class="rec-paper">
+    <div class="rec-top">
+      <div class="rec-ok">✓</div>
+      <h2>{{ isReceiptPartial ? 'Partial Payment' : 'Payment Complete' }}</h2>
+      @if (checkoutResult?.receiptNumber) {
+        <div class="rec-num">Receipt {{ checkoutResult?.receiptNumber }}</div>
+      } @else if (receiptOrder) {
+        <div class="rec-num">{{ receiptOrder.orderNumber ?? receiptOrder.id?.substring(0,8) }}</div>
+      }
+      <div class="rec-cust" style="font-size:12px;opacity:.7">{{ (checkoutResult?.transaction?.transactionDate ?? today) | date:'medium' }}</div>
+      @if (checkoutResult?.orderNumber) { <div class="rec-cust" style="font-size:11px;opacity:.6">Order: {{ checkoutResult?.orderNumber }}</div> }
+      @if (customerName) { <div class="rec-cust">{{ customerName }}</div> }
+      @if (loggedCashier) { <div class="rec-cust" style="font-size:12px;opacity:.7">Cashier: {{ loggedCashier.displayName }}</div> }
+      @if (activeSession) { <div class="rec-cust" style="font-size:11px;opacity:.5">Session: {{ activeSession.sessionNumber }}</div> }
+    </div>
+    <hr class="rec-divider" />
+    <div class="rec-totals">
+      <div class="rt-row"><span>Total</span><span>{{ (checkoutResult?.totalAmount ?? grandTotal) | number:'1.2-2' }}</span></div>
+      <div class="rt-row"><span>Paid by</span><span>{{ receiptPaymentMethod }}</span></div>
+      <div class="rt-row"><span>Tendered</span><span>{{ (checkoutResult?.tenderedAmount ?? amountTendered) | number:'1.2-2' }}</span></div>
+      @if ((checkoutResult?.changeAmount ?? change) > 0) {
+        <div class="rt-row"><span>Change</span><span class="rt-change">{{ (checkoutResult?.changeAmount ?? change) | number:'1.2-2' }}</span></div>
+      }
+      @if (isReceiptPartial) {
+        <div class="rt-row"><span>Balance Due</span><span class="rt-change">{{ checkoutResult?.balanceDue | number:'1.2-2' }}</span></div>
+      }
+    </div>
+    <hr class="rec-divider" />
+    @if (thermalReceipt?.content) {
+      <details class="rec-preview" open>
+        <summary>Receipt preview ({{ thermalReceipt?.paperSize }})</summary>
+        <pre class="rec-preview-text">{{ thermalReceipt?.content }}</pre>
+      </details>
+    }
+    <div class="rec-thanks">Thank you for your purchase!</div>
+    <div class="rec-actions">
+      <button class="rec-btn rec-print" (click)="printAndNewSale()">Print <kbd>Enter</kbd></button>
+      <button class="rec-btn rec-new" (click)="newSale()">New Sale <kbd>Esc</kbd></button>
+    </div>
+  </div>
+</div>
+}
+
+
+<!-- ═══════════════════════════════════════════════════
+     SESSION SALES / X-REPORT
+     ═══════════════════════════════════════════════════ -->
+@if (showSessionReport) {
+<div class="side-overlay" (click)="showSessionReport = false"></div>
+<div class="xr-modal">
+  <div class="xr-head">
+    <h3>Session sales</h3>
+    @if (activeSession) { <span class="xr-session">Session {{ activeSession.sessionNumber }}</span> }
+    <button class="xr-close" (click)="showSessionReport = false">✕</button>
+  </div>
+  @if (sessionReportLoading) {
+    <div class="xr-empty">Loading…</div>
+  } @else if (sessionTransactions.length === 0) {
+    <div class="xr-empty">No transactions in this session yet.</div>
+  } @else {
+    <div class="xr-summary">
+      <div><span>Transactions</span><strong>{{ sessionTransactions.length }}</strong></div>
+      <div><span>Total</span><strong>{{ sessionReportTotal | number:'1.2-2' }}</strong></div>
+    </div>
+    <div class="xr-list">
+      @for (t of sessionTransactions; track t.id) {
+        <div class="xr-row">
+          <span class="xr-num">{{ t.receiptNumber ?? t.transactionNumber }}</span>
+          <span class="xr-date">{{ t.transactionDate | date:'shortTime' }}</span>
+          <span class="xr-amt">{{ t.totalAmount | number:'1.2-2' }}</span>
+        </div>
+      }
+    </div>
+  }
+</div>
+}
+
+
+<!-- ═══════════════════════════════════════════════════
+     SALES HISTORY
+     ═══════════════════════════════════════════════════ -->
+@if (showSalesHistory) {
+<div class="sh-overlay">
+  <div class="sh-modal">
+
+    <!-- Title bar -->
+    <div class="sh-titlebar">
+      <span class="sh-title">Sales history</span>
+      <button class="sh-x" (click)="closeSalesHistory()">✕</button>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="sh-toolbar">
+      <div class="sh-search">
+        <label>Document number</label>
+        <input type="text" [(ngModel)]="docSearch" placeholder="Search #, customer…" />
+      </div>
+      <div class="sh-search">
+        <label>From</label>
+        <input type="date" [(ngModel)]="historyFrom" [max]="historyTo" (change)="loadSalesHistory()" />
+      </div>
+      <div class="sh-search">
+        <label>To</label>
+        <input type="date" [(ngModel)]="historyTo" [min]="historyFrom" (change)="loadSalesHistory()" />
+      </div>
+      <label class="sh-allusers">
+        <input type="checkbox" [(ngModel)]="showAllUsers" />
+        <span>Show all users</span>
+      </label>
+      <div class="sh-context">
+        <div class="sh-ctx-line">{{ terminalName(selectedTerminalId) }}</div>
+        @if (activeSession) { <div class="sh-ctx-sub">Session {{ activeSession.sessionNumber }} · {{ today | date:'mediumDate' }}</div> }
+      </div>
+      <div class="sh-tools">
+        <button class="sh-tool" (click)="loadSalesHistory()" title="Refresh">
+          <i class="fa-solid fa-rotate"></i><span>Refresh</span>
+        </button>
+        <button class="sh-tool" [disabled]="!selectedDocument" (click)="selectedDocument && printDocument(selectedDocument)" title="Print receipt">
+          <i class="fa-solid fa-print"></i><span>Print</span>
+        </button>
+        <button class="sh-tool" [disabled]="!selectedDocument" (click)="selectedDocument && saveDocumentPdf(selectedDocument)" title="Save as PDF">
+          <i class="fa-solid fa-file-pdf"></i><span>Save as PDF</span>
+        </button>
+        <button class="sh-tool" [disabled]="!selectedDocument" (click)="selectedDocument && printDocument(selectedDocument)" title="Receipt">
+          <i class="fa-solid fa-receipt"></i><span>Receipt</span>
+        </button>
+        <button class="sh-tool sh-tool-danger" [disabled]="!selectedDocument" (click)="selectedDocument && refundDocument(selectedDocument)" title="Refund">
+          <i class="fa-solid fa-rotate-left"></i><span>Refund</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Documents -->
+    <div class="sh-section-label">Documents</div>
+    <div class="sh-table-wrap sh-docs">
+      <table class="sh-table">
+        <thead>
+          <tr>
+            <th>Number</th><th>Type</th><th>Customer</th><th>Date</th>
+            <th>Payment</th><th class="num">Discount</th><th class="num">Subtotal</th>
+            <th class="num">Tax</th><th class="num">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (salesHistoryLoading) {
+            <tr><td colspan="9" class="sh-empty">Loading…</td></tr>
+          } @else {
+            @for (d of filteredDocuments; track d.id) {
+              <tr [class.sh-selected]="selectedDocument?.id === d.id" (click)="selectDocument(d)">
+                <td><strong>{{ d.receiptNumber ?? d.transactionNumber ?? '—' }}</strong></td>
+                <td>{{ documentTypeLabel(d.transactionType) }}</td>
+                <td>{{ documentCustomer(d) || '—' }}</td>
+                <td>{{ d.transactionDate | date:'short' }}</td>
+                <td>{{ documentPaymentLabel(d) }}</td>
+                <td class="num">{{ d.discountAmount | number:'1.2-2' }}</td>
+                <td class="num">{{ d.subtotalAmount | number:'1.2-2' }}</td>
+                <td class="num">{{ d.taxAmount | number:'1.2-2' }}</td>
+                <td class="num"><strong>{{ d.totalAmount | number:'1.2-2' }}</strong></td>
+              </tr>
+            } @empty {
+              <tr><td colspan="9" class="sh-empty">No documents found.</td></tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Document items -->
+    <div class="sh-section-label">Document items</div>
+    <div class="sh-table-wrap sh-items">
+      <table class="sh-table">
+        <thead>
+          <tr>
+            <th>Code</th><th>Name</th><th>Unit</th><th class="num">Qty</th>
+            <th class="num">Unit price</th><th class="num">Tax</th>
+            <th class="num">Before disc.</th><th class="num">Discount</th><th class="num">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (documentLoading) {
+            <tr><td colspan="9" class="sh-empty">Loading…</td></tr>
+          } @else if (!selectedDocument) {
+            <tr><td colspan="9" class="sh-empty">Select a document to see its items.</td></tr>
+          } @else {
+            @for (l of selectedDocument.lines ?? []; track l.id) {
+              <tr>
+                <td>{{ l.productCode ?? '—' }}</td>
+                <td>{{ l.productName ?? '—' }}</td>
+                <td>{{ l.unitOfMeasure ?? '—' }}</td>
+                <td class="num">{{ l.quantity }}</td>
+                <td class="num">{{ l.unitPrice | number:'1.2-2' }}</td>
+                <td class="num">{{ l.taxAmount | number:'1.2-2' }}</td>
+                <td class="num">{{ lineGross(l) | number:'1.2-2' }}</td>
+                <td class="num">{{ l.discountAmount | number:'1.2-2' }}</td>
+                <td class="num"><strong>{{ l.totalAmount | number:'1.2-2' }}</strong></td>
+              </tr>
+            } @empty {
+              <tr><td colspan="9" class="sh-empty">No items on this document.</td></tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer -->
+    <div class="sh-footer">
+      <div class="sh-totals">
+        <span>Documents count: <strong>{{ filteredDocuments.length }}</strong></span>
+        <span>Total amount: <strong>{{ salesHistoryTotal | number:'1.2-2' }}</strong></span>
+      </div>
+      <button class="sh-close-btn" (click)="closeSalesHistory()">Close</button>
+    </div>
+
+  </div>
+</div>
+}
+
+
+<!-- ═══════════════════════════════════════════════════
+     OPEN SALES  (held / parked carts)
+     ═══════════════════════════════════════════════════ -->
+@if (showOpenSalesModal) {
+<div class="os-overlay" (click)="closeOpenSales()">
+  <div class="os-modal" (click)="$event.stopPropagation()">
+
+    <div class="os-head">
+      <span class="os-title">Open sales</span>
+      <span class="os-sub">{{ openSales.length }} held order{{ openSales.length === 1 ? '' : 's' }}</span>
+      <button class="os-x" (click)="closeOpenSales()">✕</button>
+    </div>
+
+    @if (openSales.length === 0) {
+      <div class="os-empty">
+        <div style="font-size:48px;opacity:.3">🧾</div>
+        <p>No open sales. Add items to a cart and it will be held here until paid.</p>
+      </div>
+    } @else {
+      <div class="os-list">
+        @for (s of openSales; track s.id) {
+          <div class="os-card" [class.os-active]="activeSaleId === s.id" (click)="loadOpenSale(s.id)">
+            <div class="os-card-top">
+              <span class="os-ref">#{{ s.ref }}</span>
+              @if (activeSaleId === s.id) { <span class="os-current">current</span> }
+              <span class="os-time">{{ s.createdAt | date:'shortTime' }}</span>
+            </div>
+            <div class="os-customer">{{ s.customerName || 'Walk-in Customer' }}</div>
+            <div class="os-meta">
+              <span>{{ itemCount(s) }} item{{ itemCount(s) === 1 ? '' : 's' }}</span>
+              <span class="os-total">{{ s.total | number:'1.2-2' }}</span>
+            </div>
+            @if (s.note) { <div class="os-note">📝 {{ s.note }}</div> }
+            <div class="os-actions">
+              <button class="os-btn os-resume" (click)="$event.stopPropagation(); loadOpenSale(s.id)">Resume</button>
+              <button class="os-btn os-del" (click)="deleteOpenSale(s.id, $event)" title="Discard">✕</button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <div class="os-footer">
+      <button class="os-close-btn" (click)="closeOpenSales()">Close</button>
+    </div>
+
+  </div>
+</div>
+}
+
+
+<!-- ═══════════════════════════════════════════════════
+     CHANGE QUANTITY  (numpad popup)
+     ═══════════════════════════════════════════════════ -->
+@if (showQtyPad) {
+<div class="qp-overlay" (click)="closeQtyPad()">
+  <div class="qp-modal" (click)="$event.stopPropagation()">
+    <div class="qp-title">Change quantity</div>
+    <div class="qp-sub">{{ selectedItem ? (selectedItem.itemName) : 'Enter quantity for next item' }}</div>
+    <div class="qp-display" [class.qp-display-selected]="qtyPrefilled">{{ qtyBuffer || '0' }}</div>
+    <div class="qp-grid">
+      <div class="qp-key" (click)="qtyKey('1')">1</div>
+      <div class="qp-key" (click)="qtyKey('2')">2</div>
+      <div class="qp-key" (click)="qtyKey('3')">3</div>
+      <div class="qp-key qp-fn" (click)="qtyKey('back')"><i class="fa-solid fa-delete-left"></i></div>
+
+      <div class="qp-key" (click)="qtyKey('4')">4</div>
+      <div class="qp-key" (click)="qtyKey('5')">5</div>
+      <div class="qp-key" (click)="qtyKey('6')">6</div>
+      <div class="qp-key qp-fn" (click)="qtyKey('esc')">esc</div>
+
+      <div class="qp-key" (click)="qtyKey('7')">7</div>
+      <div class="qp-key" (click)="qtyKey('8')">8</div>
+      <div class="qp-key" (click)="qtyKey('9')">9</div>
+      <div class="qp-key qp-enter" (click)="qtyKey('enter')"><i class="fa-solid fa-arrow-turn-down-left"></i></div>
+
+      <div class="qp-key" (click)="qtyKey('-')">-</div>
+      <div class="qp-key" (click)="qtyKey('0')">0</div>
+      <div class="qp-key" [class.qp-disabled]="!cfgAllowDecimalQty" (click)="cfgAllowDecimalQty && qtyKey('.')">.</div>
+    </div>
+  </div>
+</div>
+}
+
+
+<!-- ═══════════════════════════════════════════════════
+     PRINTER / RECEIPT SETTINGS
+     ═══════════════════════════════════════════════════ -->
+@if (showSettingsPanel) {
+<div class="pos-overlay" (click)="closeSettings()">
+  <div class="pos-dialog" (click)="$event.stopPropagation()">
+    <div class="dlg-head">⚙ POS settings <button class="dlg-close" (click)="closeSettings()">✕</button></div>
+    <div class="dlg-body">
+      <label>Receipt paper size</label>
+      <select [(ngModel)]="posSettings.paperSize">
+        <option value="80mm">80 mm (standard thermal)</option>
+        <option value="58mm">58 mm (compact)</option>
+      </select>
+
+      <label class="set-check">
+        <input type="checkbox" [(ngModel)]="posSettings.autoPrint" />
+        Automatically print the receipt after payment
+      </label>
+
+      <label class="set-check">
+        <input type="checkbox" [(ngModel)]="posSettings.skipReceiptScreen" />
+        Skip the on-screen receipt and go straight to the next sale
+      </label>
+      <p class="set-hint">When both are on, the receipt prints directly and the terminal returns to a new sale — no extra taps.</p>
+    </div>
+    <div class="dlg-footer">
+      <button class="dlg-cancel" (click)="closeSettings()">Cancel</button>
+      <button class="dlg-ok" (click)="saveSettings()">Save</button>
+    </div>
+  </div>
+</div>
+}
+
+
+<!-- ═══════════════════════════════════════════════════
+     END SESSION PANEL
+     ═══════════════════════════════════════════════════ -->
+@if (showEndSessionPanel) {
+<div class="pos-overlay" (click)="showEndSessionPanel=false">
+  <div class="es-dialog" (click)="$event.stopPropagation()">
+
+    <!-- Header -->
+    <div class="es-head">
+      <div class="es-title">
+        <i class="fa-solid fa-door-open"></i>
+        <span>End Session</span>
+      </div>
+      @if (activeSession) {
+        <span class="es-session-num">{{ activeSession.sessionNumber }}</span>
+      }
+      <button class="dlg-close" (click)="showEndSessionPanel=false">✕</button>
+    </div>
+
+    <div class="es-body">
+
+      <!-- Left column: Cash -->
+      <div class="es-col">
+        <div class="es-section-title">Cash Count</div>
+
+        <div class="es-stat-row">
+          <span>Opening Float (Cash In)</span>
+          <strong>{{ activeSession?.openingFloat ?? 0 | number:'1.2-2' }}</strong>
+        </div>
+        <div class="es-stat-row">
+          <span>Cash Sales Collected</span>
+          <strong>{{ activeSession?.cashCollected ?? 0 | number:'1.2-2' }}</strong>
+        </div>
+        <div class="es-stat-row es-total-row">
+          <span>Expected in Drawer</span>
+          <strong>{{ sessionExpectedCash | number:'1.2-2' }}</strong>
+        </div>
+
+        <div class="es-input-row">
+          <label>Actual Closing Count (Cash Out)</label>
+          <input type="number" min="0" step="0.01" [(ngModel)]="closingCashAmount"
+                 class="es-cash-input" placeholder="0.00" autofocus />
+        </div>
+
+        <div class="es-stat-row es-variance-row"
+             [class.es-variance-over]="sessionCashVariance > 0"
+             [class.es-variance-short]="sessionCashVariance < 0">
+          <span>Variance</span>
+          <strong>{{ sessionCashVariance >= 0 ? '+' : '' }}{{ sessionCashVariance | number:'1.2-2' }}</strong>
+        </div>
+      </div>
+
+      <!-- Right column: Sales summary -->
+      <div class="es-col">
+        <div class="es-section-title">Sales Summary</div>
+
+        <div class="es-stat-row">
+          <span>Gross Sales</span>
+          <strong>{{ activeSession?.totalSalesAmount ?? 0 | number:'1.2-2' }}</strong>
+        </div>
+        <div class="es-stat-row es-deduct">
+          <span>Discounts</span>
+          <strong>- {{ activeSession?.totalDiscountsAmount ?? 0 | number:'1.2-2' }}</strong>
+        </div>
+        <div class="es-stat-row es-deduct">
+          <span>Refunds</span>
+          <strong>- {{ activeSession?.totalRefundsAmount ?? 0 | number:'1.2-2' }}</strong>
+        </div>
+        <div class="es-stat-row">
+          <span>Tax</span>
+          <strong>{{ activeSession?.totalTaxAmount ?? 0 | number:'1.2-2' }}</strong>
+        </div>
+        <div class="es-stat-row es-total-row">
+          <span>Net Sales</span>
+          <strong>{{ activeSession?.netSalesAmount ?? 0 | number:'1.2-2' }}</strong>
+        </div>
+
+        <div class="es-divider"></div>
+        <div class="es-section-title" style="margin-top:4px">Payments</div>
+
+        <div class="es-stat-row">
+          <span>Cash</span>
+          <strong>{{ activeSession?.cashCollected ?? 0 | number:'1.2-2' }}</strong>
+        </div>
+        <div class="es-stat-row">
+          <span>Card</span>
+          <strong>{{ activeSession?.cardCollected ?? 0 | number:'1.2-2' }}</strong>
+        </div>
+        <div class="es-stat-row">
+          <span>Mobile / Wallet</span>
+          <strong>{{ activeSession?.walletCollected ?? 0 | number:'1.2-2' }}</strong>
+        </div>
+        <div class="es-stat-row es-total-row">
+          <span>Transactions</span>
+          <strong>{{ activeSession?.transactionCount ?? 0 }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer actions -->
+    <div class="es-footer">
+      <button class="es-btn-cancel" (click)="showEndSessionPanel=false">Cancel</button>
+      <button class="es-btn-close" (click)="confirmEndSession(false)">
+        <i class="fa-solid fa-sign-out-alt"></i> Close Session
+      </button>
+      <button class="es-btn-print" (click)="confirmEndSession(true, false)">
+        <i class="fa-solid fa-print"></i> Print Summary
+      </button>
+      <button class="es-btn-print es-btn-print-detail" (click)="confirmEndSession(true, true)">
+        <i class="fa-solid fa-list"></i> Print with Invoices
+      </button>
+    </div>
+
+  </div>
+</div>
+}
+
+
+<!-- ═══════════════════════════════════════════════════
+     SHARED MODALS (available on terminal & payment screens)
+     ═══════════════════════════════════════════════════ -->
+@if (showCommentPanel || showCustomerPanel || showCashDrawer) {
+  <div class="pos-overlay" (click)="closeAllPanels()">
+    <div class="pos-dialog" (click)="$event.stopPropagation()">
+
+      @if (showCommentPanel) {
+        <div class="dlg-head">💬 Add Comment <button class="dlg-close" (click)="showCommentPanel=false">✕</button></div>
+        <div class="dlg-body">
+          <label>Note for order</label>
+          <textarea [(ngModel)]="commentText" rows="3" placeholder="Special instructions..."></textarea>
+        </div>
+        <div class="dlg-footer">
+          <button class="dlg-cancel" (click)="showCommentPanel=false">Cancel</button>
+          <button class="dlg-ok" (click)="applyComment()">Save</button>
+        </div>
+      }
+
+      @if (showCustomerPanel) {
+        <div class="dlg-head">👤 Customer <button class="dlg-close" (click)="showCustomerPanel=false">✕</button></div>
+        <div class="dlg-body">
+          <label>Search customer</label>
+          <input type="text" [(ngModel)]="customerSearch" placeholder="Name, phone, email…" autocomplete="off" style="margin-bottom:6px;" />
+          @if (contactsLoading) {
+            <div style="font-size:12px;color:#94a3b8;margin-bottom:6px;">Loading customers…</div>
+          }
+          <select [ngModel]="contactId" (ngModelChange)="onContactSelect($event)" size="6" style="height:auto;">
+            @for (c of filteredContacts; track c.id) {
+              <option [value]="c.id">{{ contactLabel(c) }}</option>
+            }
+          </select>
+          @if (!contactsLoading && filteredContacts.length === 0 && customerSearch) {
+            <div style="font-size:12px;color:#94a3b8;margin-top:4px;">No customers match "{{ customerSearch }}"</div>
+          }
+          <label style="margin-top:10px;">Order notes</label>
+          <textarea [(ngModel)]="orderNotes" rows="2" placeholder="Optional"></textarea>
+        </div>
+        <div class="dlg-footer">
+          <button class="dlg-cancel" (click)="showCustomerPanel=false;customerSearch=''">Cancel</button>
+          <button class="dlg-ok" (click)="showCustomerPanel=false;customerSearch=''">Done</button>
+        </div>
+      }
+
+      @if (showCashDrawer) {
+        <div class="dlg-head">▤ Cash Drawer <button class="dlg-close" (click)="showCashDrawer=false">✕</button></div>
+        <div class="dlg-body">
+          @if (!activeSession) {
+            <p style="color:#f59e0b;font-size:13px;margin:0 0 12px;">No active session — cash movements won't be recorded to a session.</p>
+          }
+          <label>Type</label>
+          <select [(ngModel)]="cashMoveType">
+            <option value="CashIn">Cash In</option>
+            <option value="CashOut">Cash Out</option>
+          </select>
+          <label>Amount</label>
+          <input type="number" [(ngModel)]="cashMoveAmount" placeholder="0.00" min="0" step="0.01" />
+          <label>Reason (optional)</label>
+          <input type="text" [(ngModel)]="cashMoveReason" placeholder="e.g. petty cash, supplier payment" />
+        </div>
+        <div class="dlg-footer">
+          <button class="dlg-cancel" (click)="showCashDrawer=false">Cancel</button>
+          <button class="dlg-ok" (click)="recordCashMove()" [disabled]="!activeSession || !cashMoveAmount">Record</button>
+        </div>
+      }
+
+    </div>
+  </div>
+}
+
+
+<!-- ═══════════════════════════════════════════════════
+     DISCOUNT OPTIONS DIALOG (cart & item discounts)
+     ═══════════════════════════════════════════════════ -->
+@if (showDiscountPanel) {
+  <div class="dd-overlay">
+    <div class="dd-modal">
+
+      <!-- LEFT: items + summary -->
+      <div class="dd-left">
+        <div class="dd-left-header">Items</div>
+        <div class="dd-item-list">
+          @for (item of cart; track item.inventoryItemId; let i = $index) {
+            <div class="dd-item" [class.active]="discountTab==='item' && discItemIndex===i"
+                 (click)="discountTab==='item' ? selectDiscountItem(i) : null">
+              <div class="dd-item-top">
+                <span>{{ item.itemName }}</span>
+                <span>{{ lineAmount(item) | number:'1.2-2' }}</span>
+              </div>
+              <div class="dd-item-detail">
+                {{ item.quantity }} × {{ lineUnitPrice(item) | number:'1.2-2' }}
+                @if (item.discount > 0) { <span class="dd-item-disc">− {{ item.discount | number:'1.2-2' }}/u</span> }
+              </div>
+            </div>
+          }
+        </div>
+        <div class="dd-summary">
+          <div class="dd-summary-row"><span>Subtotal</span><span>{{ subtotal | number:'1.2-2' }}</span></div>
+          <div class="dd-summary-row"><span>Tax</span><span>{{ totalTax | number:'1.2-2' }}</span></div>
+          <div class="dd-total-row"><span>Total</span><span class="dd-total-value">{{ grandTotal | number:'1.2-2' }}</span></div>
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div class="dd-right">
+        <div class="dd-right-header">
+          <div class="dd-header-title">Discount options</div>
+          <div class="dd-close" (click)="cancelDiscount()"><i class="fa-solid fa-xmark"></i></div>
+        </div>
+
+        <div class="dd-tabs">
+          <div class="dd-tab" [class.active]="discountTab==='cart'" (click)="setDiscountTab('cart')">Cart discount</div>
+          <div class="dd-tab" [class.active]="discountTab==='item'" (click)="setDiscountTab('item')">Item discount</div>
+        </div>
+
+        <div class="dd-content">
+          @if (cfgMaxDiscountPercent < 100) {
+            <div class="dd-item-hint" style="padding:6px 0 0;">Max discount: {{ cfgMaxDiscountPercent }}%</div>
+          }
+          @if (discountTab === 'cart') {
+            <div class="dd-box">
+              <div class="dd-cart-icon"><i class="fa-solid fa-cart-shopping"></i></div>
+              <div class="dd-box-title">Apply cart discount</div>
+              <div class="dd-type">
+                <button [class.active]="cartDiscountType==='Percentage'" (click)="setCartDiscountType('Percentage')">%</button>
+                <button [class.active]="cartDiscountType==='Fixed'" (click)="setCartDiscountType('Fixed')">{{ cfgCurrencyCode }}</button>
+              </div>
+              <div class="dd-label">Discount</div>
+              <div class="dd-input">
+                <input type="number" min="0" [max]="cartDiscountType==='Percentage' ? cfgMaxDiscountPercent : null" [(ngModel)]="cartDiscountValue" />
+                <span class="dd-symbol">{{ cartDiscountType==='Percentage' ? '%' : cfgCurrencyCode }}</span>
+              </div>
+            </div>
+          } @else {
+            <div class="dd-box">
+              <div class="dd-cart-icon"><i class="fa-solid fa-tag"></i></div>
+              @if (discItem; as it) {
+                <div class="dd-box-title">{{ it.itemName }}</div>
+                <div class="dd-type">
+                  <button [class.active]="itemDiscountType==='Percentage'" (click)="setItemDiscountType('Percentage')">%</button>
+                  <button [class.active]="itemDiscountType==='Fixed'" (click)="setItemDiscountType('Fixed')">{{ cfgCurrencyCode }}</button>
+                </div>
+                <div class="dd-label">Discount (per unit)</div>
+                <div class="dd-input">
+                  <input type="number" min="0" [max]="itemDiscountType==='Percentage' ? cfgMaxDiscountPercent : null" [(ngModel)]="itemDiscountValue" />
+                  <span class="dd-symbol">{{ itemDiscountType==='Percentage' ? '%' : cfgCurrencyCode }}</span>
+                </div>
+                <div class="dd-item-hint">Pick a line on the left to discount it.</div>
+              } @else {
+                <div class="dd-box-title">No item selected</div>
+                <div class="dd-item-hint">Add items to the cart, then pick a line on the left.</div>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="dd-footer">
+          <button class="dd-clear" (click)="clearDiscounts()"><i class="fa-solid fa-trash"></i> Clear discounts</button>
+          <div class="dd-footer-right">
+            <div class="dd-savings">Total savings: <strong>{{ totalSavings | number:'1.2-2' }}</strong></div>
+            <button class="dd-btn dd-ok" (click)="applyDiscount()"><i class="fa-solid fa-check"></i> OK</button>
+            <button class="dd-btn dd-cancel" (click)="cancelDiscount()"><i class="fa-solid fa-xmark"></i> Cancel</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+}
+
+<!-- ── Offline sync review panel (Phase 4) ─────────────────────────────────── -->
+@if (showSyncPanel) {
+  <div class="sync-overlay" (click)="closeSyncPanel()">
+    <div class="sync-modal" (click)="$event.stopPropagation()">
+      <div class="sync-head">
+        <span><i class="fa-solid fa-cloud-arrow-up"></i> Offline sync</span>
+        <button class="sync-close" (click)="closeSyncPanel()">✕</button>
+      </div>
+
+      <div class="sync-actions">
+        <button class="sync-btn" [disabled]="!isOnline || syncing" (click)="syncNow()">
+          {{ syncing ? 'Syncing…' : 'Sync now' }}
+        </button>
+        @if (syncing) {
+          <span class="sync-progress"><span class="sync-spinner"></span> {{ syncStatus }}</span>
+        } @else if (!isOnline) {
+          <span class="sync-hint">Offline — will sync automatically when reconnected</span>
+        }
+      </div>
+
+      <div class="sync-body">
+        @if (syncItems.length === 0) {
+          <div class="sync-empty">All sales are synced. Nothing pending.</div>
+        } @else {
+          @for (it of syncItems; track it.uid) {
+            <div class="sync-row" [class.sync-failed]="it.status === 'failed'" [class.sync-var]="!!it.variance">
+              <div class="sync-row-main">
+                <div class="sync-uid">{{ it.uid }}</div>
+                <div class="sync-meta">
+                  {{ it.createdAt | date:'short' }} · {{ (it.deviceTotal ?? 0) | number:'1.2-2' }}
+                  @if (it.variance) {
+                    <span class="sync-variance">Δ {{ it.variance | number:'1.2-2' }} · booked {{ (it.serverTotal ?? 0) | number:'1.2-2' }}{{ it.serverReceiptNumber ? ' (' + it.serverReceiptNumber + ')' : '' }}</span>
+                  }
+                </div>
+                @if (it.lastError) { <div class="sync-err">{{ it.lastError }}</div> }
+                @if (it.variance) { <span class="sync-tag sync-tag-var">Variance — review</span> }
+                @else if (it.status === 'failed') { <span class="sync-tag sync-tag-failed">Failed</span> }
+                @else { <span class="sync-tag sync-tag-pending">Pending</span> }
+              </div>
+              <div class="sync-row-actions">
+                @if (it.status === 'pending' || it.status === 'failed') {
+                  <button class="sync-mini" [disabled]="!isOnline" (click)="retrySync(it.uid)">Retry</button>
+                }
+                @if (it.variance) {
+                  <button class="sync-mini" (click)="dismissSync(it.uid)">Dismiss</button>
+                }
+              </div>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  </div>
+}
+
+
+<!-- ═══════════════════════════════════════════════════
+     CUSTOM CONFIRM DIALOG
+     ═══════════════════════════════════════════════════ -->
+@if (showConfirmDialog) {
+  <div class="cd-overlay" (click)="confirmCancel()">
+    <div class="cd-modal" (click)="$event.stopPropagation()">
+
+      <div class="cd-icon" [class.cd-icon-danger]="confirmDanger" [class.cd-icon-info]="!confirmDanger">
+        @if (confirmDanger) {
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        } @else {
+          <i class="fa-solid fa-circle-question"></i>
+        }
+      </div>
+
+      <div class="cd-title">{{ confirmTitle }}</div>
+      <div class="cd-message">{{ confirmMessage }}</div>
+
+      <div class="cd-actions">
+        <button class="cd-btn cd-cancel" (click)="confirmCancel()">Cancel</button>
+        <button class="cd-btn cd-ok" [class.cd-ok-danger]="confirmDanger" (click)="confirmOk()">
+          {{ confirmOkLabel }}
+        </button>
+      </div>
+
+    </div>
+  </div>
+}

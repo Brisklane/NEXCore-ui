@@ -1,0 +1,125 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">qr_code_scanner</span></div>
+      <div>
+        <h1>Unit Trace</h1>
+        <p class="inv-hero-sub">Scan or enter any unit identifier to trace its status, location, warranty and full history</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="scan-card">
+    <div class="scan-row">
+      <span class="scan-input">
+        <span class="material-symbols-outlined">barcode_scanner</span>
+        <input type="text" [(ngModel)]="query" (keyup.enter)="search()" autofocus
+          placeholder="Scan or type a serial number or IMEI…" />
+      </span>
+      <button class="ibtn ibtn--primary" (click)="search()" [disabled]="!query.trim()">
+        <span class="material-symbols-outlined">search</span> Look up
+      </button>
+      @if (searched) {
+        <button class="ibtn ibtn--tertiary" (click)="clear()">Clear</button>
+      }
+    </div>
+    <div class="scan-hint">Works with serial numbers, IMEI, IMEI2 or MAC address.</div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  @if (loading) {
+    <div class="unit-card">
+      <span class="skeleton sk-line" style="width:220px;height:20px"></span>
+      <div style="height:14px"></div>
+      <span class="skeleton sk-line" style="width:60%"></span>
+    </div>
+  } @else if (searched && result?.found && result?.serial; as _) {
+    <div class="result-grid">
+      <div class="unit-card">
+        <div class="unit-head">
+          <div>
+            <div class="unit-serial">{{ result!.serial!.serialNumber }}</div>
+            <div class="unit-item">
+              {{ result!.serial!.itemName || '—' }}
+              @if (result!.serial!.itemCode) { <span class="product-code">{{ result!.serial!.itemCode }}</span> }
+            </div>
+          </div>
+          <span class="status-pill" [ngClass]="statusPill(result!.serial!.status)">{{ statusLabel(result!.serial!.status) }}</span>
+        </div>
+
+        <div class="unit-facts">
+          @if (result!.serial!.imei) {
+            <div class="fact"><span class="fact-label">IMEI</span><span class="fact-value">{{ result!.serial!.imei }}</span></div>
+          }
+          @if (result!.serial!.imei2) {
+            <div class="fact"><span class="fact-label">IMEI 2</span><span class="fact-value">{{ result!.serial!.imei2 }}</span></div>
+          }
+          @if (result!.serial!.macAddress) {
+            <div class="fact"><span class="fact-label">MAC</span><span class="fact-value">{{ result!.serial!.macAddress }}</span></div>
+          }
+          <div class="fact"><span class="fact-label">Warehouse</span><span class="fact-value">{{ result!.serial!.warehouseName || '—' }}</span></div>
+          <div class="fact"><span class="fact-label">Unit cost</span><span class="fact-value">{{ result!.serial!.unitCost | number:'1.2-2' }}</span></div>
+          <div class="fact"><span class="fact-label">Received</span><span class="fact-value">{{ result!.serial!.receiptDate ? (result!.serial!.receiptDate | date:'mediumDate') : '—' }}</span></div>
+          @if (result!.serial!.soldDate) {
+            <div class="fact"><span class="fact-label">Sold</span><span class="fact-value">{{ result!.serial!.soldDate | date:'mediumDate' }}</span></div>
+          }
+          <div class="fact">
+            <span class="fact-label">Warranty</span>
+            @switch (warrantyState(result!.serial!.warrantyEndDate)) {
+              @case ('none') { <span class="fact-value">—</span> }
+              @case ('expired') { <span class="fact-value warranty-expired">Expired {{ result!.serial!.warrantyEndDate | date:'mediumDate' }}</span> }
+              @case ('soon') { <span class="fact-value warranty-soon">Ends {{ result!.serial!.warrantyEndDate | date:'mediumDate' }}</span> }
+              @default { <span class="fact-value warranty-ok">Until {{ result!.serial!.warrantyEndDate | date:'mediumDate' }}</span> }
+            }
+          </div>
+          @if (result!.serial!.salesReference) {
+            <div class="fact"><span class="fact-label">Sales ref</span><span class="fact-value">{{ result!.serial!.salesReference }}</span></div>
+          }
+        </div>
+        @if (result!.serial!.notes) { <div class="unit-notes">{{ result!.serial!.notes }}</div> }
+      </div>
+
+      <div class="timeline-card">
+        <div class="timeline-head">Unit history</div>
+        @if (result!.history.length === 0) {
+          <div class="inv-empty-text" style="padding:12px 2px">No history recorded yet.</div>
+        } @else {
+          <ol class="timeline">
+            @for (h of result!.history; track h.id) {
+              <li class="tl-item">
+                <span class="tl-dot"><span class="material-symbols-outlined">{{ eventIcon(h.eventType) }}</span></span>
+                <div class="tl-body">
+                  <div class="tl-title">
+                    {{ h.eventType }}
+                    @if (h.fromStatus || h.toStatus) {
+                      <span class="tl-transition">{{ h.fromStatus || 'new' }} → {{ h.toStatus }}</span>
+                    }
+                  </div>
+                  <div class="tl-meta">{{ h.eventDate | date:'medium' }}@if (h.warehouseName) { · {{ h.warehouseName }}}</div>
+                  @if (h.notes) { <div class="tl-note">{{ h.notes }}</div> }
+                </div>
+              </li>
+            }
+          </ol>
+        }
+      </div>
+    </div>
+  } @else if (searched) {
+    <div class="grid-card">
+      <div class="inv-empty">
+        <div class="inv-empty-icon" style="background:var(--c-warning-surface);color:var(--c-warning-text)"><span class="material-symbols-outlined">search_off</span></div>
+        <div class="inv-empty-title">No unit found</div>
+        <div class="inv-empty-text">Nothing matched “{{ query }}”. Check the serial/IMEI, or the unit may not be tracked yet.</div>
+      </div>
+    </div>
+  } @else {
+    <div class="grid-card">
+      <div class="inv-empty">
+        <div class="inv-empty-icon"><span class="material-symbols-outlined">barcode_scanner</span></div>
+        <div class="inv-empty-title">Ready to scan</div>
+        <div class="inv-empty-text">Point your scanner at a unit or type its identifier above to pull up its full record.</div>
+      </div>
+    </div>
+  }
+</div>

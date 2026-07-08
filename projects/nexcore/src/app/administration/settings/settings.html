@@ -1,0 +1,158 @@
+<div class="page-container">
+
+  <div class="page-header">
+    <div>
+      <h2>Settings</h2>
+      <p class="subtitle">Workspace preferences for this account.</p>
+    </div>
+    <div class="header-actions">
+      <span class="saved-pill" *ngIf="saved">✓ Saved</span>
+      <button class="btn btn-primary" type="button" (click)="save()">Save changes</button>
+    </div>
+  </div>
+
+  <div class="settings-hub">
+    <nav class="settings-nav">
+      <button class="nav-item" *ngFor="let tab of tabs" [class.active]="activeTab === tab.key" (click)="setTab(tab.key)">
+        <span class="material-symbols-outlined nav-icon">{{ tab.icon }}</span>
+        <span>{{ tab.label }}</span>
+      </button>
+    </nav>
+
+    <div class="settings-content">
+
+      <!-- ── General ──────────────────────────────────────────────────── -->
+      <ng-container *ngIf="activeTab === 'general'">
+        <h3 class="section-title">General</h3>
+        <p class="hint-text">These are local preferences for your browser session — they don't change settings for other users in your company.</p>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Timezone</label>
+            <select [(ngModel)]="form.timezone">
+              <option value="UTC">UTC</option>
+              <option value="Asia/Karachi">Asia/Karachi (PKT)</option>
+              <option value="Asia/Dubai">Asia/Dubai (GST)</option>
+              <option value="America/New_York">America/New York (ET)</option>
+              <option value="Europe/London">Europe/London (GMT)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Date format</label>
+            <select [(ngModel)]="form.dateFormat">
+              <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+              <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+              <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Fiscal year start</label>
+            <select [(ngModel)]="form.fiscalYearStart">
+              <option *ngFor="let m of ['January','April','July','October']" [value]="m">{{ m }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Landing page after login</label>
+            <select [(ngModel)]="form.landingPage">
+              <option value="/dashboard">Dashboard</option>
+              <option value="/accounting">Accounting</option>
+              <option value="/sales">Sales</option>
+              <option value="/inventory">Inventory</option>
+              <option value="/crm">CRM</option>
+            </select>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- ── Appearance ───────────────────────────────────────────────── -->
+      <ng-container *ngIf="activeTab === 'appearance'">
+        <h3 class="section-title">Appearance</h3>
+        <p class="hint-text">Choose how NexCore looks. This applies immediately and stays in sync with the theme switcher in the header.</p>
+
+        <div class="theme-picker">
+          <button class="theme-opt" [class.active]="form.theme === 'Light'" (click)="selectTheme('Light')">
+            <span class="theme-swatch theme-swatch-light"></span>
+            <span>Light</span>
+          </button>
+          <button class="theme-opt" [class.active]="form.theme === 'Dark'" (click)="selectTheme('Dark')">
+            <span class="theme-swatch theme-swatch-dark"></span>
+            <span>Dark</span>
+          </button>
+          <button class="theme-opt" [class.active]="form.theme === 'Midnight'" (click)="selectTheme('Midnight')">
+            <span class="theme-swatch theme-swatch-midnight"></span>
+            <span>Midnight</span>
+          </button>
+        </div>
+
+        <h4 class="sub-section" style="margin-top: 26px;">Sidebar Layout</h4>
+        <p class="hint-text">Choose how the main navigation is arranged. Applies immediately.</p>
+        <div class="layout-picker">
+          <button class="layout-opt" [class.active]="sidebarLayout === 'rail'" (click)="selectSidebarLayout('rail')">
+            <span class="lp-preview lp-rail">
+              <span class="lp-rail-strip"><i></i><i></i><i></i><i></i></span>
+              <span class="lp-rail-panel"><b></b><b></b><b></b><b></b></span>
+            </span>
+            <span class="lp-meta">
+              <span class="lp-name">Two-tier rail <span class="lp-badge">Current</span></span>
+              <span class="lp-desc">Compact icon rail + a context panel for the active module.</span>
+            </span>
+          </button>
+          <button class="layout-opt" [class.active]="sidebarLayout === 'classic'" (click)="selectSidebarLayout('classic')">
+            <span class="lp-preview lp-classic">
+              <span class="lp-row lp-row-active"></span>
+              <span class="lp-row"></span><span class="lp-row"></span><span class="lp-row"></span><span class="lp-row"></span>
+            </span>
+            <span class="lp-meta">
+              <span class="lp-name">Classic sidebar</span>
+              <span class="lp-desc">A single expandable column with module names &amp; descriptions.</span>
+            </span>
+          </button>
+        </div>
+      </ng-container>
+
+      <!-- ── Security ─────────────────────────────────────────────────── -->
+      <ng-container *ngIf="activeTab === 'security'">
+        <h3 class="section-title">Security</h3>
+
+        <h4 class="sub-section">Session</h4>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Auto sign-out after inactivity (minutes)</label>
+            <input type="number" min="5" max="240" [(ngModel)]="form.sessionTimeoutMinutes" />
+          </div>
+        </div>
+
+        <h4 class="sub-section">Password policy</h4>
+        <p class="hint-text">
+          Enforced for every account: minimum 8 characters, including upper &amp; lower case, a number and a special character.
+        </p>
+
+        <h4 class="sub-section">Two-factor authentication</h4>
+        <label class="toggle-row toggle-row-soon">
+          <input type="checkbox" disabled />
+          <span>Require a verification code at sign-in <span class="soon-tag">Coming soon</span></span>
+        </label>
+      </ng-container>
+
+      <!-- ── Notifications ────────────────────────────────────────────── -->
+      <ng-container *ngIf="activeTab === 'notifications'">
+        <h3 class="section-title">Notifications</h3>
+        <div class="toggles-grid">
+          <label class="toggle-row">
+            <input type="checkbox" [(ngModel)]="form.emailNotifications" />
+            <span>Email me important account activity</span>
+          </label>
+          <label class="toggle-row">
+            <input type="checkbox" [(ngModel)]="form.securityAlerts" />
+            <span>Email me about new sign-ins and security events</span>
+          </label>
+          <label class="toggle-row">
+            <input type="checkbox" [(ngModel)]="form.productUpdates" />
+            <span>Email me product news and updates</span>
+          </label>
+        </div>
+      </ng-container>
+
+    </div>
+  </div>
+</div>

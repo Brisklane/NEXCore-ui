@@ -1,0 +1,234 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">account_tree</span></div>
+      <div>
+        <h1>Chart of Accounts</h1>
+        <p class="inv-hero-sub">Manage ledger accounts</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreateForm()" [disabled]="!selectedLedgerId"><span class="material-symbols-outlined">add</span> New Account</button>
+    </div>
+  </div>
+
+  @if (error) {
+    <div class="alert alert-error">{{ error }}</div>
+  }
+  @if (successMsg) {
+    <div class="alert alert-success">{{ successMsg }}</div>
+  }
+
+  <div class="filters-bar">
+    <select [(ngModel)]="selectedLedgerId" (ngModelChange)="onLedgerChange()">
+      <option value="">Select Ledger</option>
+      @for (ledger of ledgers; track ledger.id) {
+        <option [value]="ledger.id">{{ ledger.name }}</option>
+      }
+    </select>
+    <span class="filter-search">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search by account # or name…" [disabled]="!selectedLedgerId" [(ngModel)]="filterSearch" (ngModelChange)="onSearchInput()" (keyup.enter)="applyFilters()" />
+      @if (filterSearch) { <button class="search-clear" title="Clear search" (click)="filterSearch = ''; applyFilters()">×</button> }
+    </span>
+  </div>
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editingAccount ? 'Edit Account' : 'Create Account' }}</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Account Number *</label>
+          <input type="text" [(ngModel)]="formAccountNumber" placeholder="e.g. 1001"
+            [disabled]="!!editingAccount"
+            [readonly]="!editingAccount && !formManualCode"
+            [class.input-readonly]="!editingAccount && !formManualCode" />
+
+          @if (!editingAccount) {
+            <label class="manual-code-toggle">
+              <input type="checkbox" [(ngModel)]="formManualCode" (ngModelChange)="onManualCodeToggle()" />
+              Enter code manually
+            </label>
+
+            @if (!formManualCode) {
+              <span class="form-hint">
+                @if (selectedParentNo) {
+                  Auto-generated under parent <code>{{ selectedParentNo }}</code> (parent code + next number). Pick a different parent to change it, or tick “Enter code manually”.
+                } @else {
+                  Select a <strong>Parent Account</strong> below and the code fills in automatically — parent code + next sequence (e.g. 1140 → 11401). Tick “Enter code manually” to type your own.
+                }
+              </span>
+            } @else if (codeStatus.state === 'duplicate') {
+              <span class="code-status code-status-dup">&#9888; {{ codeStatus.message }}</span>
+            } @else if (codeStatus.state === 'available') {
+              <span class="code-status code-status-ok">&#10003; {{ codeStatus.message }}</span>
+            }
+          }
+        </div>
+        <div class="form-group">
+          <label>Account Name *</label>
+          <input type="text" [(ngModel)]="formAccountName" placeholder="Account name" />
+        </div>
+        <div class="form-group">
+          <label>Category *</label>
+          <select [(ngModel)]="formCategoryId">
+            <option value="">Select category</option>
+            @for (cat of categoryOptions; track cat.id) {
+              <option [value]="cat.id">{{ cat.name }} ({{ cat.type }})</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Currency Code</label>
+          <select [(ngModel)]="formCurrencyCode">
+            <option value="">None</option>
+            @for (c of currencies; track c.code) {
+              <option [value]="c.code">{{ c.code }} – {{ c.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Parent Account</label>
+          <lib-entity-picker-input
+            [options]="allAccounts"
+            [value]="parentAccountLabel(formParentAccountId)"
+            [displayFields]="accountDisplayFields"
+            [columns]="accountColumns"
+            [pickerPageSize]="25"
+            entityLabel="Account"
+            placeholder="Search parent account..."
+            (itemSelected)="onParentSelected($event)"
+          />
+        </div>
+        <div class="form-group">
+          <label>Subledger Master Account ID</label>
+          <input type="text" [(ngModel)]="formSubledgerMasterAccountId" placeholder="Optional master account ID" [disabled]="!!editingAccount" />
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <input type="text" [(ngModel)]="formDescription" placeholder="Description" />
+        </div>
+        <div class="form-group form-check-row">
+          <label><input type="checkbox" [(ngModel)]="formIsPostingAllowed" /> Posting Allowed</label>
+          <label><input type="checkbox" [(ngModel)]="formIsControlAccount" /> Control Account</label>
+          <label><input type="checkbox" [(ngModel)]="formAllowManualEntry" /> Manual Entry</label>
+          @if (!editingAccount) {
+            <label><input type="checkbox" [(ngModel)]="formIsSubledgerAccount" /> Subledger Account</label>
+          }
+          @if (editingAccount) {
+            <label><input type="checkbox" [(ngModel)]="formIsActive" /> Active</label>
+          }
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="saveAccount()">{{ editingAccount ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  <!-- Account Detail -->
+  @if (selectedAccount) {
+    <div class="detail-panel">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="margin:0;">{{ selectedAccount.accountName }}</h3>
+        <button class="btn btn-secondary btn-sm" (click)="closeDetail()">✕ Close</button>
+      </div>
+      <div class="detail-grid">
+        <div class="detail-item"><label>Account Number</label><span>{{ selectedAccount.accountNumber }}</span></div>
+        <div class="detail-item"><label>Category</label><span>{{ selectedAccount.categoryName ?? getCategoryName(selectedAccount.categoryId) }}</span></div>
+        <div class="detail-item"><label>Currency</label><span>{{ selectedAccount.currencyCode ?? '—' }}</span></div>
+        <div class="detail-item"><label>Posting Allowed</label><span>{{ selectedAccount.isPostingAllowed ? 'Yes' : 'No' }}</span></div>
+        <div class="detail-item"><label>Control Account</label><span>{{ selectedAccount.isControlAccount ? 'Yes' : 'No' }}</span></div>
+        <div class="detail-item"><label>Manual Entry</label><span>{{ selectedAccount.allowManualEntry ? 'Yes' : 'No' }}</span></div>
+        <div class="detail-item"><label>Active</label><span>{{ selectedAccount.isActive ? 'Yes' : 'No' }}</span></div>
+        <div class="detail-item"><label>Description</label><span>{{ selectedAccount.description ?? '—' }}</span></div>
+      </div>
+
+      @if (selectedAccount.isControlAccount) {
+        <h4 style="margin:16px 0 8px;">Sub-ledger Accounts</h4>
+        @if (loadingSubledger) {
+          <p>Loading...</p>
+        } @else if (subledgerAccounts.length === 0) {
+          <p class="empty-row">No sub-ledger accounts</p>
+        } @else {
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr><th>Number</th><th>Name</th><th>Currency</th><th>Active</th></tr>
+              </thead>
+              <tbody>
+                @for (sub of subledgerAccounts; track sub.id) {
+                  <tr>
+                    <td>{{ sub.accountNumber }}</td>
+                    <td>{{ sub.accountName }}</td>
+                    <td>{{ sub.currencyCode ?? '—' }}</td>
+                    <td><span class="badge" [class.badge-active]="sub.isActive" [class.badge-inactive]="!sub.isActive">{{ sub.isActive ? 'Active' : 'Inactive' }}</span></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+    </div>
+  }
+
+  <!-- Table -->
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" [class.sorted]="sortBy === 'accountNumber'" (click)="sort('accountNumber')">Account # <span class="sort-icon">{{ sortBy === 'accountNumber' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'accountName'" (click)="sort('accountName')">Account Name <span class="sort-icon">{{ sortBy === 'accountName' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Category</th>
+            <th class="sortable" [class.sorted]="sortBy === 'currencyCode'" (click)="sort('currencyCode')">Currency <span class="sort-icon">{{ sortBy === 'currencyCode' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'isPostingAllowed'" (click)="sort('isPostingAllowed')">Posting <span class="sort-icon">{{ sortBy === 'isPostingAllowed' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'isControlAccount'" (click)="sort('isControlAccount')">Control <span class="sort-icon">{{ sortBy === 'isControlAccount' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'isActive'" (click)="sort('isActive')">Active <span class="sort-icon">{{ sortBy === 'isActive' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (a of accounts; track a.id) {
+            <tr [class.row-new]="a.id === highlighter.id">
+              <td>{{ a.accountNumber }}</td>
+              <td>{{ a.accountName }}</td>
+              <td>{{ a.categoryName ?? getCategoryName(a.categoryId) }}</td>
+              <td>{{ a.currencyCode ?? '—' }}</td>
+              <td><span class="badge" [class.badge-yes]="a.isPostingAllowed">{{ a.isPostingAllowed ? 'Yes' : 'No' }}</span></td>
+              <td><span class="badge" [class.badge-yes]="a.isControlAccount">{{ a.isControlAccount ? 'Yes' : 'No' }}</span></td>
+              <td><span class="badge" [class.badge-active]="a.isActive" [class.badge-inactive]="!a.isActive">{{ a.isActive ? 'Active' : 'Inactive' }}</span></td>
+              <td class="actions-cell">
+                <button class="btn-icon" title="View" (click)="viewAccount(a)">👁️</button>
+                <button class="btn-icon" title="Edit" (click)="openEditForm(a)">✏️</button>
+                <button class="btn-icon btn-icon-danger" title="Delete" (click)="deleteAccount(a)">🗑️</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="8" class="empty-row">No accounts found. Select a ledger above.</td></tr>
+          }
+        </tbody>
+      </table>
+      @if (accounts.length > 0) {
+        <div class="pagination-bar">
+          <div class="pagination-info">
+            <span>Rows per page:</span>
+            <select [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+              @for (opt of pageSizeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+            </select>
+            <span>{{ (page - 1) * pageSize + 1 }}–{{ page * pageSize > totalCount ? totalCount : page * pageSize }} of {{ totalCount }}</span>
+          </div>
+          <div class="pagination-controls">
+            <button class="btn-page" [disabled]="page <= 1" (click)="goToPage(page - 1)">&#8249; Prev</button>
+            <span class="page-indicator">Page {{ page }} of {{ totalPages }}</span>
+            <button class="btn-page" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next &#8250;</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

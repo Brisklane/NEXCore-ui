@@ -1,0 +1,77 @@
+<div class="page-container">
+
+  <app-page-header icon="category" title="Vendor Categories" subtitle="Classify suppliers for segmentation and reporting">
+    <button class="btn btn-primary" (click)="openCreate()">+ New Category</button>
+  </app-page-header>
+
+  <app-alert type="error"   [message]="error"></app-alert>
+  <app-alert type="success" [message]="success"></app-alert>
+
+  @if (showForm) {
+    <app-form-panel [title]="editing ? 'Edit Category' : 'New Category'">
+      <div class="form-group-full">
+        <div class="help-box"><span class="help-icon">ℹ️</span><span>Vendor categories group suppliers for <strong>segmentation</strong> and <strong>reporting</strong>. The <strong>Code</strong> is a short unique identifier auto-generated from the name; toggle <strong>Enter code manually</strong> to override it.</span></div>
+      </div>
+      @if (codeManual) {
+        <app-input label="Code" required placeholder="e.g. RAW, SERV, LOG"
+                   [(ngModel)]="form.code" [error]="submitted ? errors.code : ''"></app-input>
+        <div class="form-group-full">
+          <label class="code-manual-toggle"><input type="checkbox" [(ngModel)]="codeManual" /> Enter code manually</label>
+        </div>
+      } @else {
+        <div class="form-group">
+          <app-input label="Code" readonly [(ngModel)]="form.code"></app-input>
+          <div class="code-auto-note">⚙ Auto-generated from name</div>
+          <label class="code-manual-toggle"><input type="checkbox" [(ngModel)]="codeManual" /> Enter code manually</label>
+        </div>
+      }
+      <app-input label="Name" required placeholder="Category name"
+                 [(ngModel)]="form.name" (ngModelChange)="onNameChange()" [error]="submitted ? errors.name : ''"></app-input>
+      <div class="form-group-full">
+        <app-textarea label="Description" [rows]="2" placeholder="Optional description" [(ngModel)]="form.description"></app-textarea>
+      </div>
+      @if (editing) {
+        <div class="form-group form-check-row">
+          <label><input type="checkbox" [(ngModel)]="form.isActive" /> Active</label>
+        </div>
+      }
+
+      <ng-container actions>
+        <button class="btn btn-secondary" (click)="cancel()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()" [disabled]="saving">{{ editing ? 'Update' : 'Create' }}</button>
+      </ng-container>
+    </app-form-panel>
+  }
+
+  <div class="filters-bar">
+    <span class="filter-search">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search by code, name or description…" [(ngModel)]="search" />
+      @if (search) { <button class="search-clear" title="Clear search" (click)="search = ''">×</button> }
+    </span>
+  </div>
+
+  <app-data-table [sortableAll]="true"
+    [columns]="columns"
+    [data]="filteredCategories"
+    [actions]="actions"
+    [loading]="loading"
+    [highlightRowId]="highlighter.id"
+    emptyMessage="No vendor categories yet."
+    (rowAction)="onRowAction($event)">
+  </app-data-table>
+
+</div>
+
+@if (showDeleteConfirm) {
+  <div class="modal-overlay">
+    <div class="modal-box">
+      <h4>Delete Category</h4>
+      <p>Delete <strong>{{ deleteTarget?.name }}</strong>? Vendors referencing it must be reassigned first.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showDeleteConfirm = false">Cancel</button>
+        <button class="btn btn-danger" (click)="confirmDelete()">Delete</button>
+      </div>
+    </div>
+  </div>
+}

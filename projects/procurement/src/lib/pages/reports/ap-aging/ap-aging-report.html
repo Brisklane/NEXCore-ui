@@ -1,0 +1,40 @@
+<div class="page-container">
+
+  <app-page-header title="AP Aging" subtitle="Outstanding payables bucketed by how long they have been due">
+    <button class="btn btn-secondary" (click)="load()" [disabled]="loading">↻ Refresh</button>
+  </app-page-header>
+
+  <app-alert type="error" [message]="error"></app-alert>
+
+  <div class="helper-box">
+    <span class="helper-icon">ℹ️</span>
+    <div>Open vendor bills are aged by their <strong>due date</strong>. <strong>Current</strong> is not yet due; the remaining
+      buckets count days past due. Watch the <strong>61–90</strong> and <strong>90+</strong> columns — these are the balances most
+      at risk of straining vendor relationships or incurring late penalties.</div>
+  </div>
+
+  @if (data) {
+    <div class="kpi-grid">
+      <div class="kpi-card good"><span class="kpi-label">Current</span><span class="kpi-value">{{ data.current | number:'1.0-0' }}</span><span class="kpi-sub">not yet due</span></div>
+      <div class="kpi-card"><span class="kpi-label">1–30 days</span><span class="kpi-value">{{ data.days1To30 | number:'1.0-0' }}</span></div>
+      <div class="kpi-card warn"><span class="kpi-label">31–60 days</span><span class="kpi-value">{{ data.days31To60 | number:'1.0-0' }}</span></div>
+      <div class="kpi-card warn"><span class="kpi-label">61–90 days</span><span class="kpi-value">{{ data.days61To90 | number:'1.0-0' }}</span></div>
+      <div class="kpi-card bad"><span class="kpi-label">90+ days</span><span class="kpi-value">{{ data.days90Plus | number:'1.0-0' }}</span><span class="kpi-sub">overdue</span></div>
+      <div class="kpi-card accent"><span class="kpi-label">Total Due</span><span class="kpi-value">{{ data.total | number:'1.0-0' }}</span><span class="kpi-sub">{{ currency }}</span></div>
+    </div>
+
+    <div class="report-card">
+      <h3>Payables Distribution</h3>
+      <lib-donut-chart [data]="bucketPoints" [currency]="currency" caption="Total Due"></lib-donut-chart>
+    </div>
+
+    <div class="report-card">
+      <h3>Aging by Vendor</h3>
+      <app-data-table [sortableAll]="true" [columns]="columns" [data]="data.rows" [loading]="loading"
+        emptyMessage="No outstanding payables. 🎉"></app-data-table>
+    </div>
+  } @else if (!loading) {
+    <div class="empty-state">No payables data available yet.</div>
+  }
+
+</div>

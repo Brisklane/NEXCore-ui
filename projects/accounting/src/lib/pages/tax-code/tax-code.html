@@ -1,0 +1,72 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">percent</span></div>
+      <div>
+        <h1>Tax Codes</h1>
+        <p class="inv-hero-sub">View tax codes and rates</p>
+      </div>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="inv-toolbar">
+    <span class="inv-search">
+      <span class="material-symbols-outlined">search</span>
+      <input type="text" placeholder="Search by code or name…" [(ngModel)]="filterSearch" (ngModelChange)="onSearchInput()" (keyup.enter)="applyFilters()" />
+      @if (filterSearch) { <button class="search-clear" title="Clear search" (click)="filterSearch = ''; applyFilters()">×</button> }
+    </span>
+  </div>
+
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else {
+    <div class="grid-card">
+      <div class="grid-scroll">
+      <table class="data-grid">
+        <thead>
+          <tr>
+            <th class="th-sort" [class.is-sorted]="sortBy === 'code'" (click)="sort('code')">Code <span class="sort-caret">{{ sortBy === 'code' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+            <th class="th-sort" [class.is-sorted]="sortBy === 'name'" (click)="sort('name')">Name <span class="sort-caret">{{ sortBy === 'name' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+            <th class="num th-sort" [class.is-sorted]="sortBy === 'percentage'" (click)="sort('percentage')">Percentage <span class="sort-caret">{{ sortBy === 'percentage' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+            <th class="th-sort" [class.is-sorted]="sortBy === 'isRecoverable'" (click)="sort('isRecoverable')">Recoverable <span class="sort-caret">{{ sortBy === 'isRecoverable' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+            <th class="th-sort" [class.is-sorted]="sortBy === 'isActive'" (click)="sort('isActive')">Active <span class="sort-caret">{{ sortBy === 'isActive' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (tc of taxCodes; track tc.id) {
+            <tr>
+              <td class="col-strong">{{ tc.code }}</td>
+              <td>{{ tc.name }}</td>
+              <td class="num">{{ tc.percentage | number:'1.2-2' }}%</td>
+              <td><span class="status-pill" [class.pill-instock]="tc.isRecoverable" [class.pill-muted]="!tc.isRecoverable">{{ tc.isRecoverable ? 'Yes' : 'No' }}</span></td>
+              <td><span class="status-pill" [class.pill-instock]="tc.isActive" [class.pill-muted]="!tc.isActive">{{ tc.isActive ? 'Active' : 'Inactive' }}</span></td>
+              <td>{{ tc.description ?? '—' }}</td>
+            </tr>
+          } @empty {
+            <tr><td colspan="6"><div class="inv-empty" style="padding:40px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">percent</span></div><div class="inv-empty-title">No tax codes found</div></div></td></tr>
+          }
+        </tbody>
+      </table>
+      </div>
+      @if (taxCodes.length > 0) {
+        <div class="pagination-bar">
+          <div class="pagination-info">
+            <span>Rows per page:</span>
+            <select [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+              @for (opt of pageSizeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+            </select>
+            <span>{{ (page - 1) * pageSize + 1 }}–{{ page * pageSize > totalCount ? totalCount : page * pageSize }} of {{ totalCount }}</span>
+          </div>
+          <div class="pagination-controls">
+            <button class="btn-page" [disabled]="page <= 1" (click)="goToPage(page - 1)">&#8249; Prev</button>
+            <span class="page-indicator">Page {{ page }} of {{ totalPages }}</span>
+            <button class="btn-page" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next &#8250;</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

@@ -1,0 +1,52 @@
+<div class="container">
+  <h2>Candidate Shortlisting</h2>
+
+  <div *ngIf="error" class="error">{{ error }}</div>
+
+  <div class="content">
+    <div class="applications-list">
+      <h3>Candidates for Shortlisting</h3>
+      <p *ngIf="loading">Loading...</p>
+      <table class="table" *ngIf="!loading && applications.length > 0">
+        <thead>
+          <tr>
+            <th>Job ID</th>
+            <th>Candidate ID</th>
+            <th>Status</th>
+            <th>Applied At</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let app of applications">
+            <td>{{ app.jobId }}</td>
+            <td>{{ app.candidateId }}</td>
+            <td>{{ app.status }}</td>
+            <td>{{ app.appliedAt | date:'short' }}</td>
+            <td>
+              <button (click)="selectForShortlist(app)" class="btn btn-sm btn-primary">Shortlist</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p *ngIf="!loading && applications.length === 0">No applications for shortlisting.</p>
+    </div>
+
+    <div class="shortlist-panel" *ngIf="selectedApplication">
+      <h3>Shortlisting: {{ selectedApplication.candidateId }}</h3>
+      <div class="form-group">
+        <label>Rating:</label>
+        <input type="number" [(ngModel)]="rating" name="rating" min="0" max="5" />
+      </div>
+      <div class="form-group">
+        <label>Notes:</label>
+        <textarea [(ngModel)]="shortlistNotes" name="shortlistNotes" rows="5"></textarea>
+      </div>
+      <div class="button-group">
+        <button (click)="moveToInterview()" class="btn btn-success">Proceed to Interview</button>
+        <button (click)="rejectCandidate()" class="btn btn-danger">Reject</button>
+        <button (click)="selectedApplication = null" class="btn btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>

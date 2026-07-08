@@ -1,0 +1,108 @@
+<aside class="sbc">
+
+  <!-- Brand -->
+  <a class="sbc-brand" routerLink="/dashboard" title="NexCore">
+    <img src="images/nexcore-mark.svg" alt="NexCore" class="sbc-brand-mark" />
+    <span class="sbc-brand-name">NexCore</span>
+  </a>
+
+  <div class="sbc-scroll">
+
+    <!-- Top links (Dashboard / Apps) + AI -->
+    <a *ngFor="let item of topItems" [routerLink]="item.route" routerLinkActive="active" class="sbc-link" [title]="item.label">
+      <span class="sbc-ico"><span class="material-symbols-outlined">{{ item.icon }}</span></span>
+      <span class="sbc-name">{{ item.label }}</span>
+    </a>
+    <button class="sbc-link sbc-ai" (click)="aiOpen.emit()" title="NexCore AI">
+      <span class="sbc-ico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+          <path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"></path>
+        </svg>
+      </span>
+      <span class="sbc-name">NexCore AI</span>
+    </button>
+
+    <div class="sbc-sep"></div>
+
+    <!-- Reusable module/app row -->
+    <ng-template #modRow let-item="item">
+    <div class="sbc-mod">
+      <button class="sbc-mod-head" [class.active]="isModuleActive(item)" [class.open]="item.expanded" (click)="onModuleClick(item)">
+        <span class="sbc-mod-ico">
+          <img *ngIf="item.moduleImage" [src]="item.moduleImage" [alt]="item.label" class="sbc-mod-img" />
+          <span *ngIf="!item.moduleImage" class="material-symbols-outlined">{{ item.icon || 'category' }}</span>
+        </span>
+        <span class="sbc-mod-text">
+          <span class="sbc-mod-name">{{ item.label }}</span>
+          <span class="sbc-mod-sub" *ngIf="descFor(item.label)">{{ descFor(item.label) }}</span>
+        </span>
+        <span class="material-symbols-outlined sbc-arrow" *ngIf="item.children?.length" [class.rot]="item.expanded">expand_more</span>
+      </button>
+
+      <!-- Page tree (accordion) -->
+      <div class="sbc-children" *ngIf="item.expanded && item.children?.length">
+        <ng-container *ngFor="let child of item.children">
+          <!-- Leaf -->
+          <a *ngIf="!hasNestedChildren(child)" [routerLink]="child.route" routerLinkActive="active" class="sbc-leaf" [title]="child.label">
+            <span class="material-symbols-outlined sbc-leaf-ico">{{ child.icon }}</span>
+            <span class="sbc-leaf-text">{{ child.label }}</span>
+          </a>
+          <!-- Group -->
+          <div *ngIf="hasNestedChildren(child)" class="sbc-group">
+            <button class="sbc-group-head" (click)="toggleChild(child, $event, item.children)">
+              <span class="material-symbols-outlined sbc-leaf-ico">{{ child.icon }}</span>
+              <span class="sbc-leaf-text">{{ child.label }}</span>
+              <span class="material-symbols-outlined sbc-arrow sm" [class.rot]="child.expanded">expand_more</span>
+            </button>
+            <div class="sbc-subtree" *ngIf="child.expanded">
+              <ng-container *ngFor="let sub of child.children">
+                <a *ngIf="!hasNestedChildren(sub)" [routerLink]="sub.route" routerLinkActive="active" class="sbc-leaf sbc-leaf-sub" [title]="sub.label">
+                  <span class="material-symbols-outlined sbc-leaf-ico">{{ sub.icon }}</span>
+                  <span class="sbc-leaf-text">{{ sub.label }}</span>
+                </a>
+                <div *ngIf="hasNestedChildren(sub)" class="sbc-group sbc-group-nested">
+                  <button class="sbc-group-head sub" (click)="toggleChild(sub, $event, child.children)">
+                    <span class="material-symbols-outlined sbc-leaf-ico">{{ sub.icon }}</span>
+                    <span class="sbc-leaf-text">{{ sub.label }}</span>
+                    <span class="material-symbols-outlined sbc-arrow sm" [class.rot]="sub.expanded">expand_more</span>
+                  </button>
+                  <div class="sbc-subtree" *ngIf="sub.expanded">
+                    <a *ngFor="let d of sub.children" [routerLink]="d.route" routerLinkActive="active" class="sbc-leaf sbc-leaf-sub2" [title]="d.label">
+                      <span class="material-symbols-outlined sbc-leaf-ico">{{ d.icon }}</span>
+                      <span class="sbc-leaf-text">{{ d.label }}</span>
+                    </a>
+                  </div>
+                </div>
+              </ng-container>
+            </div>
+          </div>
+        </ng-container>
+      </div>
+    </div>
+    </ng-template>
+
+    <div class="sbc-section">Core Modules</div>
+    <ng-container *ngFor="let item of modules">
+      <ng-container *ngTemplateOutlet="modRow; context: { item: item }"></ng-container>
+    </ng-container>
+
+    <ng-container *ngIf="apps.length">
+      <div class="sbc-section">Apps</div>
+      <ng-container *ngFor="let item of apps">
+        <ng-container *ngTemplateOutlet="modRow; context: { item: item }"></ng-container>
+      </ng-container>
+    </ng-container>
+
+    <!-- Admin section (flat) -->
+    <ng-container *ngFor="let item of adminItems">
+      <div class="sbc-section">{{ item.label }}</div>
+      <ng-container *ngFor="let child of item.children">
+        <a [routerLink]="child.route" routerLinkActive="active" class="sbc-link" [title]="child.label">
+          <span class="sbc-ico"><span class="material-symbols-outlined">{{ child.icon || 'chevron_right' }}</span></span>
+          <span class="sbc-name">{{ child.label }}</span>
+        </a>
+      </ng-container>
+    </ng-container>
+
+  </div>
+</aside>

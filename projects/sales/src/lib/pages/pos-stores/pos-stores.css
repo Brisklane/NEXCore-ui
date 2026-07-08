@@ -1,0 +1,204 @@
+﻿@import '../shared-styles.css';
+
+.form-group-full { grid-column: 1 / -1; }
+
+.form-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted, #94a3b8);
+  margin-bottom: 8px;
+}
+
+.badge-warning {
+  background: #fef9c3;
+  color: #92400e;
+}
+
+.map-link {
+  font-size: 12px;
+  color: var(--accent, #2b7fff);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.map-link:hover { text-decoration: underline; }
+
+.vendor-panel {
+  border-left: 3px solid var(--accent, #2b7fff);
+}
+
+/* ── Phone input ──────────────────────────────────────────── */
+.phone-group {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px;
+  overflow: visible;
+  background: var(--input-bg, #fff);
+}
+
+.phone-country-selector {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  cursor: pointer;
+  border-right: 1px solid var(--border-color, #e2e8f0);
+  min-width: 90px;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.phone-country-selector:hover {
+  background: var(--hover-bg, #f8fafc);
+}
+
+.flag-img {
+  width: 20px;
+  height: 14px;
+  object-fit: cover;
+  border-radius: 2px;
+}
+
+.dial-code {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.dial-code-sm {
+  font-size: 12px;
+  color: #6b7280;
+  margin-left: auto;
+}
+
+.arrow-down {
+  font-size: 10px;
+  color: #9ca3af;
+}
+
+.phone-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 200;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  min-width: 220px;
+  overflow: hidden;
+}
+
+.phone-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #374151;
+  transition: background 0.1s;
+}
+
+.phone-dropdown-item:hover {
+  background: var(--hover-bg, #f1f5f9);
+}
+
+.phone-input {
+  flex: 1;
+  border: none !important;
+  outline: none !important;
+  border-radius: 0 8px 8px 0;
+  padding: 0 12px;
+  font-size: 14px;
+  background: transparent;
+  min-width: 0;
+}
+
+.vendor-tab-content {
+  padding-top: 0;
+}
+
+.vendor-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0 14px;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  margin-bottom: 4px;
+}
+
+.vendor-status-label {
+  font-weight: 600;
+  font-size: 13px;
+  color: #475569;
+}
+
+.vendor-tab-bar {
+  display: flex;
+  gap: 4px;
+  padding: 12px 0 8px;
+  border-bottom: 2px solid var(--border-color, #e2e8f0);
+  margin-bottom: 16px;
+}
+
+.vendor-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.vendor-tab-btn:hover {
+  background: var(--hover-bg, #f1f5f9);
+  color: #1e293b;
+}
+
+.vendor-tab-btn.active {
+  background: var(--primary-light, #ede9fe);
+  color: var(--primary, var(--accent, #2b7fff));
+  border-color: var(--primary-light, #ede9fe);
+  font-weight: 600;
+}
+
+
+/* ── Premium config-card uplift (POS pages) ─────────────────────────────── */
+.page-container .form-panel {
+  border-radius: 18px;
+  border: 1px solid var(--border-default, #e8edf3);
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(15, 23, 42, .06));
+  background: var(--bg-surface, #fff);
+  padding: 20px 22px;
+}
+.page-container .form-panel > h3,
+.page-container .form-panel-header {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 15px; font-weight: 750; color: var(--text-heading, #0f172a);
+  padding-bottom: 12px; margin-bottom: 16px;
+  border-bottom: 1px solid var(--border-light, #f1f5f9);
+}
+.page-container .ds-section-title,
+.page-container .form-section-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--accent, #2b7fff);
+}
+.page-container .ds-preview-pane {
+  border-radius: 14px;
+  background: var(--bg-subtle, #f8fafc);
+  border: 1px solid var(--border-default, #e8edf3);
+}
+.page-container .ds-preview-sample { color: var(--accent, #2b7fff); }

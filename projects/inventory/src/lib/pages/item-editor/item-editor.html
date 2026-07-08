@@ -1,0 +1,364 @@
+<div class="editor-shell">
+  <!-- Sticky action bar -->
+  <div class="editor-bar">
+    <div class="bar-left">
+      <button class="ibtn ibtn--tertiary ibtn--sm" (click)="cancel()"><span class="material-symbols-outlined">arrow_back</span></button>
+      <div>
+        <div class="bar-eyebrow">{{ isEdit ? 'Edit product' : 'New product' }}</div>
+        <div class="bar-title">{{ isEdit ? (formName || 'Item') : (formName || 'Untitled item') }}</div>
+      </div>
+    </div>
+    <div class="bar-actions">
+      <button class="ibtn ibtn--secondary" (click)="cancel()">Cancel</button>
+      <button class="ibtn ibtn--primary" (click)="saveItem()" [disabled]="saving || !canSave">
+        <span class="material-symbols-outlined">{{ saving ? 'progress_activity' : 'save' }}</span>
+        {{ saving ? 'Saving…' : (isEdit ? 'Save changes' : 'Create product') }}
+      </button>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error editor-alert">{{ error }}</div> }
+
+  <div class="editor-layout">
+    <!-- Section nav -->
+    <nav class="editor-nav">
+      @for (s of sections; track s.key) {
+        <button class="nav-item" [class.active]="section === s.key" (click)="section = s.key">
+          <span class="material-symbols-outlined">{{ s.icon }}</span> {{ s.label }}
+        </button>
+      }
+      @if (missingFields.length) {
+        <div class="nav-required"><span class="material-symbols-outlined">error</span> Required: {{ missingFields.join(', ') }}</div>
+      }
+    </nav>
+
+    <!-- Section content -->
+    <div class="editor-body">
+      @if (loading) {
+        <div class="form-card"><span class="skeleton sk-line" style="width:40%;height:18px"></span><div style="height:16px"></div><span class="skeleton sk-line" style="width:100%"></span></div>
+      }
+
+      <!-- BASIC -->
+      @if (section === 'basic') {
+        <div class="form-card">
+          <div class="card-title">Basic information</div>
+          <div class="form-grid">
+            <div class="form-group"><label>Code</label><input type="text" [(ngModel)]="formCode" readonly /></div>
+            <div class="form-group"><label>Name <span class="req">*</span></label><input type="text" [(ngModel)]="formName" placeholder="Item name" [class.input-required]="!formName.trim()" /></div>
+            <div class="form-group"><label>Item Type <span class="req">*</span></label>
+              <select [(ngModel)]="formItemType" [class.input-required]="!formItemType"><option value="">— Select —</option>@for (o of itemTypes; track o.value) { <option [value]="o.value">{{ o.label }}</option> }</select>
+            </div>
+            <div class="form-group"><label>Condition</label><select [(ngModel)]="formCondition"><option value="">— Select —</option>@for (o of itemConditions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }</select></div>
+            <div class="form-group"><label>Base Unit <span class="req">*</span></label><select [(ngModel)]="formBaseUnitId" [class.input-required]="!formBaseUnitId"><option value="">— Select —</option>@for (u of units; track u.id) { <option [value]="u.id">{{ u.name }}</option> }</select></div>
+            <div class="form-group"><label>Category <span class="req">*</span></label>
+              <select [ngModel]="formCategoryId" (ngModelChange)="onCategoryChange($event)" [class.input-required]="!formCategoryId"><option value="">— Select —</option>@for (c of categories; track c.id) { <option [value]="c.id">{{ c.name }}</option> }</select>
+              @if (!isEdit && categoryMissingGlAccounts) { <span class="field-hint field-hint-warn">No GL accounts — edit category first</span> }
+              @else if (!isEdit && glAccountsFromCategory) { <span class="field-hint field-hint-ok">GL accounts auto-filled</span> }
+            </div>
+            <div class="form-group"><label>Brand</label><select [(ngModel)]="formBrandId"><option value="">— Select —</option>@for (b of brands; track b.id) { <option [value]="b.id">{{ b.name }}</option> }</select></div>
+            <div class="form-group color-dropdown-wrapper" (focusout)="onColorFocusOut($event)">
+              <label>Display Color</label>
+              <button type="button" class="color-dropdown-trigger" (click)="showColorDropdown = !showColorDropdown">
+                @if (selectedColor) { <span class="color-swatch" [style.background]="selectedColor.hexCode ?? '#ccc'"></span><span>{{ selectedColor.name }}</span> }
+                @else { <span class="color-swatch color-swatch-empty"></span><span class="color-placeholder">— Select —</span> }
+                <span class="color-chevron">&#9660;</span>
+              </button>
+              @if (showColorDropdown) {
+                <div class="color-dropdown-panel">
+                  <div class="color-option" tabindex="0" (click)="formDisplayColorId = ''; showColorDropdown = false" (keydown.enter)="formDisplayColorId = ''; showColorDropdown = false"><span class="color-swatch color-swatch-empty"></span><span>— None —</span></div>
+                  @for (col of colors; track col.id) {
+                    <div class="color-option" tabindex="0" [class.color-option-active]="formDisplayColorId === col.id" (click)="formDisplayColorId = col.id; showColorDropdown = false" (keydown.enter)="formDisplayColorId = col.id; showColorDropdown = false"><span class="color-swatch" [style.background]="col.hexCode ?? '#ccc'"></span><span>{{ col.name }}</span></div>
+                  }
+                </div>
+              }
+            </div>
+            <div class="form-group"><label>Age Restriction</label><input type="number" [(ngModel)]="formAgeRestriction" min="0" placeholder="0" /></div>
+            <div class="form-group"><label>Purchase Price</label><input type="number" [(ngModel)]="formQuickPurchasePrice" min="0" step="0.01" placeholder="0.00" /></div>
+            <div class="form-group"><label>Sale Price</label><input type="number" [(ngModel)]="formQuickSalePrice" min="0" step="0.01" placeholder="0.00" /></div>
+            <div class="form-group form-group-full"><label>Primary Barcode</label>
+              <input type="text" [(ngModel)]="formQuickBarcode" (ngModelChange)="onPrimaryBarcodeChange()" placeholder="Scan or enter barcode" />
+              @if (barcodeStatusMsg) { <small class="barcode-hint" [class.barcode-hint-ok]="barcodeStatus==='available'" [class.barcode-hint-bad]="barcodeStatus==='taken'">{{ barcodeStatusMsg }}</small> }
+            </div>
+            <div class="form-group form-group-full"><label>Short Description</label><input type="text" [(ngModel)]="formShortDescription" placeholder="Shown on receipts & marketplace" /></div>
+            <div class="form-group form-group-full"><label>Description</label><textarea [(ngModel)]="formDescription" rows="3" placeholder="Full description"></textarea></div>
+          </div>
+        </div>
+      }
+
+      <!-- STOCK & TRACKING -->
+      @if (section === 'stock') {
+        <div class="form-card">
+          <div class="card-title">Unit-level tracking</div>
+          <p class="card-sub">How is each unit of this product identified in stock?</p>
+          <div class="seg">
+            @for (t of trackingTypes; track t.value) {
+              <button type="button" class="seg-btn" [class.active]="formTrackingType === t.value" (click)="formTrackingType = t.value">
+                <span class="material-symbols-outlined">{{ t.value === 'Serial' ? 'barcode' : (t.value === 'Lot' ? 'inventory' : 'tag') }}</span>
+                {{ t.value }}
+              </button>
+            }
+          </div>
+          @if (formTrackingType === 'Serial') {
+            <div class="gl-notice gl-notice-auto" style="margin-top:14px">Every unit gets a unique serial/IMEI with its own lifecycle. Serials are captured when receiving stock, or generated from the item's Serials tab.</div>
+          } @else if (formTrackingType === 'Lot') {
+            <div class="gl-notice gl-notice-auto" style="margin-top:14px">Units are grouped into batches with manufacture/expiry dates. Batch details are captured when receiving stock.</div>
+          } @else {
+            <div class="gl-notice gl-notice-hint" style="margin-top:14px">Standard quantity tracking — stock is a single number per warehouse.</div>
+          }
+        </div>
+
+        <div class="form-card">
+          <div class="card-title">Stock control</div>
+          <div class="form-grid">
+            <div class="form-group"><label>Reorder Level</label><input type="number" [(ngModel)]="formReorderLevel" min="0" placeholder="0" /></div>
+            <div class="form-group"><label>Max Stock Level</label><input type="number" [(ngModel)]="formMaxStockLevel" min="0" placeholder="0" /></div>
+            <div class="form-group"><label>Economic Order Qty</label><input type="number" [(ngModel)]="formEconomicOrderQuantity" min="0" placeholder="0" /></div>
+          </div>
+          <div class="form-check-row" style="margin-top:14px">
+            <label><input type="checkbox" [(ngModel)]="formHasVariants" /> Has Variants</label>
+            <label><input type="checkbox" [(ngModel)]="formIsComponent" /> Is Component</label>
+            <label><input type="checkbox" [(ngModel)]="formAlertOnLowStock" /> Alert on Low Stock</label>
+            <label><input type="checkbox" [(ngModel)]="formAlertOnExcessStock" /> Alert on Excess Stock</label>
+            <label><input type="checkbox" [(ngModel)]="formIsActive" /> Active</label>
+            <label><input type="checkbox" [(ngModel)]="formIsPublished" /> Published</label>
+            <label><input type="checkbox" [(ngModel)]="formIsFeatured" /> Featured</label>
+          </div>
+        </div>
+
+        @if (!isEdit) {
+          <div class="form-card">
+            <div class="card-title">Opening stock <span class="card-optional">optional</span></div>
+            <p class="card-sub">Set a starting quantity — posts a stock adjustment right after the item is created.</p>
+            <div class="form-grid">
+              <div class="form-group"><label>Warehouse</label><select [(ngModel)]="formOpeningWarehouseId"><option value="">— None —</option>@for (w of warehouses; track w.id) { <option [value]="w.id">{{ w.name }}</option> }</select></div>
+              <div class="form-group"><label>Quantity</label><input type="number" [(ngModel)]="formOpeningQty" min="0" placeholder="0" /></div>
+              <div class="form-group"><label>Unit Cost</label><input type="number" [(ngModel)]="formOpeningUnitCost" min="0" step="0.01" placeholder="0.00" /></div>
+            </div>
+          </div>
+        }
+      }
+
+      <!-- PRICING & BARCODES -->
+      @if (section === 'pricing') {
+        <div class="form-card">
+          <div class="card-title">Prices</div>
+          @if (formPrices.length) { <div class="row-list">@for (p of formPrices; track $index; let i = $index) { <div class="row-item"><span class="row-tag">{{ unitName(p.unitId) }}</span><span class="row-meta">Sale {{ p.salePrice }} · Cost {{ p.purchasePrice }}{{ p.priceList ? ' · ' + p.priceList : '' }}{{ p.isTaxInclusive ? ' · Tax incl.' : '' }}</span><button type="button" class="btn-remove" (click)="removePrice(i)">✕</button></div> }</div> }
+          <div class="add-row-form">
+            <select [(ngModel)]="newPrice.unitId" style="width:130px"><option value="">Unit *</option>@for (u of units; track u.id) { <option [value]="u.id">{{ u.name }}</option> }</select>
+            <input type="text" [(ngModel)]="newPrice.priceList" placeholder="Price list" style="width:110px" />
+            <input type="number" [(ngModel)]="newPrice.salePrice" placeholder="Sale" min="0" step="0.01" style="width:100px" />
+            <input type="number" [(ngModel)]="newPrice.purchasePrice" placeholder="Cost" min="0" step="0.01" style="width:100px" />
+            <label><input type="checkbox" [(ngModel)]="newPrice.isTaxInclusive" /> Tax incl.</label>
+            <button type="button" class="ibtn ibtn--secondary ibtn--sm" (click)="addPrice()">+ Add</button>
+          </div>
+        </div>
+        <div class="form-card">
+          <div class="card-title">Barcodes</div>
+          @if (formBarcodes.length) { <div class="row-list">@for (b of formBarcodes; track $index; let i = $index) { <div class="row-item"><span class="row-tag">{{ b.barcode }}</span><span class="row-meta">{{ b.barcodeType }}{{ b.isPrimary ? ' · ★ Primary' : '' }}</span><button type="button" class="btn-remove" (click)="removeBarcode(i)">✕</button></div> }</div> }
+          <div class="add-row-form">
+            <input type="text" [(ngModel)]="newBarcode.barcode" placeholder="Barcode value *" />
+            <input type="text" [(ngModel)]="newBarcode.barcodeType" placeholder="Type (EAN-13, QR…)" style="width:160px" />
+            <label><input type="checkbox" [(ngModel)]="newBarcode.isPrimary" /> Primary</label>
+            <button type="button" class="ibtn ibtn--secondary ibtn--sm" (click)="addBarcode()">+ Add</button>
+          </div>
+        </div>
+        <div class="form-card">
+          <div class="card-title">Taxes</div>
+          @if (formTaxes.length) { <div class="row-list">@for (t of formTaxes; track $index; let i = $index) { <div class="row-item"><span class="row-tag">{{ taxName(t.taxDefinitionId) }}</span><span class="row-meta">{{ t.overrideRate != null ? 'Override: ' + t.overrideRate + '%' : 'Default rate' }}</span><button type="button" class="btn-remove" (click)="removeTax(i)">✕</button></div> }</div> }
+          <div class="add-row-form">
+            <select [(ngModel)]="newTax.taxDefinitionId" style="width:220px"><option value="">Select Tax *</option>@for (td of taxDefinitions; track td.id) { <option [value]="td.id">{{ td.name }} ({{ td.rate }}%)</option> }</select>
+            <input type="number" [(ngModel)]="newTax.overrideRate" placeholder="Override %" min="0" max="100" step="0.01" style="width:130px" />
+            <button type="button" class="ibtn ibtn--secondary ibtn--sm" (click)="addTax()">+ Add</button>
+          </div>
+        </div>
+        <div class="form-card">
+          <div class="card-title">Discounts</div>
+          @if (formDiscounts.length) { <div class="row-list">@for (d of formDiscounts; track $index; let i = $index) { <div class="row-item"><span class="row-tag">{{ d.name || d.discountType || 'Discount' }}</span><span class="row-meta">{{ d.discountValue }} · {{ d.validFrom }} – {{ d.validTo }} · P{{ d.priority }}</span><button type="button" class="btn-remove" (click)="removeDiscount(i)">✕</button></div> }</div> }
+          <div class="add-row-form">
+            <input type="text" [(ngModel)]="newDiscount.name" placeholder="Name" style="width:120px" />
+            <input type="text" [(ngModel)]="newDiscount.discountType" placeholder="Type" style="width:130px" />
+            <label>Value <input type="number" [(ngModel)]="newDiscount.discountValue" min="0" step="0.01" style="width:80px;flex:none;min-width:0" /></label>
+            <label>From <input type="date" [(ngModel)]="newDiscount.validFrom" style="flex:none;min-width:0" /></label>
+            <label>To <input type="date" [(ngModel)]="newDiscount.validTo" style="flex:none;min-width:0" /></label>
+            <button type="button" class="ibtn ibtn--secondary ibtn--sm" (click)="addDiscount()">+ Add</button>
+          </div>
+        </div>
+      }
+
+      <!-- GL ACCOUNTS -->
+      @if (section === 'accounts') {
+        <div class="form-card">
+          <div class="card-title">GL accounts</div>
+          @if (!isEdit) {
+            @if (glAccountsFromCategory) { <div class="gl-notice gl-notice-auto">Auto-filled from category <strong>{{ selectedCategoryName }}</strong>. Override any field if needed.</div> }
+            @else if (categoryMissingGlAccounts) { <div class="gl-notice gl-notice-warn">Category <strong>{{ selectedCategoryName }}</strong> has no GL accounts. Set them up in Item Categories to auto-fill here.</div> }
+            @else if (!formCategoryId) { <div class="gl-notice gl-notice-hint">Select a category (Basic Info) to auto-fill GL accounts.</div> }
+          }
+          <div class="form-grid" style="margin-top:14px">
+            <div class="form-group"><label>Inventory Account</label><lib-entity-picker-input [options]="glAccounts" [value]="accountLabel(formInventoryAccountId)" [displayFields]="accountDisplayFields" [columns]="accountColumns" [pickerPageSize]="25" entityLabel="Account" placeholder="Search accounts..." (itemSelected)="formInventoryAccountId = $event['id']" /></div>
+            <div class="form-group"><label>COGS Account</label><lib-entity-picker-input [options]="glAccounts" [value]="accountLabel(formCogsAccountId)" [displayFields]="accountDisplayFields" [columns]="accountColumns" [pickerPageSize]="25" entityLabel="Account" placeholder="Search accounts..." (itemSelected)="formCogsAccountId = $event['id']" /></div>
+            <div class="form-group"><label>Purchase Account</label><lib-entity-picker-input [options]="glAccounts" [value]="accountLabel(formPurchaseAccountId)" [displayFields]="accountDisplayFields" [columns]="accountColumns" [pickerPageSize]="25" entityLabel="Account" placeholder="Search accounts..." (itemSelected)="formPurchaseAccountId = $event['id']" /></div>
+            <div class="form-group"><label>Sales Account</label><lib-entity-picker-input [options]="glAccounts" [value]="accountLabel(formSalesAccountId)" [displayFields]="accountDisplayFields" [columns]="accountColumns" [pickerPageSize]="25" entityLabel="Account" placeholder="Search accounts..." (itemSelected)="formSalesAccountId = $event['id']" /></div>
+          </div>
+        </div>
+      }
+
+      <!-- MEDIA & COLORS -->
+      @if (section === 'media') {
+        <div class="form-card">
+          <div class="card-title">Additional colors</div>
+          <div class="color-checkbox-grid">
+            @for (col of colors; track col.id) { <label class="color-checkbox-item" [class.color-checkbox-selected]="hasColorId(col.id)" (click)="toggleColorId(col.id)"><span class="color-swatch" [style.background]="col.hexCode ?? '#ccc'"></span><span>{{ col.name }}</span></label> }
+          </div>
+        </div>
+        <div class="form-card">
+          <div class="card-title">Images</div>
+          @if (uploadedImages.length) { <div class="section-title">Uploaded</div><div class="row-list">@for (img of uploadedImages; track img.id) { <div class="row-item"><img class="img-thumb-sm" [src]="resolveImageUrl(img.url)" [alt]="img.altText ?? ''" /><span class="row-tag">{{ img.altText || img.url }}</span><span class="row-meta">Order {{ img.displayOrder }}{{ img.isPrimary ? ' · ★' : '' }}</span><button type="button" class="btn-remove" (click)="deleteUploadedImage(img)">✕</button></div> }</div> }
+          @if (pendingImages.length) { <div class="section-title">Pending upload</div><div class="row-list">@for (img of pendingImages; track $index; let i = $index) { <div class="row-item"><img class="img-thumb-sm" [src]="img.previewUrl" [alt]="img.altText" /><span class="row-tag">{{ img.altText || ('Image ' + (i + 1)) }}</span><span class="row-meta">Order {{ img.displayOrder }}{{ img.isPrimary ? ' · ★' : '' }}</span><button type="button" class="btn-remove" (click)="removePendingImage(i)">✕</button></div> }</div> }
+          <div class="add-row-form img-upload-row">
+            <input #imageFileInput type="file" accept="image/*" class="img-file-input" (change)="onImageFileSelected($event)" />
+            @if (imagePreviewUrl) { <img class="img-thumb-preview" [src]="imagePreviewUrl" alt="Preview" /> }
+            <input type="text" [(ngModel)]="newImageAltText" placeholder="Alt text" style="width:160px" />
+            <label>Order <input type="number" [(ngModel)]="newImageDisplayOrder" min="0" style="width:60px;flex:none;min-width:0" /></label>
+            <label><input type="checkbox" [(ngModel)]="newImageIsPrimary" /> Primary</label>
+            <button type="button" class="ibtn ibtn--secondary ibtn--sm" (click)="addImage()" [disabled]="!pendingImageFile">+ Add</button>
+          </div>
+        </div>
+      }
+
+      <!-- ATTRIBUTES & VARIANTS -->
+      @if (section === 'attributes') {
+        <div class="form-card">
+          <div class="card-title">Attributes</div>
+          @if (formAttributes.length) { <div class="row-list">@for (a of formAttributes; track $index; let i = $index) { <div class="row-item"><span class="row-tag">{{ attrName(a.attributeDefinitionId) }}</span><span class="row-meta">{{ a.value }}</span><button type="button" class="btn-remove" (click)="removeAttribute(i)">✕</button></div> }</div> }
+          <div class="add-row-form">
+            <select [(ngModel)]="newAttribute.attributeDefinitionId" style="width:220px"><option value="">Select Attribute *</option>@for (ad of attributeDefinitions; track ad.id) { <option [value]="ad.id">{{ ad.name }} ({{ ad.dataType }})</option> }</select>
+            <input type="text" [(ngModel)]="newAttribute.value" placeholder="Value" />
+            <button type="button" class="ibtn ibtn--secondary ibtn--sm" (click)="addAttribute()">+ Add</button>
+          </div>
+        </div>
+        <div class="form-card">
+          <div class="card-title">Sizes</div>
+          @if (formSizes.length) { <div class="row-list">@for (s of formSizes; track $index; let i = $index) { <div class="row-item"><span class="row-tag">{{ sizeName(s.sizeId) }}</span><span class="row-meta">{{ s.isDefault ? '★ Default' : '' }}</span><button type="button" class="btn-remove" (click)="removeSize(i)">✕</button></div> }</div> }
+          <div class="add-row-form">
+            <select [(ngModel)]="newSize.sizeId" style="width:180px"><option value="">Select Size *</option>@for (s of sizeOptions; track s.id) { <option [value]="s.id">{{ s.name }}</option> }</select>
+            <label><input type="checkbox" [(ngModel)]="newSize.isDefault" /> Default</label>
+            <button type="button" class="ibtn ibtn--secondary ibtn--sm" (click)="addSize()">+ Add</button>
+          </div>
+        </div>
+        <div class="form-card">
+          <div class="card-title">Variants</div>
+          @if (formVariants.length) { <div class="row-list">@for (v of formVariants; track $index; let i = $index) { <div class="row-item"><span class="row-tag">{{ v.variantCode || v.variantName || 'Variant ' + (i + 1) }}</span><span class="row-meta">{{ v.sizeId ? 'Size: ' + sizeName(v.sizeId) : '' }}{{ v.salePriceOverride != null ? ' · Sale ' + v.salePriceOverride : '' }}</span><button type="button" class="btn-remove" (click)="removeVariant(i)">✕</button></div> }</div> }
+          <div class="add-row-form">
+            <input type="text" [(ngModel)]="newVariant.variantCode" placeholder="Code" style="width:90px" />
+            <input type="text" [(ngModel)]="newVariant.variantName" placeholder="Name" style="width:120px" />
+            <select [(ngModel)]="newVariant.colorId" style="width:110px"><option value="">Color</option>@for (c of colors; track c.id) { <option [value]="c.id">{{ c.name }}</option> }</select>
+            <select [(ngModel)]="newVariant.sizeId" style="width:100px"><option value="">Size</option>@for (s of sizeOptions; track s.id) { <option [value]="s.id">{{ s.name }}</option> }</select>
+            <input type="text" [(ngModel)]="newVariant.barcode" placeholder="Barcode" style="width:120px" />
+            <input type="number" [(ngModel)]="newVariant.salePriceOverride" placeholder="Sale ovr" min="0" step="0.01" style="width:100px" />
+            <button type="button" class="ibtn ibtn--secondary ibtn--sm" (click)="addVariant()">+ Add</button>
+          </div>
+        </div>
+      }
+
+      <!-- LOGISTICS & WARRANTY -->
+      @if (section === 'logistics') {
+        <div class="form-card">
+          <div class="card-title">Shipping</div>
+          <div class="form-grid">
+            <div class="form-group"><label>Weight (kg)</label><input type="number" [(ngModel)]="formShipping.weightKg" min="0" step="0.01" /></div>
+            <div class="form-group"><label>Length (cm)</label><input type="number" [(ngModel)]="formShipping.lengthCm" min="0" step="0.1" /></div>
+            <div class="form-group"><label>Width (cm)</label><input type="number" [(ngModel)]="formShipping.widthCm" min="0" step="0.1" /></div>
+            <div class="form-group"><label>Height (cm)</label><input type="number" [(ngModel)]="formShipping.heightCm" min="0" step="0.1" /></div>
+            <div class="form-group"><label>Country of Origin</label><input type="text" [(ngModel)]="formShipping.countryOfOrigin" placeholder="e.g. PK, CN" /></div>
+            <div class="form-group"><label>HS Code</label><input type="text" [(ngModel)]="formShipping.hsCode" /></div>
+            <div class="form-group"><label>Units per Carton</label><input type="number" [(ngModel)]="formShipping.unitsPerCarton" min="0" /></div>
+            <div class="form-group"><label>Cartons per Pallet</label><input type="number" [(ngModel)]="formShipping.cartonsPerPallet" min="0" /></div>
+          </div>
+          <div class="form-check-row" style="margin-top:14px">
+            <label><input type="checkbox" [(ngModel)]="formShipping.requiresSpecialHandling" /> Special Handling</label>
+            <label><input type="checkbox" [(ngModel)]="formShipping.isHazmat" /> Hazmat</label>
+            <label><input type="checkbox" [(ngModel)]="formShipping.isShippableInternational" /> Ships Internationally</label>
+          </div>
+        </div>
+        <div class="form-card">
+          <div class="card-title">Warranty</div>
+          <div class="form-grid">
+            <div class="form-group"><label>Warranty Type</label><input type="text" [(ngModel)]="formWarranty.warrantyType" placeholder="e.g. Limited" /></div>
+            <div class="form-group"><label>Duration (months)</label><input type="number" [(ngModel)]="formWarranty.durationMonths" min="0" /></div>
+            <div class="form-group"><label>Provider Name</label><input type="text" [(ngModel)]="formWarranty.providerName" /></div>
+            <div class="form-group"><label>Provider Contact</label><input type="text" [(ngModel)]="formWarranty.providerContact" /></div>
+            <div class="form-group form-group-full"><label>Policy Description</label><textarea [(ngModel)]="formWarranty.policyDescription" rows="2"></textarea></div>
+          </div>
+        </div>
+      }
+
+      <!-- COMMERCE -->
+      @if (section === 'commerce') {
+        <div class="form-card">
+          <div class="card-title">SEO</div>
+          <div class="form-grid">
+            <div class="form-group"><label>Meta Title</label><input type="text" [(ngModel)]="formSeo.metaTitle" /></div>
+            <div class="form-group"><label>Slug</label><input type="text" [(ngModel)]="formSeo.slug" placeholder="url-friendly-slug" /></div>
+            <div class="form-group"><label>Keywords</label><input type="text" [(ngModel)]="formSeo.metaKeywords" /></div>
+            <div class="form-group"><label>Canonical URL</label><input type="text" [(ngModel)]="formSeo.canonicalUrl" /></div>
+            <div class="form-group form-group-full"><label>Meta Description</label><textarea [(ngModel)]="formSeo.metaDescription" rows="2"></textarea></div>
+          </div>
+        </div>
+        <div class="form-card">
+          <div class="card-title">Suppliers</div>
+          @if (formSuppliers.length) { <div class="row-list">@for (s of formSuppliers; track $index; let i = $index) { <div class="row-item"><span class="row-tag">{{ s.supplierItemCode || (s.supplierId.substring(0,8) + '…') }}</span><span class="row-meta">{{ s.supplierItemName }}{{ s.isPrimary ? ' · ★' : '' }}{{ s.leadTimeDays != null ? ' · ' + s.leadTimeDays + 'd' : '' }}</span><button type="button" class="btn-remove" (click)="removeSupplier(i)">✕</button></div> }</div> }
+          <div class="add-row-form">
+            <input type="text" [(ngModel)]="newSupplier.supplierId" placeholder="Supplier ID *" />
+            <input type="text" [(ngModel)]="newSupplier.supplierItemCode" placeholder="Supplier item code" style="width:150px" />
+            <input type="text" [(ngModel)]="newSupplier.supplierItemName" placeholder="Supplier item name" style="width:160px" />
+            <input type="number" [(ngModel)]="newSupplier.leadTimeDays" placeholder="Lead days" min="0" style="width:90px" />
+            <label><input type="checkbox" [(ngModel)]="newSupplier.isPrimary" /> Primary</label>
+            <button type="button" class="ibtn ibtn--secondary ibtn--sm" (click)="addSupplier()">+ Add</button>
+          </div>
+        </div>
+        <div class="form-card">
+          <div class="card-title">Channel listings</div>
+          @if (formChannelListings.length) { <div class="row-list">@for (c of formChannelListings; track $index; let i = $index) { <div class="row-item"><span class="row-tag">{{ c.channel }}</span><span class="row-meta">{{ c.listingStatus }}{{ c.channelPrice != null ? ' · ' + c.channelPrice : '' }}</span><button type="button" class="btn-remove" (click)="removeChannelListing(i)">✕</button></div> }</div> }
+          <div class="add-row-form">
+            <input type="text" [(ngModel)]="newChannelListing.channel" placeholder="Channel *" style="width:160px" />
+            <input type="text" [(ngModel)]="newChannelListing.listingStatus" placeholder="Status" style="width:100px" />
+            <input type="number" [(ngModel)]="newChannelListing.channelPrice" placeholder="Price" min="0" step="0.01" style="width:90px" />
+            <input type="text" [(ngModel)]="newChannelListing.externalSku" placeholder="External SKU" style="width:120px" />
+            <button type="button" class="ibtn ibtn--secondary ibtn--sm" (click)="addChannelListing()">+ Add</button>
+          </div>
+        </div>
+        <div class="form-card">
+          <div class="card-title">Bundle components</div>
+          @if (formBundleComponents.length) { <div class="row-list">@for (b of formBundleComponents; track $index; let i = $index) { <div class="row-item"><span class="row-tag">{{ itemName(b.componentItemId) }}</span><span class="row-meta">Qty {{ b.quantity }}</span><button type="button" class="btn-remove" (click)="removeBundleComponent(i)">✕</button></div> }</div> }
+          <div class="add-row-form">
+            <select [(ngModel)]="newBundleComponent.componentItemId" style="width:200px"><option value="">Component item *</option>@for (it of items; track it.id) { <option [value]="it.id">{{ it.name }}</option> }</select>
+            <label>Qty <input type="number" [(ngModel)]="newBundleComponent.quantity" min="0.001" step="0.001" style="width:70px;flex:none;min-width:0" /></label>
+            <select [(ngModel)]="newBundleComponent.unitId" style="width:120px"><option value="">Unit</option>@for (u of units; track u.id) { <option [value]="u.id">{{ u.name }}</option> }</select>
+            <button type="button" class="ibtn ibtn--secondary ibtn--sm" (click)="addBundleComponent()">+ Add</button>
+          </div>
+        </div>
+        <div class="form-card">
+          <div class="card-title">Substitutions</div>
+          @if (formSubstitutions.length) { <div class="row-list">@for (s of formSubstitutions; track $index; let i = $index) { <div class="row-item"><span class="row-tag">{{ itemName(s.substituteItemId) }}</span><span class="row-meta">Priority {{ s.priority }}{{ s.isBidirectional ? ' · ↔' : '' }}</span><button type="button" class="btn-remove" (click)="removeSubstitution(i)">✕</button></div> }</div> }
+          <div class="add-row-form">
+            <select [(ngModel)]="newSubstitution.substituteItemId" style="width:200px"><option value="">Substitute item *</option>@for (it of items; track it.id) { <option [value]="it.id">{{ it.name }}</option> }</select>
+            <label>Priority <input type="number" [(ngModel)]="newSubstitution.priority" min="1" style="width:70px;flex:none;min-width:0" /></label>
+            <label><input type="checkbox" [(ngModel)]="newSubstitution.isBidirectional" /> Two-way</label>
+            <button type="button" class="ibtn ibtn--secondary ibtn--sm" (click)="addSubstitution()">+ Add</button>
+          </div>
+        </div>
+        <div class="form-card">
+          <div class="card-title">Comments</div>
+          @if (formComments.length) { <div class="row-list">@for (c of formComments; track $index; let i = $index) { <div class="row-item"><span class="row-tag">{{ c.commentType || 'Comment' }}</span><span class="row-meta">{{ c.comment }}{{ c.isPinned ? ' 📌' : '' }}</span><button type="button" class="btn-remove" (click)="removeComment(i)">✕</button></div> }</div> }
+          <div class="add-row-form">
+            <input type="text" [(ngModel)]="newComment.commentType" placeholder="Type" style="width:160px" />
+            <input type="text" [(ngModel)]="newComment.comment" placeholder="Comment *" />
+            <label><input type="checkbox" [(ngModel)]="newComment.isPinned" /> Pin</label>
+            <button type="button" class="ibtn ibtn--secondary ibtn--sm" (click)="addComment()">+ Add</button>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</div>

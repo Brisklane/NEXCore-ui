@@ -1,0 +1,181 @@
+<div class="dsh pos-dsh">
+
+  <!-- Spotlight banner -->
+  <div class="dsh-banner">
+    <div class="dsh-banner-l">
+      <span class="dsh-eyebrow"><span class="material-symbols-outlined">point_of_sale</span> Point of Sale · Live</span>
+      <h1>POS Dashboard</h1>
+      <p class="dsh-banner-sub">Real-time branch status and daily sales across all your outlets.</p>
+    </div>
+    <div class="dsh-banner-r">
+      <div class="pos-conn" [class.off]="!isOnline"
+           [title]="cfgPosMode + (isOnline ? ' · Connected' : ' · No connection')">
+        <span class="pos-conn-dot" [class.off]="!isOnline"></span>
+        {{ isOnline ? 'Online' : 'Offline' }}
+      </div>
+      <button class="dsh-cta" (click)="loadAll()" [disabled]="loading">
+        <span class="material-symbols-outlined">refresh</span> Refresh
+      </button>
+    </div>
+  </div>
+
+  @if (error) { <div class="pos-alert">{{ error }}</div> }
+
+  <!-- Bento -->
+  <div class="dsh-bento">
+
+    <div class="dsh-tile dsh-stat span-3 c-brand">
+      <div class="dsh-stat-ico"><span class="material-symbols-outlined">payments</span></div>
+      <div class="dsh-stat-label">Sales Today</div>
+      <div class="dsh-stat-val">{{ grossSalesToday | number:'1.2-2' }}</div>
+      <div class="dsh-stat-foot">Across all branches</div>
+    </div>
+    <div class="dsh-tile dsh-stat span-3 c-cyan">
+      <div class="dsh-stat-ico"><span class="material-symbols-outlined">receipt_long</span></div>
+      <div class="dsh-stat-label">Transactions</div>
+      <div class="dsh-stat-val">{{ txnsToday }}</div>
+      <div class="dsh-stat-foot">Today</div>
+    </div>
+    <div class="dsh-tile dsh-stat span-3 c-success">
+      <div class="dsh-stat-ico"><span class="material-symbols-outlined">lock_open</span></div>
+      <div class="dsh-stat-label">Open Sessions</div>
+      <div class="dsh-stat-val">{{ openSessions }}</div>
+      <div class="dsh-stat-foot">Currently trading</div>
+    </div>
+    <div class="dsh-tile dsh-stat span-3 c-violet">
+      <div class="dsh-stat-ico"><span class="material-symbols-outlined">storefront</span></div>
+      <div class="dsh-stat-label">Stores</div>
+      <div class="dsh-stat-val">{{ storeCount }}</div>
+      <div class="dsh-stat-foot">Configured outlets</div>
+    </div>
+
+    <!-- Live monitor tile -->
+    <div class="dsh-tile span-12">
+      <div class="dsh-th">
+        <div class="dsh-th-title"><span class="dsh-th-ico"><span class="material-symbols-outlined">monitor_heart</span></span> Live Monitor</div>
+        <div class="pos-toolbar">
+          <div class="pos-toggle">
+            <button [class.active]="activeView==='stores'" (click)="activeView='stores'">
+              <span class="material-symbols-outlined">storefront</span> Stores
+            </button>
+            <button [class.active]="activeView==='terminals'" (click)="activeView='terminals'">
+              <span class="material-symbols-outlined">point_of_sale</span> Terminals
+            </button>
+          </div>
+          <div class="pos-search">
+            <span class="material-symbols-outlined">search</span>
+            <input type="text" [(ngModel)]="searchQuery" placeholder="Search by name, cashier…" />
+          </div>
+          <span class="dsh-th-hint">
+            {{ activeView === 'stores' ? filtered.length + ' store(s)' : filteredTerminals.length + ' terminal(s)' }}
+            @if (lastUpdated) { · updated {{ lastUpdated | date:'shortTime' }} }
+          </span>
+        </div>
+      </div>
+
+      @if (loading) {
+        <div class="pos-loading"><span class="dsh-spinner-x"></span> Loading dashboard…</div>
+      } @else {
+
+        <!-- STORES VIEW -->
+        @if (activeView === 'stores') {
+          @if (filtered.length === 0) {
+            <div class="pos-empty">
+              <span class="material-symbols-outlined">storefront</span>
+              <p>@if (stores.length === 0) { No POS stores configured } @else { No results for "{{ searchQuery }}" }</p>
+            </div>
+          } @else {
+            <div class="pos-branch-grid">
+              @for (b of filtered; track b.branchId) {
+                <div class="pos-branch">
+                  <div class="pos-branch-head">
+                    <div class="pos-branch-ico"><span class="material-symbols-outlined">storefront</span></div>
+                    <div class="pos-branch-id">
+                      <div class="pos-branch-name">{{ storeName(b.branchId) }}</div>
+                      <div class="pos-branch-code">{{ b.branchId | slice:0:8 }}…</div>
+                    </div>
+                    <span [class]="sessionStatusClass(b.status)">{{ sessionStatusLabel(b.status) }}</span>
+                  </div>
+
+                  <div class="pos-branch-figs">
+                    <div class="pbf"><div class="pbf-val">{{ b.todayTotalSales | number:'1.2-2' }}</div><div class="pbf-lbl">Today Sales</div></div>
+                    <div class="pbf"><div class="pbf-val">{{ b.todayTransactionCount }}</div><div class="pbf-lbl">Txns</div></div>
+                    <div class="pbf"><div class="pbf-val">{{ b.openSessionCount }}</div><div class="pbf-lbl">Sessions</div></div>
+                  </div>
+                  <div class="pos-branch-pays">
+                    <span class="pbp"><span class="material-symbols-outlined">payments</span> {{ b.todayCashCollected | number:'1.0-0' }}</span>
+                    <span class="pbp"><span class="material-symbols-outlined">credit_card</span> {{ b.todayCardCollected | number:'1.0-0' }}</span>
+                    <span class="pbp"><span class="material-symbols-outlined">account_balance_wallet</span> {{ b.todayWalletCollected | number:'1.0-0' }}</span>
+                  </div>
+
+                  @if (b.activeCashierName) {
+                    <div class="pos-branch-cashier">
+                      <span class="material-symbols-outlined">person</span> {{ b.activeCashierName }}
+                      @if (b.sessionOpenedAt) { <span class="pos-since">since {{ b.sessionOpenedAt | date:'shortTime' }}</span> }
+                    </div>
+                  }
+
+                  <button class="pos-open-btn" (click)="openPOS(b.branchId)">Open POS <span class="material-symbols-outlined">arrow_forward</span></button>
+                </div>
+              }
+            </div>
+          }
+        }
+
+        <!-- TERMINALS VIEW -->
+        @if (activeView === 'terminals') {
+          @if (filteredTerminals.length === 0) {
+            <div class="pos-empty">
+              <span class="material-symbols-outlined">point_of_sale</span>
+              <p>@if (terminalStatuses.length === 0) { No POS terminals configured } @else { No results for "{{ searchQuery }}" }</p>
+            </div>
+          } @else {
+            <div class="grid-scroll">
+              <table class="data-grid pos-term-grid">
+                <thead>
+                  <tr>
+                    <th>Terminal</th><th>Store</th><th>Status</th><th>Cashier / Opened</th>
+                    <th class="num">Sales</th><th class="num">Txns</th><th class="num">Cash</th><th class="num">Card</th><th class="num">Float</th><th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (t of filteredTerminals; track t.terminalId) {
+                    <tr [class.row-inactive]="!t.isActive">
+                      <td><div class="col-strong">{{ t.terminalName }}</div><div class="pos-sub">{{ t.terminalCode }}</div></td>
+                      <td>{{ t.storeName }}</td>
+                      <td><span [class]="sessionStatusClass(t.status)">{{ sessionStatusLabel(t.status) }}</span></td>
+                      <td>
+                        @if (t.activeCashierName) {
+                          <div>{{ t.activeCashierName }}</div>
+                          @if (t.sessionOpenedAt) { <div class="pos-sub">since {{ t.sessionOpenedAt | date:'shortTime' }}</div> }
+                        } @else { <span class="pos-sub">—</span> }
+                      </td>
+                      <td class="num">{{ t.todayTotalSales | number:'1.2-2' }}</td>
+                      <td class="num">{{ t.todayTransactionCount }}</td>
+                      <td class="num">{{ t.todayCashCollected | number:'1.2-2' }}</td>
+                      <td class="num">{{ t.todayCardCollected | number:'1.2-2' }}</td>
+                      <td class="num">{{ t.openingFloat | number:'1.2-2' }}</td>
+                      <td><button class="pos-open-sm" (click)="openPOS(t.storeId)">Open</button></td>
+                    </tr>
+                  }
+                </tbody>
+                <tfoot>
+                  <tr class="pos-totals">
+                    <td colspan="4"><strong>Totals</strong></td>
+                    <td class="num"><strong>{{ terminalTotalSales | number:'1.2-2' }}</strong></td>
+                    <td class="num"><strong>{{ terminalTotalTxns }}</strong></td>
+                    <td class="num"><strong>{{ terminalTotalCash | number:'1.2-2' }}</strong></td>
+                    <td class="num"><strong>{{ terminalTotalCard | number:'1.2-2' }}</strong></td>
+                    <td class="num"></td><td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          }
+        }
+
+      }
+    </div>
+
+  </div>
+</div>

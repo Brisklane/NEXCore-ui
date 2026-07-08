@@ -1,0 +1,198 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">inventory_2</span></div>
+      <div>
+        <h1>Production Batches</h1>
+        <p class="inv-hero-sub">Track production batch lifecycle from manufacturing through quality approval</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreate()"><span class="material-symbols-outlined">add</span> New Batch</button>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="kpi-strip">
+    <div class="kpi-card kpi-brand"><div class="kpi-top"><span class="kpi-label">Total Batches</span><span class="kpi-icon"><span class="material-symbols-outlined">factory</span></span></div><div class="kpi-value">{{ totalCount }}</div></div>
+    <div class="kpi-card kpi-violet"><div class="kpi-top"><span class="kpi-label">In Progress</span><span class="kpi-icon"><span class="material-symbols-outlined">settings</span></span></div><div class="kpi-value">{{ inProgressCount }}</div></div>
+    <div class="kpi-card kpi-cyan"><div class="kpi-top"><span class="kpi-label">Completed</span><span class="kpi-icon"><span class="material-symbols-outlined">check_circle</span></span></div><div class="kpi-value">{{ completedCount }}</div></div>
+    <div class="kpi-card kpi-success"><div class="kpi-top"><span class="kpi-label">QA Approved</span><span class="kpi-icon"><span class="material-symbols-outlined">verified</span></span></div><div class="kpi-value">{{ approvedCount }}</div></div>
+    <div class="kpi-card kpi-amber"><div class="kpi-top"><span class="kpi-label">Total Qty</span><span class="kpi-icon"><span class="material-symbols-outlined">package_2</span></span></div><div class="kpi-value">{{ totalQty | number:'1.0-0' }}</div></div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editing ? 'Edit Batch' : 'Create Batch' }}</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Production Order ID *</label>
+          @if (editing) {
+            <div class="form-control form-control-readonly">{{ getOrderLabel(formProductionOrderId) }}</div>
+          } @else {
+            <select [(ngModel)]="formProductionOrderId" (ngModelChange)="onProductionOrderChange()" class="form-control">
+              <option value="">-- Select Production Order --</option>
+              @for (opt of productionOrderOptions; track opt.id) {
+                <option [value]="opt.id">{{ opt.label }}</option>
+              }
+            </select>
+            <small class="cell-secondary">Only Released, In Progress, Completed, or Closed production orders are shown.</small>
+          }
+        </div>
+        <div class="form-group">
+          <label>Product ID *</label>
+          @if (editing) {
+            <div class="form-control form-control-readonly">{{ getProductDisplayLabel(formProductId, null, formProductionOrderId) }}</div>
+          } @else {
+            <select [(ngModel)]="formProductId" [disabled]="!!formProductionOrderId" class="form-control">
+              <option value="">-- Select Product --</option>
+              @for (opt of productOptions; track opt.id) {
+                <option [value]="opt.id">{{ opt.label }}</option>
+              }
+            </select>
+          }
+        </div>
+        <div class="form-group">
+          <label>Quantity *</label>
+          <input type="number" [(ngModel)]="formQuantity" min="0.001" step="0.001" />
+          @if (getSelectedOrderPlannedQty() !== null) {
+            <div class="qty-context">
+              <span class="qty-context-line">
+                Planned: <strong>{{ getSelectedOrderPlannedQty() | number:'1.0-3' }}</strong>
+                @if ((totalBatchedByPoId[formProductionOrderId] ?? 0) > 0) {
+                  &nbsp;· Already batched: <strong>{{ totalBatchedByPoId[formProductionOrderId] | number:'1.0-3' }}</strong>
+                }
+              </span>
+              @if (getQtyHintState() === 'over') {
+                <span class="qty-hint qty-hint-over">⚠ Total would exceed planned quantity — represents overproduction beyond the authorised amount.</span>
+              } @else if (getQtyHintState() === 'exact') {
+                <span class="qty-hint qty-hint-exact">✓ Total matches planned quantity — full-yield batch.</span>
+              } @else if (getQtyHintState() === 'under') {
+                <span class="qty-hint qty-hint-under">ℹ Total is less than planned — additional batches may follow.</span>
+              }
+            </div>
+          }
+        </div>
+        <div class="form-group">
+          <label>Unit of Measure</label>
+          <input type="text" [(ngModel)]="formUnit" placeholder="e.g. EA, KG" />
+        </div>
+        <div class="form-group">
+          <label>Manufacturing Date</label>
+          <input type="date" [(ngModel)]="formManufacturingDate" />
+        </div>
+        <div class="form-group">
+          <label>Expiry Date</label>
+          <input type="date" [(ngModel)]="formExpiryDate" />
+        </div>
+        <div class="form-group">
+          <label>Warehouse ID</label>
+          <select [(ngModel)]="formWarehouseId" class="form-control">
+            <option value="">-- Select Warehouse (Optional) --</option>
+            @for (opt of warehouseOptions; track opt.id) {
+              <option [value]="opt.id">{{ opt.label }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Vendor Batch #</label>
+          <input type="text" [(ngModel)]="formVendorBatchNumber" placeholder="Supplier or external batch reference" />
+          <small class="cell-secondary">Enter the batch number from your supplier or external system, if applicable. Leave blank for internally tracked batches.</small>
+        </div>
+        @if (editing) {
+          <div class="form-group">
+            <label>Status</label>
+            <select [(ngModel)]="formStatus">@for (s of statusOptions; track s) { <option [value]="s">{{ getStatusOptionLabel(s) }}</option> }</select>
+          </div>
+        }
+        <div class="form-group form-group-wide">
+          <label>Notes</label>
+          <textarea [(ngModel)]="formNotes" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancel()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()">{{ editing ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <input type="text" class="filter-search" [(ngModel)]="filterSearch" (ngModelChange)="onFilterChange()" placeholder="Search by batch, product or order..." />
+    <select class="filter-select" [(ngModel)]="filterStatus" (ngModelChange)="onFilterChange()">
+      <option value="all">All Statuses</option>
+      @for (s of statusOptions; track s) { <option [value]="s">{{ getStatusOptionLabel(s) }}</option> }
+    </select>
+    <span class="filter-count">{{ filteredItems.length }} of {{ totalCount }}</span>
+  </div>
+
+  @if (loading) { <div class="loading-spinner">Loading...</div> } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" [class.sorted]="sortBy === 'batchNumber'" (click)="sort('batchNumber')">Batch # <span class="sort-icon">{{ sortBy === 'batchNumber' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Product</th>
+            <th>Order #</th>
+            <th class="sortable" [class.sorted]="sortBy === 'quantity'" (click)="sort('quantity')">Quantity <span class="sort-icon">{{ sortBy === 'quantity' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'manufacturingDate'" (click)="sort('manufacturingDate')">Mfg Date <span class="sort-icon">{{ sortBy === 'manufacturingDate' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'expiryDate'" (click)="sort('expiryDate')">Expiry Date <span class="sort-icon">{{ sortBy === 'expiryDate' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'qualityApproved'" (click)="sort('qualityApproved')">QA <span class="sort-icon">{{ sortBy === 'qualityApproved' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'status'" (click)="sort('status')">Status <span class="sort-icon">{{ sortBy === 'status' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of displayRows; track row.id) {
+            <tr [class.row-new]="row.id === highlighter.id">
+              <td class="cell-primary">{{ row.batchNumber || '—' }}</td>
+              <td>
+                <div class="cell-primary">{{ getProductDisplayLabel(row.productId, row.productName, row.productionOrderId) }}</div>
+              </td>
+                <td>{{ getOrderLabel(row.productionOrderId) }}</td>
+              <td>{{ row.quantity | number:'1.0-2' }} {{ row.unitOfMeasure }}</td>
+              <td>{{ row.manufacturingDate | date:'mediumDate' }}</td>
+              <td>{{ row.expiryDate | date:'mediumDate' }}</td>
+              <td>
+                @if (row.qualityApproved) {
+                  <span class="badge badge-completed">✓ Approved</span>
+                } @else {
+                  <span class="badge badge-draft">Pending</span>
+                }
+              </td>
+              <td><span class="badge {{ getStatusClass(row.status) }}">{{ getStatusDisplay(row.status) }}</span></td>
+              <td class="actions-cell">
+                @if (canComplete(row)) {
+                  <button class="btn-xs btn-success" (click)="quickUpdateStatus(row, 'Completed')">Complete</button>
+                }
+                <button class="btn-icon" (click)="openEdit(row)" title="Edit">✏️</button>
+                <button class="btn-icon" (click)="delete(row)" title="Delete">🗑️</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="9" class="empty-row">No batches found</td></tr>
+          }
+        </tbody>
+      </table>
+      @if (filteredItems.length > 0) {
+        <div class="pagination-bar">
+          <div class="pagination-info">
+            <span>Rows per page:</span>
+            <select [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+              @for (opt of pageSizeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+            </select>
+            <span>Showing {{ (page - 1) * pageSize + 1 }} to {{ page * pageSize > totalCount ? totalCount : page * pageSize }} of {{ totalCount }} entries</span>
+          </div>
+          <div class="pagination-controls">
+            <button class="btn-page" [disabled]="page <= 1" (click)="goToPage(page - 1)">&#8249; Prev</button>
+            <span class="page-indicator">Page {{ page }} of {{ totalPages }}</span>
+            <button class="btn-page" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next &#8250;</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

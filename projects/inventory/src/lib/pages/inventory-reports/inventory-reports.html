@@ -1,0 +1,291 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">insights</span></div>
+      <div>
+        <h1>Insights</h1>
+        <p class="inv-hero-sub">Stock analysis and inventory insights</p>
+      </div>
+    </div>
+  </div>
+
+  @if (error) {
+    <div class="alert alert-error">{{ error }}</div>
+  }
+
+  <div class="tab-bar">
+    <button [class]="activeTab === 'stockSummary' ? 'tab-btn tab-btn-active' : 'tab-btn'" (click)="setTab('stockSummary')">Stock Summary</button>
+    <button [class]="activeTab === 'stockLedger' ? 'tab-btn tab-btn-active' : 'tab-btn'" (click)="setTab('stockLedger')">Stock Ledger</button>
+    <button [class]="activeTab === 'valuation' ? 'tab-btn tab-btn-active' : 'tab-btn'" (click)="setTab('valuation')">Stock Valuation</button>
+    <button [class]="activeTab === 'aging' ? 'tab-btn tab-btn-active' : 'tab-btn'" (click)="setTab('aging')">Inventory Aging</button>
+    <button [class]="activeTab === 'lowStock' ? 'tab-btn tab-btn-active' : 'tab-btn'" (click)="setTab('lowStock')">Low Stock Alerts</button>
+  </div>
+
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else {
+
+    <!-- ── Stock Summary ───────────────────────────────────────── -->
+    @if (activeTab === 'stockSummary') {
+      <div class="filters-bar">
+        <select class="filter-select" [(ngModel)]="summaryWarehouseId" (ngModelChange)="loadStockSummary()">
+          <option value="">All Locations</option>
+          @for (w of warehouses; track w.id) {
+            <option [value]="w.id">{{ w.name }}</option>
+          }
+        </select>
+        <button class="btn btn-secondary" (click)="loadStockSummary()">Refresh</button>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Product</th>
+              <th>Location</th>
+              <th>In Stock</th>
+              <th>Reserved</th>
+              <th>Sellable</th>
+              <th>Unit Cost</th>
+              <th>Value</th>
+              <th>Last Moved</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (stockSummary.length === 0) {
+              <tr><td colspan="9" class="empty-row">No stock data found</td></tr>
+            }
+            @for (row of stockSummary; track row.itemId + row.warehouseId) {
+              <tr>
+                <td>{{ row.itemCode }}</td>
+                <td>{{ row.itemName }}</td>
+                <td>{{ row.warehouseName }}</td>
+                <td class="num-cell">{{ row.quantityOnHand | number:'1.2-2' }}</td>
+                <td class="num-cell">{{ row.quantityReserved | number:'1.2-2' }}</td>
+                <td class="num-cell"><strong>{{ row.quantityAvailable | number:'1.2-2' }}</strong></td>
+                <td class="num-cell">{{ row.averageCost | number:'1.2-2' }}</td>
+                <td class="num-cell">{{ row.totalValue | number:'1.2-2' }}</td>
+                <td>{{ row.lastTransactionDate ? (row.lastTransactionDate | date:'mediumDate') : '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        @if (summaryTotal > 0) {
+          <div class="pagination-bar">
+            <div class="pagination-info">
+              Rows per page:
+              <select [(ngModel)]="summaryPageSize" (ngModelChange)="summaryPageSizeChange()">
+                @for (s of summaryPageSizeOptions; track s) { <option [value]="s">{{ s }}</option> }
+              </select>
+              <span>{{ (summaryPage - 1) * summaryPageSize + 1 }}–{{ summaryPage * summaryPageSize < summaryTotal ? summaryPage * summaryPageSize : summaryTotal }} of {{ summaryTotal }}</span>
+            </div>
+            <div class="pagination-controls">
+              <button class="btn-page" (click)="summaryGoToPage(summaryPage - 1)" [disabled]="summaryPage <= 1">Prev</button>
+              <span class="page-indicator">Page {{ summaryPage }} of {{ summaryTotalPages }}</span>
+              <button class="btn-page" (click)="summaryGoToPage(summaryPage + 1)" [disabled]="summaryPage >= summaryTotalPages">Next</button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- ── Stock Ledger ───────────────────────────────────────── -->
+    @if (activeTab === 'stockLedger') {
+      <p class="filter-hint">Select an item and warehouse, then click Run to load the ledger.</p>
+      <div class="filters-bar">
+        <select class="filter-select" [(ngModel)]="ledgerItemId" required>
+          <option value="">— Select Item (required) —</option>
+          @for (i of items; track i.id) {
+            <option [value]="i.id">{{ i.code }} — {{ i.name }}</option>
+          }
+        </select>
+        <select class="filter-select" [(ngModel)]="ledgerWarehouseId" required>
+          <option value="">— Select Location (required) —</option>
+          @for (w of warehouses; track w.id) {
+            <option [value]="w.id">{{ w.name }}</option>
+          }
+        </select>
+        <label class="filter-label">From</label>
+        <input type="date" class="filter-date" [(ngModel)]="ledgerFrom" />
+        <label class="filter-label">To</label>
+        <input type="date" class="filter-date" [(ngModel)]="ledgerTo" />
+        <button class="btn btn-primary" (click)="loadLedger()" [disabled]="!ledgerItemId || !ledgerWarehouseId">Run</button>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Document #</th>
+              <th>Type</th>
+              <th>Transaction Type</th>
+              <th>Qty</th>
+              <th>Unit Cost</th>
+              <th>Total Cost</th>
+              <th>Running Qty</th>
+              <th>Running Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (ledger.length === 0) {
+              <tr><td colspan="9" class="empty-row">Select item and warehouse above, then click Run.</td></tr>
+            }
+            @for (row of ledger; track row.transactionId) {
+              <tr>
+                <td>{{ row.transactionDate | date:'mediumDate' }}</td>
+                <td>{{ row.documentNumber }}</td>
+                <td>{{ row.documentType }}</td>
+                <td>{{ row.transactionType }}</td>
+                <td class="num-cell" [class.qty-negative]="row.quantity < 0">{{ row.quantity | number:'1.2-2' }}</td>
+                <td class="num-cell">{{ row.unitCost | number:'1.2-2' }}</td>
+                <td class="num-cell">{{ row.totalCost | number:'1.2-2' }}</td>
+                <td class="num-cell"><strong>{{ row.runningBalance | number:'1.2-2' }}</strong></td>
+                <td class="num-cell">{{ row.runningValue | number:'1.2-2' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- ── Stock Valuation ───────────────────────────────────── -->
+    @if (activeTab === 'valuation') {
+      <div class="filters-bar">
+        <label class="filter-label">As of Date</label>
+        <input type="date" class="filter-date" [(ngModel)]="valuationAsOfDate" />
+        <button class="btn btn-primary" (click)="loadValuation()">Run</button>
+        <button class="btn btn-secondary" (click)="valuationAsOfDate = ''; loadValuation()">Clear Date</button>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Product</th>
+              <th>Category</th>
+              <th>Total Qty</th>
+              <th>Unit Cost</th>
+              <th>Value</th>
+              <th>As Of Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (valuation.length === 0) {
+              <tr><td colspan="7" class="empty-row">No valuation data found</td></tr>
+            }
+            @for (row of valuation; track row.itemId) {
+              <tr>
+                <td>{{ row.itemCode }}</td>
+                <td>{{ row.itemName }}</td>
+                <td>{{ row.categoryName }}</td>
+                <td class="num-cell">{{ row.totalQuantity | number:'1.2-2' }}</td>
+                <td class="num-cell">{{ row.averageCost | number:'1.2-2' }}</td>
+                <td class="num-cell"><strong>{{ row.totalValue | number:'1.2-2' }}</strong></td>
+                <td>{{ row.asOfDate | date:'mediumDate' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- ── Inventory Aging ────────────────────────────────────── -->
+    @if (activeTab === 'aging') {
+      <div class="filters-bar">
+        <select class="filter-select" [(ngModel)]="agingWarehouseId">
+          <option value="">All Locations</option>
+          @for (w of warehouses; track w.id) {
+            <option [value]="w.id">{{ w.name }}</option>
+          }
+        </select>
+        <button class="btn btn-primary" (click)="loadAging()">Run</button>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Product</th>
+              <th>Location</th>
+              <th>Receipt Date</th>
+              <th>Days in Inventory</th>
+              <th>Remaining Qty</th>
+              <th>Unit Cost</th>
+              <th>Value</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (aging.length === 0) {
+              <tr><td colspan="9" class="empty-row">No aging data found. Click Run to load.</td></tr>
+            }
+            @for (row of aging; track row.itemId + row.receiptDate) {
+              <tr [class.row-warning]="row.daysInInventory > 90" [class.row-danger]="row.daysInInventory > 180">
+                <td>{{ row.itemCode }}</td>
+                <td>{{ row.itemName }}</td>
+                <td>{{ row.warehouseName }}</td>
+                <td>{{ row.receiptDate | date:'mediumDate' }}</td>
+                <td class="num-cell">
+                  <strong>{{ row.daysInInventory }}</strong>
+                </td>
+                <td class="num-cell">{{ row.remainingQuantity | number:'1.2-2' }}</td>
+                <td class="num-cell">{{ row.unitCost | number:'1.2-2' }}</td>
+                <td class="num-cell">{{ row.totalValue | number:'1.2-2' }}</td>
+                <td>
+                  @if (row.daysInInventory > 180) {
+                    <span class="badge badge-inactive">Slow Moving</span>
+                  } @else if (row.daysInInventory > 90) {
+                    <span class="badge badge-warning">Aging</span>
+                  } @else {
+                    <span class="badge badge-active">Fresh</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- ── Low Stock Alerts ───────────────────────────────────── -->
+    @if (activeTab === 'lowStock') {
+      <div class="filters-bar">
+        <button class="btn btn-secondary" (click)="loadLowStock()">Refresh</button>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Product</th>
+              <th>Location</th>
+              <th>Current Qty</th>
+              <th>Reorder Level</th>
+              <th>EOQ</th>
+              <th>Qty to Order</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (lowStock.length === 0) {
+              <tr><td colspan="8" class="empty-row">No low stock alerts</td></tr>
+            }
+            @for (row of lowStock; track row.itemId + row.warehouseId) {
+              <tr>
+                <td>{{ row.itemCode }}</td>
+                <td>{{ row.itemName }}</td>
+                <td>{{ row.warehouseName }}</td>
+                <td class="num-cell" [class.qty-negative]="row.currentQuantity <= 0">{{ row.currentQuantity | number:'1.2-2' }}</td>
+                <td class="num-cell">{{ row.reorderLevel | number:'1.2-2' }}</td>
+                <td class="num-cell">{{ row.economicOrderQuantity | number:'1.2-2' }}</td>
+                <td class="num-cell">{{ (row.reorderLevel - row.currentQuantity + row.economicOrderQuantity) | number:'1.2-2' }}</td>
+                <td><span class="badge badge-inactive">{{ row.status }}</span></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+  }
+</div>

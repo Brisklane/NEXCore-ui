@@ -1,0 +1,115 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">work</span></div>
+      <div>
+        <h1>Positions</h1>
+        <p class="inv-hero-sub">Manage organisational positions linked to departments and designations</p>
+      </div>
+    </div>
+    <button class="btn btn-primary" (click)="openCreateForm()">+ New Position</button>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editingPosition ? 'Edit Position' : 'Create Position' }}</h3>
+      @if (saveError) { <div class="alert alert-error">{{ saveError }}</div> }
+      <div class="form-grid">
+        @if (!editingPosition) {
+          <div class="form-group">
+            <label>Position Code</label>
+            <input type="text" [(ngModel)]="formCode" placeholder="e.g. POS-001" maxlength="30" />
+          </div>
+        }
+        <div class="form-group">
+          <label>Position Name *</label>
+          <input type="text" [(ngModel)]="formName" placeholder="e.g. Senior Developer" />
+        </div>
+        <div class="form-group">
+          <label>Department *</label>
+          <select [(ngModel)]="formDepartmentId">
+            <option value="">-- Select Department --</option>
+            @for (d of departments; track d.id) {
+              <option [value]="d.id">{{ d.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Designation *</label>
+          <select [(ngModel)]="formDesignationId">
+            <option value="">-- Select Designation --</option>
+            @for (d of designations; track d.id) {
+              <option [value]="d.id">{{ d.name }}</option>
+            }
+          </select>
+        </div>
+        @if (editingPosition) {
+          <div class="form-group form-check-row">
+            <label><input type="checkbox" [(ngModel)]="formIsVacant" /> Vacant</label>
+          </div>
+          <div class="form-group form-check-row">
+            <label><input type="checkbox" [(ngModel)]="formIsActive" /> Active</label>
+          </div>
+        }
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()" [disabled]="saving">Cancel</button>
+        <button class="btn btn-primary" (click)="savePosition()" [disabled]="saving">
+          {{ saving ? 'Saving…' : (editingPosition ? 'Update' : 'Create') }}
+        </button>
+      </div>
+    </div>
+  }
+
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Code</th>
+            <th>Name</th>
+            <th>Department</th>
+            <th>Designation</th>
+            <th>Vacant</th>
+            <th>Status</th>
+            <th class="actions-cell">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (pos of positions; track pos.id; let i = $index) {
+            <tr>
+              <td class="row-num">{{ i + 1 }}</td>
+              <td><code class="code-chip">{{ pos.positionCode || '—' }}</code></td>
+              <td>{{ pos.positionName || '—' }}</td>
+              <td>{{ getDeptName(pos.departmentId) }}</td>
+              <td>{{ getDesignationName(pos.designationId) }}</td>
+              <td>
+                @if (pos.isVacant) {
+                  <span class="badge-active">Yes</span>
+                } @else {
+                  <span class="badge-inactive">No</span>
+                }
+              </td>
+              <td>
+                <span class="badge" [class.badge-active]="pos.isActive" [class.badge-inactive]="!pos.isActive">
+                  {{ pos.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td class="actions-cell">
+                <button class="btn-icon" title="Edit" (click)="openEditForm(pos)">✏️</button>
+                <button class="btn-icon" title="Delete" (click)="deletePosition(pos)">🗑️</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="8" class="empty-row">No positions found. Click "+ New Position" to add one.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

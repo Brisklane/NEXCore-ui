@@ -1,0 +1,178 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">inventory_2</span></div>
+      <div>
+        <h1>Finished Goods Receipts</h1>
+        <p class="inv-hero-sub">Record completed production receipts into warehouse inventory</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreate()"><span class="material-symbols-outlined">add</span> New Receipt</button>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="kpi-strip">
+    <div class="kpi-card kpi-brand"><div class="kpi-top"><span class="kpi-label">Total Receipts</span><span class="kpi-icon"><span class="material-symbols-outlined">inventory_2</span></span></div><div class="kpi-value">{{ totalCount }}</div></div>
+    <div class="kpi-card kpi-cyan"><div class="kpi-top"><span class="kpi-label">Total Received</span><span class="kpi-icon"><span class="material-symbols-outlined">package_2</span></span></div><div class="kpi-value">{{ totalReceivedQty | number:'1.0-0' }}</div></div>
+    <div class="kpi-card kpi-violet"><div class="kpi-top"><span class="kpi-label">Unique Products</span><span class="kpi-icon"><span class="material-symbols-outlined">label</span></span></div><div class="kpi-value">{{ uniqueProducts }}</div></div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (success) { <div class="alert alert-success">{{ success }}</div> }
+
+  <div class="ux-help-box" role="note">
+    <strong>Inventory Integration</strong>
+    Saving a new receipt automatically creates a GRN inventory document and increases the warehouse stock balance. A warehouse selection is required on create. Edits update quantities only — no additional inventory transaction is created.
+  </div>
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editing ? 'Edit Receipt' : 'Create Receipt' }}</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Production Order ID *</label>
+          @if (editing) {
+            <div class="form-control form-control-readonly">{{ getOrderLabel(formProductionOrderId) }}</div>
+          } @else {
+            <select [(ngModel)]="formProductionOrderId" (ngModelChange)="onProductionOrderChange()" class="form-control">
+              <option value="">-- Select Production Order --</option>
+              @for (opt of productionOrderOptions; track opt.id) {
+                <option [value]="opt.id">{{ opt.label }}</option>
+              }
+            </select>
+            <small class="cell-secondary">Only InProgress production orders are shown — record the receipt while production is active.</small>
+          }
+        </div>
+        <div class="form-group">
+          <label>Product ID *</label>
+          @if (editing) {
+            <div class="form-control form-control-readonly">{{ getProductDisplayLabel(formProductId, null, formProductionOrderId) }}</div>
+          } @else {
+            <select [(ngModel)]="formProductId" [disabled]="!!formProductionOrderId" class="form-control">
+              <option value="">-- Select Product --</option>
+              @for (opt of productOptions; track opt.id) {
+                <option [value]="opt.id">{{ opt.label }}</option>
+              }
+            </select>
+          }
+        </div>
+        <div class="form-group">
+          <label>Received Quantity *</label>
+          <input type="number" [(ngModel)]="formReceivedQuantity" min="0.001" step="0.001" />
+          @if (getSelectedOrderPlannedQty() !== null) {
+            <div class="qty-context">
+              <span class="qty-context-line">
+                Planned: <strong>{{ getSelectedOrderPlannedQty() | number:'1.0-3' }}</strong>
+                @if ((getSelectedOrderProducedQty() ?? 0) > 0) {
+                  &nbsp;· Already produced: <strong>{{ getSelectedOrderProducedQty() | number:'1.0-3' }}</strong>
+                }
+              </span>
+              @if (getQtyHintState() === 'over') {
+                <span class="qty-hint qty-hint-over">⚠ Exceeds planned quantity — represents overproduction beyond the authorised amount.</span>
+              } @else if (getQtyHintState() === 'exact') {
+                <span class="qty-hint qty-hint-exact">✓ Matches planned quantity — full-yield receipt.</span>
+              } @else if (getQtyHintState() === 'under') {
+                <span class="qty-hint qty-hint-under">ℹ Less than planned — expected when units were rejected or scrapped during quality inspection.</span>
+              }
+            </div>
+          }
+        </div>
+        <div class="form-group">
+          <label>Unit of Measure</label>
+          <input type="text" [(ngModel)]="formUnit" placeholder="e.g. EA, KG" />
+        </div>
+        <div class="form-group">
+          <label>Batch Number</label>
+          <input type="text" [(ngModel)]="formBatchNo" placeholder="e.g. PO-1003-20260519" />
+          <small class="cell-secondary">Auto-suggested from the production order. Identifies the lot for traceability — edit freely or leave blank.</small>
+        </div>
+        <div class="form-group">
+          <label>Receipt Date</label>
+          <input type="date" [(ngModel)]="formReceiptDate" />
+        </div>
+        <div class="form-group">
+          <label>Warehouse{{ !editing ? ' *' : '' }}</label>
+          <select [(ngModel)]="formWarehouseId" class="form-control">
+            <option value="">-- Select Warehouse --</option>
+            @for (opt of warehouseOptions; track opt.id) {
+              <option [value]="opt.id">{{ opt.label }}</option>
+            }
+          </select>
+          @if (!editing) { <span class="cell-secondary" style="font-size:11px;margin-top:4px">Stock will be added to this warehouse.</span> }
+        </div>
+        <div class="form-group form-group-wide">
+          <label>Notes</label>
+          <textarea [(ngModel)]="formNotes" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancel()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()">{{ editing ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <input type="text" class="filter-search" [(ngModel)]="filterSearch" (ngModelChange)="onFilterChange()" placeholder="Search by product, order or batch..." />
+    <span class="filter-count">{{ filteredItems.length }} of {{ totalCount }}</span>
+  </div>
+
+  @if (loading) { <div class="loading-spinner">Loading...</div> } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" [class.sorted]="sortBy === 'orderNumber'" (click)="sort('orderNumber')">Order # <span class="sort-icon">{{ sortBy === 'orderNumber' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'productName'" (click)="sort('productName')">Product <span class="sort-icon">{{ sortBy === 'productName' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'quantityReceived'" (click)="sort('quantityReceived')">Qty Received <span class="sort-icon">{{ sortBy === 'quantityReceived' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'batchNo'" (click)="sort('batchNo')">Batch # <span class="sort-icon">{{ sortBy === 'batchNo' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'unitOfMeasure'" (click)="sort('unitOfMeasure')">Unit <span class="sort-icon">{{ sortBy === 'unitOfMeasure' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'receivedAt'" (click)="sort('receivedAt')">Received At <span class="sort-icon">{{ sortBy === 'receivedAt' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Warehouse</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of displayRows; track row.id) {
+            <tr [class.row-new]="row.id === highlighter.id">
+              <td class="cell-primary">{{ getOrderLabel(row.productionOrderId) }}</td>
+              <td>
+                <div class="cell-primary">{{ getProductDisplayLabel(row.productId, row.productName, row.productionOrderId) }}</div>
+              </td>
+              <td class="text-bold">{{ row.quantityReceived | number:'1.0-3' }} {{ row.unitOfMeasure }}</td>
+              <td>{{ row.batchNo || '—' }}</td>
+              <td>{{ row.unitOfMeasure || '—' }}</td>
+              <td>{{ row.receivedAt | date:'mediumDate' }}</td>
+              <td>{{ getWarehouseLabel(row.warehouseId) }}</td>
+              <td class="actions-cell">
+                <button class="btn-icon" (click)="openEdit(row)" title="Edit">✏️</button>
+                <button class="btn-icon" (click)="delete(row)" title="Delete">🗑️</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="8" class="empty-row">No receipts found</td></tr>
+          }
+        </tbody>
+      </table>
+      @if (filteredItems.length > 0) {
+        <div class="pagination-bar">
+          <div class="pagination-info">
+            <span>Rows per page:</span>
+            <select [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+              @for (opt of pageSizeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+            </select>
+            <span>Showing {{ (page - 1) * pageSize + 1 }} to {{ page * pageSize > totalCount ? totalCount : page * pageSize }} of {{ totalCount }} entries</span>
+          </div>
+          <div class="pagination-controls">
+            <button class="btn-page" [disabled]="page <= 1" (click)="goToPage(page - 1)">&#8249; Prev</button>
+            <span class="page-indicator">Page {{ page }} of {{ totalPages }}</span>
+            <button class="btn-page" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next &#8250;</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

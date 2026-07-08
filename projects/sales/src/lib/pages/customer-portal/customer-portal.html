@@ -1,0 +1,281 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Customer Portal</h2>
+      <p class="subtitle">Manage online ordering, reviews, and customer notifications</p>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (successMsg) { <div class="alert alert-success">{{ successMsg }}</div> }
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn" [class.active]="activeTab === 'stores'" (click)="setTab('stores')">
+      Online Stores
+    </button>
+    <button class="tab-btn" [class.active]="activeTab === 'nearby'" (click)="setTab('nearby')">Nearby Stores</button>
+    <button class="tab-btn" [class.active]="activeTab === 'orders'" (click)="setTab('orders')">
+      Portal Orders
+    </button>
+    <button class="tab-btn" [class.active]="activeTab === 'reviews'" (click)="setTab('reviews')">
+      Reviews
+    </button>
+    <button class="tab-btn" [class.active]="activeTab === 'notifications'" (click)="setTab('notifications')">
+      Notifications
+    </button>
+  </div>
+
+  <!-- ── Online Stores ──────────────────────────────────────────────────────── -->
+  @if (activeTab === 'stores') {
+    <div class="filters-bar">
+      <input type="text" [(ngModel)]="storeSearch" placeholder="Search stores..." />
+      <span class="filter-count">{{ filteredStores.length }} store(s) online</span>
+    </div>
+
+    @if (storesLoading) {
+      <div class="loading-spinner">Loading stores...</div>
+    } @else {
+      @if (filteredStores.length === 0) {
+        <div style="text-align:center;padding:40px;color:#94a3b8;">
+          No online-enabled stores found. Enable a store's online ordering in POS Stores.
+        </div>
+      } @else {
+        <div class="store-cards">
+          @for (s of filteredStores; track s.id) {
+            <div class="store-card">
+              <h4>{{ s.tradingName ?? '—' }}</h4>
+              <div class="store-meta">
+                <div>Code: <strong>{{ s.storeCode }}</strong></div>
+                @if (s.storeType) { <div>{{ s.storeType }}{{ s.storeFormat ? ' · ' + s.storeFormat : '' }}</div> }
+                @if (s.estimatedPrepTimeMinutes) { <div>~{{ s.estimatedPrepTimeMinutes }} min prep</div> }
+              </div>
+              <div class="store-badges">
+                <span class="badge badge-active">Online</span>
+                @if (s.acceptsOnlinePickup) { <span class="badge badge-confirmed">Pickup</span> }
+                @if (s.hasDelivery) { <span class="badge badge-confirmed">Delivery</span> }
+                <span class="badge" [class.badge-active]="s.isActive" [class.badge-inactive]="!s.isActive">
+                  {{ s.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    }
+  }
+
+  <!-- ── Nearby Stores ────────────────────────────────────────────────────────  -->
+  @if (activeTab === 'nearby') {
+    <div class="nearby-controls">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <label style="font-size:13px;color:#475569;font-weight:500;">Radius (km)</label>
+        <input type="number" [(ngModel)]="nearbyRadiusKm" min="1" max="200"
+          style="width:72px;padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;" />
+        <button class="btn btn-primary" (click)="findNearbyStores()" [disabled]="nearbyLoading">
+          &#127759; {{ nearbyLoading ? 'Locating…' : 'Use My Location' }}
+        </button>
+      </div>
+      @if (nearbySearched) {
+        <span class="filter-count">{{ nearbyStores.length }} store(s) found</span>
+      }
+    </div>
+
+    @if (nearbyError) {
+      <div class="alert alert-error">{{ nearbyError }}</div>
+    }
+
+    @if (nearbyLoading) {
+      <div class="loading-spinner">Detecting your location…</div>
+    } @else if (nearbySearched && nearbyStores.length === 0) {
+      <div style="text-align:center;padding:40px;color:#94a3b8;">
+        No stores found within {{ nearbyRadiusKm }} km of your location.
+      </div>
+    } @else if (nearbyStores.length > 0) {
+      <div class="nearby-grid">
+        @for (store of nearbyStores; track store.id) {
+          <div class="nearby-card">
+            <div class="nearby-card-header">
+              <div>
+                <span class="nearby-card-name">{{ store.tradingName ?? '—' }}</span>
+                <div style="font-size:10px;color:#94a3b8;font-family:monospace;">{{ store.storeCode }}</div>
+              </div>
+              <span class="nearby-distance">{{ store.distanceKm | number:'1.1-1' }} km</span>
+            </div>
+            <div class="nearby-card-body">
+              @if (store.storeType) {
+                <div class="nearby-row">
+                  <span class="material-icons nearby-icon">store</span>
+                  <span>{{ store.storeType }} · {{ store.storeFormat }}</span>
+                </div>
+              }
+              @if (store.estimatedPrepTimeMinutes) {
+                <div class="nearby-row">
+                  <span class="material-icons nearby-icon">schedule</span>
+                  <span>~{{ store.estimatedPrepTimeMinutes }} min prep time</span>
+                </div>
+              }
+              @if (store.hasDelivery && store.maxDeliveryRadiusKm) {
+                <div class="nearby-row">
+                  <span class="material-icons nearby-icon">delivery_dining</span>
+                  <span>Delivery up to {{ store.maxDeliveryRadiusKm }} km</span>
+                </div>
+              }
+              @if (store.minOnlineOrderAmount) {
+                <div class="nearby-row">
+                  &#128722;
+                  <span>Min. order {{ store.minOnlineOrderAmount | number:'1.2-2' }}</span>
+                </div>
+              }
+              @if (store.latitude !== null && store.longitude !== null) {
+                <div class="nearby-row" style="margin-top:6px;">
+                  <a [href]="getMapUrl(store.latitude!, store.longitude!)" target="_blank" class="nearby-map-link">
+                    &#128205; Open in Maps
+                  </a>
+                </div>
+              }
+            </div>
+            <div class="nearby-card-footer">
+              @if (store.acceptsOnlinePickup) {
+                <span class="badge badge-confirmed">Pickup</span>
+              }
+              @if (store.hasDelivery) {
+                <span class="badge badge-confirmed">Delivery</span>
+              }
+              @if (store.isOnlineOrderingEnabled) {
+                <span class="badge badge-accepted">Online Orders</span>
+              }
+              <span [class]="store.isActive ? 'badge badge-accepted' : 'badge badge-cancelled'">
+                {{ store.isActive ? 'Active' : 'Inactive' }}
+              </span>
+            </div>
+          </div>
+        }
+      </div>
+    } @else {
+      <div style="text-align:center;padding:48px;color:#94a3b8;">
+        <div style="font-size:48px;margin-bottom:12px;">&#127759;</div>
+        Click <strong>Use My Location</strong> to find stores near you.
+      </div>
+    }
+  }
+
+  <!-- ── Portal Orders ──────────────────────────────────────────────────────── -->
+  @if (activeTab === 'orders') {
+    <div class="filters-bar">
+      <input type="text" [(ngModel)]="orderSearch" placeholder="Search by order # or customer..." />
+      <span class="filter-count">{{ filteredOrders.length }} order(s)</span>
+    </div>
+
+    @if (ordersLoading) {
+      <div class="loading-spinner">Loading portal orders...</div>
+    } @else {
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Order #</th>
+              <th>Customer</th>
+              <th>Status</th>
+              <th>Total</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (o of filteredOrders; track o.id) {
+              <tr>
+                <td><strong>{{ o.orderNumber || '—' }}</strong></td>
+                <td>{{ o.contactName || '—' }}</td>
+                <td><span [class]="orderStatusClass(o.status)">{{ o.status }}</span></td>
+                <td>{{ o.totalAmount | number:'1.2-2' }}</td>
+                <td>{{ o.createdAt | date:'mediumDate' }}</td>
+              </tr>
+            }
+            @empty {
+              <tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:24px">No portal orders found.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <!-- ── Reviews ────────────────────────────────────────────────────────────── -->
+  @if (activeTab === 'reviews') {
+    <div class="filters-bar">
+      <input type="text" [(ngModel)]="reviewSearch" placeholder="Search by product or comment..." />
+      <span class="filter-count">{{ filteredReviews.length }} review(s)</span>
+    </div>
+
+    @if (reviewsLoading) {
+      <div class="loading-spinner">Loading reviews...</div>
+    } @else {
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Rating</th>
+              <th>Comment</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of filteredReviews; track r.id) {
+              <tr>
+                <td>{{ r.productName || '—' }}</td>
+                <td>
+                  <span class="rating-stars">
+                    @for (star of starsArray(r.rating); track star) {
+                      <span [class.filled]="star <= r.rating">★</span>
+                    }
+                  </span>
+                </td>
+                <td>{{ r.comment || '—' }}</td>
+                <td>{{ r.createdAt | date:'mediumDate' }}</td>
+              </tr>
+            }
+            @empty {
+              <tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:24px">No reviews yet.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <!-- ── Notifications ──────────────────────────────────────────────────────── -->
+  @if (activeTab === 'notifications') {
+    <div class="filters-bar">
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+        <input type="checkbox" [(ngModel)]="unreadOnly" /> Show unread only
+      </label>
+      <span class="filter-count">{{ visibleNotifications.length }} notification(s)</span>
+      <button class="btn btn-secondary btn-sm" (click)="markAllRead()" style="margin-left:auto">
+        Mark all read
+      </button>
+    </div>
+
+    @if (notificationsLoading) {
+      <div class="loading-spinner">Loading notifications...</div>
+    } @else {
+      <div class="table-container" style="border-radius:8px;overflow:hidden">
+        @for (n of visibleNotifications; track n.id) {
+          <div class="notif-item" [class.unread]="!n.isRead" (click)="markOneRead(n)">
+            <div class="notif-body">
+              <div class="notif-title">{{ n.title || 'Notification' }}</div>
+              <div class="notif-msg">{{ n.message || '—' }}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="notif-time">{{ n.createdAt | date:'short' }}</span>
+              @if (!n.isRead) { <div class="notif-unread-dot"></div> }
+            </div>
+          </div>
+        }
+        @empty {
+          <div style="text-align:center;padding:32px;color:#94a3b8;">No notifications.</div>
+        }
+      </div>
+    }
+  }
+</div>

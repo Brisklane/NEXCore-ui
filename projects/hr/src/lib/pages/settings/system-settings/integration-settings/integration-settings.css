@@ -1,0 +1,64 @@
+/* Integration Settings Styles */
+
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.page-header h2 {
+  margin: 0;
+  font-size: 1.85rem;
+}
+
+.page-header .subtitle {
+  margin: 0.35rem 0 0;
+  color: var(--text-muted, #6b7280);
+  max-width: 40rem;
+}
+
+.integration-panel {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.integration-card {
+  padding: 1.75rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(100, 116, 139, 0.18);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+  max-width: 48rem;
+}
+
+.integration-card h3 {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+  font-size: 1.35rem;
+}
+
+.integration-card p {
+  margin: 0;
+  line-height: 1.75;
+  color: var(--text-muted, #475569);
+}
+
+.integration-actions {
+  margin-top: 1.25rem;
+}
+
+.integration-actions .btn {
+  min-width: 170px;
+}
+
+.alert {
+  margin-bottom: 1rem;
+}
+
+.loading-spinner {
+  padding: 2rem 0;
+  text-align: center;
+}

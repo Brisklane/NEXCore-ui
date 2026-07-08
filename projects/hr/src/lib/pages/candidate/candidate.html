@@ -1,0 +1,129 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">person_search</span></div>
+      <div>
+        <h1>Candidates</h1>
+        <p class="inv-hero-sub">Manage applicant profiles</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Candidate</button>
+    </div>
+  </div>
+
+  <div *ngIf="error" class="alert alert-error">{{ error }}</div>
+
+  <div class="md-split">
+    <!-- ══ LEFT: candidate rows ══ -->
+    <div class="md-list">
+      <div class="md-list-body">
+        <ng-container *ngIf="loading">
+          <div class="md-rec" *ngFor="let s of [0,1,2,3,4]"><span class="skeleton sk-circle" style="width:34px;height:34px"></span><div style="flex:1"><span class="skeleton sk-line" style="width:70%"></span></div></div>
+        </ng-container>
+        <div *ngIf="!loading && candidates.length === 0" class="inv-empty" style="padding:36px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">person_search</span></div><div class="inv-empty-title">No candidates</div><div class="inv-empty-text">Create your first candidate.</div></div>
+        <button class="md-rec" *ngFor="let c of candidates" [class.selected]="editingCandidate?.id === c.id" (click)="openEditForm(c)">
+          <span class="md-rec-ico">{{ (c.firstName || '?').charAt(0) }}{{ (c.lastName || '').charAt(0) }}</span>
+          <div class="md-rec-main"><span class="md-rec-title">{{ c.firstName }} {{ c.lastName }}</span><span class="md-rec-sub"><span class="md-rec-code">{{ c.candidateCode || '—' }}</span>{{ c.currentCompany ? ' · ' + c.currentCompany : '' }}</span></div>
+          <span class="status-pill" [class.pill-out]="c.isBlacklisted" [class.pill-instock]="!c.isBlacklisted">{{ c.isBlacklisted ? 'Blacklisted' : 'Active' }}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ══ RIGHT: blacklist form | edit form | empty ══ -->
+    <div class="md-detail">
+      <ng-container *ngIf="showBlacklistForm">
+        <div class="md-detail-head">
+          <span class="md-detail-title">Blacklist Candidate</span>
+          <button class="icon-btn" title="Close" (click)="showBlacklistForm = false"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="md-detail-body">
+          <div class="form-grid">
+            <div class="form-group"><label>Reason *</label><input type="text" [(ngModel)]="blacklistReason" placeholder="Reason for blacklisting" /></div>
+          </div>
+          <div class="form-actions">
+            <button class="ibtn ibtn--secondary" (click)="showBlacklistForm = false">Cancel</button>
+            <button class="ibtn ibtn--danger" (click)="confirmBlacklist()"><span class="material-symbols-outlined">block</span> Confirm Blacklist</button>
+          </div>
+        </div>
+      </ng-container>
+
+      <ng-container *ngIf="showForm && !showBlacklistForm">
+        <div class="md-detail-head">
+          <span class="md-detail-title">{{ editingCandidate ? 'Edit Candidate' : 'New Candidate' }}</span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button *ngIf="editingCandidate && !editingCandidate.isBlacklisted" class="ibtn ibtn--sm ibtn--secondary" (click)="openBlacklistForm(editingCandidate)"><span class="material-symbols-outlined">block</span> Blacklist</button>
+            <button *ngIf="editingCandidate && editingCandidate.isBlacklisted" class="ibtn ibtn--sm ibtn--secondary" (click)="unblacklist(editingCandidate)"><span class="material-symbols-outlined">undo</span> Unblacklist</button>
+            <button class="icon-btn" title="Close" (click)="cancelForm()"><span class="material-symbols-outlined">close</span></button>
+          </div>
+        </div>
+        <div class="md-detail-body">
+          <div class="form-grid">
+        <div *ngIf="!editingCandidate" class="form-group">
+          <label>Candidate Code</label>
+          <input type="text" [(ngModel)]="formCandidateCode" placeholder="e.g. CAN-001" />
+        </div>
+        <div class="form-group">
+          <label>First Name *</label>
+          <input type="text" [(ngModel)]="formFirstName" placeholder="First name" />
+        </div>
+        <div class="form-group">
+          <label>Last Name *</label>
+          <input type="text" [(ngModel)]="formLastName" placeholder="Last name" />
+        </div>
+        <div class="form-group">
+          <label>Email *</label>
+          <input type="email" [(ngModel)]="formEmail" placeholder="Email address" />
+        </div>
+        <div class="form-group">
+          <label>Phone</label>
+          <input type="text" [(ngModel)]="formPhone" placeholder="Phone number" />
+        </div>
+        <div class="form-group">
+          <label>Current Company</label>
+          <input type="text" [(ngModel)]="formCurrentCompany" placeholder="Current employer" />
+        </div>
+        <div class="form-group">
+          <label>Source</label>
+          <select [(ngModel)]="formSource">
+            <option *ngFor="let s of sourceOptions" [ngValue]="s.value">{{ s.label }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Total Experience (Years)</label>
+          <input type="number" [(ngModel)]="formTotalExperienceYears" placeholder="e.g. 5" min="0" />
+        </div>
+        <div class="form-group">
+          <label>Current Salary</label>
+          <input type="number" [(ngModel)]="formCurrentSalary" placeholder="Current salary" min="0" />
+        </div>
+        <div class="form-group">
+          <label>Expected Salary</label>
+          <input type="number" [(ngModel)]="formExpectedSalary" placeholder="Expected salary" min="0" />
+        </div>
+        <div class="form-group">
+          <label>Resume URL</label>
+          <input type="text" [(ngModel)]="formResumeUrl" placeholder="https://..." />
+        </div>
+        <div class="form-group form-check-row">
+          <label><input type="checkbox" [(ngModel)]="formConsentGiven" /> Data Consent Given</label>
+        </div>
+      </div>
+          <div class="form-actions">
+            <button type="button" class="ibtn ibtn--danger" style="margin-right:auto" *ngIf="editingCandidate" (click)="deleteCandidate(editingCandidate)"><span class="material-symbols-outlined">delete</span> Delete</button>
+            <button class="ibtn ibtn--secondary" (click)="cancelForm()">Cancel</button>
+            <button class="ibtn ibtn--primary" (click)="saveCandidate()"><span class="material-symbols-outlined">save</span> {{ editingCandidate ? 'Update' : 'Create' }}</button>
+          </div>
+        </div>
+      </ng-container>
+
+      <div *ngIf="!showForm && !showBlacklistForm" class="md-empty">
+        <div class="md-empty-icon"><span class="material-symbols-outlined">person_search</span></div>
+        <div class="md-empty-title">Manage candidates</div>
+        <div class="md-empty-text">Select a candidate to edit, or create a new one.</div>
+        <button class="btn-brand" style="margin-top:8px" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Candidate</button>
+      </div>
+    </div>
+  </div>
+</div>
+

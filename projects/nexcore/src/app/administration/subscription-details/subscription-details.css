@@ -1,0 +1,276 @@
+.block { margin-top: 28px; }
+
+.block-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-bottom: 14px;
+}
+
+.block-head h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+}
+
+.block-head .subtitle { margin: 0; }
+
+.card {
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-default, #e2e8f0);
+  border-radius: var(--radius, 12px);
+  box-shadow: var(--shadow-sm);
+  padding: 20px;
+}
+
+/* ── Plan hero ────────────────────────────────────────────────────── */
+.plan-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 18px;
+  background: var(--brand-grad, linear-gradient(135deg, #22c7e6, #2b7fff));
+  border-radius: var(--radius-lg, 18px);
+  padding: 26px 28px;
+  color: #fff;
+  box-shadow: 0 16px 40px rgba(43, 127, 255, 0.28);
+}
+
+.plan-hero-badge {
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: var(--radius-pill, 999px);
+  background: rgba(255, 255, 255, 0.22);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.plan-hero-name {
+  margin: 0 0 4px;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.plan-hero-desc {
+  margin: 0;
+  font-size: 13.5px;
+  opacity: 0.92;
+}
+
+.plan-hero-right {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.plan-hero-price .amount { font-size: 26px; font-weight: 800; }
+.plan-hero-price .cadence { font-size: 12.5px; opacity: 0.85; margin-left: 4px; }
+
+.plan-hero-btn {
+  background: #fff;
+  color: var(--brand-blue, #2b7fff);
+  border: none;
+  font-weight: 700;
+}
+.plan-hero-btn:disabled { opacity: 0.85; cursor: not-allowed; }
+
+/* ── Usage ────────────────────────────────────────────────────────── */
+.usage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.usage-card {
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-default, #e2e8f0);
+  border-radius: var(--radius, 12px);
+  box-shadow: var(--shadow-sm);
+  padding: 16px 18px;
+}
+
+.usage-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.usage-ico {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--c) 14%, transparent);
+  color: var(--c);
+}
+.usage-ico .material-symbols-outlined { font-size: 17px; }
+
+.usage-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+}
+
+.usage-value {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+  margin-bottom: 10px;
+}
+
+.usage-of {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted, #94a3b8);
+}
+
+.usage-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg-muted, #f1f5f9);
+  overflow: hidden;
+}
+
+.usage-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--c);
+}
+
+/* ── Plans grid ───────────────────────────────────────────────────── */
+.plans-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+}
+
+.plan-card {
+  position: relative;
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-default, #e2e8f0);
+  border-radius: var(--radius-lg, 16px);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.plan-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+
+.plan-card.highlight {
+  border-color: var(--accent, #2b7fff);
+  box-shadow: 0 0 0 3px var(--accent-soft, rgba(43, 127, 255, 0.12));
+}
+
+.plan-current-tag {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent, #2b7fff);
+  background: var(--accent-soft, rgba(43, 127, 255, 0.1));
+  padding: 2px 9px;
+  border-radius: var(--radius-pill, 999px);
+}
+
+.plan-card-name {
+  margin: 0 0 4px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+}
+
+.plan-card-tagline {
+  margin: 0 0 14px;
+  font-size: 12.5px;
+  color: var(--text-secondary, #64748b);
+}
+
+.plan-card-price { margin-bottom: 16px; }
+.plan-card-price .amount { font-size: 26px; font-weight: 800; color: var(--text-heading, #0f172a); }
+.plan-card-price .cadence { font-size: 12.5px; color: var(--text-muted, #94a3b8); margin-left: 4px; }
+
+.plan-card-features {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.plan-card-features li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-primary, #334155);
+}
+
+.plan-card-features .material-symbols-outlined {
+  font-size: 16px;
+  color: var(--pos, #10b981);
+}
+
+.plan-card-btn { width: 100%; }
+.plan-card-btn:disabled { cursor: not-allowed; }
+
+/* ── Payment + invoices ───────────────────────────────────────────── */
+.billing-cols {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.payment-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.payment-card-chip {
+  width: 46px;
+  height: 32px;
+  border-radius: 7px;
+  background: var(--brand-grad, linear-gradient(135deg, #22c7e6, #2b7fff));
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.payment-number {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-heading, #1e293b);
+  letter-spacing: 0.04em;
+}
+
+.payment-expiry {
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+}
+
+.invoices-card .table-container {
+  box-shadow: none;
+  border: 1px solid var(--border-default, #e2e8f0);
+}
+
+@media (max-width: 860px) {
+  .billing-cols { grid-template-columns: 1fr; }
+}

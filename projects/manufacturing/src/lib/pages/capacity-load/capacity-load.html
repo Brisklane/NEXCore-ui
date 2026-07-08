@@ -1,0 +1,214 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">speed</span></div>
+      <div>
+        <h1>Capacity Load</h1>
+        <p class="inv-hero-sub">Monitor work center capacity utilization and identify overload conditions</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreate()"><span class="material-symbols-outlined">add</span> New Record</button>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="kpi-strip">
+    <div class="kpi-card kpi-brand"><div class="kpi-top"><span class="kpi-label">Total Records</span><span class="kpi-icon"><span class="material-symbols-outlined">factory</span></span></div><div class="kpi-value">{{ totalCount }}</div></div>
+    <div class="kpi-card kpi-cyan"><div class="kpi-top"><span class="kpi-label">Avg Load</span><span class="kpi-icon"><span class="material-symbols-outlined">speed</span></span></div><div class="kpi-value">{{ avgLoadPct | number:'1.0-1' }}%</div></div>
+    <div class="kpi-card kpi-danger"><div class="kpi-top"><span class="kpi-label">Overloaded</span><span class="kpi-icon"><span class="material-symbols-outlined">warning</span></span></div><div class="kpi-value">{{ overloadedCount }}</div></div>
+    <div class="kpi-card kpi-amber"><div class="kpi-top"><span class="kpi-label">Total Req. Hours</span><span class="kpi-icon"><span class="material-symbols-outlined">timer</span></span></div><div class="kpi-value">{{ totalRequiredHours | number:'1.0-1' }} h</div></div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editing ? 'Edit Capacity Load' : 'Create Capacity Load' }}</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Work Center Shift *</label>
+          <div class="sh-picker-wrap">
+            <input
+              type="text"
+              class="sh-picker-input"
+              [(ngModel)]="shiftSearchText"
+              [disabled]="!!editing"
+              placeholder="Type to search shifts..."
+              autocomplete="off"
+              (focus)="onShiftFocus()"
+              (input)="onShiftInput()"
+              (blur)="onShiftBlur()"
+            />
+            @if (showShiftDropdown) {
+              <div class="sh-picker-dropdown">
+                @if (filteredShiftSuggestions.length === 0) {
+                  <div class="sh-picker-empty">No shifts found</div>
+                }
+                @for (shift of filteredShiftSuggestions; track shift.id) {
+                  <div class="sh-picker-option" (mousedown)="selectShiftOption(shift)">
+                    <span class="sh-wc">{{ shift.label.split(' / ')[0] }}</span>
+                    <span class="sh-name">{{ shift.label.split(' / ')[1] }}</span>
+                    <span class="sh-time">{{ shift.label.split(' / ').slice(2).join(' / ') }}</span>
+                  </div>
+                }
+                <button type="button" class="sh-picker-more" (mousedown)="openShiftPicker()">Search more...</button>
+              </div>
+            }
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Production Order</label>
+          <select [(ngModel)]="formProductionOrderId">
+            <option value="">-- No linked order --</option>
+            @for (order of productionOrderOptions; track order.id) {
+              <option [value]="order.id">{{ order.label }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Date *</label>
+          <input type="date" [(ngModel)]="formLoadDate" />
+        </div>
+        <div class="form-group">
+          <label>Required Hours *</label>
+          <input type="number" [(ngModel)]="formRequiredHours" min="0" step="0.5" />
+        </div>
+        <div class="form-group">
+          <label>Available Hours *</label>
+          <input type="number" [(ngModel)]="formAvailableHours" min="0.1" step="0.5" [readonly]="!editing" />
+          @if (!editing) {
+            <small class="field-note">Auto-filled from the selected shift.</small>
+          }
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancel()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()">{{ editing ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <input type="text" class="filter-search" [(ngModel)]="filterSearch" (ngModelChange)="onFilterChange()" placeholder="Search by work center..." />
+    <span class="filter-count">{{ filteredItems.length }} of {{ totalCount }}</span>
+  </div>
+
+  @if (loading) { <div class="loading-spinner">Loading...</div> } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Work Center / Shift</th>
+            <th>Production Order</th>
+            <th class="sortable" [class.sorted]="sortBy === 'date'" (click)="sort('date')">Date <span class="sort-icon">{{ sortBy === 'date' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'requiredHours'" (click)="sort('requiredHours')">Req. Hours <span class="sort-icon">{{ sortBy === 'requiredHours' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'availableHours'" (click)="sort('availableHours')">Avail. Hours <span class="sort-icon">{{ sortBy === 'availableHours' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'loadPercentage'" (click)="sort('loadPercentage')">Load % <span class="sort-icon">{{ sortBy === 'loadPercentage' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'isOverloaded'" (click)="sort('isOverloaded')">Overloaded <span class="sort-icon">{{ sortBy === 'isOverloaded' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of displayRows; track row.id) {
+            <tr [class]="getLoadClass(row)" [class.row-new]="row.id === highlighter.id">
+              <td>
+                <div class="cell-primary">{{ getWorkCenterLabel(row.workCenterId, row.workCenterName) }}</div>
+                <div class="cell-secondary">{{ getShiftLabel(row.workCenterShiftId) }}</div>
+              </td>
+              <td>
+                @if (getEffectiveProductionOrderId(row)) {
+                  <div class="cell-primary">{{ getOrderLabel(getEffectiveProductionOrderId(row)) }}</div>
+                } @else if (row.productionOrderCount > 0) {
+                  <div class="cell-primary">{{ row.productionOrderCount }} linked {{ row.productionOrderCount === 1 ? 'order' : 'orders' }}</div>
+                } @else {
+                  <div class="cell-secondary">No linked order</div>
+                }
+              </td>
+              <td>{{ row.date | date:'mediumDate' }}</td>
+              <td>{{ row.requiredHours | number:'1.0-1' }} h</td>
+              <td>{{ row.availableHours | number:'1.0-1' }} h</td>
+              <td>
+                <div class="progress-bar-wrap">
+                  <div class="progress-bar" [style.width.%]="row.loadPercentage > 100 ? 100 : row.loadPercentage"
+                    [style.background]="row.isOverloaded ? '#ef4444' : (row.loadPercentage >= 80 ? '#f59e0b' : '#10b981')"></div>
+                </div>
+                <span class="pct-label">{{ row.loadPercentage | number:'1.0-1' }}%</span>
+              </td>
+              <td>
+                @if (row.isOverloaded) {
+                  <span class="badge badge-cancelled">⚠️ Overloaded</span>
+                } @else {
+                  <span class="badge badge-completed">✓ OK</span>
+                }
+              </td>
+              <td class="actions-cell">
+                <button class="btn-icon" (click)="openEdit(row)" title="Edit">✏️</button>
+                <button class="btn-icon" (click)="delete(row)" title="Delete">🗑️</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="8" class="empty-row">No capacity load records found</td></tr>
+          }
+        </tbody>
+      </table>
+      @if (filteredItems.length > 0) {
+        <div class="pagination-bar">
+          <div class="pagination-info">
+            <span>Rows per page:</span>
+            <select [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+              @for (opt of pageSizeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+            </select>
+            <span>Showing {{ (page - 1) * pageSize + 1 }} to {{ page * pageSize > totalCount ? totalCount : page * pageSize }} of {{ totalCount }} entries</span>
+          </div>
+          <div class="pagination-controls">
+            <button class="btn-page" [disabled]="page <= 1" (click)="goToPage(page - 1)">&#8249; Prev</button>
+            <span class="page-indicator">Page {{ page }} of {{ totalPages }}</span>
+            <button class="btn-page" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next &#8250;</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<!-- Work Center Shift picker modal — outside page-container so it overlays everything -->
+@if (showShiftPicker) {
+  <div class="sh-overlay" (click)="closeShiftPicker()">
+    <div class="sh-card" (click)="$event.stopPropagation()">
+      <div class="sh-card-head">
+        <h4>Search: Work Center Shift</h4>
+        <button type="button" class="sh-close-btn" (click)="closeShiftPicker()" title="Close">✕</button>
+      </div>
+      <div class="sh-card-toolbar">
+        <input type="text" class="sh-search-input" [(ngModel)]="shiftPickerSearch" (input)="onShiftPickerSearch()" placeholder="Search by work center or shift name..." />
+        <div class="sh-pagination-controls">
+          <div class="sh-page-stat">{{ shiftPickerPageStart }}-{{ shiftPickerPageEnd }}/{{ shiftPickerTotal }}</div>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="goToShiftPickerPage(shiftPickerPage - 1)" [disabled]="!shiftPickerHasPrev">◀</button>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="goToShiftPickerPage(shiftPickerPage + 1)" [disabled]="!shiftPickerHasNext">▶</button>
+        </div>
+      </div>
+      <div class="sh-table-wrap">
+        <table class="sh-table">
+          <thead>
+            <tr><th>Work Center</th><th>Shift</th><th>Avail. Hrs</th></tr>
+          </thead>
+          <tbody>
+            @if (shiftPickerTotal === 0) {
+              <tr><td colspan="3" class="sh-empty-row">No shifts found</td></tr>
+            } @else {
+              @for (shift of shiftPickerPageItems; track shift.id) {
+                <tr class="sh-select-row" (click)="selectShiftOption(shift)">
+                  <td>{{ shift.label.split(' / ')[0] }}</td>
+                  <td>{{ shift.label.split(' / ')[1] }}{{ shift.label.split(' / ').length > 2 ? ' · ' + shift.label.split(' / ').slice(2).join(' / ') : '' }}</td>
+                  <td>{{ shift.availableHours | number:'1.0-1' }} h</td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+}

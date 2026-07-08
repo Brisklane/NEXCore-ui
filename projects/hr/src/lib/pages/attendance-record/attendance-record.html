@@ -1,0 +1,93 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">schedule</span></div>
+      <div>
+        <h1>Attendance Records</h1>
+        <p class="inv-hero-sub">Track daily employee attendance</p>
+      </div>
+    </div>
+    <button class="btn btn-primary" (click)="openCreateForm()">+ Add Record</button>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editingRecord ? 'Edit Attendance Record' : 'Add Attendance Record' }}</h3>
+      <div class="form-grid">
+        @if (!editingRecord) {
+          <div class="form-group">
+            <label>Employee ID *</label>
+            <input type="text" [(ngModel)]="formEmployeeId" placeholder="Employee ID" />
+          </div>
+          <div class="form-group">
+            <label>Date *</label>
+            <input type="date" [(ngModel)]="formDate" />
+          </div>
+        }
+        <div class="form-group">
+          <label>Check In</label>
+          <input type="time" [(ngModel)]="formCheckIn" />
+        </div>
+        <div class="form-group">
+          <label>Check Out</label>
+          <input type="time" [(ngModel)]="formCheckOut" />
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select [(ngModel)]="formStatus">
+            <option value="present">Present</option>
+            <option value="absent">Absent</option>
+            <option value="late">Late</option>
+            <option value="half-day">Half Day</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Notes</label>
+          <input type="text" [(ngModel)]="formNotes" placeholder="Notes" />
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="saveRecord()">{{ editingRecord ? 'Update' : 'Add' }}</button>
+      </div>
+    </div>
+  }
+
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Employee ID</th>
+            <th>Date</th>
+            <th>Check In</th>
+            <th>Check Out</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of records; track r.id) {
+            <tr>
+              <td>{{ r.employeeId }}</td>
+              <td>{{ r.date | date:'mediumDate' }}</td>
+              <td>{{ r.checkIn || '—' }}</td>
+              <td>{{ r.checkOut || '—' }}</td>
+              <td><span class="badge badge-status">{{ r.status }}</span></td>
+              <td>
+                <button class="btn btn-sm btn-secondary" (click)="openEditForm(r)">Edit</button>
+                <button class="btn btn-sm btn-danger" (click)="deleteRecord(r)">Delete</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="6" class="empty-state">No attendance records found.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

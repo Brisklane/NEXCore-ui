@@ -1,0 +1,91 @@
+@import '../shared-styles.css';
+
+.ds-section-title {
+  margin: 16px 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.ds-section-title:first-child { margin-top: 0; }
+
+/* Two-column: form fields + live preview */
+.ds-layout { display: flex; gap: 24px; align-items: flex-start; }
+.ds-fields { flex: 1; min-width: 0; }
+
+.ds-counter-now {
+  font-size: 13px;
+  color: #475569;
+  background: #f1f5f9;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+}
+.ds-warn { font-size: 12px; color: #b45309; margin: 6px 0 0; }
+
+/* Preview pane */
+.ds-preview-pane {
+  width: 240px;
+  flex-shrink: 0;
+  background: #0f172a;
+  border-radius: 10px;
+  padding: 20px 16px;
+  text-align: center;
+  color: #e2e8f0;
+  position: sticky;
+  top: 12px;
+}
+.ds-preview-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #94a3b8;
+  margin-bottom: 12px;
+}
+.ds-preview-sample {
+  font-family: 'Courier New', monospace;
+  font-size: 26px;
+  font-weight: 700;
+  color: #38bdf8;
+  word-break: break-all;
+  min-height: 32px;
+}
+.ds-preview-loading { color: #64748b; }
+.ds-preview-pattern { margin-top: 12px; font-size: 12px; color: #cbd5e1; }
+.ds-preview-pattern code { background: rgba(148,163,184,.18); padding: 1px 5px; border-radius: 4px; }
+.ds-preview-note { margin-top: 14px; font-size: 11px; color: #64748b; line-height: 1.4; }
+
+.ds-next { background: #eff6ff; color: #1d4ed8; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+
+@media (max-width: 720px) {
+  .ds-layout { flex-direction: column; }
+  .ds-preview-pane { width: 100%; position: static; }
+}
+
+/* ── Premium config-card uplift (POS pages) ─────────────────────────────── */
+.page-container .form-panel {
+  border-radius: 18px;
+  border: 1px solid var(--border-default, #e8edf3);
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(15, 23, 42, .06));
+  background: var(--bg-surface, #fff);
+  padding: 20px 22px;
+}
+.page-container .form-panel > h3,
+.page-container .form-panel-header {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 15px; font-weight: 750; color: var(--text-heading, #0f172a);
+  padding-bottom: 12px; margin-bottom: 16px;
+  border-bottom: 1px solid var(--border-light, #f1f5f9);
+}
+.page-container .ds-section-title,
+.page-container .form-section-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--accent, #2b7fff);
+}
+.page-container .ds-preview-pane {
+  border-radius: 14px;
+  background: var(--bg-subtle, #f8fafc);
+  border: 1px solid var(--border-default, #e8edf3);
+}
+.page-container .ds-preview-sample { color: var(--accent, #2b7fff); }

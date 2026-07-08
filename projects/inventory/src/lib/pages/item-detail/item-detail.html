@@ -1,0 +1,229 @@
+<div class="page-container" [class.detail-embedded]="embedded">
+  @if (!embedded) {
+    <button class="back-link" (click)="back()"><span class="material-symbols-outlined">arrow_back</span> Products</button>
+  }
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  @if (loading) {
+    <div class="detail-hero">
+      <span class="skeleton sk-circle" style="width:72px;height:72px"></span>
+      <div style="flex:1">
+        <span class="skeleton sk-line" style="width:260px;height:22px"></span>
+        <div style="height:10px"></div>
+        <span class="skeleton sk-line" style="width:160px"></span>
+      </div>
+    </div>
+  } @else if (item) {
+    <!-- Hero -->
+    <div class="detail-hero">
+      @if (primaryImageUrl()) {
+        <img class="hero-thumb" [src]="primaryImageUrl()" [alt]="item.name ?? ''" />
+      } @else {
+        <span class="hero-thumb hero-thumb-fallback" [style.background]="item.displayColorHex || null">{{ itemInitial() }}</span>
+      }
+      <div class="hero-main">
+        <div class="hero-badges">
+          <span class="track-badge" [class.track-serial]="trackingType==='Serial'" [class.track-lot]="trackingType==='Lot'" [class.track-none]="trackingType==='None'">
+            <span class="material-symbols-outlined">{{ trackingIcon }}</span> {{ trackingLabel }}
+          </span>
+          <span class="status-pill" [class.pill-instock]="stockStatus==='in'" [class.pill-low]="stockStatus==='low'" [class.pill-out]="stockStatus==='out'">
+            {{ stockStatus==='out' ? 'Out of stock' : (stockStatus==='low' ? 'Low stock' : 'In stock') }}
+          </span>
+          <span class="status-pill" [class.pill-instock]="item.isActive" [class.pill-muted]="!item.isActive">{{ item.isActive ? 'Active' : 'Inactive' }}</span>
+        </div>
+        <h1 class="hero-name">{{ item.name || '—' }}</h1>
+        <div class="hero-code"><span class="material-symbols-outlined">qr_code_2</span> {{ item.code }}</div>
+      </div>
+      <div class="hero-actions">
+        <button class="ibtn ibtn--secondary" (click)="edit()"><span class="material-symbols-outlined">edit</span> Edit</button>
+      </div>
+    </div>
+
+    <!-- KPI tiles -->
+    <div class="kpi-strip">
+      <div class="kpi-card kpi-brand"><div class="kpi-top"><span class="kpi-label">In Stock</span><span class="kpi-icon"><span class="material-symbols-outlined">inventory</span></span></div><div class="kpi-value">{{ onHand | number:'1.0-2' }}</div><div class="kpi-foot">Across {{ balances.length }} location(s)</div></div>
+      <div class="kpi-card kpi-cyan"><div class="kpi-top"><span class="kpi-label">Sellable</span><span class="kpi-icon"><span class="material-symbols-outlined">check_circle</span></span></div><div class="kpi-value">{{ available | number:'1.0-2' }}</div><div class="kpi-foot">On hand − reserved</div></div>
+      <div class="kpi-card kpi-amber"><div class="kpi-top"><span class="kpi-label">Reserved</span><span class="kpi-icon"><span class="material-symbols-outlined">lock_clock</span></span></div><div class="kpi-value" [class.is-muted]="reserved===0">{{ reserved | number:'1.0-2' }}</div><div class="kpi-foot">Committed to orders</div></div>
+      <div class="kpi-card kpi-success"><div class="kpi-top"><span class="kpi-label">Stock Value</span><span class="kpi-icon"><span class="material-symbols-outlined">payments</span></span></div><div class="kpi-value">{{ stockValue | number:'1.0-0' }}</div><div class="kpi-foot">At average cost</div></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-rail">
+      <button class="rail-tab" [class.active]="activeTab==='overview'" (click)="setTab('overview')"><span class="material-symbols-outlined">info</span> Overview</button>
+      <button class="rail-tab" [class.active]="activeTab==='stock'" (click)="setTab('stock')"><span class="material-symbols-outlined">warehouse</span> Stock by location</button>
+      @if (trackingType==='Serial') {
+        <button class="rail-tab" [class.active]="activeTab==='serials'" (click)="setTab('serials')"><span class="material-symbols-outlined">barcode</span> Serials <span class="rail-count">{{ serialTotal }}</span></button>
+      }
+      @if (trackingType==='Lot') {
+        <button class="rail-tab" [class.active]="activeTab==='batches'" (click)="setTab('batches')"><span class="material-symbols-outlined">inventory</span> Batches <span class="rail-count">{{ batches.length }}</span></button>
+      }
+      <button class="rail-tab" [class.active]="activeTab==='movement'" (click)="setTab('movement')"><span class="material-symbols-outlined">receipt_long</span> Movement</button>
+    </div>
+
+    <!-- OVERVIEW -->
+    @if (activeTab==='overview') {
+      <div class="panel-grid">
+        <div class="panel">
+          <div class="panel-title">Details</div>
+          <div class="kv"><span>Item type</span><b>{{ item.itemType || '—' }}</b></div>
+          <div class="kv"><span>Condition</span><b>{{ item.condition || '—' }}</b></div>
+          <div class="kv"><span>Costing method</span><b>{{ item.costingMethod || '—' }}</b></div>
+          <div class="kv"><span>Tracking</span><b>{{ trackingType }}</b></div>
+          <div class="kv"><span>Reorder level</span><b>{{ item.reorderLevel ?? '—' }}</b></div>
+          <div class="kv"><span>Max stock</span><b>{{ item.maxStockLevel ?? '—' }}</b></div>
+          <div class="kv"><span>Published</span><b>{{ item.isPublished ? 'Yes' : 'No' }}</b></div>
+          @if (item.shortDescription) { <div class="kv kv-wide"><span>Short description</span><b>{{ item.shortDescription }}</b></div> }
+        </div>
+        <div class="panel">
+          <div class="panel-title">Pricing</div>
+          @if ((item.prices ?? []).length === 0) {
+            <div class="panel-empty">No prices defined.</div>
+          } @else {
+            @for (p of item.prices; track p.id) {
+              <div class="kv"><span>{{ p.priceList || 'Default' }}</span><b>Sale {{ p.salePrice | number:'1.2-2' }} · Cost {{ p.purchasePrice | number:'1.2-2' }}</b></div>
+            }
+          }
+          <div class="panel-title" style="margin-top:18px">Barcodes</div>
+          @if ((item.barcodes ?? []).length === 0) {
+            <div class="panel-empty">No barcodes.</div>
+          } @else {
+            <div class="chip-row">
+              @for (b of item.barcodes; track b.id) {
+                <span class="code-chip">{{ b.barcode }}@if (b.isPrimary) { <span class="chip-star">★</span> }</span>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- STOCK BY LOCATION -->
+    @if (activeTab==='stock') {
+      <div class="grid-card">
+        <div class="grid-scroll">
+          <table class="data-grid">
+            <thead><tr><th>Location</th><th class="num">In Stock</th><th class="num">Reserved</th><th class="num">Sellable</th><th class="num">Unit Cost</th><th class="num">Value</th></tr></thead>
+            <tbody>
+              @if (balances.length === 0) {
+                <tr><td colspan="6"><div class="inv-empty"><div class="inv-empty-icon"><span class="material-symbols-outlined">warehouse</span></div><div class="inv-empty-title">No stock yet</div><div class="inv-empty-text">This item has no balance in any warehouse.</div></div></td></tr>
+              }
+              @for (b of balances; track b.id) {
+                <tr>
+                  <td class="col-strong">{{ warehouseName(b.warehouseId) }}</td>
+                  <td class="num">{{ b.quantityOnHand | number:'1.0-2' }}</td>
+                  <td class="num">{{ b.quantityReserved | number:'1.0-2' }}</td>
+                  <td class="num col-strong">{{ b.quantityAvailable | number:'1.0-2' }}</td>
+                  <td class="num">{{ b.averageCost | number:'1.2-2' }}</td>
+                  <td class="num">{{ b.totalValue | number:'1.0-2' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    <!-- SERIALS -->
+    @if (activeTab==='serials') {
+      <div class="section-toolbar">
+        <div class="section-note">Each row is one physical unit with its own identity and lifecycle.</div>
+        <button class="ibtn ibtn--primary ibtn--sm" (click)="showGenerate = !showGenerate"><span class="material-symbols-outlined">add</span> Generate serials</button>
+      </div>
+      @if (showGenerate) {
+        <div class="gen-panel">
+          <div class="gen-field"><label>Prefix</label><input type="text" [(ngModel)]="gen.prefix" placeholder="e.g. SN-" /></div>
+          <div class="gen-field"><label>Start #</label><input type="number" [(ngModel)]="gen.startNumber" min="1" /></div>
+          <div class="gen-field"><label>Count</label><input type="number" [(ngModel)]="gen.count" min="1" max="5000" /></div>
+          <div class="gen-field"><label>Padding</label><input type="number" [(ngModel)]="gen.padding" min="0" max="12" /></div>
+          <button class="ibtn ibtn--primary ibtn--sm" (click)="generateSerials()" [disabled]="generating || gen.count < 1">{{ generating ? 'Generating…' : 'Create' }}</button>
+          <button class="ibtn ibtn--tertiary ibtn--sm" (click)="showGenerate = false">Cancel</button>
+        </div>
+      }
+      <div class="grid-card">
+        <div class="grid-scroll">
+          <table class="data-grid">
+            <thead><tr><th>Serial</th><th>IMEI</th><th>Status</th><th>Location</th><th>Warranty</th><th>Received</th></tr></thead>
+            <tbody>
+              @if (!serialsLoaded) {
+                @for (s of [0,1,2,3,4]; track s) { <tr><td colspan="6"><span class="skeleton sk-line" style="width:100%"></span></td></tr> }
+              } @else if (serials.length === 0) {
+                <tr><td colspan="6"><div class="inv-empty"><div class="inv-empty-icon" style="background:var(--c-brand-surface);color:var(--accent)"><span class="material-symbols-outlined">barcode</span></div><div class="inv-empty-title">No serialized units yet</div><div class="inv-empty-text">Units are created when a serial receipt is posted, or generate them above.</div></div></td></tr>
+              }
+              @for (s of serials; track s.id) {
+                <tr>
+                  <td class="col-strong" style="font-family:'Consolas',monospace">{{ s.serialNumber }}</td>
+                  <td>{{ s.imei || '—' }}</td>
+                  <td><span class="status-pill" [ngClass]="serialPill(s.status)">{{ serialLabel(s.status) }}</span></td>
+                  <td>{{ s.warehouseName || (s.warehouseId ? warehouseName(s.warehouseId) : '—') }}</td>
+                  <td>{{ s.warrantyEndDate ? (s.warrantyEndDate | date:'mediumDate') : '—' }}</td>
+                  <td>{{ s.receiptDate ? (s.receiptDate | date:'mediumDate') : '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    <!-- BATCHES -->
+    @if (activeTab==='batches') {
+      <div class="grid-card">
+        <div class="grid-scroll">
+          <table class="data-grid">
+            <thead><tr><th>Batch</th><th>Mfg date</th><th>Expiry</th><th class="num">Received</th><th class="num">Remaining</th><th>Status</th></tr></thead>
+            <tbody>
+              @if (!batchesLoaded) {
+                @for (s of [0,1,2]; track s) { <tr><td colspan="6"><span class="skeleton sk-line" style="width:100%"></span></td></tr> }
+              } @else if (batches.length === 0) {
+                <tr><td colspan="6"><div class="inv-empty"><div class="inv-empty-icon" style="background:var(--c-brand-surface);color:var(--accent)"><span class="material-symbols-outlined">inventory</span></div><div class="inv-empty-title">No batches yet</div><div class="inv-empty-text">Batches are created when a lot-tracked receipt is posted.</div></div></td></tr>
+              }
+              @for (b of batches; track b.id) {
+                <tr>
+                  <td class="col-strong" style="font-family:'Consolas',monospace">{{ b.batchNumber }}</td>
+                  <td>{{ b.manufactureDate ? (b.manufactureDate | date:'mediumDate') : '—' }}</td>
+                  <td [ngClass]="expiryClass(b.daysToExpiry)">
+                    {{ b.expiryDate ? (b.expiryDate | date:'mediumDate') : '—' }}
+                    @if (b.daysToExpiry != null && b.daysToExpiry >= 0 && b.daysToExpiry <= 30) { <span class="expiry-tag">{{ b.daysToExpiry }}d</span> }
+                    @if (b.daysToExpiry != null && b.daysToExpiry < 0) { <span class="expiry-tag">expired</span> }
+                  </td>
+                  <td class="num">{{ b.receivedQuantity | number:'1.0-2' }}</td>
+                  <td class="num col-strong">{{ b.remainingQuantity | number:'1.0-2' }}</td>
+                  <td><span class="status-pill" [ngClass]="batchPill(b.status)">{{ b.status }}</span></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    <!-- MOVEMENT -->
+    @if (activeTab==='movement') {
+      <div class="grid-card">
+        <div class="grid-scroll">
+          <table class="data-grid">
+            <thead><tr><th>Date</th><th>Document</th><th>Type</th><th class="num">Qty</th><th class="num">Unit cost</th><th class="num">Balance</th></tr></thead>
+            <tbody>
+              @if (!ledgerLoaded) {
+                @for (s of [0,1,2,3]; track s) { <tr><td colspan="6"><span class="skeleton sk-line" style="width:100%"></span></td></tr> }
+              } @else if (ledger.length === 0) {
+                <tr><td colspan="6"><div class="inv-empty"><div class="inv-empty-icon"><span class="material-symbols-outlined">receipt_long</span></div><div class="inv-empty-title">No movements</div><div class="inv-empty-text">Stock receipts, issues and adjustments will appear here.</div></div></td></tr>
+              }
+              @for (t of ledger; track t.transactionId) {
+                <tr>
+                  <td>{{ t.transactionDate | date:'mediumDate' }}</td>
+                  <td>{{ t.documentNumber || '—' }}</td>
+                  <td><span class="status-pill pill-muted">{{ t.transactionType || t.documentType || '—' }}</span></td>
+                  <td class="num" [style.color]="t.quantity < 0 ? 'var(--c-danger-text)' : 'var(--c-success-text)'">{{ t.quantity > 0 ? '+' : '' }}{{ t.quantity | number:'1.0-2' }}</td>
+                  <td class="num">{{ t.unitCost | number:'1.2-2' }}</td>
+                  <td class="num col-strong">{{ t.runningBalance | number:'1.0-2' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  }
+</div>

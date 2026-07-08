@@ -1,0 +1,3 @@
+@import '../shared-styles.css';
+
+.form-group-full { grid-column: 1 / -1; }

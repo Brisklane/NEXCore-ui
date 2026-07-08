@@ -1,0 +1,425 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">inventory</span></div>
+      <div>
+        <h1>Material Planning</h1>
+        <p class="inv-hero-sub">MRP planning, demand analysis &amp; stock management</p>
+      </div>
+    </div>
+    @if (activeTab === 'parameters') {
+      <div class="inv-hero-actions">
+        <button class="btn-brand" (click)="openCreate()"><span class="material-symbols-outlined">add</span> New Planning Record</button>
+      </div>
+    }
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="ux-help-box" role="note">
+    <strong>Stock Policy</strong>
+    Reorder point, safety stock, and lead time values drive automated replenishment quality. Keep these aligned with supplier behavior.
+  </div>
+
+  <!-- Alerts Section -->
+  @if (alerts.length > 0) {
+    <div class="alerts-section">
+      <div class="alerts-summary" (click)="alertsExpanded = !alertsExpanded">
+        <div class="alerts-summary-counts">
+          @if (alerts.filter(a => a.type === 'error').length > 0) {
+            <span class="alert-count count-error">&#10006; {{ alerts.filter(a => a.type === 'error').length }} error{{ alerts.filter(a => a.type === 'error').length > 1 ? 's' : '' }}</span>
+          }
+          @if (alerts.filter(a => a.type === 'warning').length > 0) {
+            <span class="alert-count count-warning">&#9888; {{ alerts.filter(a => a.type === 'warning').length }} shortage{{ alerts.filter(a => a.type === 'warning').length > 1 ? 's' : '' }}</span>
+          }
+          @if (alerts.filter(a => a.type === 'info').length > 0) {
+            <span class="alert-count count-info">&#8505; {{ alerts.filter(a => a.type === 'info').length }} info</span>
+          }
+        </div>
+        <button class="alerts-toggle">{{ alertsExpanded ? 'Hide details ▲' : 'Show details ▼' }}</button>
+      </div>
+      @if (alertsExpanded) {
+        <div class="alerts-list">
+          @for (alert of alerts; track alert.message) {
+            <div [ngClass]="'alert-item alert-item-' + alert.type">{{ alert.message }}</div>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Tab Navigation -->
+  <div class="tab-navigation">
+    <button 
+      [class.tab-active]="activeTab === 'mrp-planning'" 
+      (click)="switchTab('mrp-planning')"
+      class="tab-btn">
+      📊 MRP Planning
+    </button>
+    <button 
+      [class.tab-active]="activeTab === 'demands'" 
+      (click)="switchTab('demands')"
+      class="tab-btn">
+      📋 Demands
+    </button>
+    <button 
+      [class.tab-active]="activeTab === 'parameters'" 
+      (click)="switchTab('parameters')"
+      class="tab-btn">
+      ⚙️ Planning Parameters
+    </button>
+  </div>
+
+  <!-- ===== MRP PLANNING TAB ===== -->
+  @if (activeTab === 'mrp-planning') {
+    <div class="tab-content">
+      <!-- Summary Cards -->
+      @if (demands.length > 0) {
+        <div class="kpi-strip">
+          <div class="kpi-card kpi-brand"><div class="kpi-top"><span class="kpi-label">Active Demands</span><span class="kpi-icon"><span class="material-symbols-outlined">list_alt</span></span></div><div class="kpi-value">{{ demands.length }}</div></div>
+          <div class="kpi-card kpi-success"><div class="kpi-top"><span class="kpi-label">Fulfilled from Stock</span><span class="kpi-icon"><span class="material-symbols-outlined">inventory</span></span></div><div class="kpi-value">{{ mrpRows.filter(r => r.status === 'ReadyForPO').length }}</div></div>
+          <div class="kpi-card kpi-danger"><div class="kpi-top"><span class="kpi-label">Shortages</span><span class="kpi-icon"><span class="material-symbols-outlined">warning</span></span></div><div class="kpi-value">{{ mrpRows.filter(r => r.status === 'Shortage').length }}</div></div>
+          <div class="kpi-card kpi-amber"><div class="kpi-top"><span class="kpi-label">Total Planned Qty</span><span class="kpi-icon"><span class="material-symbols-outlined">package_2</span></span></div><div class="kpi-value">{{ mrpRows.reduce((sum, r) => sum + r.plannedQty, 0) }}</div></div>
+        </div>
+      }
+
+      <!-- MRP Controls -->
+      <div class="mrp-controls">
+        <button 
+          class="btn btn-primary" 
+          (click)="runMrpBatch()"
+          [disabled]="runningMrp || mrpRows.every(r => r.plannedQty <= 0)">
+          {{ runningMrp ? 'Running MRP...' : '🚀 Run MRP Batch' }}
+        </button>
+        <span class="help-text">Auto-create planned orders for all shortage items</span>
+      </div>
+
+      <!-- MRP Planning Grid -->
+      @if (loading) {
+        <div class="loading-spinner">Loading MRP data...</div>
+      } @else {
+        <div class="table-container">
+          <table class="mrp-table">
+            <thead>
+              <tr>
+                <th class="sortable" [class.sorted]="mrpSortBy === 'productName'" (click)="sortMrp('productName')">Product <span class="sort-icon">{{ mrpSortBy === 'productName' ? (mrpSortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+                <th class="sortable" [class.sorted]="mrpSortBy === 'demandQty'" (click)="sortMrp('demandQty')">Demand Qty <span class="sort-icon">{{ mrpSortBy === 'demandQty' ? (mrpSortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+                <th class="sortable" [class.sorted]="mrpSortBy === 'availableStock'" (click)="sortMrp('availableStock')">Available <span class="sort-icon">{{ mrpSortBy === 'availableStock' ? (mrpSortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+                <th class="sortable" [class.sorted]="mrpSortBy === 'safetyStock'" (click)="sortMrp('safetyStock')">Safety Stock <span class="sort-icon">{{ mrpSortBy === 'safetyStock' ? (mrpSortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+                <th class="sortable" [class.sorted]="mrpSortBy === 'lotSize'" (click)="sortMrp('lotSize')">Lot Size <span class="sort-icon">{{ mrpSortBy === 'lotSize' ? (mrpSortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+                <th class="sortable" [class.sorted]="mrpSortBy === 'netRequirement'" (click)="sortMrp('netRequirement')">Net Req. <span class="sort-icon">{{ mrpSortBy === 'netRequirement' ? (mrpSortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+                <th class="sortable" [class.sorted]="mrpSortBy === 'plannedQty'" (click)="sortMrp('plannedQty')">Planned Qty <span class="sort-icon">{{ mrpSortBy === 'plannedQty' ? (mrpSortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+                <th class="sortable" [class.sorted]="mrpSortBy === 'status'" (click)="sortMrp('status')">Status <span class="sort-icon">{{ mrpSortBy === 'status' ? (mrpSortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of pagedMrpRows; track row.rowId) {
+                <tr [class.selected]="selectedMrpRow?.rowId === row.rowId" (click)="selectMrpRow(row)">
+                  <td class="product-col">
+                    <div class="product-name">{{ getProductDisplayLabel(row.productId, row.productName) }}</div>
+                  </td>
+                  <td>{{ row.demandQty }}</td>
+                  <td class="stock-col" [class.low-stock]="row.availableStock < row.demandQty">{{ row.availableStock }}</td>
+                  <td>{{ row.safetyStock }}</td>
+                  <td>{{ row.lotSize }}</td>
+                  <td class="requirement-col">{{ row.netRequirement }}</td>
+                  <td class="planned-col">{{ row.plannedQty }}</td>
+                  <td>
+                    <span [ngClass]="'badge badge-' + row.status">
+                      {{ row.status === 'ReadyForPO' ? 'Ready' : (row.status === 'PartialStock' ? 'Partial' : row.status) }}
+                    </span>
+                  </td>
+                  <td class="actions-cell">
+                    @if (row.plannedQty > 0) {
+                      <button 
+                        class="btn-sm btn-primary"
+                        (click)="createPlannedOrder(row); $event.stopPropagation()"
+                        [disabled]="runningPlannedOrder">
+                        {{ runningPlannedOrder ? 'Creating...' : 'Create PO' }}
+                      </button>
+                    }
+                  </td>
+                </tr>
+                <!-- Expanded Details Row -->
+                @if (selectedMrpRow?.rowId === row.rowId) {
+                  <tr class="details-row">
+                    <td colspan="9">
+                      <div class="row-details">
+                        <div class="detail-section">
+                          <h4>Calculation Details</h4>
+                          <div class="detail-grid">
+                            <div>
+                              <label>Net Requirement Formula:</label>
+                              <code>max(Demand + SafetyStock - Available, 0) = max({{ row.demandQty }} + {{ row.safetyStock }} - {{ row.availableStock }}, 0) = {{ row.netRequirement }}</code>
+                            </div>
+                            <div>
+                              <label>Planned Quantity:</label>
+                              <code>roundUp(NetReq / LotSize) × LotSize = roundUp({{ row.netRequirement }} / {{ row.lotSize }}) × {{ row.lotSize }} = {{ row.plannedQty }}</code>
+                            </div>
+                          </div>
+                        </div>
+                        @if (row.planningData) {
+                          <div class="detail-section">
+                            <h4>Planning Parameters</h4>
+                            <div class="detail-grid">
+                              <div><label>Lead Time:</label> {{ row.planningData.leadTimeDays }} days</div>
+                              <div><label>Procurement Type:</label> {{ row.planningData.procurementType }}</div>
+                              <div><label>MRP Type:</label> {{ row.planningData.mrpType }}</div>
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    </td>
+                  </tr>
+                }
+              } @empty {
+                <tr><td colspan="9" class="empty-row">No demands found. Create demands to see MRP planning.</td></tr>
+              }
+            </tbody>
+          </table>
+          @if (mrpRows.length > 0) {
+            <div class="pagination-bar">
+              <div class="pagination-info">
+                Rows per page:
+                <select [(ngModel)]="mrpPageSize" (ngModelChange)="onMrpPageSizeChange()">
+                  @for (s of pageSizeOptions; track s) { <option [value]="s">{{ s }}</option> }
+                </select>
+                <span>Showing {{ (mrpPage - 1) * mrpPageSize + 1 }} to {{ mrpPage * mrpPageSize < mrpRows.length ? mrpPage * mrpPageSize : mrpRows.length }} of {{ mrpRows.length }} entries</span>
+              </div>
+              <div class="pagination-controls">
+                <button class="btn-page" (click)="goToMrpPage(mrpPage - 1)" [disabled]="mrpPage <= 1">Prev</button>
+                <span class="page-indicator">Page {{ mrpPage }} of {{ mrpTotalPages }}</span>
+                <button class="btn-page" (click)="goToMrpPage(mrpPage + 1)" [disabled]="mrpPage >= mrpTotalPages">Next</button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ===== DEMANDS TAB ===== -->
+  @if (activeTab === 'demands') {
+    <div class="tab-content">
+      @if (loading) {
+        <div class="loading-spinner">Loading demands...</div>
+      } @else {
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Demand ID</th>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>Unit</th>
+                <th>Required Date</th>
+                <th>Source</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (demand of pagedDemands; track demand.id) {
+                <tr>
+                  <td>{{ demand.id }}</td>
+                  <td>{{ getProductDisplayLabel(demand.productId, demand.productName) }}</td>
+                  <td>{{ demand.quantity }}</td>
+                  <td>{{ demand.unit }}</td>
+                  <td>{{ demand.dueDate | date: 'short' }}</td>
+                  <td><span class="badge">{{ demand.sourceType }}</span></td>
+                </tr>
+              } @empty {
+                <tr><td colspan="6" class="empty-row">No demands found</td></tr>
+              }
+            </tbody>
+          </table>
+          @if (demands.length > 0) {
+            <div class="pagination-bar">
+              <div class="pagination-info">
+                Rows per page:
+                <select [(ngModel)]="demandPageSize" (ngModelChange)="onDemandPageSizeChange()">
+                  @for (s of pageSizeOptions; track s) { <option [value]="s">{{ s }}</option> }
+                </select>
+                <span>Showing {{ (demandPage - 1) * demandPageSize + 1 }} to {{ demandPage * demandPageSize < demands.length ? demandPage * demandPageSize : demands.length }} of {{ demands.length }} entries</span>
+              </div>
+              <div class="pagination-controls">
+                <button class="btn-page" (click)="goToDemandPage(demandPage - 1)" [disabled]="demandPage <= 1">Prev</button>
+                <span class="page-indicator">Page {{ demandPage }} of {{ demandTotalPages }}</span>
+                <button class="btn-page" (click)="goToDemandPage(demandPage + 1)" [disabled]="demandPage >= demandTotalPages">Next</button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ===== PARAMETERS TAB ===== -->
+  @if (activeTab === 'parameters') {
+    <div class="tab-content">
+      @if (showForm) {
+        <div class="form-panel">
+          <h3>{{ editing ? 'Edit Material Planning' : 'Create Material Planning' }}</h3>
+          <div class="ux-help-box" role="note">
+            <strong>Planning Parameters Guide</strong>
+            <div class="help-grid">
+              <div class="help-item">
+                <span class="help-term">Reorder Point</span>
+                <span class="help-desc">When available stock drops to or below this number, MRP triggers a planned order. <em>Example: Wooden Table = 10 means order more when fewer than 10 are on hand.</em></span>
+              </div>
+              <div class="help-item">
+                <span class="help-term">Safety Stock</span>
+                <span class="help-desc">A buffer held above demand to absorb unexpected delays or spikes. MRP adds this to the net requirement. <em>Example: 2 units means always keep at least 2 extra.</em></span>
+              </div>
+              <div class="help-item">
+                <span class="help-term">Lot Size</span>
+                <span class="help-desc">Minimum order quantity — MRP rounds planned orders up to the nearest multiple. <em>Example: Lot Size = 5 means you order in batches of 5, never 3 or 7.</em></span>
+              </div>
+              <div class="help-item">
+                <span class="help-term">Lead Time (days)</span>
+                <span class="help-desc">Days from placing an order to receiving it. Used to back-schedule: if a table is needed June 10 and lead time is 7 days, the order must be placed by June 3.</span>
+              </div>
+              <div class="help-item">
+                <span class="help-term">Planning Horizon (days)</span>
+                <span class="help-desc">How far ahead MRP looks for demand. Set to 60 to only plan the next 2 months. Leave at 0 to consider all future demand with no cutoff.</span>
+              </div>
+              <div class="help-item">
+                <span class="help-term">Scrap %</span>
+                <span class="help-desc">Expected production loss rate. MRP inflates planned qty to compensate. <em>Example: Need 100 tables at 5% scrap → MRP plans 106 so 100 good ones remain after rejects.</em></span>
+              </div>
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Product *</label>
+              <lib-product-picker-input
+                [value]="productDisplayText"
+                [disabled]="!!editing"
+                placeholder="Type product code or name..."
+                (productSelected)="onProductSelected($event)"
+              />
+            </div>
+            <div class="form-group">
+              <label>Product Reference</label>
+              <input type="text" [(ngModel)]="formProductId" readonly class="readonly-input" />
+            </div>
+            <div class="form-group">
+              <label>Product Name</label>
+              <input type="text" [(ngModel)]="formProductName" readonly class="readonly-input" />
+            </div>
+            <div class="form-group">
+              <label>Safety Stock</label>
+              <input type="number" [(ngModel)]="formSafetyStock" min="0" />
+            </div>
+            <div class="form-group">
+              <label>Reorder Point</label>
+              <input type="number" [(ngModel)]="formReorderPoint" min="0" />
+            </div>
+            <div class="form-group">
+              <label>Max Stock Level</label>
+              <input type="number" [(ngModel)]="formMaxStockLevel" min="0" />
+            </div>
+            <div class="form-group">
+              <label>Lot Size</label>
+              <input type="number" [(ngModel)]="formLotSize" min="0" />
+            </div>
+            <div class="form-group">
+              <label>Lead Time (days)</label>
+              <input type="number" [(ngModel)]="formLeadTimeDays" min="0" />
+            </div>
+            <div class="form-group">
+              <label>Planning Horizon (days)</label>
+              <input type="number" [(ngModel)]="formPlanningHorizonDays" min="0" />
+            </div>
+            <div class="form-group">
+              <label>Scrap %</label>
+              <input type="number" [(ngModel)]="formScrapPercentage" min="0" max="100" />
+            </div>
+            <div class="form-group">
+              <label>Procurement Type</label>
+              <select [(ngModel)]="formProcurementType">
+                @for (t of procurementTypes; track t) { <option [value]="t">{{ t }}</option> }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>MRP Type</label>
+              <select [(ngModel)]="formMrpType">
+                @for (t of mrpTypes; track t) { <option [value]="t">{{ t }}</option> }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Notes</label>
+              <input type="text" [(ngModel)]="formNotes" />
+            </div>
+            @if (editing) {
+              <div class="form-group form-check-row">
+                <label><input type="checkbox" [(ngModel)]="formIsActive" /> Active</label>
+              </div>
+            }
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-secondary" (click)="cancel()">Cancel</button>
+            <button class="btn btn-primary" (click)="save()">{{ editing ? 'Update' : 'Create' }}</button>
+          </div>
+        </div>
+      }
+
+      @if (loading) {
+        <div class="loading-spinner">Loading...</div>
+      } @else {
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th class="sortable" [class.sorted]="sortBy === 'productName'" (click)="sort('productName')">Product <span class="sort-icon">{{ sortBy === 'productName' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+                <th class="sortable" [class.sorted]="sortBy === 'safetyStock'" (click)="sort('safetyStock')">Safety Stock <span class="sort-icon">{{ sortBy === 'safetyStock' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+                <th class="sortable" [class.sorted]="sortBy === 'reorderPoint'" (click)="sort('reorderPoint')">Reorder Point <span class="sort-icon">{{ sortBy === 'reorderPoint' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+                <th class="sortable" [class.sorted]="sortBy === 'lotSize'" (click)="sort('lotSize')">Lot Size <span class="sort-icon">{{ sortBy === 'lotSize' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+                <th class="sortable" [class.sorted]="sortBy === 'leadTimeDays'" (click)="sort('leadTimeDays')">Lead Time <span class="sort-icon">{{ sortBy === 'leadTimeDays' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+                <th class="sortable" [class.sorted]="sortBy === 'procurementType'" (click)="sort('procurementType')">Procurement <span class="sort-icon">{{ sortBy === 'procurementType' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+                <th class="sortable" [class.sorted]="sortBy === 'mrpType'" (click)="sort('mrpType')">MRP <span class="sort-icon">{{ sortBy === 'mrpType' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+                <th class="sortable" [class.sorted]="sortBy === 'isActive'" (click)="sort('isActive')">Status <span class="sort-icon">{{ sortBy === 'isActive' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of pagedItems; track row.id) {
+                <tr [class.row-new]="row.id === highlighter.id">
+                  <td>{{ getProductDisplayLabel(row.productId, row.productName) }}</td>
+                  <td>{{ row.safetyStock }}</td>
+                  <td>{{ row.reorderPoint }}</td>
+                  <td>{{ row.lotSize }}</td>
+                  <td>{{ row.leadTimeDays }} days</td>
+                  <td>{{ row.procurementType }}</td>
+                  <td>{{ row.mrpType }}</td>
+                  <td><span class="badge" [class.badge-active]="row.isActive" [class.badge-inactive]="!row.isActive">{{ row.isActive ? 'Active' : 'Inactive' }}</span></td>
+                  <td class="actions-cell">
+                    <button class="btn-icon" (click)="openEdit(row)">✏️</button>
+                    <button class="btn-icon" (click)="delete(row)">🗑️</button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="9" class="empty-row">No material planning data found</td></tr>
+              }
+            </tbody>
+          </table>
+          @if (items.length > 0) {
+            <div class="pagination-bar">
+              <div class="pagination-info">
+                Rows per page:
+                <select [(ngModel)]="paramPageSize" (ngModelChange)="onParamPageSizeChange()">
+                  @for (s of pageSizeOptions; track s) { <option [value]="s">{{ s }}</option> }
+                </select>
+                <span>Showing {{ (paramPage - 1) * paramPageSize + 1 }} to {{ paramPage * paramPageSize < items.length ? paramPage * paramPageSize : items.length }} of {{ items.length }} entries</span>
+              </div>
+              <div class="pagination-controls">
+                <button class="btn-page" (click)="goToParamPage(paramPage - 1)" [disabled]="paramPage <= 1">Prev</button>
+                <span class="page-indicator">Page {{ paramPage }} of {{ paramTotalPages }}</span>
+                <button class="btn-page" (click)="goToParamPage(paramPage + 1)" [disabled]="paramPage >= paramTotalPages">Next</button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

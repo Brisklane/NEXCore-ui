@@ -1,0 +1,103 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">local_offer</span></div>
+      <div>
+        <h1>Promotions</h1>
+        <p class="inv-hero-sub">Create and manage discount promotions and offers</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Promotion</button>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (successMsg) { <div class="alert alert-success">{{ successMsg }}</div> }
+
+  <div class="md-split">
+    <!-- ══ LEFT: promotion rows ══ -->
+    <div class="md-list">
+      <div class="md-list-head">
+        <span class="inv-search"><span class="material-symbols-outlined">search</span><input type="text" [(ngModel)]="searchQuery" placeholder="Search promotions…" /></span>
+      </div>
+      <div class="md-list-body">
+        @if (loading) {
+          @for (s of [0,1,2,3]; track s) { <div class="md-rec"><span class="skeleton sk-circle" style="width:34px;height:34px"></span><div style="flex:1"><span class="skeleton sk-line" style="width:70%"></span></div></div> }
+        } @else if (filteredPromotions.length === 0) {
+          <div class="inv-empty" style="padding:36px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">local_offer</span></div><div class="inv-empty-title">No promotions</div><div class="inv-empty-text">Create your first promotion.</div></div>
+        } @else {
+          @for (p of filteredPromotions; track p.id) {
+            <button class="md-rec" [class.selected]="editingPromotion?.id === p.id" [class.row-new]="p.id === highlighter.id" (click)="openEditForm(p)">
+              <span class="md-rec-ico"><span class="material-symbols-outlined" style="font-size:17px">local_offer</span></span>
+              <div class="md-rec-main"><span class="md-rec-title">{{ p.name }}</span><span class="md-rec-sub"><span class="md-rec-code">{{ p.promotionCode ?? '—' }}</span> · {{ targetTypeLabel(p.targetType) }}</span></div>
+              <span [class]="statusClass(p.status)">{{ normStatus(p.status) }}</span>
+            </button>
+          }
+        }
+      </div>
+    </div>
+
+    <!-- ══ RIGHT: form + status actions | empty ══ -->
+    <div class="md-detail">
+      @if (showForm) {
+        <div class="md-detail-head">
+          <span class="md-detail-title">{{ editingPromotion ? 'Edit Promotion' : 'New Promotion' }}</span>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            @if (editingPromotion) {
+              @if (normStatus(editingPromotion.status) === 'Draft' || normStatus(editingPromotion.status) === 'Paused') {
+                <button class="ibtn ibtn--sm ibtn--secondary" (click)="activate(editingPromotion.id)"><span class="material-symbols-outlined">play_arrow</span> Activate</button>
+              }
+              @if (normStatus(editingPromotion.status) === 'Active') {
+                <button class="ibtn ibtn--sm ibtn--secondary" (click)="pause(editingPromotion.id)"><span class="material-symbols-outlined">pause</span> Pause</button>
+              }
+              @if (normStatus(editingPromotion.status) !== 'Cancelled' && normStatus(editingPromotion.status) !== 'Expired') {
+                <button class="ibtn ibtn--sm ibtn--secondary" (click)="cancel(editingPromotion.id)"><span class="material-symbols-outlined">block</span> Cancel</button>
+              }
+            }
+            <button class="icon-btn" title="Close" (click)="cancelForm()"><span class="material-symbols-outlined">close</span></button>
+          </div>
+        </div>
+        <div class="md-detail-body">
+          <div class="form-grid">
+            <div class="form-group"><label>Name *</label><input type="text" [(ngModel)]="formName" placeholder="Promotion name" /></div>
+            <div class="form-group">
+              <label>Code</label>
+              <input type="text" [(ngModel)]="formPromotionCode" placeholder="e.g. SUMMER20" [disabled]="!!editingPromotion || formAutoCode" />
+              @if (!editingPromotion) {
+                <label style="font-weight:400;font-size:12px;margin-top:4px;display:flex;align-items:center;gap:6px;"><input type="checkbox" [(ngModel)]="formAutoCode" (ngModelChange)="onAutoCodeToggle()" style="width:auto;" /> Auto-generate</label>
+                @if (!formAutoCode && formPromotionCode.trim()) {
+                  @if (codeTaken) { <small style="color:var(--c-danger-text);font-size:11px;">✕ "{{ formPromotionCode }}" is already in use.</small> }
+                  @else { <small style="color:var(--c-success-text);font-size:11px;">✓ Available.</small> }
+                }
+              }
+            </div>
+            <div class="form-group"><label>Target Type</label><select [(ngModel)]="formTargetType">@for (t of targetTypeOptions; track t.value) { <option [ngValue]="t.value">{{ t.label }}</option> }</select></div>
+            <div class="form-group"><label>Priority</label><input type="number" [(ngModel)]="formPriority" min="0" /></div>
+            <div class="form-group"><label>Start Date *</label><input type="date" [(ngModel)]="formStartDate" /></div>
+            <div class="form-group"><label>End Date *</label><input type="date" [(ngModel)]="formEndDate" /></div>
+            <div class="form-group"><label>Min Order Amount</label><input type="number" [(ngModel)]="formMinOrderAmount" placeholder="0.00" min="0" /></div>
+            <div class="form-group"><label>Max Total Uses</label><input type="number" [(ngModel)]="formMaxUsageCount" placeholder="Unlimited" min="1" /></div>
+            <div class="form-group"><label>Max Per Customer</label><input type="number" [(ngModel)]="formMaxUsagePerCustomer" placeholder="Unlimited" min="1" /></div>
+            <div class="form-group" style="flex-direction:row;align-items:center;gap:8px;"><input type="checkbox" [(ngModel)]="formIsAutoApplied" id="autoApply" style="width:auto;" /><label for="autoApply" style="margin:0;">Auto Apply</label></div>
+            <div class="form-group" style="flex-direction:row;align-items:center;gap:8px;"><input type="checkbox" [(ngModel)]="formIsStackable" id="stackable" style="width:auto;" /><label for="stackable" style="margin:0;">Stackable</label></div>
+            <div class="form-group form-group-full"><label>Description</label><textarea [(ngModel)]="formDescription" rows="2" placeholder="Optional description"></textarea></div>
+            <div class="form-group form-group-full"><label>Notes</label><textarea [(ngModel)]="formNotes" rows="2" placeholder="Internal notes"></textarea></div>
+          </div>
+          <div class="form-actions">
+            @if (editingPromotion) { <button class="ibtn ibtn--danger" style="margin-right:auto" (click)="delete(editingPromotion.id)"><span class="material-symbols-outlined">delete</span> Delete</button> }
+            <button class="ibtn ibtn--secondary" (click)="cancelForm()">Cancel</button>
+            <button class="ibtn ibtn--primary" (click)="save()"><span class="material-symbols-outlined">save</span> {{ editingPromotion ? 'Update' : 'Create' }}</button>
+          </div>
+        </div>
+      } @else {
+        <div class="md-empty">
+          <div class="md-empty-icon"><span class="material-symbols-outlined">local_offer</span></div>
+          <div class="md-empty-title">Manage promotions</div>
+          <div class="md-empty-text">Select a promotion to edit and manage its status, or create a new one.</div>
+          <button class="btn-brand" style="margin-top:8px" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Promotion</button>
+        </div>
+      }
+    </div>
+  </div>
+</div>

@@ -1,0 +1,73 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">two_wheeler</span></div>
+      <div>
+        <h1>Riders</h1>
+        <p class="inv-hero-sub">Manage delivery riders and their assignments</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> Add Rider</button>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (successMsg) { <div class="alert alert-success">{{ successMsg }}</div> }
+
+  <div class="md-split">
+    <!-- ══ LEFT: rider rows ══ -->
+    <div class="md-list">
+      <div class="md-list-head">
+        <span class="inv-search"><span class="material-symbols-outlined">search</span><input type="text" [(ngModel)]="searchQuery" placeholder="Search by name or phone…" /></span>
+      </div>
+      <div class="md-list-body">
+        @if (loading) {
+          @for (s of [0,1,2,3]; track s) { <div class="md-rec"><span class="skeleton sk-circle" style="width:34px;height:34px"></span><div style="flex:1"><span class="skeleton sk-line" style="width:70%"></span></div></div> }
+        } @else if (filteredRiders.length === 0) {
+          <div class="inv-empty" style="padding:36px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">two_wheeler</span></div><div class="inv-empty-title">No riders</div><div class="inv-empty-text">Add your first delivery rider.</div></div>
+        } @else {
+          @for (rider of filteredRiders; track rider.id) {
+            <button class="md-rec" [class.selected]="editingRider?.id === rider.id" [class.row-new]="rider.id === highlighter.id" (click)="openEditForm(rider)">
+              <span class="md-rec-ico">{{ (riderName(rider) || '?').charAt(0) }}</span>
+              <div class="md-rec-main"><span class="md-rec-title">{{ riderName(rider) || '—' }}</span><span class="md-rec-sub">{{ rider.phone ?? '—' }}@if (storeName(rider)) { · {{ storeName(rider) }} }</span></div>
+              <span class="md-rec-status" [class.on]="rider.isActive" [class.off]="!rider.isActive"></span>
+            </button>
+          }
+        }
+      </div>
+    </div>
+
+    <!-- ══ RIGHT: form | empty ══ -->
+    <div class="md-detail">
+      @if (showForm) {
+        <div class="md-detail-head">
+          <span class="md-detail-title">{{ editingRider ? 'Edit Rider' : 'New Rider' }}</span>
+          <button class="icon-btn" title="Close" (click)="cancelForm()"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="md-detail-body">
+          <div class="form-grid">
+            <div class="form-group"><label>Name *</label><input type="text" [(ngModel)]="formName" placeholder="Rider name" /></div>
+            <div class="form-group"><label>Phone *</label><input type="text" [(ngModel)]="formPhone" placeholder="Phone number" /></div>
+            <div class="form-group"><label>Store</label><select [(ngModel)]="formStoreId"><option value="">-- None --</option>@for (s of stores; track s.id) { <option [value]="s.id">{{ s.tradingName }}</option> }</select></div>
+            @if (editingRider) {
+              <div class="form-group"><label>Active</label><select [(ngModel)]="formIsActive"><option [ngValue]="true">Yes</option><option [ngValue]="false">No</option></select></div>
+            }
+          </div>
+          <div class="form-actions">
+            @if (editingRider) { <button class="ibtn ibtn--danger" style="margin-right:auto" (click)="deleteRider(editingRider.id)"><span class="material-symbols-outlined">delete</span> Delete</button> }
+            <button class="ibtn ibtn--secondary" (click)="cancelForm()">Cancel</button>
+            <button class="ibtn ibtn--primary" (click)="save()"><span class="material-symbols-outlined">save</span> {{ editingRider ? 'Update' : 'Create' }}</button>
+          </div>
+        </div>
+      } @else {
+        <div class="md-empty">
+          <div class="md-empty-icon"><span class="material-symbols-outlined">two_wheeler</span></div>
+          <div class="md-empty-title">Manage riders</div>
+          <div class="md-empty-text">Select a rider to edit, or add a new one.</div>
+          <button class="btn-brand" style="margin-top:8px" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> Add Rider</button>
+        </div>
+      }
+    </div>
+  </div>
+</div>

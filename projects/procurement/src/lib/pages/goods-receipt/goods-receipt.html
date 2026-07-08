@@ -1,0 +1,150 @@
+<div class="page-container">
+
+  <app-page-header icon="move_to_inbox" title="Goods Receipts (GRN)" subtitle="Record deliveries against purchase orders">
+    <button class="btn btn-primary" (click)="openCreate()">+ New Goods Receipt</button>
+  </app-page-header>
+
+  <app-alert type="error"   [message]="error"></app-alert>
+  <app-alert type="success" [message]="success"></app-alert>
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>New Goods Receipt</h3>
+
+      <div class="helper-box">
+        <span class="helper-icon">ℹ️</span>
+        <div>Select a confirmed purchase order — its outstanding lines load below. Enter the <strong>received</strong>
+          quantity per line (accepted is auto-filled; adjust rejected as needed), then save as a draft.
+          <strong>Post</strong> updates inventory and the PO's received quantities. Use <strong>Inspect (QC)</strong>
+          to record quality results before posting.</div>
+      </div>
+
+      <div class="form-grid">
+        <app-select label="Purchase Order" required [options]="poOptions" [(ngModel)]="form.purchaseOrderId"
+                    (ngModelChange)="onPOChange()" [error]="submitted ? errors.po : ''" placeholder="-- Select PO --"></app-select>
+        <app-input label="Vendor Delivery Note #" placeholder="Vendor's DN ref" [(ngModel)]="form.vendorDeliveryNoteNumber"></app-input>
+        <app-input label="Receipt Date" type="date" [(ngModel)]="form.receiptDate"></app-input>
+        <app-select label="Receipt Type" [options]="receiptTypeOptions" [(ngModel)]="form.receiptType" placeholder=""></app-select>
+        <app-select label="Warehouse" required [options]="warehouseOptions" [(ngModel)]="form.warehouseId"
+                    [error]="submitted ? errors.warehouse : ''" placeholder="-- Select warehouse --"></app-select>
+      </div>
+
+      @if (selectedPO) {
+        <h4 class="section-title">Receipt Lines — PO {{ selectedPO.orderNumber }}</h4>
+        @if (submitted && errors.lines) { <div class="alert alert-error">{{ errors.lines }}</div> }
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th><th style="text-align:right">Ordered</th><th style="text-align:right">Outstanding</th>
+                <th style="text-align:right">Received</th><th style="text-align:right">Accepted</th><th style="text-align:right">Rejected</th>
+                <th>Lot #</th><th>Expiry</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (l of formLines; track l.purchaseOrderLineId) {
+                <tr>
+                  <td>{{ l.itemCode ? l.itemCode + ' — ' : '' }}{{ l.itemDescription }}</td>
+                  <td style="text-align:right">{{ l.quantityOrdered }}</td>
+                  <td style="text-align:right">{{ l.quantityRemaining }}</td>
+                  <td style="text-align:right"><input class="num-input" type="number" min="0" [max]="l.quantityRemaining" [(ngModel)]="l.quantityReceived" (ngModelChange)="onQtyChange(l)" /></td>
+                  <td style="text-align:right"><input class="num-input" type="number" min="0" [(ngModel)]="l.quantityAccepted" (ngModelChange)="onQtyChange(l)" /></td>
+                  <td style="text-align:right"><input class="num-input" type="number" min="0" [(ngModel)]="l.quantityRejected" (ngModelChange)="onQtyChange(l)" /></td>
+                  <td><input class="txt-input" type="text" [(ngModel)]="l.lotNumber" placeholder="Lot/batch" /></td>
+                  <td><input class="txt-input" type="date" [(ngModel)]="l.expiryDate" /></td>
+                </tr>
+              } @empty { <tr><td colspan="8" class="empty-row">No outstanding lines on this PO.</td></tr> }
+            </tbody>
+          </table>
+        </div>
+        @if (errors.linesBalance) { <div class="alert alert-error">{{ errors.linesBalance }}</div> }
+      }
+
+      <div class="form-grid" style="margin-top:12px">
+        <div class="form-group-full">
+          <app-textarea label="Notes" [rows]="2" placeholder="Receipt notes" [(ngModel)]="form.notes"></app-textarea>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()" [disabled]="saving">Create Receipt</button>
+      </div>
+    </div>
+  }
+
+  <div class="filters-bar">
+    <span class="filter-search">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search by receipt #, PO or vendor…" [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
+      @if (search) { <button class="search-clear" title="Clear search" (click)="search = ''; onSearchChange()">×</button> }
+    </span>
+    <select class="filter-input" [(ngModel)]="statusFilter" (ngModelChange)="onStatusChange()">
+      <option [ngValue]="''">All statuses</option>
+      @for (opt of statusFilterOptions; track opt.value) { <option [ngValue]="opt.value">{{ opt.label }}</option> }
+    </select>
+  </div>
+
+  <app-data-table [sortableAll]="true"
+    [columns]="columns" [data]="receipts" [actions]="actions" [loading]="loading"
+    [highlightRowId]="highlighter.id"
+    [totalCount]="totalCount" [page]="page" [pageSize]="pageSize" [sortBy]="sortBy" [sortDirection]="sortDirection"
+    emptyMessage="No goods receipts found." (rowAction)="onRowAction($event)"
+    (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)" (sortChange)="onSortChange($event)">
+  </app-data-table>
+
+</div>
+
+@if (showInspectModal) {
+  <div class="modal-overlay">
+    <div class="modal-box" style="max-width:760px">
+      <h4>Open / Review — {{ inspectReceiptNumber }}</h4>
+      <p class="help-text" style="margin:0 0 12px">Set the receiving <strong>warehouse</strong>, confirm the accepted/rejected quantities, then <strong>Save &amp; Post</strong> to add the accepted stock to that warehouse.</p>
+      @if (inspectHint) { <div class="alert alert-warning" style="margin:0 0 12px">{{ inspectHint }}</div> }
+      <div style="max-width:360px;margin-bottom:14px">
+        <app-select label="Receiving Warehouse" [options]="warehouseOptions"
+                    [(ngModel)]="inspectWarehouseId" placeholder="-- Select warehouse --"></app-select>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead><tr><th>Item</th><th>Quality</th><th style="text-align:right">Accepted</th><th style="text-align:right">Rejected</th><th>Notes</th></tr></thead>
+          <tbody>
+            @for (l of inspectLines; track l.lineId) {
+              <tr>
+                <td>{{ l.itemDescription }}</td>
+                <td>
+                  <select class="txt-input" [(ngModel)]="l.qualityStatus">
+                    @for (opt of qualityOptions; track opt.value) { <option [ngValue]="opt.value">{{ opt.label }}</option> }
+                  </select>
+                </td>
+                <td style="text-align:right"><input class="num-input" type="number" min="0" [(ngModel)]="l.quantityAccepted" /></td>
+                <td style="text-align:right"><input class="num-input" type="number" min="0" [(ngModel)]="l.quantityRejected" /></td>
+                <td><input class="txt-input" type="text" [(ngModel)]="l.qualityNotes" placeholder="QC notes" /></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showInspectModal = false" [disabled]="posting">Cancel</button>
+        <button class="btn btn-secondary" (click)="submitInspection()" [disabled]="posting">Save</button>
+        <button class="btn btn-primary" (click)="submitInspection(true)" [disabled]="posting || !inspectWarehouseId">
+          {{ posting ? 'Posting…' : 'Save & Post' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showDeleteConfirm) {
+  <div class="modal-overlay">
+    <div class="modal-box">
+      <h4>Delete Goods Receipt</h4>
+      <p>Delete <strong>{{ deleteTarget?.receiptNumber }}</strong>? This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showDeleteConfirm = false">Cancel</button>
+        <button class="btn btn-danger" (click)="confirmDelete()">Delete</button>
+      </div>
+    </div>
+  </div>
+}

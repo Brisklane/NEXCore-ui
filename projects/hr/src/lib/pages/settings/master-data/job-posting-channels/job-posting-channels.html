@@ -1,0 +1,314 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">work</span></div>
+      <div>
+        <h1>Job Posting Channels</h1>
+        <p class="inv-hero-sub">Manage job posting channels and their distribution settings</p>
+      </div>
+    </div>
+    @if (activeTab === 'channels') {
+      <button class="btn btn-primary" (click)="openCreateForm()">+ New Posting Channel</button>
+    } @else {
+      <button class="btn btn-primary" (click)="openCreateCtForm()">+ New Channel Template</button>
+    }
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn" [class.tab-active]="activeTab === 'channels'" (click)="switchTab('channels')">
+      Posting Channels
+    </button>
+    <button class="tab-btn" [class.tab-active]="activeTab === 'templates'" (click)="switchTab('templates')">
+      Channel Templates
+    </button>
+  </div>
+
+  <!-- ══ POSTING CHANNELS TAB ══════════════════════════════════════════════ -->
+  @if (activeTab === 'channels') {
+    @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+    @if (showForm) {
+      <div class="form-panel">
+        <h3>{{ editingChannel ? 'Edit Posting Channel' : 'Create Posting Channel' }}</h3>
+        @if (saveError) { <div class="alert alert-error">{{ saveError }}</div> }
+        <div class="form-grid">
+          @if (!editingChannel) {
+            <div class="form-group">
+              <label>Job *</label>
+              <select [(ngModel)]="formJobId">
+                <option value="">-- Select Job --</option>
+                @for (j of jobs; track j.id) {
+                  <option [value]="j.id">{{ j.title }}</option>
+                }
+              </select>
+            </div>
+          }
+          <div class="form-group">
+            <label>Channel Template *</label>
+            <select [(ngModel)]="formChannelTemplateId">
+              <option value="">-- Select Template --</option>
+              @for (t of templates; track t.id) {
+                <option [value]="t.id">{{ t.channelName ?? t.channelCode ?? t.id }}</option>
+              }
+            </select>
+            @if (templates.length === 0) {
+              <small class="field-hint">No templates found. Add them in the Channel Templates tab.</small>
+            }
+          </div>
+          <div class="form-group">
+            <label>Channel Name (Snapshot)</label>
+            <input type="text" [(ngModel)]="formChannelNameSnapshot" placeholder="e.g. LinkedIn, Rozee.pk" />
+          </div>
+          @if (!editingChannel) {
+            <div class="form-group">
+              <label>Channel Type *</label>
+              <select [(ngModel)]="formChannelTypeLookupValueId">
+                <option value="">-- Select Channel Type --</option>
+                @for (v of channelTypeValues; track v.id) {
+                  <option [value]="v.id">{{ v.name }}</option>
+                }
+              </select>
+              @if (channelTypeValues.length === 0) {
+                <small class="field-hint">No channel types found. Add them under Lookup Values.</small>
+              }
+            </div>
+          }
+          <div class="form-group">
+            <label>Status *</label>
+            <select [(ngModel)]="formStatusLookupValueId">
+              <option value="">-- Select Status --</option>
+              @for (v of statusValues; track v.id) {
+                <option [value]="v.id">{{ v.name }}</option>
+              }
+            </select>
+            @if (statusValues.length === 0) {
+              <small class="field-hint">No status values found. Add them under Lookup Values.</small>
+            }
+          </div>
+          <div class="form-group">
+            <label>Source Tracking Code</label>
+            <input type="text" [(ngModel)]="formSourceTrackingCode" placeholder="UTM or tracking code" />
+          </div>
+          <div class="form-group">
+            <label>Posting URL</label>
+            <input type="url" [(ngModel)]="formPostingUrl" placeholder="https://..." />
+          </div>
+          <div class="form-group">
+            <label>Open Date *</label>
+            <input type="date" [(ngModel)]="formOpenDate" [disabled]="!!editingChannel" />
+          </div>
+          <div class="form-group">
+            <label>Close Date</label>
+            <input type="date" [(ngModel)]="formCloseDate" />
+          </div>
+          <div class="form-group form-check-row">
+            <label><input type="checkbox" [(ngModel)]="formIsSponsored" /> Sponsored</label>
+          </div>
+          @if (formIsSponsored) {
+            <div class="form-group">
+              <label>Sponsored Budget</label>
+              <input type="number" [(ngModel)]="formSponsoredBudget" placeholder="0.00" min="0" step="0.01" />
+            </div>
+          }
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-secondary" (click)="cancelForm()" [disabled]="saving">Cancel</button>
+          <button class="btn btn-primary" (click)="saveChannel()" [disabled]="saving">
+            {{ saving ? 'Saving…' : (editingChannel ? 'Update' : 'Create') }}
+          </button>
+        </div>
+      </div>
+    }
+
+    @if (loading) {
+      <div class="loading-spinner">Loading...</div>
+    } @else {
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Channel Name</th>
+              <th>Job</th>
+              <th>Template</th>
+              <th>Type</th>
+              <th>URL</th>
+              <th>Open Date</th>
+              <th>Close Date</th>
+              <th>Status</th>
+              <th>Sponsored</th>
+              <th class="actions-cell">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (ch of channels; track ch.id; let i = $index) {
+              <tr>
+                <td class="row-num">{{ i + 1 }}</td>
+                <td>{{ ch.channelNameSnapshot || '—' }}</td>
+                <td>{{ getJobTitle(ch.jobId) }}</td>
+                <td>{{ getTemplateName(ch.channelTemplateId) }}</td>
+                <td>{{ getChannelTypeName(ch.channelTypeLookupValueId) }}</td>
+                <td>
+                  @if (ch.postingUrl) {
+                    <a [href]="ch.postingUrl" target="_blank" rel="noopener">View ↗</a>
+                  } @else {
+                    —
+                  }
+                </td>
+                <td>{{ ch.openDate | date:'mediumDate' }}</td>
+                <td>{{ ch.closeDate ? (ch.closeDate | date:'mediumDate') : '—' }}</td>
+                <td>
+                  <span class="badge badge-active">{{ getStatusName(ch.statusLookupValueId) }}</span>
+                </td>
+                <td>
+                  @if (ch.isSponsored) {
+                    <span class="badge-active">Yes</span>
+                  } @else {
+                    <span class="badge-inactive">No</span>
+                  }
+                </td>
+                <td class="actions-cell">
+                  <button class="btn-icon" title="Edit" (click)="openEditForm(ch)">✏️</button>
+                  <button class="btn-icon" title="Delete" (click)="deleteChannel(ch)">🗑️</button>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="11" class="empty-row">No posting channels found. Click "+ New Posting Channel" to add one.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <!-- ══ CHANNEL TEMPLATES TAB ═════════════════════════════════════════════ -->
+  @if (activeTab === 'templates') {
+    @if (ctError) { <div class="alert alert-error">{{ ctError }}</div> }
+
+    @if (showCtForm) {
+      <div class="form-panel">
+        <h3>{{ editingTemplate ? 'Edit Channel Template' : 'Create Channel Template' }}</h3>
+        @if (ctSaveError) { <div class="alert alert-error">{{ ctSaveError }}</div> }
+        <div class="form-grid">
+          @if (!editingTemplate) {
+            <div class="form-group">
+              <label>Channel Code</label>
+              <input type="text" [(ngModel)]="ctFormChannelCode" placeholder="e.g. LINKEDIN" />
+            </div>
+          }
+          <div class="form-group">
+            <label>Channel Name</label>
+            <input type="text" [(ngModel)]="ctFormChannelName" placeholder="e.g. LinkedIn Jobs" />
+          </div>
+          <div class="form-group">
+            <label>Channel Type *</label>
+            <select [(ngModel)]="ctFormChannelTypeLookupValueId">
+              <option value="">-- Select Channel Type --</option>
+              @for (v of channelTypeValues; track v.id) {
+                <option [value]="v.id">{{ v.name }}</option>
+              }
+            </select>
+            @if (channelTypeValues.length === 0) {
+              <small class="field-hint">No channel types found. Add them under Lookup Values.</small>
+            }
+          </div>
+          <div class="form-group">
+            <label>Default Status</label>
+            <select [(ngModel)]="ctFormDefaultStatusLookupValueId">
+              <option value="">-- None --</option>
+              @for (v of statusValues; track v.id) {
+                <option [value]="v.id">{{ v.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>API Endpoint</label>
+            <input type="text" [(ngModel)]="ctFormApiEndpoint" placeholder="https://api.example.com/post" />
+          </div>
+          <div class="form-group">
+            <label>Tracking Prefix</label>
+            <input type="text" [(ngModel)]="ctFormTrackingPrefix" placeholder="e.g. LI-" />
+          </div>
+          <div class="form-group form-check-row">
+            <label><input type="checkbox" [(ngModel)]="ctFormSupportsAutoPosting" /> Supports Auto-Posting</label>
+          </div>
+          <div class="form-group form-check-row">
+            <label><input type="checkbox" [(ngModel)]="ctFormRequiresApproval" /> Requires Approval</label>
+          </div>
+          @if (editingTemplate) {
+            <div class="form-group form-check-row">
+              <label><input type="checkbox" [(ngModel)]="ctFormIsActive" /> Active</label>
+            </div>
+          }
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-secondary" (click)="cancelCtForm()" [disabled]="ctSaving">Cancel</button>
+          <button class="btn btn-primary" (click)="saveTemplate()" [disabled]="ctSaving">
+            {{ ctSaving ? 'Saving…' : (editingTemplate ? 'Update' : 'Create') }}
+          </button>
+        </div>
+      </div>
+    }
+
+    @if (ctLoading) {
+      <div class="loading-spinner">Loading...</div>
+    } @else {
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Code</th>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Auto-Post</th>
+              <th>Requires Approval</th>
+              <th>Tracking Prefix</th>
+              <th>Active</th>
+              <th class="actions-cell">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (t of templates; track t.id; let i = $index) {
+              <tr>
+                <td class="row-num">{{ i + 1 }}</td>
+                <td>{{ t.channelCode || '—' }}</td>
+                <td>{{ t.channelName || '—' }}</td>
+                <td>{{ getChannelTypeName(t.channelTypeLookupValueId) }}</td>
+                <td>
+                  @if (t.supportsAutoPosting) {
+                    <span class="badge-active">Yes</span>
+                  } @else {
+                    <span class="badge-inactive">No</span>
+                  }
+                </td>
+                <td>
+                  @if (t.requiresApproval) {
+                    <span class="badge-active">Yes</span>
+                  } @else {
+                    <span class="badge-inactive">No</span>
+                  }
+                </td>
+                <td>{{ t.trackingPrefix || '—' }}</td>
+                <td>
+                  @if (t.isActive) {
+                    <span class="badge badge-active">Active</span>
+                  } @else {
+                    <span class="badge badge-inactive">Inactive</span>
+                  }
+                </td>
+                <td class="actions-cell">
+                  <button class="btn-icon" title="Edit" (click)="openEditCtForm(t)">✏️</button>
+                  <button class="btn-icon" title="Delete" (click)="deleteTemplate(t)">🗑️</button>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="9" class="empty-row">No channel templates found. Click "+ New Channel Template" to add one.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</div>

@@ -1,0 +1,52 @@
+@import '../shared-styles.css';
+
+.filter-input {
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong, #cbd5e1);
+  border-radius: 6px;
+  font-size: 14px;
+  min-width: 240px;
+}
+
+.tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent, #2b7fff);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  padding: 0 5px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.bins-table {
+  margin-bottom: 20px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.bins-empty {
+  padding: 24px 0 8px;
+  font-size: 13px;
+  color: var(--text-muted, #94a3b8);
+}
+
+.bins-add-section {
+  margin-top: 16px;
+  border-top: 1px solid var(--border-default, #e2e8f0);
+  padding-top: 16px;
+}
+
+.bins-add-section h4 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}

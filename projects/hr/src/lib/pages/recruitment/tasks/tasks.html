@@ -1,0 +1,136 @@
+<div class="page-container tasks-page">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">person_search</span></div>
+      <div>
+        <h1>Candidate Tasks</h1>
+        <p class="inv-hero-sub">Manage task assignments for candidates and applications.</p>
+      </div>
+    </div>
+
+    <button type="button" class="btn btn-primary" (click)="openCreateForm()">New Task</button>
+  </div>
+
+  <div *ngIf="error" class="alert alert-error">{{ error }}</div>
+  <div *ngIf="loading" class="tasks-loading">Loading candidate tasks...</div>
+
+  <section *ngIf="showForm" class="form-panel">
+    <h3>{{ editingTask ? 'Edit Candidate Task' : 'Create Candidate Task' }}</h3>
+
+    <form (ngSubmit)="saveTask()" class="form-grid">
+      <div class="form-group">
+        <label>Candidate</label>
+        <select name="candidateId" [(ngModel)]="formCandidateId">
+          <option value="">— Select Candidate —</option>
+          <option *ngFor="let c of candidates" [value]="c.id">
+            {{ (c.firstName + ' ' + c.lastName).trim() || c.candidateCode || c.id }}
+          </option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Application</label>
+        <select name="applicationId" [(ngModel)]="formApplicationId">
+          <option value="">— Select Application —</option>
+          <option *ngFor="let app of applications" [value]="app.id">
+            {{ app.applicationCode || app.id }}
+          </option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Job</label>
+        <select name="jobId" [(ngModel)]="formJobId">
+          <option value="">— Select Job —</option>
+          <option *ngFor="let j of jobs" [value]="j.id">
+            {{ j.jobTitle || j.jobCode || j.id }}
+          </option>
+        </select>
+      </div>
+
+      <div class="form-group full-width">
+        <label>Title</label>
+        <input name="title" [(ngModel)]="formTitle" required />
+      </div>
+
+      <div class="form-group full-width">
+        <label>Description</label>
+        <textarea name="description" rows="4" [(ngModel)]="formDescription"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Due Date</label>
+        <input type="date" name="dueDate" [(ngModel)]="formDueDate" />
+      </div>
+
+      <div class="form-group">
+        <label>Priority</label>
+        <select name="priority" [(ngModel)]="formPriority">
+          <option value="">— Select Priority —</option>
+          <option *ngFor="let v of taskPriorityValues" [value]="v.id">{{ v.name || v.code }}</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Status</label>
+        <select name="status" [(ngModel)]="formStatus">
+          <option value="">— Select Status —</option>
+          <option *ngFor="let v of taskStatusValues" [value]="v.id">{{ v.name || v.code }}</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Assigned Employee</label>
+        <select name="assignedEmployeeId" [(ngModel)]="formAssignedEmployeeId">
+          <option value="">— Select Employee —</option>
+          <option *ngFor="let e of employees" [value]="e.id">
+            {{ (e.firstName + ' ' + e.lastName).trim() || e.employeeCode || e.id }}
+          </option>
+        </select>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">{{ editingTask ? 'Update' : 'Save' }}</button>
+        <button type="button" class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+      </div>
+    </form>
+  </section>
+
+  <section *ngIf="!loading && tasks.length === 0" class="tasks-empty alert alert-success">
+    No candidate tasks available.
+  </section>
+
+  <section *ngIf="tasks.length > 0" class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Candidate</th>
+          <th>Application</th>
+          <th>Job</th>
+          <th>Status</th>
+          <th>Due Date</th>
+          <th>Priority</th>
+          <th>Assigned</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let task of tasks">
+          <td>{{ task.taskCode }}</td>
+          <td>{{ getCandidateLabel(task.candidateId) }}</td>
+          <td>{{ getApplicationLabel(task.applicationId) }}</td>
+          <td>{{ getJobLabel(task.jobId) }}</td>
+          <td>{{ getStatusLabel(task.statusLookupValueId) }}</td>
+          <td>{{ task.dueDate || '-' }}</td>
+          <td>{{ getPriorityLabel(task.taskTypeLookupValueId) }}</td>
+          <td>{{ getEmployeeLabel(task.assignedByEmployeeId) }}</td>
+          <td class="actions-cell">
+            <button type="button" class="btn btn-secondary btn-sm" (click)="openEditForm(task)">Edit</button>
+            <button type="button" class="btn btn-danger btn-sm" (click)="deleteTask(task)">Delete</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+</div>

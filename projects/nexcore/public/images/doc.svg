@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 116 28" width="116" height="28">
+  <!-- Medical bag -->
+  <rect x="2" y="9" width="18" height="16" rx="2" fill="#1565C0"/>
+  <!-- Handle -->
+  <path d="M7 9 L7 6 Q11 4 15 6 L15 9" fill="none" stroke="#1565C0" stroke-width="2" stroke-linejoin="round"/>
+  <!-- Cross -->
+  <rect x="10" y="12" width="3" height="9" rx="0.5" fill="white"/>
+  <rect x="7" y="15" width="9" height="3" rx="0.5" fill="white"/>
+  <!-- Text -->
+  <text x="25" y="13" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="700" fill="#1565C0" letter-spacing="0.5">DOC</text>
+  <text x="25" y="24" font-family="Segoe UI, Arial, sans-serif" font-size="8.5" font-weight="400" fill="#666" letter-spacing="0.5">NEXCORE</text>
+</svg>

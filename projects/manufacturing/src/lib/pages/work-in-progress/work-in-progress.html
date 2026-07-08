@@ -1,0 +1,166 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">pending_actions</span></div>
+      <div>
+        <h1>Work In Progress</h1>
+        <p class="inv-hero-sub">Monitor quantity flow through production — in-progress, completed, and rejected</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreate()"><span class="material-symbols-outlined">add</span> New WIP Record</button>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="kpi-strip">
+    <div class="kpi-card kpi-brand"><div class="kpi-top"><span class="kpi-label">Total Records</span><span class="kpi-icon"><span class="material-symbols-outlined">autorenew</span></span></div><div class="kpi-value">{{ totalCount }}</div></div>
+    <div class="kpi-card kpi-violet"><div class="kpi-top"><span class="kpi-label">In Progress Qty</span><span class="kpi-icon"><span class="material-symbols-outlined">settings</span></span></div><div class="kpi-value">{{ totalInProgress | number:'1.0-0' }}</div></div>
+    <div class="kpi-card kpi-success"><div class="kpi-top"><span class="kpi-label">Completed Qty</span><span class="kpi-icon"><span class="material-symbols-outlined">check_circle</span></span></div><div class="kpi-value">{{ totalCompleted | number:'1.0-0' }}</div></div>
+    <div class="kpi-card kpi-danger"><div class="kpi-top"><span class="kpi-label">Rejected Qty</span><span class="kpi-icon"><span class="material-symbols-outlined">cancel</span></span></div><div class="kpi-value">{{ totalRejected | number:'1.0-0' }}</div></div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="ux-help-box" role="note">
+    <strong>Execution Guidance</strong>
+    Keep in-progress, completed, and rejected quantities updated. WIP values feed downstream throughput and production performance analytics.
+  </div>
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editing ? 'Edit WIP Record' : 'Create WIP Record' }}</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Production Order *</label>
+          @if (editing) {
+            <div class="form-control form-control-readonly">{{ formPoPickerText || getOrderLabel(formProductionOrderId) }}</div>
+          } @else {
+            <lib-option-picker-input
+              [options]="poPickerOptions"
+              [value]="formPoPickerText"
+              [entityLabel]="'Production Order'"
+              [columns]="poColumns"
+              placeholder="Search by order # or product..."
+              (optionSelected)="onPoSelected($event)"
+            />
+          }
+          @if (!editing && poPickerOptions.length === 0) {
+            <small class="quantity-check quantity-check-over">No available production orders. Existing orders already have WIP records.</small>
+          }
+        </div>
+        <div class="form-group">
+          <label>Product *</label>
+          @if (editing || formProductionOrderId) {
+            <div class="form-control form-control-readonly">
+              {{ formProductDisplayText || getProductDisplayLabel(formProductId, null, formProductionOrderId) || 'Auto-filled from selected order' }}
+            </div>
+          } @else {
+            <div class="form-control form-control-readonly" style="color:#94a3b8">Select a production order — product auto-fills</div>
+          }
+        </div>
+        <div class="form-group">
+          <label>Qty In Progress</label>
+          <input type="number" [(ngModel)]="formQuantityInProgress" min="0" />
+        </div>
+        <div class="form-group">
+          <label>Qty Completed</label>
+          <input type="number" [(ngModel)]="formQuantityCompleted" min="0" />
+        </div>
+        <div class="form-group">
+          <label>Qty Rejected</label>
+          <input type="number" [(ngModel)]="formQuantityRejected" min="0" />
+        </div>
+        <div class="form-group">
+          <label>Unit of Measure</label>
+          <input type="text" [(ngModel)]="formUnitOfMeasure" placeholder="e.g. EA, KG" />
+        </div>
+        <div class="form-group form-group-wide">
+          <label>Notes</label>
+          <textarea [(ngModel)]="formNotes" rows="2"></textarea>
+        </div>
+        @if (getSelectedPlannedQuantity() !== null) {
+          <div class="form-group form-group-wide">
+            <small class="quantity-check" [class.quantity-check-over]="isQuantityOverPlanned()" [class.quantity-check-ok]="isQuantityBalanced()">
+              Quantity Check: Total entered {{ getCurrentTotalQuantity() }} / Planned {{ getSelectedPlannedQuantity() }}
+            </small>
+          </div>
+        }
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancel()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()">{{ editing ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <input type="text" class="filter-search" [(ngModel)]="filterSearch" (ngModelChange)="onFilterChange()" placeholder="Search by product or order..." />
+    <button class="btn btn-secondary" (click)="load()" style="margin-left: auto;" title="Refresh list">🔄 Refresh</button>
+    <span class="filter-count">{{ filteredItems.length }} of {{ totalCount }}</span>
+  </div>
+
+  @if (loading) { <div class="loading-spinner">Loading...</div> } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" [class.sorted]="sortBy === 'orderNumber'" (click)="sort('orderNumber')">Order # <span class="sort-icon">{{ sortBy === 'orderNumber' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'productName'" (click)="sort('productName')">Product <span class="sort-icon">{{ sortBy === 'productName' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'quantityInProgress'" (click)="sort('quantityInProgress')">In Progress <span class="sort-icon">{{ sortBy === 'quantityInProgress' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'quantityCompleted'" (click)="sort('quantityCompleted')">Completed <span class="sort-icon">{{ sortBy === 'quantityCompleted' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'quantityRejected'" (click)="sort('quantityRejected')">Rejected <span class="sort-icon">{{ sortBy === 'quantityRejected' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Completion %</th>
+            <th class="sortable" [class.sorted]="sortBy === 'unitOfMeasure'" (click)="sort('unitOfMeasure')">Unit <span class="sort-icon">{{ sortBy === 'unitOfMeasure' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'lastUpdatedAt'" (click)="sort('lastUpdatedAt')">Last Updated <span class="sort-icon">{{ sortBy === 'lastUpdatedAt' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of displayRows; track item.id) {
+            <tr [class.row-new]="item.id === highlighter.id">
+              <td class="cell-primary">{{ getOrderLabel(item.productionOrderId) }}</td>
+              <td>
+                <div class="cell-primary">{{ getProductDisplayLabel(item.productId, item.productName, item.productionOrderId) }}</div>
+              </td>
+              <td>{{ item.quantityInProgress | number:'1.0-2' }}</td>
+              <td class="text-success">{{ item.quantityCompleted | number:'1.0-2' }}</td>
+              <td class="text-danger">{{ item.quantityRejected | number:'1.0-2' }}</td>
+              <td>
+                <div class="progress-bar-wrap">
+                  <div class="progress-bar" [style.width.%]="getCompletionPct(item)"></div>
+                </div>
+                <span class="pct-label">{{ getCompletionPct(item) }}%</span>
+              </td>
+              <td>{{ item.unitOfMeasure || '—' }}</td>
+              <td>{{ item.lastUpdatedAt | date:'mediumDate' }}</td>
+              <td class="actions-cell">
+                <button class="btn-icon" (click)="openEdit(item)" title="Edit">✏️</button>
+                <button class="btn-icon" (click)="delete(item)" title="Delete">🗑️</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="9" class="empty-row">No WIP records found</td></tr>
+          }
+        </tbody>
+      </table>
+      @if (filteredItems.length > 0) {
+        <div class="pagination-bar">
+          <div class="pagination-info">
+            <span>Rows per page:</span>
+            <select [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+              @for (opt of pageSizeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+            </select>
+            <span>Showing {{ (page - 1) * pageSize + 1 }} to {{ page * pageSize > totalCount ? totalCount : page * pageSize }} of {{ totalCount }} entries</span>
+          </div>
+          <div class="pagination-controls">
+            <button class="btn-page" [disabled]="page <= 1" (click)="goToPage(page - 1)">&#8249; Prev</button>
+            <span class="page-indicator">Page {{ page }} of {{ totalPages }}</span>
+            <button class="btn-page" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next &#8250;</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

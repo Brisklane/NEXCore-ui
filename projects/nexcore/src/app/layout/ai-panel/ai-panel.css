@@ -1,0 +1,218 @@
+:host {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  pointer-events: none;
+}
+
+/* Backdrop */
+.ai-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 15, 30, 0.45);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+.ai-backdrop.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Drawer */
+.ai-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 380px;
+  max-width: 92vw;
+  background: var(--bg-surface);
+  border-left: 1px solid var(--border-default);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+}
+.ai-drawer.open {
+  transform: translateX(0);
+}
+
+/* Header */
+.ai-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border-light);
+}
+.ai-head-id {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ai-spark {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: var(--brand-grad);
+  box-shadow: 0 6px 16px rgba(43, 127, 255, 0.35);
+}
+.ai-spark svg { width: 22px; height: 22px; }
+.ai-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-heading);
+}
+.ai-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.ai-close {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.15s, color 0.15s;
+}
+.ai-close:hover { background: var(--bg-muted); color: var(--text-primary); }
+.ai-close svg { width: 18px; height: 18px; }
+
+/* Body */
+.ai-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.ai-hero { max-width: 300px; }
+.ai-orb {
+  width: 84px;
+  height: 84px;
+  margin: 8px auto 18px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: var(--brand-grad);
+  box-shadow: 0 14px 36px rgba(43, 127, 255, 0.4);
+  position: relative;
+  animation: ai-float 4s ease-in-out infinite;
+}
+.ai-orb::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 2px solid var(--accent-soft);
+  animation: ai-pulse 2.8s ease-out infinite;
+}
+.ai-orb svg { width: 38px; height: 38px; }
+@keyframes ai-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes ai-pulse {
+  0% { transform: scale(0.9); opacity: 0.8; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+.ai-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  margin-bottom: 14px;
+}
+.ai-hero-title {
+  margin: 0 0 10px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-heading);
+}
+.ai-hero-text {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+/* Suggestion chips */
+.ai-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 22px;
+}
+.ai-chip {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  background: var(--bg-muted);
+  border: 1px solid var(--border-light);
+  padding: 7px 13px;
+  border-radius: var(--radius-pill);
+}
+
+/* Footer composer (disabled teaser) */
+.ai-foot {
+  padding: 14px 16px 18px;
+  border-top: 1px solid var(--border-light);
+}
+.ai-composer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-muted);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-pill);
+  padding: 6px 6px 6px 16px;
+  opacity: 0.75;
+}
+.ai-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 13.5px;
+  color: var(--text-primary);
+}
+.ai-send {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: var(--brand-grad);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  cursor: not-allowed;
+}
+.ai-send svg { width: 17px; height: 17px; }
+.ai-foot-note {
+  margin: 10px 2px 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+@media (max-width: 480px) {
+  .ai-drawer { width: 100vw; max-width: 100vw; }
+}

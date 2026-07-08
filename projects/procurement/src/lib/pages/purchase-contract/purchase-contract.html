@@ -1,0 +1,191 @@
+<div class="page-container">
+
+  <app-page-header icon="assignment_turned_in" title="Purchase Contracts" subtitle="Framework agreements and long-term vendor commitments">
+    <button class="btn btn-primary" (click)="openCreate()">+ New Contract</button>
+  </app-page-header>
+
+  <app-alert type="error"   [message]="error"></app-alert>
+  <app-alert type="success" [message]="success"></app-alert>
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editing ? 'Edit Contract — ' + editing.contractNumber : 'New Contract' }}</h3>
+
+      <div class="tab-bar">
+        <button [class]="formTab === 'details' ? 'tab-btn tab-btn-active' : 'tab-btn'" (click)="formTab = 'details'">Details</button>
+        <button [class]="formTab === 'lines' ? 'tab-btn tab-btn-active' : 'tab-btn'" (click)="formTab = 'lines'">Lines ({{ formLines.length }})</button>
+        <button [class]="formTab === 'terms' ? 'tab-btn tab-btn-active' : 'tab-btn'" (click)="formTab = 'terms'">Terms</button>
+      </div>
+
+      @if (formTab === 'details') {
+        <div class="help-box">
+          <span class="help-icon">ℹ️</span>
+          <span>
+            The <strong>contract type</strong> sets the commitment model: a <strong>Framework Agreement</strong> caps total spend,
+            a <strong>Blanket Order</strong> commits quantities at agreed prices, and <strong>Service</strong>, <strong>Supply</strong>
+            and <strong>Maintenance</strong> cover their respective engagements. <strong>Max Contract Value</strong> is the spend
+            ceiling, tracked against the contract's <strong>committed</strong> and <strong>used value</strong>. Enabling
+            <strong>auto-renew</strong> together with <strong>renewal notice days</strong> drives an expiry reminder before the end date.
+          </span>
+        </div>
+        <div class="form-grid">
+          <app-input label="Title" required placeholder="Contract title"
+                     [(ngModel)]="form.title" [error]="submitted ? errors.title : ''"></app-input>
+          <app-select label="Vendor" required [options]="vendorOptions" [(ngModel)]="form.vendorId"
+                      [error]="submitted ? errors.vendorId : ''" placeholder="-- Select vendor --"></app-select>
+          <app-select label="Contract Type" [options]="contractTypeOptions" [(ngModel)]="form.contractType" placeholder=""></app-select>
+          <app-input label="Start Date" required type="date" [(ngModel)]="form.startDate" [error]="submitted ? errors.startDate : ''"></app-input>
+          <app-input label="End Date" required type="date" [(ngModel)]="form.endDate" [error]="submitted ? errors.endDate : ''"></app-input>
+          <app-select label="Currency" [options]="currencyOptions" [(ngModel)]="form.currencyCode" placeholder=""></app-select>
+          <app-input label="Max Contract Value" type="number" [min]="0" [step]="0.01" placeholder="0.00" [(ngModel)]="form.maximumContractValue"></app-input>
+          <app-select label="Payment Terms" [options]="paymentTermOptions" [(ngModel)]="form.paymentTerms" placeholder=""></app-select>
+          <app-select label="Incoterm" [options]="incotermOptions" [(ngModel)]="form.incoterm" placeholder="-- None --"></app-select>
+          <div class="form-group form-check-row">
+            <label><input type="checkbox" [(ngModel)]="form.autoRenew" /> Auto-renew</label>
+          </div>
+          <app-input label="Renewal Notice (days)" type="number" [min]="0" [(ngModel)]="form.renewalNoticeDays"></app-input>
+          <app-input label="Renewal Duration (months)" type="number" [min]="0" [(ngModel)]="form.renewalDurationMonths"></app-input>
+          <div class="form-group-full">
+            <app-textarea label="Description" [rows]="2" placeholder="Contract description" [(ngModel)]="form.description"></app-textarea>
+          </div>
+        </div>
+      }
+
+      @if (formTab === 'lines') {
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th><th>Description</th><th style="text-align:right">Unit Price</th><th style="text-align:right">Disc %</th>
+                <th style="text-align:right">Committed Qty</th><th style="text-align:right">Line Value</th><th>UoM</th><th>Category</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (l of formLines; track $index; let i = $index) {
+                <tr>
+                  <td>{{ l.itemCode || '—' }}</td>
+                  <td>{{ l.itemDescription }}</td>
+                  <td style="text-align:right">{{ l.unitPrice | number:'1.2-2' }}</td>
+                  <td style="text-align:right">{{ l.discountPercent ?? 0 }}</td>
+                  <td style="text-align:right">{{ l.committedQuantity ?? '—' }}</td>
+                  <td style="text-align:right">{{ lineValue(l) | number:'1.2-2' }}</td>
+                  <td>{{ l.unitOfMeasureName || '—' }}</td>
+                  <td>{{ categoryName(l.procurementCategoryId) }}</td>
+                  <td style="text-align:center"><button type="button" class="btn-remove" (click)="removeLine(i)">✕</button></td>
+                </tr>
+              } @empty { <tr><td colspan="9" class="empty-row">No lines added yet.</td></tr> }
+            </tbody>
+            @if (formLines.length) {
+              <tfoot>
+                <tr>
+                  <td colspan="5" style="text-align:right;font-weight:600">Committed Total</td>
+                  <td style="text-align:right;font-weight:600" [style.color]="committedExceedsMax ? '#ef4444' : null">{{ committedTotal | number:'1.2-2' }}</td>
+                  <td colspan="3"></td>
+                </tr>
+                @if (committedExceedsMax) {
+                  <tr>
+                    <td colspan="9" style="color:#ef4444;font-size:12px">
+                      Committed total exceeds the Max Contract Value of {{ form.maximumContractValue | number:'1.2-2' }}.
+                    </td>
+                  </tr>
+                }
+              </tfoot>
+            }
+          </table>
+        </div>
+
+        <h4 class="section-title">Add Line</h4>
+        <div class="form-grid line-add-grid">
+          <div class="form-group">
+            <label>Item</label>
+            <lib-entity-picker-input
+              [apiUrl]="itemApiUrl" [value]="newLine.itemCode || ''"
+              [displayFields]="itemDisplayFields" [columns]="itemColumns" [pickerPageSize]="25"
+              entityLabel="Item" placeholder="Search items…" (itemSelected)="onLineItemSelect($event)">
+            </lib-entity-picker-input>
+          </div>
+          <app-input label="Description" placeholder="Item description" [(ngModel)]="newLine.itemDescription"></app-input>
+          <app-input label="Unit Price" type="number" [min]="0" [step]="0.01" placeholder="0.00" [(ngModel)]="newLine.unitPrice"></app-input>
+          <app-input label="Discount %" type="number" [min]="0" [max]="100" placeholder="0" [(ngModel)]="newLine.discountPercent"></app-input>
+          <app-input label="Committed Qty" type="number" [min]="0" [(ngModel)]="newLine.committedQuantity"></app-input>
+          <app-select label="UoM" [options]="uomOptions" [(ngModel)]="newLine.unitOfMeasureId" placeholder="-- Unit --"></app-select>
+          <app-select label="Category" [options]="categoryOptions" [(ngModel)]="newLine.procurementCategoryId" placeholder="-- None --"></app-select>
+          <div class="form-group form-check-row">
+            <button type="button" class="btn btn-secondary" (click)="addLine()">+ Add Line</button>
+          </div>
+        </div>
+      }
+
+      @if (formTab === 'terms') {
+        <div class="form-grid">
+          <div class="form-group-full">
+            <app-textarea label="Terms & Conditions" [rows]="5" placeholder="Contract terms and conditions" [(ngModel)]="form.termsAndConditions"></app-textarea>
+          </div>
+          <div class="form-group-full">
+            <app-textarea label="Notes" [rows]="3" placeholder="Internal notes" [(ngModel)]="form.notes"></app-textarea>
+          </div>
+        </div>
+      }
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()" [disabled]="saving">{{ editing ? 'Save Changes' : 'Create Contract' }}</button>
+      </div>
+    </div>
+  }
+
+  <div class="filters-bar">
+    <span class="filter-search">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search by title, number or vendor…" [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
+      @if (search) { <button class="search-clear" title="Clear search" (click)="search = ''; onSearchChange()">×</button> }
+    </span>
+    <select class="filter-input" [(ngModel)]="statusFilter" (ngModelChange)="onStatusChange()">
+      <option [ngValue]="''">All statuses</option>
+      @for (opt of statusFilterOptions; track opt.value) { <option [ngValue]="opt.value">{{ opt.label }}</option> }
+    </select>
+  </div>
+
+  <app-data-table [sortableAll]="true"
+    [columns]="columns" [data]="contracts" [actions]="actions" [loading]="loading"
+    [totalCount]="totalCount" [page]="page" [pageSize]="pageSize"
+    [sortBy]="sortBy" [sortDirection]="sortDirection"
+    [highlightRowId]="highlighter.id"
+    (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)" (sortChange)="onSortChange($event)"
+    emptyMessage="No contracts found." (rowAction)="onRowAction($event)">
+  </app-data-table>
+
+</div>
+
+@if (showTerminateModal) {
+  <div class="modal-overlay">
+    <div class="modal-box">
+      <h4>Terminate Contract</h4>
+      <div class="form-group">
+        <label>Termination Reason <span style="color:#ef4444">*</span></label>
+        <textarea [(ngModel)]="terminationReason" rows="3" placeholder="Reason for termination"
+                  [style.border-color]="terminateSubmitted && !terminationReason.trim() ? '#ef4444' : null"></textarea>
+        @if (terminateSubmitted && !terminationReason.trim()) {
+          <span style="color:#ef4444;font-size:12px;margin-top:3px;display:block">A termination reason is required.</span>
+        }
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showTerminateModal = false">Cancel</button>
+        <button class="btn btn-danger" (click)="confirmTerminate()">Terminate</button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showDeleteConfirm) {
+  <div class="modal-overlay">
+    <div class="modal-box">
+      <h4>Delete Contract</h4>
+      <p>Delete <strong>{{ deleteTarget?.contractNumber }}</strong>? This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showDeleteConfirm = false">Cancel</button>
+        <button class="btn btn-danger" (click)="confirmDelete()">Delete</button>
+      </div>
+    </div>
+  </div>
+}

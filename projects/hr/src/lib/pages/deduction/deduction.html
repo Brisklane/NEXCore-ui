@@ -1,0 +1,99 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">payments</span></div>
+      <div>
+        <h1>Deductions</h1>
+        <p class="inv-hero-sub">Manage payroll deduction configurations</p>
+      </div>
+    </div>
+    <button class="btn btn-primary" (click)="openCreateForm()">+ New Deduction</button>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editingDeduction ? 'Edit Deduction' : 'Create Deduction' }}</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Name *</label>
+          <input type="text" [(ngModel)]="formName" placeholder="e.g. Income Tax" />
+        </div>
+        <div class="form-group">
+          <label>Code *</label>
+          <input type="text" [(ngModel)]="formCode" placeholder="e.g. TAX-01" />
+        </div>
+        <div class="form-group">
+          <label>Deduction Type *</label>
+          <select [(ngModel)]="formDeductionType">
+            <option value="tax">Tax</option>
+            <option value="insurance">Insurance</option>
+            <option value="loan">Loan</option>
+            <option value="pension">Pension</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Fixed Amount</label>
+          <input type="number" [(ngModel)]="formAmount" min="0" placeholder="0.00" />
+        </div>
+        <div class="form-group">
+          <label>Percentage (%)</label>
+          <input type="number" [(ngModel)]="formPercentage" min="0" max="100" placeholder="0.00" />
+        </div>
+        @if (editingDeduction) {
+          <div class="form-group form-check-row">
+            <label><input type="checkbox" [(ngModel)]="formIsActive" /> Active</label>
+          </div>
+        }
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="saveDeduction()">{{ editingDeduction ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Amount</th>
+            <th>Percentage</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (d of deductions; track d.id) {
+            <tr>
+              <td>{{ d.code }}</td>
+              <td>{{ d.name }}</td>
+              <td>{{ d.deductionType }}</td>
+              <td>{{ d.amount != null ? (d.amount | number) : '—' }}</td>
+              <td>{{ d.percentage != null ? d.percentage + '%' : '—' }}</td>
+              <td>
+                <span class="badge" [class.badge-active]="d.isActive" [class.badge-inactive]="!d.isActive">
+                  {{ d.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td>
+                <button class="btn btn-sm btn-secondary" (click)="openEditForm(d)">Edit</button>
+                <button class="btn btn-sm btn-danger" (click)="deleteDeduction(d)">Delete</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="7" class="empty-state">No deductions found.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

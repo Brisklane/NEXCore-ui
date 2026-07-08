@@ -1,0 +1,162 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">local_shipping</span></div>
+      <div>
+        <h1>Deliveries</h1>
+        <p class="inv-hero-sub">Track and manage order deliveries</p>
+      </div>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (successMsg) { <div class="alert alert-success">{{ successMsg }}</div> }
+
+  <!-- DETAIL PANEL -->
+  @if (selectedDelivery) {
+    <div class="detail-panel">
+      <div class="detail-header">
+        <div>
+          <h3>Delivery: {{ selectedDelivery.deliveryNumber || '—' }}</h3>
+          <div class="detail-header-title">
+            <span [class]="badgeClass(selectedDelivery.status)">{{ normStatus(selectedDelivery.status) }}</span>
+          </div>
+        </div>
+        <div class="detail-actions">
+          @if (normStatus(selectedDelivery.status) === 'Pending' || normStatus(selectedDelivery.status) === 'ReadyToShip') {
+            @if (!showShipForm) {
+              <button class="btn btn-primary btn-sm" (click)="openShipForm()">Ship</button>
+            } @else {
+              <button class="btn btn-secondary btn-sm" (click)="showShipForm = false">Cancel</button>
+              <button class="btn btn-primary btn-sm" (click)="shipDelivery()">Confirm Ship</button>
+            }
+            <button class="btn btn-danger btn-sm" (click)="deleteDelivery(selectedDelivery.id)">Delete</button>
+          }
+          @if (normStatus(selectedDelivery.status) === 'Shipped' || normStatus(selectedDelivery.status) === 'InTransit' || normStatus(selectedDelivery.status) === 'OutForDelivery') {
+            <button class="btn btn-success btn-sm" (click)="markDelivered(selectedDelivery.id)">Mark Delivered</button>
+          }
+          <button class="btn btn-secondary btn-sm" (click)="closeDetail()">✕ Close</button>
+        </div>
+      </div>
+
+      <div class="detail-grid">
+        <div class="detail-section">
+          <div class="detail-section-title">Delivery Info</div>
+          <div class="detail-row"><span>Order #</span><span>{{ selectedDelivery.salesOrderNumber || selectedDelivery.salesOrderId }}</span></div>
+          <div class="detail-row"><span>Customer</span><span>{{ selectedDelivery.contactName || '—' }}</span></div>
+          <div class="detail-row"><span>Carrier</span><span>{{ selectedDelivery.carrier || '—' }}</span></div>
+          <div class="detail-row"><span>Tracking #</span><span>{{ selectedDelivery.trackingNumber || '—' }}</span></div>
+          <div class="detail-row"><span>Planned Date</span><span>{{ selectedDelivery.plannedDeliveryDate ? (selectedDelivery.plannedDeliveryDate | date:'mediumDate') : '—' }}</span></div>
+          <div class="detail-row"><span>Shipped At</span><span>{{ selectedDelivery.actualShipDate ? (selectedDelivery.actualShipDate | date:'medium') : '—' }}</span></div>
+          <div class="detail-row"><span>Delivered At</span><span>{{ selectedDelivery.actualDeliveryDate ? (selectedDelivery.actualDeliveryDate | date:'medium') : '—' }}</span></div>
+        </div>
+        <div class="detail-section">
+          <div class="detail-section-title">Ship To</div>
+          @if (selectedDelivery.shipToName) { <div class="detail-row"><span>Name</span><span>{{ selectedDelivery.shipToName }}</span></div> }
+          @if (selectedDelivery.shipToStreet) { <div class="detail-row"><span>Street</span><span>{{ selectedDelivery.shipToStreet }}</span></div> }
+          @if (selectedDelivery.shipToCity) { <div class="detail-row"><span>City</span><span>{{ selectedDelivery.shipToCity }}</span></div> }
+          @if (selectedDelivery.shipToCountry) { <div class="detail-row"><span>Country</span><span>{{ selectedDelivery.shipToCountry }}</span></div> }
+          @if (!selectedDelivery.shipToName && !selectedDelivery.shipToStreet) {
+            <div style="color:#94a3b8;font-size:12px">No shipping address</div>
+          }
+        </div>
+      </div>
+
+      @if (showShipForm) {
+        <div class="form-section" style="margin-top:16px">
+          <div class="form-section-title">Ship Details</div>
+          <div class="form-grid form-grid-3">
+            <div class="form-group">
+              <label>Carrier</label>
+              <input type="text" [(ngModel)]="formCarrier" placeholder="e.g. FedEx, DHL" />
+            </div>
+            <div class="form-group" style="grid-column: 2 / span 2">
+              <label>Tracking Number</label>
+              <input type="text" [(ngModel)]="formTrackingNumber" placeholder="Tracking number" />
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (selectedDelivery.lines?.length > 0) {
+        <div class="detail-section" style="margin-top:16px">
+          <div class="detail-section-title">Line Items</div>
+          <table class="items-table">
+            <thead>
+              <tr><th>Item</th><th>Ordered</th><th>Delivered</th><th>UOM</th><th>Lot #</th></tr>
+            </thead>
+            <tbody>
+              @for (line of selectedDelivery.lines; track line.id) {
+                <tr>
+                  <td>{{ line.productName || line.productCode || line.productId }}</td>
+                  <td>{{ line.orderedQuantity }}</td>
+                  <td>{{ line.deliveredQuantity }}</td>
+                  <td>{{ line.unitOfMeasure || '—' }}</td>
+                  <td>{{ line.lotNumber || '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- FILTERS -->
+  <div class="inv-toolbar">
+    <span class="inv-search">
+      <span class="material-symbols-outlined">search</span>
+      <input type="text" [(ngModel)]="searchQuery" placeholder="Search by delivery #, order #, carrier, customer…" />
+    </span>
+    <select class="inv-select" [(ngModel)]="statusFilter">
+      <option value="">All Statuses</option>
+      @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }
+    </select>
+    <span class="toolbar-count"><strong>{{ filtered.length }}</strong> record(s)</span>
+  </div>
+
+  @if (loading) {
+    <div class="grid-card"><div class="grid-scroll"><table class="data-grid"><thead><tr><th>Delivery #</th><th>Customer</th><th>Status</th><th>Carrier</th><th>Planned</th><th></th></tr></thead><tbody>@for (s of [0,1,2,3,4]; track s) { <tr><td><span class="skeleton sk-line" style="width:60%"></span></td><td><span class="skeleton sk-line" style="width:70%"></span></td><td><span class="skeleton sk-line" style="width:50%"></span></td><td><span class="skeleton sk-line" style="width:50%"></span></td><td><span class="skeleton sk-line" style="width:40%"></span></td><td></td></tr> }</tbody></table></div></div>
+  } @else {
+    <div class="grid-card">
+      <div class="grid-scroll">
+        <table class="data-grid">
+          <thead>
+            <tr>
+              <th class="th-sort" [class.is-sorted]="sortBy === 'deliveryNumber'" (click)="sort('deliveryNumber')">Delivery # <span class="sort-caret">{{ sortBy === 'deliveryNumber' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+              <th class="th-sort" [class.is-sorted]="sortBy === 'salesOrderNumber'" (click)="sort('salesOrderNumber')">Order # <span class="sort-caret">{{ sortBy === 'salesOrderNumber' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+              <th class="th-sort" [class.is-sorted]="sortBy === 'contactName'" (click)="sort('contactName')">Customer <span class="sort-caret">{{ sortBy === 'contactName' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+              <th class="th-sort" [class.is-sorted]="sortBy === 'status'" (click)="sort('status')">Status <span class="sort-caret">{{ sortBy === 'status' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+              <th class="th-sort" [class.is-sorted]="sortBy === 'carrier'" (click)="sort('carrier')">Carrier <span class="sort-caret">{{ sortBy === 'carrier' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+              <th>Tracking #</th>
+              <th class="th-sort" [class.is-sorted]="sortBy === 'plannedDeliveryDate'" (click)="sort('plannedDeliveryDate')">Planned Date <span class="sort-caret">{{ sortBy === 'plannedDeliveryDate' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (d of filtered; track d.id) {
+              <tr class="is-clickable" (click)="viewDelivery(d)">
+                <td class="col-strong">{{ d.deliveryNumber || '—' }}</td>
+                <td>{{ d.salesOrderNumber || '—' }}</td>
+                <td>{{ d.contactName || '—' }}</td>
+                <td><span [class]="badgeClass(d.status)">{{ normStatus(d.status) }}</span></td>
+                <td>{{ d.carrier || '—' }}</td>
+                <td>{{ d.trackingNumber || '—' }}</td>
+                <td>{{ d.plannedDeliveryDate ? (d.plannedDeliveryDate | date:'mediumDate') : '—' }}</td>
+                <td class="num" style="white-space:nowrap">
+                  <button class="icon-btn" title="View" (click)="viewDelivery(d); $event.stopPropagation()"><span class="material-symbols-outlined">visibility</span></button>
+                  @if (normStatus(d.status) === 'Shipped' || normStatus(d.status) === 'InTransit') {
+                    <button class="icon-btn" title="Mark delivered" (click)="markDelivered(d.id); $event.stopPropagation()"><span class="material-symbols-outlined">task_alt</span></button>
+                  }
+                </td>
+              </tr>
+            }
+            @empty {
+              <tr><td colspan="8"><div class="inv-empty" style="padding:40px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">local_shipping</span></div><div class="inv-empty-title">No deliveries found</div><div class="inv-empty-text">Deliveries created from orders will appear here.</div></div></td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+</div>

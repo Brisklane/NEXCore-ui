@@ -1,0 +1,160 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">assignment_ind</span></div>
+      <div>
+        <h1>Job Applications</h1>
+        <p class="inv-hero-sub">Manage and track job applications</p>
+      </div>
+    </div>
+    <button class="btn btn-primary" (click)="openCreateForm()">+ New Application</button>
+  </div>
+
+  @if (error) {
+    <div class="alert alert-error">{{ error }}</div>
+  }
+
+  <div class="filters-bar">
+    <select [(ngModel)]="filterJobId">
+      <option value="">-- All Jobs --</option>
+      @for (j of jobs; track j.id) {
+        <option [value]="j.id">{{ j.jobTitle || j.jobCode || j.id }}</option>
+      }
+    </select>
+    <select [(ngModel)]="filterCandidateId">
+      <option value="">-- All Candidates --</option>
+      @for (c of candidates; track c.id) {
+        <option [value]="c.id">{{ c.firstName }} {{ c.lastName }}</option>
+      }
+    </select>
+    <button class="btn btn-secondary" (click)="filterByJob()">Filter by Job</button>
+    <button class="btn btn-secondary" (click)="filterByCandidate()">Filter by Candidate</button>
+    <button class="btn btn-secondary" (click)="clearFilters()">Clear</button>
+  </div>
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editingApplication ? 'Edit Application' : 'Create Application' }}</h3>
+      <div class="form-grid">
+
+        @if (!editingApplication) {
+          <div class="form-group">
+            <label>Job *</label>
+            <select [(ngModel)]="formJobId">
+              <option value="">Select a job</option>
+              @for (j of jobs; track j.id) {
+                <option [value]="j.id">{{ j.jobTitle || j.jobCode || j.id }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Candidate *</label>
+            <select [(ngModel)]="formCandidateId">
+              <option value="">Select a candidate</option>
+              @for (c of candidates; track c.id) {
+                <option [value]="c.id">{{ c.firstName }} {{ c.lastName }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Application Code</label>
+            <input type="text" [(ngModel)]="formApplicationCode" placeholder="e.g. APP-001" />
+          </div>
+          <div class="form-group">
+            <label>Applied Date</label>
+            <input type="date" [(ngModel)]="formAppliedDate" />
+          </div>
+        }
+
+        <div class="form-group">
+          <label>Status</label>
+          <select [(ngModel)]="formStatusLookupValueId">
+            <option value="">Select a status</option>
+            @for (s of statusOptions; track s.value) {
+              <option [value]="s.value">{{ s.label }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Priority</label>
+          <select [(ngModel)]="formPriorityLookupValueId">
+            <option value="">Select a priority</option>
+            @for (p of priorityOptions; track p.value) {
+              <option [value]="p.value">{{ p.label }}</option>
+            }
+          </select>
+        </div>
+
+        @if (editingApplication) {
+          <div class="form-group">
+            <label>Applied Date</label>
+            <input type="date" [(ngModel)]="formAppliedDate" />
+          </div>
+          <div class="form-group">
+            <label>Screening Score</label>
+            <input type="number" [(ngModel)]="formScreeningScore" min="0" max="100" placeholder="0–100" />
+          </div>
+          <div class="form-group form-check-row">
+            <label><input type="checkbox" [(ngModel)]="formIsShortlisted" /> Shortlisted</label>
+          </div>
+        }
+
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="saveApplication()">{{ editingApplication ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Job</th>
+            <th>Candidate</th>
+            <th>Status</th>
+            <th>Priority</th>
+            <th>Score</th>
+            <th>Shortlisted</th>
+            <th>Applied Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (a of applications; track a.id) {
+            <tr>
+              <td>{{ a.applicationCode || '—' }}</td>
+              <td>{{ getJobTitle(a.jobId) }}</td>
+              <td>{{ getCandidateName(a.candidateId) }}</td>
+              <td>
+                <span class="badge" [ngClass]="getStatusClass(a.statusLookupValueId)">
+                  {{ getStatusLabel(a.statusLookupValueId) }}
+                </span>
+              </td>
+              <td>{{ getPriorityLabel(a.priorityLookupValueId) }}</td>
+              <td>{{ a.screeningScore != null ? a.screeningScore : '—' }}</td>
+              <td>
+                <span class="badge" [class.badge-active]="a.isShortlisted" [class.badge-inactive]="!a.isShortlisted">
+                  {{ a.isShortlisted ? 'Yes' : 'No' }}
+                </span>
+              </td>
+              <td>{{ a.appliedDate | date:'mediumDate' }}</td>
+              <td class="actions-cell">
+                <button class="btn-icon" title="Edit" (click)="openEditForm(a)">✏️</button>
+                <button class="btn-icon btn-icon-danger" title="Delete" (click)="deleteApplication(a)">🗑️</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="9" class="empty-row">No applications found.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

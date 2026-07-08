@@ -1,0 +1,111 @@
+<div class="dsh inv-dsh">
+
+  <!-- Spotlight banner -->
+  <div class="dsh-banner">
+    <div class="dsh-banner-l">
+      <span class="dsh-eyebrow"><span class="material-symbols-outlined">warehouse</span> Inventory · Stock Control</span>
+      <h1>Inventory Dashboard</h1>
+      <p class="dsh-banner-sub">12 items are below their reorder point — 3 need urgent restocking. Everything else is healthy.</p>
+    </div>
+    <div class="dsh-banner-r">
+      <div class="dsh-fig">
+        <div class="dsh-fig-val">$2.8M</div>
+        <div class="dsh-fig-label">Stock value</div>
+      </div>
+      <div class="dsh-fig-sep"></div>
+      <div class="dsh-fig">
+        <div class="dsh-fig-val">1,842</div>
+        <div class="dsh-fig-label">Active SKUs</div>
+      </div>
+      <button class="dsh-cta" (click)="go('/inventory/goods-receipt')"><span class="material-symbols-outlined">input</span> Goods Receipt</button>
+    </div>
+  </div>
+
+  <!-- Bento -->
+  <div class="dsh-bento">
+
+    <!-- Stat tiles -->
+    <div class="dsh-tile dsh-stat span-3 hover" *ngFor="let s of stats" [ngClass]="s.color">
+      <div class="dsh-stat-ico"><span class="material-symbols-outlined">{{ s.icon }}</span></div>
+      <div class="dsh-stat-label">{{ s.label }}</div>
+      <div class="dsh-stat-val">{{ s.value }}</div>
+      <div class="dsh-stat-foot">
+        <span class="dsh-delta" [ngClass]="s.dir"><span class="material-symbols-outlined">{{ s.dir === 'up' ? 'arrow_upward' : 'arrow_downward' }}</span>{{ s.delta }}</span>
+        {{ s.foot }}
+      </div>
+    </div>
+
+    <!-- Stock movement bars -->
+    <div class="dsh-tile span-8">
+      <div class="dsh-th">
+        <div class="dsh-th-title"><span class="dsh-th-ico"><span class="material-symbols-outlined">bar_chart</span></span> Stock Movement</div>
+        <span class="dsh-th-hint">Units moved · last 8 weeks</span>
+      </div>
+      <div class="dsh-vbars">
+        <div class="dsh-vbar-col" *ngFor="let m of movement">
+          <div class="dsh-vbar" [style.height.%]="m.pct"></div>
+          <span class="dsh-vbar-cap">{{ m.cap }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Category donut -->
+    <div class="dsh-tile span-4">
+      <div class="dsh-th">
+        <div class="dsh-th-title"><span class="dsh-th-ico"><span class="material-symbols-outlined">donut_small</span></span> SKUs by Category</div>
+      </div>
+      <div class="dsh-donut-wrap">
+        <div class="dsh-donut">
+          <svg width="138" height="138" viewBox="0 0 138 138">
+            <circle cx="69" cy="69" r="40" fill="none" stroke="var(--bg-muted,#f1f5f9)" stroke-width="16"/>
+            <circle *ngFor="let c of categories" cx="69" cy="69" r="40" fill="none" [attr.stroke]="c.color" stroke-width="16"
+                    [attr.stroke-dasharray]="c.dash" [attr.stroke-dashoffset]="c.off" transform="rotate(-90 69 69)"/>
+          </svg>
+          <div class="dsh-donut-center">
+            <div class="dsh-donut-num">1,842</div>
+            <div class="dsh-donut-cap">SKUs</div>
+          </div>
+        </div>
+        <div class="dsh-legend">
+          <div class="dsh-leg" *ngFor="let c of categories">
+            <span class="dsh-leg-dot" [style.background]="c.color"></span>
+            <span class="dsh-leg-label">{{ c.label }}</span>
+            <span class="dsh-leg-val">{{ c.count }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Low stock alerts -->
+    <div class="dsh-tile span-8">
+      <div class="dsh-th">
+        <div class="dsh-th-title"><span class="dsh-th-ico"><span class="material-symbols-outlined">notification_important</span></span> Low Stock Alerts</div>
+        <a class="dsh-link" [routerLink]="['/inventory/stock-on-hand']">View all</a>
+      </div>
+      <div class="dsh-list">
+        <div class="dsh-li" *ngFor="let a of alerts">
+          <div class="dsh-li-av" [ngClass]="a.av">{{ a.qty }}</div>
+          <div class="dsh-li-main">
+            <div class="dsh-li-title">{{ a.name }}</div>
+            <div class="dsh-li-sub">{{ a.wh }}</div>
+          </div>
+          <span class="dsh-chip" [ngClass]="a.qty === '0' ? 'chip-out' : 'chip-low'">{{ a.qty === '0' ? 'Out of stock' : 'Low' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick actions -->
+    <div class="dsh-tile span-4">
+      <div class="dsh-th">
+        <div class="dsh-th-title"><span class="dsh-th-ico"><span class="material-symbols-outlined">bolt</span></span> Quick Actions</div>
+      </div>
+      <div class="dsh-qa">
+        <button class="dsh-qa-tile" [routerLink]="['/inventory/products/new']"><span class="dsh-qa-ico"><span class="material-symbols-outlined">add_box</span></span> New Product</button>
+        <button class="dsh-qa-tile" [routerLink]="['/inventory/goods-receipt']"><span class="dsh-qa-ico"><span class="material-symbols-outlined">input</span></span> Receive Stock</button>
+        <button class="dsh-qa-tile" [routerLink]="['/inventory/adjustments']"><span class="dsh-qa-ico"><span class="material-symbols-outlined">tune</span></span> Adjust Stock</button>
+        <button class="dsh-qa-tile" [routerLink]="['/inventory/insights']"><span class="dsh-qa-ico"><span class="material-symbols-outlined">assessment</span></span> Insights</button>
+      </div>
+    </div>
+
+  </div>
+</div>

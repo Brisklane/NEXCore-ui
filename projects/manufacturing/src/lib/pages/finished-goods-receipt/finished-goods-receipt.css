@@ -1,0 +1,48 @@
+﻿@import '../shared-styles.css';
+
+.form-control-readonly {
+	display: flex;
+	align-items: center;
+	min-height: 38px;
+	padding: 8px 12px;
+	background: var(--bg-subtle, #f8fafc);
+	border: 1px solid var(--border-strong, #cbd5e1);
+	border-radius: 6px;
+	color: var(--text-primary, #334155);
+}
+
+.qty-context {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	margin-top: 5px;
+}
+
+.qty-context-line {
+	font-size: 0.8rem;
+	color: var(--text-secondary, #64748b);
+}
+
+.qty-hint {
+	font-size: 0.78rem;
+	padding: 3px 6px;
+	border-radius: 4px;
+}
+
+.qty-hint-over {
+	color: #92400e;
+	background: #fef3c7;
+	border: 1px solid #fcd34d;
+}
+
+.qty-hint-exact {
+	color: #065f46;
+	background: #d1fae5;
+	border: 1px solid #6ee7b7;
+}
+
+.qty-hint-under {
+	color: #1e40af;
+	background: #dbeafe;
+	border: 1px solid #93c5fd;
+}

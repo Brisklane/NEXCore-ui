@@ -1,0 +1,273 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">event</span></div>
+      <div>
+        <h1>Meetings</h1>
+        <p class="inv-hero-sub">Schedule and track your meetings and events</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Meeting</button>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="kpi-strip">
+    <div class="kpi-card kpi-brand"><div class="kpi-top"><span class="kpi-label">Total Meetings</span><span class="kpi-icon"><span class="material-symbols-outlined">event</span></span></div><div class="kpi-value">{{ total }}</div></div>
+    <div class="kpi-card kpi-cyan"><div class="kpi-top"><span class="kpi-label">Upcoming</span><span class="kpi-icon"><span class="material-symbols-outlined">hourglass_top</span></span></div><div class="kpi-value">{{ upcoming }}</div></div>
+    <div class="kpi-card kpi-violet"><div class="kpi-top"><span class="kpi-label">Today</span><span class="kpi-icon"><span class="material-symbols-outlined">today</span></span></div><div class="kpi-value">{{ today }}</div></div>
+    <div class="kpi-card kpi-amber"><div class="kpi-top"><span class="kpi-label">This Week</span><span class="kpi-icon"><span class="material-symbols-outlined">calendar_month</span></span></div><div class="kpi-value">{{ thisWeek }}</div></div>
+    <div class="kpi-card kpi-success"><div class="kpi-top"><span class="kpi-label">Completed</span><span class="kpi-icon"><span class="material-symbols-outlined">check_circle</span></span></div><div class="kpi-value">{{ completed }}</div></div>
+    <div class="kpi-card kpi-danger"><div class="kpi-top"><span class="kpi-label">Overdue</span><span class="kpi-icon"><span class="material-symbols-outlined">warning</span></span></div><div class="kpi-value">{{ overdue }}</div></div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editingMeeting ? 'Edit Meeting' : 'New Meeting' }}</h3>
+      <form class="activity-form">
+
+        <!-- About -->
+        <div class="form-section">
+          <div class="section-header"><h4>About</h4></div>
+          <div class="form-grid">
+            <div class="form-group form-group-full">
+              <label>Subject <span class="required">*</span></label>
+              <input type="text" [(ngModel)]="formSubject" name="subject" placeholder="Meeting subject or agenda title" />
+            </div>
+            <div class="form-group form-group-full">
+              <label>Description</label>
+              <textarea [(ngModel)]="formDescription" name="description" rows="3" placeholder="Agenda, objectives, or notes..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- When -->
+        <div class="form-section">
+          <div class="section-header"><h4>When</h4></div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Start Date <span class="required">*</span></label>
+              <input type="date" [(ngModel)]="formStartDate" name="startDate" />
+            </div>
+            <div class="form-group">
+              <label>Start Time</label>
+              <input type="time" [(ngModel)]="formStartTime" name="startTime" />
+            </div>
+            <div class="form-group">
+              <label>End Date</label>
+              <input type="date" [(ngModel)]="formEndDate" name="endDate" />
+            </div>
+            <div class="form-group">
+              <label>End Time</label>
+              <input type="time" [(ngModel)]="formEndTime" name="endTime" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Name -->
+        <div class="form-section">
+          <div class="section-header"><h4>Name</h4></div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Type</label>
+              <select [(ngModel)]="formNameType" name="nameType" (ngModelChange)="onNameTypeChange()">
+                @for (o of nameTypeOptions; track o) { <option [value]="o">{{ o }}</option> }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>{{ formNameType }}</label>
+              <crm-lookup-dropdown
+                [(ngModel)]="formNameId"
+                name="nameId"
+                [options]="nameOptions"
+                [placeholder]="'Select ' + formNameType"
+                [label]="formNameType"
+              ></crm-lookup-dropdown>
+            </div>
+          </div>
+        </div>
+
+        <!-- Related To -->
+        <div class="form-section">
+          <div class="section-header"><h4>Related To</h4></div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Type</label>
+              <select [(ngModel)]="formRelatedToType" name="relatedToType" (ngModelChange)="onRelatedToTypeChange()">
+                @for (o of relatedToTypeOptions; track o) { <option [value]="o">{{ o }}</option> }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>{{ formRelatedToType }}</label>
+              <crm-lookup-dropdown
+                [(ngModel)]="formRelatedToId"
+                name="relatedToId"
+                [options]="relatedToOptions"
+                [placeholder]="'Select ' + formRelatedToType"
+                [label]="formRelatedToType"
+              ></crm-lookup-dropdown>
+            </div>
+          </div>
+        </div>
+
+        <!-- Details -->
+        <div class="form-section">
+          <div class="section-header"><h4>Details</h4></div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Priority</label>
+              <select [(ngModel)]="formPriority" name="priority">
+                @for (o of priorityOptions; track o) { <option [value]="o">{{ o }}</option> }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Status</label>
+              <select [(ngModel)]="formStatus" name="status">
+                @for (o of statusOptions; track o) { <option [value]="o">{{ o }}</option> }
+              </select>
+            </div>
+          </div>
+        </div>
+
+      </form>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" [disabled]="!formSubject.trim() || !formStartDate" (click)="saveMeeting()">
+          {{ editingMeeting ? 'Update Meeting' : 'Create Meeting' }}
+        </button>
+      </div>
+    </div>
+  }
+
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else {
+
+    <!-- Open / Upcoming Meetings -->
+    <div class="sub-section">
+      <div class="sub-section-header open-header">
+        <h4>Upcoming &amp; Active Meetings</h4>
+        <span class="count-chip">{{ openMeetingsCount }}</span>
+      </div>
+      <div class="filter-bar">
+        <input type="text" class="filter-search" placeholder="Search open meetings..."
+          [(ngModel)]="openMeetingsSearch" name="openMeetingsSearch" (input)="onOpenMeetingsSearch()" />
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th>Start</th>
+              <th>End</th>
+              <th>Name</th>
+              <th>Related To</th>
+              <th>Priority</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (m of pagedOpenMeetings; track m.id) {
+              <tr [class.row-overdue]="isOverdue(m)">
+                <td class="cell-primary">{{ m.subject }}</td>
+                <td>{{ m.startDateTime ? (m.startDateTime | date:'MMM d, y, h:mm a') : '—' }}</td>
+                <td [class.overdue-date]="isOverdue(m)">{{ m.endDateTime ? (m.endDateTime | date:'MMM d, y, h:mm a') : '—' }}</td>
+                <td>{{ getNameDisplay(m) }}</td>
+                <td>{{ getRelatedDisplay(m) }}</td>
+                <td><span class="badge {{ getPriorityClass(m.priority) }}">{{ m.priority || 'Normal' }}</span></td>
+                <td><span class="badge {{ getStatusClass(m.status) }}">{{ m.status || 'Not Started' }}</span></td>
+                <td class="actions-cell">
+                  <button class="btn-done" (click)="markDone(m)">Done</button>
+                  <button class="btn-icon" title="Edit" (click)="openEditForm(m)">✏️</button>
+                  <button class="btn-icon btn-icon-danger" title="Delete" (click)="deleteMeeting(m.id)">🗑️</button>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="8" class="empty-row">No active meetings.</td></tr>
+            }
+          </tbody>
+        </table>
+        <div class="pagination-bar">
+          <div class="pagination-info">
+            <span>Rows per page:</span>
+            <select [(ngModel)]="openMeetingsPageSize" name="openMeetingsPageSize" (change)="onOpenMeetingsPageSizeChange()">
+              @for (opt of pageSizeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+            </select>
+            <span>Showing {{ openMeetingsFirstEntry }} to {{ openMeetingsLastEntry }} of {{ openMeetingsTotal }}</span>
+          </div>
+          <div class="pagination-controls">
+            <button class="btn-page" [disabled]="openMeetingsPage <= 1" (click)="goToOpenMeetingsPage(openMeetingsPage - 1)">&#8249; Prev</button>
+            <span class="page-indicator">Page {{ openMeetingsPage }} of {{ openMeetingsTotalPages }}</span>
+            <button class="btn-page" [disabled]="openMeetingsPage >= openMeetingsTotalPages" (click)="goToOpenMeetingsPage(openMeetingsPage + 1)">Next &#8250;</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Completed Meetings -->
+    <div class="sub-section">
+      <div class="sub-section-header done-header">
+        <h4>Completed Meetings</h4>
+        <span class="count-chip">{{ closedMeetingsCount }}</span>
+      </div>
+      <div class="filter-bar">
+        <input type="text" class="filter-search" placeholder="Search completed meetings..."
+          [(ngModel)]="closedMeetingsSearch" name="closedMeetingsSearch" (input)="onClosedMeetingsSearch()" />
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th>Start</th>
+              <th>End</th>
+              <th>Name</th>
+              <th>Related To</th>
+              <th>Priority</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (m of pagedClosedMeetings; track m.id) {
+              <tr class="row-done">
+                <td class="cell-primary">{{ m.subject }}</td>
+                <td>{{ m.startDateTime ? (m.startDateTime | date:'MMM d, y, h:mm a') : '—' }}</td>
+                <td>{{ m.endDateTime ? (m.endDateTime | date:'MMM d, y, h:mm a') : '—' }}</td>
+                <td>{{ getNameDisplay(m) }}</td>
+                <td>{{ getRelatedDisplay(m) }}</td>
+                <td><span class="badge {{ getPriorityClass(m.priority) }}">{{ m.priority || 'Normal' }}</span></td>
+                <td><span class="badge badge-completed">Completed</span></td>
+                <td class="actions-cell">
+                  <button class="btn-icon" title="Edit" (click)="openEditForm(m)">✏️</button>
+                  <button class="btn-icon btn-icon-danger" title="Delete" (click)="deleteMeeting(m.id)">🗑️</button>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="8" class="empty-row">No completed meetings yet.</td></tr>
+            }
+          </tbody>
+        </table>
+        <div class="pagination-bar">
+          <div class="pagination-info">
+            <span>Rows per page:</span>
+            <select [(ngModel)]="closedMeetingsPageSize" name="closedMeetingsPageSize" (change)="onClosedMeetingsPageSizeChange()">
+              @for (opt of pageSizeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+            </select>
+            <span>Showing {{ closedMeetingsFirstEntry }} to {{ closedMeetingsLastEntry }} of {{ closedMeetingsTotal }}</span>
+          </div>
+          <div class="pagination-controls">
+            <button class="btn-page" [disabled]="closedMeetingsPage <= 1" (click)="goToClosedMeetingsPage(closedMeetingsPage - 1)">&#8249; Prev</button>
+            <span class="page-indicator">Page {{ closedMeetingsPage }} of {{ closedMeetingsTotalPages }}</span>
+            <button class="btn-page" [disabled]="closedMeetingsPage >= closedMeetingsTotalPages" (click)="goToClosedMeetingsPage(closedMeetingsPage + 1)">Next &#8250;</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  }
+</div>

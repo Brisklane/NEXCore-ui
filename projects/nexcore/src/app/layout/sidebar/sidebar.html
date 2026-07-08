@@ -1,0 +1,172 @@
+<aside class="sb2" [class.collapsed]="collapsed">
+
+  <!-- ══ Far-left icon rail (modules) ══ -->
+  <div class="rail">
+    <a class="rail-brand" routerLink="/dashboard" title="NexCore">
+      <img src="images/nexcore-mark.svg" alt="NexCore" class="rail-brand-mark" />
+    </a>
+
+    <button class="rail-btn rail-ai" (click)="aiOpen.emit(); $event.stopPropagation()" title="NexCore AI">
+      <span class="rail-ico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"></path>
+        </svg>
+      </span>
+      <span class="rail-label">AI</span>
+    </button>
+
+    <div class="rail-scroll">
+      <button *ngFor="let item of railTop"
+              class="rail-btn"
+              [class.active]="routeModuleLabel === item.label"
+              (click)="selectModule(item)"
+              [title]="item.label">
+        <span class="rail-ico"><span class="material-symbols-outlined">{{ item.icon }}</span></span>
+        <span class="rail-label">{{ item.label }}</span>
+      </button>
+
+      <div class="rail-sep"></div>
+
+      <button *ngFor="let item of railModules"
+              class="rail-btn rail-module"
+              [class.active]="isRailActive(item)"
+              (click)="selectModule(item)"
+              (mouseenter)="openFlyout(item, $event)"
+              (mouseleave)="scheduleCloseFlyout()"
+              [title]="item.label">
+        <span class="rail-ico"><img [src]="item.moduleImage" [alt]="item.label" class="rail-img" /></span>
+        <span class="rail-label">{{ item.label }}</span>
+      </button>
+
+      <!-- Apps: built on top of the core modules -->
+      <ng-container *ngIf="railApps.length">
+        <div class="rail-grouplabel">Apps</div>
+        <button *ngFor="let item of railApps"
+                class="rail-btn rail-module"
+                [class.active]="isRailActive(item)"
+                (click)="selectModule(item)"
+                (mouseenter)="openFlyout(item, $event)"
+                (mouseleave)="scheduleCloseFlyout()"
+                [title]="item.label">
+          <span class="rail-ico"><img [src]="item.moduleImage" [alt]="item.label" class="rail-img" /></span>
+          <span class="rail-label">{{ item.label }}</span>
+        </button>
+      </ng-container>
+    </div>
+
+    <div class="rail-bottom">
+      <ng-container *ngFor="let item of railAdmin">
+        <button class="rail-btn"
+                [class.active]="isRailActive(item)"
+                (click)="selectModule(item)"
+                (mouseenter)="openFlyout(item, $event)"
+                (mouseleave)="scheduleCloseFlyout()"
+                [title]="item.label">
+          <span class="rail-ico"><span class="material-symbols-outlined">{{ item.icon || 'shield_person' }}</span></span>
+          <span class="rail-label">{{ item.label }}</span>
+        </button>
+      </ng-container>
+      <!-- Fixed expand toggle (collapsed) — inside the rail footer so a flyout can never cover it -->
+      <button *ngIf="collapsed" class="rail-toggle" (click)="collapseToggle.emit(); $event.stopPropagation()"
+              title="Expand panel" aria-label="Expand panel">
+        <span class="material-symbols-outlined">chevron_right</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ Collapsed-rail hover flyout ══ -->
+  <div class="rail-flyout" *ngIf="collapsed && flyoutModule as fm"
+       [style.top.px]="flyoutTop"
+       (mouseenter)="keepFlyout()" (mouseleave)="scheduleCloseFlyout()">
+    <div class="rail-flyout-head">{{ fm.label }}</div>
+    <div class="rail-flyout-body">
+      <ng-container *ngFor="let child of fm.children">
+        <a *ngIf="!hasNestedChildren(child)" [routerLink]="child.route" routerLinkActive="active"
+           class="fly-link" (click)="flyoutModule = null">
+          <span class="material-symbols-outlined fly-ico">{{ child.icon }}</span><span>{{ child.label }}</span>
+        </a>
+        <ng-container *ngIf="hasNestedChildren(child)">
+          <div class="fly-group-label">{{ child.label }}</div>
+          <ng-container *ngFor="let sub of child.children">
+            <a *ngIf="!hasNestedChildren(sub)" [routerLink]="sub.route" routerLinkActive="active"
+               class="fly-link sub" (click)="flyoutModule = null">
+              <span class="material-symbols-outlined fly-ico">{{ sub.icon }}</span><span>{{ sub.label }}</span>
+            </a>
+            <ng-container *ngIf="hasNestedChildren(sub)">
+              <div class="fly-group-label sub">{{ sub.label }}</div>
+              <a *ngFor="let d of sub.children" [routerLink]="d.route" routerLinkActive="active"
+                 class="fly-link sub2" (click)="flyoutModule = null">
+                <span class="material-symbols-outlined fly-ico">{{ d.icon }}</span><span>{{ d.label }}</span>
+              </a>
+            </ng-container>
+          </ng-container>
+        </ng-container>
+      </ng-container>
+    </div>
+  </div>
+
+  <!-- ══ Context panel (active module's pages) ══ -->
+  <div class="panel" *ngIf="!collapsed && activeModule as m">
+    <div class="panel-head">
+      <span class="panel-title">{{ m.label }}</span>
+      <button class="panel-collapse" (click)="collapseToggle.emit(); $event.stopPropagation()" title="Collapse panel">
+        <span class="material-symbols-outlined">left_panel_close</span>
+      </button>
+    </div>
+
+    <div class="panel-scroll">
+      <ng-container *ngFor="let child of m.children">
+        <!-- Leaf link -->
+        <a *ngIf="!hasNestedChildren(child)"
+           [routerLink]="child.route"
+           routerLinkActive="active"
+           class="p-link"
+           [title]="child.label">
+          <span class="material-symbols-outlined p-ico">{{ child.icon }}</span>
+          <span class="p-text">{{ child.label }}</span>
+        </a>
+
+        <!-- Group -->
+        <div *ngIf="hasNestedChildren(child)" class="p-group">
+          <button class="p-group-head" (click)="toggleChild(child, $event, m.children)">
+            <span class="material-symbols-outlined p-ico">{{ child.icon }}</span>
+            <span class="p-group-label">{{ child.label }}</span>
+            <span class="material-symbols-outlined p-arrow" [class.rot]="child.expanded">chevron_right</span>
+          </button>
+
+          <div class="p-sub" *ngIf="child.expanded">
+            <ng-container *ngFor="let sub of child.children">
+              <a *ngIf="!hasNestedChildren(sub)"
+                 [routerLink]="sub.route"
+                 routerLinkActive="active"
+                 class="p-link p-link-sub"
+                 [title]="sub.label">
+                <span class="material-symbols-outlined p-ico">{{ sub.icon }}</span>
+                <span class="p-text">{{ sub.label }}</span>
+              </a>
+
+              <!-- Deeper nesting -->
+              <div *ngIf="hasNestedChildren(sub)" class="p-group p-group-nested">
+                <button class="p-group-head sub" (click)="toggleChild(sub, $event, child.children)">
+                  <span class="material-symbols-outlined p-ico">{{ sub.icon }}</span>
+                  <span class="p-group-label">{{ sub.label }}</span>
+                  <span class="material-symbols-outlined p-arrow" [class.rot]="sub.expanded">chevron_right</span>
+                </button>
+                <div class="p-sub" *ngIf="sub.expanded">
+                  <a *ngFor="let d of sub.children"
+                     [routerLink]="d.route"
+                     routerLinkActive="active"
+                     class="p-link p-link-sub2"
+                     [title]="d.label">
+                    <span class="material-symbols-outlined p-ico">{{ d.icon }}</span>
+                    <span class="p-text">{{ d.label }}</span>
+                  </a>
+                </div>
+              </div>
+            </ng-container>
+          </div>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+</aside>

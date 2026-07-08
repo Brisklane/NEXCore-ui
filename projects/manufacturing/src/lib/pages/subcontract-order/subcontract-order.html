@@ -1,0 +1,105 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">handshake</span></div>
+      <div>
+        <h1>Subcontract Orders</h1>
+        <p class="inv-hero-sub">Manage manufacturing subcontract orders</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreate()"><span class="material-symbols-outlined">add</span> New Order</button>
+    </div>
+  </div>
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="ux-help-box" role="note">
+    <strong>External Processing</strong>
+    Use subcontract orders for outsourced steps with clear expected return dates and unit cost to keep lead-time and cost visibility.
+  </div>
+
+  <div class="md-split">
+    <div class="md-list">
+      <div class="md-list-body">
+        @if (loading) {
+          @for (s of [0,1,2,3]; track s) { <div class="md-rec"><span class="skeleton sk-circle" style="width:34px;height:34px"></span><div style="flex:1"><span class="skeleton sk-line" style="width:70%"></span></div></div> }
+        } @else if (displayRows.length === 0) {
+          <div class="inv-empty" style="padding:36px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">handshake</span></div><div class="inv-empty-title">No subcontract orders</div><div class="inv-empty-text">Create your first subcontract order.</div></div>
+        } @else {
+          @for (row of displayRows; track row.id) {
+            <button class="md-rec" [class.selected]="editing?.id === row.id" [class.row-new]="row.id === highlighter.id" (click)="openEdit(row)">
+              <span class="md-rec-ico"><span class="material-symbols-outlined" style="font-size:17px">handshake</span></span>
+              <div class="md-rec-main"><span class="md-rec-title">{{ row.vendorName || 'Unmapped Vendor' }}</span><span class="md-rec-sub">{{ getOrderLabel(row.productionOrderId) }} · {{ row.quantitySent }} {{ row.unitOfMeasure }}</span></div>
+              <span class="status-pill pill-muted">{{ getStatusOptionLabel(row.status || 'Draft') }}</span>
+            </button>
+          }
+        }
+      </div>
+      @if (totalCount > 0) {
+        <div class="md-list-foot"><span>{{ (page - 1) * pageSize + 1 }}–{{ page * pageSize > totalCount ? totalCount : page * pageSize }} of {{ totalCount }}</span><div class="md-pager"><button class="btn-page" [disabled]="page <= 1" (click)="goToPage(page - 1)">Prev</button><button class="btn-page" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next</button></div></div>
+      }
+    </div>
+
+    <div class="md-detail">
+      @if (showForm) {
+        <div class="md-detail-head">
+          <span class="md-detail-title">{{ editing ? 'Edit Subcontract Order' : 'New Subcontract Order' }}</span>
+          <button class="icon-btn" title="Close" (click)="cancel()"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="md-detail-body">
+          <div class="form-grid">
+        <div class="form-group">
+          <label>Production Order ID *</label>
+          @if (editing) {
+            <div class="form-control form-control-readonly">{{ getSelectedOrderLabel() }}</div>
+          } @else {
+            <select [(ngModel)]="formProductionOrderId" (ngModelChange)="onProductionOrderChange()" class="form-control">
+              <option value="">-- Select Production Order --</option>
+              @for (opt of productionOrderOptions; track opt.id) {
+                <option [value]="opt.id">{{ opt.label }}</option>
+              }
+            </select>
+          }
+        </div>
+        <div class="form-group">
+          <label>Operation *</label>
+          @if (editing) {
+            <div class="form-control form-control-readonly">
+              {{ productionOrderOperationOptions.find(op => op.id === formProductionOrderOperationId)?.label || '—' }}
+            </div>
+          } @else {
+            <select [(ngModel)]="formProductionOrderOperationId" class="form-control" [disabled]="!formProductionOrderId || operationsLoading">
+              <option value="">-- Select Operation --</option>
+              @for (op of productionOrderOperationOptions; track op.id) {
+                <option [value]="op.id">{{ op.label }}</option>
+              }
+            </select>
+            @if (operationsLoading) {
+              <small class="field-help">Loading operations...</small>
+            }
+          }
+        </div>
+        <div class="form-group"><label>Vendor ID *</label><input type="text" [(ngModel)]="formVendorId" required /></div>
+        <div class="form-group"><label>Quantity Sent *</label><input type="number" [(ngModel)]="formQuantitySent" min="0.001" step="0.001" required /></div>
+        <div class="form-group"><label>Unit of Measure</label><input type="text" [(ngModel)]="formUnitOfMeasure" placeholder="e.g. EA" /></div>
+        <div class="form-group"><label>Unit Cost</label><input type="number" [(ngModel)]="formUnitCost" min="0" step="0.01" /></div>
+        <div class="form-group"><label>Status</label><select [(ngModel)]="formStatus">@for (s of statusOptions; track s) { <option [value]="s">{{ getStatusOptionLabel(s) }}</option> }</select></div>
+        <div class="form-group"><label>Expected Return Date</label><input type="date" [(ngModel)]="formExpectedReturnDate" /></div>
+      </div>
+          <div class="form-actions">
+            @if (editing) { <button class="ibtn ibtn--danger" style="margin-right:auto" (click)="delete(editing)"><span class="material-symbols-outlined">delete</span> Delete</button> }
+            <button class="ibtn ibtn--secondary" (click)="cancel()">Cancel</button>
+            <button class="ibtn ibtn--primary" (click)="save()"><span class="material-symbols-outlined">save</span> {{ editing ? 'Update' : 'Create' }}</button>
+          </div>
+        </div>
+      } @else {
+        <div class="md-empty">
+          <div class="md-empty-icon"><span class="material-symbols-outlined">handshake</span></div>
+          <div class="md-empty-title">Manage subcontract orders</div>
+          <div class="md-empty-text">Select an order to edit, or create a new one.</div>
+          <button class="btn-brand" style="margin-top:8px" (click)="openCreate()"><span class="material-symbols-outlined">add</span> New Order</button>
+        </div>
+      }
+    </div>
+  </div>
+</div>

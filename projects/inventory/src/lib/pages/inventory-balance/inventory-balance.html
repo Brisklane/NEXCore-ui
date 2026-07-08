@@ -1,0 +1,111 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">payments</span></div>
+      <div>
+        <h1>Stock Valuation</h1>
+        <p class="inv-hero-sub">Financial valuation of stock across every location</p>
+      </div>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="inv-toolbar">
+    <span class="inv-search">
+      <span class="material-symbols-outlined">search</span>
+      <input type="text" placeholder="Search by item code or name…" [(ngModel)]="filterSearch" (ngModelChange)="onSearchInput()" (keyup.enter)="applyFilters()" />
+      @if (filterSearch) { <button class="search-clear" title="Clear search" (click)="filterSearch = ''; applyFilters()">×</button> }
+    </span>
+    <select class="inv-select" [(ngModel)]="filterWarehouseId" (ngModelChange)="applyFilters()">
+      <option value="">All Locations</option>
+      @for (w of warehouses; track w.id) { <option [value]="w.id">{{ w.name }}</option> }
+    </select>
+    @if (filterSearch || filterWarehouseId) { <button class="ibtn ibtn--secondary" (click)="clearFilters()">Clear</button> }
+  </div>
+
+  <div class="val-layout">
+    <!-- ══ MAIN: valuation grid ══ -->
+    <div class="val-main">
+      @if (loading) {
+        <div class="grid-card">
+          <div class="grid-scroll">
+            <table class="data-grid">
+              <thead><tr><th>Product</th><th>Location</th><th class="num">In Stock</th><th class="num">Sellable</th><th class="num">Unit Cost</th><th class="num">Value</th></tr></thead>
+              <tbody>
+                @for (s of [0,1,2,3,4,5]; track s) {
+                  <tr><td><span class="skeleton sk-line" style="width:70%"></span></td><td><span class="skeleton sk-line" style="width:55%"></span></td><td><span class="skeleton sk-line" style="width:40%"></span></td><td><span class="skeleton sk-line" style="width:40%"></span></td><td><span class="skeleton sk-line" style="width:45%"></span></td><td><span class="skeleton sk-line" style="width:50%"></span></td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      } @else {
+        <div class="grid-card">
+          <div class="grid-scroll">
+            <table class="data-grid">
+              <thead>
+                <tr>
+                  <th class="th-sort" [class.is-sorted]="sortBy === 'itemCode' || sortBy === 'itemName'" (click)="sort('itemCode')">Product <span class="sort-caret">{{ sortBy === 'itemCode' || sortBy === 'itemName' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+                  <th>Location</th>
+                  <th class="num th-sort" [class.is-sorted]="sortBy === 'quantityOnHand'" (click)="sort('quantityOnHand')">In Stock <span class="sort-caret">{{ sortBy === 'quantityOnHand' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+                  <th class="num th-sort" [class.is-sorted]="sortBy === 'quantityReserved'" (click)="sort('quantityReserved')">Reserved <span class="sort-caret">{{ sortBy === 'quantityReserved' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+                  <th class="num th-sort" [class.is-sorted]="sortBy === 'quantityAvailable'" (click)="sort('quantityAvailable')">Sellable <span class="sort-caret">{{ sortBy === 'quantityAvailable' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+                  <th class="num th-sort" [class.is-sorted]="sortBy === 'averageCost'" (click)="sort('averageCost')">Unit Cost <span class="sort-caret">{{ sortBy === 'averageCost' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+                  <th class="num th-sort" [class.is-sorted]="sortBy === 'totalValue'" (click)="sort('totalValue')">Value <span class="sort-caret">{{ sortBy === 'totalValue' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+                  <th class="th-sort" [class.is-sorted]="sortBy === 'lastTransactionDate'" (click)="sort('lastTransactionDate')">Last Moved <span class="sort-caret">{{ sortBy === 'lastTransactionDate' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                @if (items.length === 0) {
+                  <tr><td colspan="8"><div class="inv-empty" style="padding:44px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">payments</span></div><div class="inv-empty-title">No valuation data found</div><div class="inv-empty-text">Try a different search or location.</div></div></td></tr>
+                }
+                @for (item of items; track item.itemId + item.warehouseId) {
+                  <tr>
+                    <td><div class="product-meta"><span class="product-name">{{ item.itemName }}</span><span class="product-code">{{ item.itemCode }}</span></div></td>
+                    <td>{{ item.warehouseName }}</td>
+                    <td class="num">{{ item.quantityOnHand | number:'1.0-2' }}</td>
+                    <td class="num" style="color:var(--c-neutral-text)">{{ item.quantityReserved | number:'1.0-2' }}</td>
+                    <td class="num">{{ item.quantityAvailable | number:'1.0-2' }}</td>
+                    <td class="num">{{ item.averageCost | number:'1.2-2' }}</td>
+                    <td class="num col-strong">{{ item.totalValue | number:'1.2-2' }}</td>
+                    <td>{{ item.lastTransactionDate ? (item.lastTransactionDate | date:'mediumDate') : '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          @if (totalCount > 0) {
+            <div class="grid-foot">
+              <div class="grid-foot-info">
+                Rows per page:
+                <select [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()">
+                  @for (s of pageSizeOptions; track s) { <option [value]="s">{{ s }}</option> }
+                </select>
+                <span>{{ (page - 1) * pageSize + 1 }}–{{ page * pageSize < totalCount ? page * pageSize : totalCount }} of {{ totalCount | number }}</span>
+              </div>
+              <div class="md-pager">
+                <button class="btn-page" (click)="goToPage(page - 1)" [disabled]="page <= 1">Prev</button>
+                <span class="page-indicator">Page {{ page }} of {{ totalPages }}</span>
+                <button class="btn-page" (click)="goToPage(page + 1)" [disabled]="page >= totalPages">Next</button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- ══ RAIL: persistent valuation summary ══ -->
+    <aside class="val-rail">
+      <div class="val-hero-card">
+        <span class="val-hero-label"><span class="material-symbols-outlined">account_balance_wallet</span> Total inventory value</span>
+        <span class="val-hero-value">{{ totalInventoryValue | number:'1.0-0' }}</span>
+        <span class="val-hero-foot">Valued at average cost{{ filterWarehouseId ? ' · this location' : ' · all locations' }}</span>
+      </div>
+      <div class="val-stat"><span class="val-stat-ic" style="--vc:var(--accent,#2b7fff)"><span class="material-symbols-outlined">inventory_2</span></span><div class="val-stat-body"><span class="val-stat-label">Unique items</span><span class="val-stat-value">{{ uniqueItemCount | number }}</span></div></div>
+      <div class="val-stat"><span class="val-stat-ic" style="--vc:#06b6d4"><span class="material-symbols-outlined">inventory</span></span><div class="val-stat-body"><span class="val-stat-label">Units in stock</span><span class="val-stat-value">{{ totalUnitsOnHand | number:'1.0-0' }}</span></div></div>
+      <div class="val-stat"><span class="val-stat-ic" style="--vc:#d97706"><span class="material-symbols-outlined">lock</span></span><div class="val-stat-body"><span class="val-stat-label">Reserved</span><span class="val-stat-value">{{ totalUnitsReserved | number:'1.0-0' }}</span></div></div>
+      <div class="val-stat"><span class="val-stat-ic" style="--vc:#16a34a"><span class="material-symbols-outlined">sell</span></span><div class="val-stat-body"><span class="val-stat-label">Sellable units</span><span class="val-stat-value">{{ totalUnitsAvailable | number:'1.0-0' }}</span></div></div>
+    </aside>
+  </div>
+</div>

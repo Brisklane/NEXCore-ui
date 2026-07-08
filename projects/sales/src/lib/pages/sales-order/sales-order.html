@@ -1,0 +1,677 @@
+<div class="page-container">
+
+  <!-- HEADER -->
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">shopping_cart</span></div>
+      <div>
+        <h1>Sales Orders</h1>
+        <p class="inv-hero-sub">Create and manage sales orders</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreate()"><span class="material-symbols-outlined">add</span> New Order</button>
+    </div>
+  </div>
+
+  <!-- ALERTS -->
+  @if (error) {
+    <div class="alert alert-error">{{ error }}</div>
+  }
+  @if (successMsg) {
+    <div class="alert alert-success">{{ successMsg }}</div>
+  }
+
+  <!-- STAT CARDS -->
+  @if (!showCreateForm && !selectedOrder) {
+    <div class="kpi-strip">
+      <div class="kpi-card kpi-brand" style="cursor:pointer" [class.is-sorted]="activeStatFilter === 'online'" (click)="filterStat('online')">
+        <div class="kpi-top"><span class="kpi-label">Online / Mobile</span><span class="kpi-icon"><span class="material-symbols-outlined">language</span></span></div>
+        <div class="kpi-value">{{ statsOnline }}</div>
+      </div>
+      <div class="kpi-card kpi-cyan" style="cursor:pointer" (click)="filterStat('pos')">
+        <div class="kpi-top"><span class="kpi-label">POS</span><span class="kpi-icon"><span class="material-symbols-outlined">point_of_sale</span></span></div>
+        <div class="kpi-value">{{ statsPOS }}</div>
+      </div>
+      <div class="kpi-card kpi-violet" style="cursor:pointer" (click)="filterStat('phone')">
+        <div class="kpi-top"><span class="kpi-label">Phone</span><span class="kpi-icon"><span class="material-symbols-outlined">call</span></span></div>
+        <div class="kpi-value">{{ statsPhone }}</div>
+      </div>
+      <div class="kpi-card kpi-amber" style="cursor:pointer" (click)="filterStat('pending')">
+        <div class="kpi-top"><span class="kpi-label">Pending</span><span class="kpi-icon"><span class="material-symbols-outlined">pending</span></span></div>
+        <div class="kpi-value">{{ statsPending }}</div>
+      </div>
+      <div class="kpi-card kpi-success" style="cursor:pointer" (click)="filterStat('today')">
+        <div class="kpi-top"><span class="kpi-label">Today</span><span class="kpi-icon"><span class="material-symbols-outlined">today</span></span></div>
+        <div class="kpi-value">{{ statsToday }}</div>
+      </div>
+      <div class="kpi-card kpi-brand">
+        <div class="kpi-top"><span class="kpi-label">Revenue (filtered)</span><span class="kpi-icon"><span class="material-symbols-outlined">payments</span></span></div>
+        <div class="kpi-value">{{ statsRevenue | number:'1.0-0' }}</div>
+      </div>
+    </div>
+
+    <!-- FILTERS -->
+    <div class="inv-toolbar">
+      <span class="inv-search"><span class="material-symbols-outlined">search</span><input type="text" [(ngModel)]="searchNumber" placeholder="Search order # or customer…" /></span>
+      <select class="inv-select" [(ngModel)]="statusFilter"><option value="">All Statuses</option>@for (s of displayStatuses; track s.value) { <option [value]="s.value">{{ s.name }}</option> }</select>
+      <select class="inv-select" [(ngModel)]="channelFilter"><option value="">All Channels</option>@for (c of displayChannels; track c.value) { <option [value]="c.value">{{ c.name }}</option> }</select>
+      <span class="toolbar-count"><strong>{{ filtered.length }}</strong> order(s)</span>
+    </div>
+
+    <!-- ORDER LIST -->
+    @if (loading) {
+      <div class="grid-card"><div class="grid-scroll"><table class="data-grid"><thead><tr><th>Order #</th><th>Customer</th><th>Channel</th><th>Status</th><th class="num">Total</th><th>Date</th></tr></thead><tbody>@for (s of [0,1,2,3,4]; track s) { <tr><td><span class="skeleton sk-line" style="width:60%"></span></td><td><span class="skeleton sk-line" style="width:70%"></span></td><td><span class="skeleton sk-line" style="width:50%"></span></td><td><span class="skeleton sk-line" style="width:50%"></span></td><td><span class="skeleton sk-line" style="width:40%"></span></td><td><span class="skeleton sk-line" style="width:50%"></span></td></tr> }</tbody></table></div></div>
+    } @else {
+      <div class="grid-card">
+        <div class="grid-scroll">
+          <table class="data-grid">
+            <thead>
+              <tr>
+                <th class="th-sort" [class.is-sorted]="sortBy === 'orderNumber'" (click)="sort('orderNumber')">Order # <span class="sort-caret">{{ sortBy === 'orderNumber' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+                <th class="th-sort" [class.is-sorted]="sortBy === 'contactName'" (click)="sort('contactName')">Customer <span class="sort-caret">{{ sortBy === 'contactName' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+                <th class="th-sort" [class.is-sorted]="sortBy === 'salesChannel'" (click)="sort('salesChannel')">Channel <span class="sort-caret">{{ sortBy === 'salesChannel' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+                <th class="th-sort" [class.is-sorted]="sortBy === 'status'" (click)="sort('status')">Status <span class="sort-caret">{{ sortBy === 'status' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+                <th class="num th-sort" [class.is-sorted]="sortBy === 'totalAmount'" (click)="sort('totalAmount')">Total <span class="sort-caret">{{ sortBy === 'totalAmount' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+                <th class="th-sort" [class.is-sorted]="sortBy === 'orderDate'" (click)="sort('orderDate')">Date <span class="sort-caret">{{ sortBy === 'orderDate' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}</span></th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (o of filtered; track o.id) {
+                <tr class="is-clickable" [class.row-new]="o.id === highlighter.id" (click)="viewOrder(o)">
+                  <td class="col-strong">{{ o.orderNumber || '—' }}</td>
+                  <td>{{ o.contactName || '—' }}</td>
+                  <td><span [class]="channelBadgeClass(o.salesChannel)">{{ channelLabel(o.salesChannel) }}</span></td>
+                  <td><span [class]="badgeClass(o.status)">{{ normStatus(o.status) }}</span></td>
+                  <td class="num">{{ o.totalAmount | number:'1.2-2' }}</td>
+                  <td>{{ o.orderDate | date:'mediumDate' }}</td>
+                  <td class="num"><button class="icon-btn" title="View" (click)="viewOrder(o); $event.stopPropagation()"><span class="material-symbols-outlined">visibility</span></button></td>
+                </tr>
+              }
+              @empty {
+                <tr><td colspan="7"><div class="inv-empty" style="padding:40px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">shopping_cart</span></div><div class="inv-empty-title">No orders found</div><div class="inv-empty-text">New sales orders will appear here.</div></div></td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  }
+
+  <!-- ORDER DETAIL -->
+  @if (selectedOrder && !showCreateForm) {
+    <div class="detail-panel">
+      <div class="detail-header">
+        <div>
+          <h3>{{ selectedOrder.orderNumber || 'Order' }}</h3>
+          <span [class]="badgeClass(selectedOrder.status)">{{ normStatus(selectedOrder.status) }}</span>
+          <span [class]="channelBadgeClass(selectedOrder.salesChannel)" style="margin-left:6px">{{ channelLabel(selectedOrder.salesChannel) }}</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          @if (normStatus(selectedOrder.status) === 'Draft') {
+            <button class="btn btn-primary btn-sm" (click)="confirmFromDraft(selectedOrder.id)">Confirm Order</button>
+            <button class="btn btn-danger btn-sm" (click)="deleteOrder(selectedOrder.id)">Delete</button>
+          }
+          @if (normStatus(selectedOrder.status) === 'Placed' || normStatus(selectedOrder.status) === 'PendingApproval') {
+            <button class="btn btn-primary btn-sm" (click)="confirmOrder(selectedOrder.id)">Confirm Order</button>
+          }
+          @if (canShip(selectedOrder)) {
+            <button class="btn btn-primary btn-sm" style="background:#7c3aed;border-color:#7c3aed" (click)="openCreateShipment()">📦 Create Shipment</button>
+          }
+          @if (canInvoice(selectedOrder)) {
+            <button class="btn btn-primary btn-sm" style="background:#16a34a;border-color:#16a34a" (click)="generateInvoice(selectedOrder.id)">Generate Invoice</button>
+          }
+          <button class="btn btn-secondary btn-sm" (click)="closeDetail()">✕ Close</button>
+        </div>
+      </div>
+
+      @if (detailLoading) {
+        <div class="loading-spinner">Loading details...</div>
+      } @else {
+        <div class="detail-grid">
+          <div class="detail-section">
+            <div class="detail-section-title">Order Info</div>
+            <div class="detail-row"><span>Customer</span><span>{{ selectedOrder.contactName || '—' }}</span></div>
+            <div class="detail-row"><span>PO #</span><span>{{ selectedOrder.customerPONumber || '—' }}</span></div>
+            <div class="detail-row"><span>Fulfillment</span><span>{{ selectedOrder.fulfillmentType || '—' }}</span></div>
+            <div class="detail-row"><span>Payment Terms</span><span>{{ selectedOrder.paymentTerms || '—' }}</span></div>
+            <div class="detail-row"><span>Incoterm</span><span>{{ selectedOrder.incoterm || '—' }}</span></div>
+            <div class="detail-row"><span>Order Date</span><span>{{ selectedOrder.orderDate | date:'medium' }}</span></div>
+          </div>
+          <div class="detail-section">
+            <div class="detail-section-title">Financials</div>
+            <div class="detail-row"><span>Subtotal</span><span>{{ selectedOrder.subtotalAmount | number:'1.2-2' }}</span></div>
+            <div class="detail-row"><span>Discount</span><span>{{ selectedOrder.discountAmount | number:'1.2-2' }}</span></div>
+            <div class="detail-row"><span>Tax</span><span>{{ selectedOrder.taxAmount | number:'1.2-2' }}</span></div>
+            <div class="detail-row"><span>Shipping</span><span>{{ selectedOrder.shippingAmount | number:'1.2-2' }}</span></div>
+            <div class="detail-row detail-row-total"><span>Total</span><span>{{ selectedOrder.totalAmount | number:'1.2-2' }}</span></div>
+            <div class="detail-row"><span>Paid</span><span>{{ selectedOrder.paidAmount | number:'1.2-2' }}</span></div>
+            <div class="detail-row"><span>Balance Due</span><span>{{ selectedOrder.balanceDue | number:'1.2-2' }}</span></div>
+          </div>
+          <div class="detail-section">
+            <div class="detail-section-title">Ship To</div>
+            @if (selectedOrder.shipToName) { <div class="detail-row"><span>Name</span><span>{{ selectedOrder.shipToName }}</span></div> }
+            @if (selectedOrder.shipToStreet) { <div class="detail-row"><span>Street</span><span>{{ selectedOrder.shipToStreet }}</span></div> }
+            @if (selectedOrder.shipToCity) { <div class="detail-row"><span>City</span><span>{{ selectedOrder.shipToCity }}{{ selectedOrder.shipToState ? ', ' + selectedOrder.shipToState : '' }}</span></div> }
+            @if (selectedOrder.shipToCountry) { <div class="detail-row"><span>Country</span><span>{{ selectedOrder.shipToCountry }}</span></div> }
+            @if (selectedOrder.requestedDeliveryDate) { <div class="detail-row"><span>Requested Delivery</span><span>{{ selectedOrder.requestedDeliveryDate | date:'mediumDate' }}</span></div> }
+            @if (!selectedOrder.shipToName && !selectedOrder.shipToStreet) {
+              <div style="color:#94a3b8;font-size:12px">No shipping address</div>
+            }
+          </div>
+        </div>
+
+        <!-- Line items -->
+        @if (selectedOrder.lines?.length > 0) {
+          <div class="detail-section" style="margin-top:16px">
+            <div class="detail-section-title">Line Items</div>
+            <table class="items-table">
+              <thead>
+                <tr><th>Item</th><th>Qty</th><th>Unit Price</th><th>Disc %</th><th>Tax</th><th>Line Total</th></tr>
+              </thead>
+              <tbody>
+                @for (line of selectedOrder.lines; track line.id) {
+                  <tr>
+                    <td>{{ line.productName || line.productCode || line.productId }}</td>
+                    <td>{{ line.quantity }}</td>
+                    <td>{{ line.unitPrice | number:'1.2-2' }}</td>
+                    <td>{{ line.discountPercentage }}%</td>
+                    <td>{{ line.taxCategory ?? '—' }}</td>
+                    <td>{{ line.totalAmount | number:'1.2-2' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+        @if (selectedOrder.notes) {
+          <div class="detail-section" style="margin-top:16px">
+            <div class="detail-section-title">Notes</div>
+            <p style="font-size:13px;color:#475569;margin:0">{{ selectedOrder.notes }}</p>
+          </div>
+        }
+      }
+    </div>
+  }
+
+  <!-- CREATE FORM -->
+  @if (showCreateForm) {
+    <div class="form-panel">
+      <div class="form-panel-header">
+        <h3>New Sales Order</h3>
+        @if (form.lines.length > 0) {
+          <span class="form-total-badge">{{ formTotal | number:'1.2-2' }}</span>
+        }
+      </div>
+
+      <!-- Tab bar -->
+      <div class="tab-bar">
+        <button class="tab-btn" [class.active]="activeTab === 'order'"    (click)="activeTab = 'order'">Order</button>
+        <button class="tab-btn" [class.active]="activeTab === 'pricing'"  (click)="activeTab = 'pricing'">Pricing</button>
+        <button class="tab-btn" [class.active]="activeTab === 'delivery'" (click)="activeTab = 'delivery'">Delivery</button>
+        <button class="tab-btn" [class.active]="activeTab === 'pos'"      (click)="activeTab = 'pos'">POS</button>
+        <button class="tab-btn" [class.active]="activeTab === 'items'"    (click)="activeTab = 'items'">
+          Items @if (form.lines.length > 0) { <span class="tab-badge">{{ form.lines.length }}</span> }
+        </button>
+      </div>
+
+      <!-- -- Tab: Order -- -->
+      @if (activeTab === 'order') {
+        <div class="tab-content">
+          <div class="form-section">
+            <div class="form-section-title">Customer</div>
+            <div class="form-grid form-grid-3">
+              <div class="form-group" style="grid-column: 1 / span 2">
+                <label>Customer *</label>
+                <lib-entity-picker-input
+                  [options]="contactPickerOptions"
+                  [value]="form.contactName || ''"
+                  [displayFields]="contactDisplayFields"
+                  [columns]="contactColumns"
+                  [pickerPageSize]="25"
+                  [allowCreate]="true"
+                  entityLabel="Customer"
+                  placeholder="Search customers..."
+                  (itemSelected)="onContactPicked($event)"
+                  (createRequested)="openQuickCreateContact($event)"
+                />
+              </div>
+              <div class="form-group">
+                <label>Customer PO #</label>
+                <input type="text" [(ngModel)]="form.customerPONumber" placeholder="PO / Reference #" />
+              </div>
+              <div class="form-group" style="grid-column: 1 / -1">
+                <label>Notes</label>
+                <input type="text" [(ngModel)]="form.notes" placeholder="Order notes..." />
+              </div>
+            </div>
+
+          </div>
+
+          <div class="form-section">
+            <div class="form-section-title">Order Information</div>
+            <div class="form-grid form-grid-3">
+              <div class="form-group">
+                <label>Channel *</label>
+                <select [(ngModel)]="form.salesChannel">
+                  @for (c of displayChannels; track c.value) {
+                    <option [value]="c.value">{{ c.name }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Fulfillment Type</label>
+                <select [(ngModel)]="form.fulfillmentType">
+                  <option value="">-- Select --</option>
+                  @for (f of displayFulfillmentTypes; track f.value) {
+                    <option [value]="f.value">{{ f.name }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Payment Terms</label>
+                <select [(ngModel)]="form.paymentTerms">
+                  <option value="">-- Select --</option>
+                  @for (p of displayPaymentTerms; track p.value) {
+                    <option [value]="p.value">{{ p.name }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- -- Tab: Pricing -- -->
+      @if (activeTab === 'pricing') {
+        <div class="tab-content">
+          <div class="form-section">
+            <div class="form-section-title">Discounts &amp; Pricing</div>
+            <div class="form-grid form-grid-3">
+              <div class="form-group">
+                <label>Price List</label>
+                <select [(ngModel)]="form.priceListId">
+                  <option value="">-- None --</option>
+                  @for (pl of priceLists; track pl.id) {
+                    <option [value]="pl.id">{{ pl.name }}{{ pl.code ? ' (' + pl.code + ')' : '' }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Coupon Code</label>
+                <input type="text" [(ngModel)]="form.couponCode" placeholder="Enter coupon code" />
+              </div>
+              <div class="form-group">
+                <label>Incoterm</label>
+                <select [(ngModel)]="form.incoterm">
+                  <option value="">-- Select --</option>
+                  @for (i of displayIncoterms; track i.value) {
+                    <option [value]="i.value">{{ i.name }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- -- Tab: POS -- -->
+      @if (activeTab === 'pos') {
+        <div class="tab-content">
+          <div class="form-section">
+            <div class="form-section-title">Point of Sale</div>
+            <div class="form-grid form-grid-3">
+              <div class="form-group">
+                <label>POS Store</label>
+                <select [(ngModel)]="form.originBranchId" (ngModelChange)="onPosStoreChange($event)">
+                  <option value="">-- None --</option>
+                  @for (s of posStores; track s.id) {
+                    <option [value]="s.id">{{ s.tradingName }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>POS Terminal</label>
+                <select [(ngModel)]="form.originPosTerminalId">
+                  <option value="">-- None --</option>
+                  @for (t of posTerminals; track t.id) {
+                    <option [value]="t.id">{{ t.terminalName }} ({{ t.terminalCode }})</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Cashier</label>
+                <select [(ngModel)]="form.originPosCashierId">
+                  <option value="">-- None --</option>
+                  @for (c of posCashiers; track c.id) {
+                    <option [value]="c.id">{{ c.displayName }}{{ c.badgeNumber ? ' (' + c.badgeNumber + ')' : '' }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- -- Tab: Delivery -- -->
+      @if (activeTab === 'delivery') {
+        <div class="tab-content">
+          <div class="form-section">
+            <div class="form-section-title">Ship-To Address</div>
+            <div class="form-grid form-grid-3">
+
+              <!-- Recipient name -->
+              <div class="form-group">
+                <label>Recipient Name</label>
+                <input type="text" [(ngModel)]="form.shipToName" placeholder="Full name" />
+              </div>
+
+              <!-- Phone with country code -->
+              <div class="form-group" style="grid-column: 2 / -1">
+                <label>Phone</label>
+                <div class="phone-group">
+                  <div class="phone-country-selector" (click)="$event.stopPropagation(); toggleDeliveryPhoneDropdown()">
+                    <img [src]="deliveryFlagUrl(deliveryPhoneCountry)" class="flag-img" alt="" />
+                    <span class="dial-code">{{ deliveryDialCode(deliveryPhoneCountry) }}</span>
+                    <span class="arrow-down">▾</span>
+                    @if (showDeliveryPhoneDropdown) {
+                      <div class="phone-dropdown" (click)="$event.stopPropagation()">
+                        <input type="text" class="dropdown-search" [(ngModel)]="deliveryPhoneSearch"
+                               placeholder="Search country…" autofocus />
+                        @for (c of filteredPhoneCountries; track c.code) {
+                          <div class="phone-dropdown-item"
+                               (click)="selectDeliveryPhoneCountry(c)">
+                            <img [src]="deliveryFlagUrl(c)" class="flag-img" alt="" />
+                            <span>{{ c.name }}</span>
+                            <span class="dial-code-sm">{{ deliveryDialCode(c) }}</span>
+                          </div>
+                        } @empty {
+                          <div class="phone-dropdown-empty">No matches</div>
+                        }
+                      </div>
+                    }
+                  </div>
+                  <input type="tel" [(ngModel)]="deliveryPhone" placeholder="e.g. 300 1234567" class="phone-input" />
+                </div>
+              </div>
+
+              <!-- Street -->
+              <div class="form-group" style="grid-column: 1 / -1">
+                <label>Street Address</label>
+                <input type="text" [(ngModel)]="form.shipToStreet" placeholder="Street address" />
+              </div>
+
+              <!-- Country dropdown (searchable) -->
+              <div class="form-group">
+                <label>Country</label>
+                <div class="geo-select" (click)="$event.stopPropagation(); toggleDeliveryCountryDropdown()">
+                  @if (selectedDeliveryCountry) {
+                    <img [src]="deliveryFlagUrl(selectedDeliveryCountry)" class="flag-img" alt="" />
+                    <span class="geo-select-label">{{ selectedDeliveryCountry.name }}</span>
+                  } @else {
+                    <span class="geo-select-placeholder">— Select Country —</span>
+                  }
+                  <span class="arrow-down">▾</span>
+                  @if (showDeliveryCountryDropdown) {
+                    <div class="phone-dropdown geo-dropdown" (click)="$event.stopPropagation()">
+                      <input type="text" class="dropdown-search" [(ngModel)]="deliveryCountrySearch"
+                             placeholder="Search country…" autofocus />
+                      @for (c of filteredDeliveryCountries; track c.code) {
+                        <div class="phone-dropdown-item" (click)="selectDeliveryCountry(c)">
+                          <img [src]="deliveryFlagUrl(c)" class="flag-img" alt="" />
+                          <span>{{ c.name }}</span>
+                        </div>
+                      } @empty {
+                        <div class="phone-dropdown-empty">No matches</div>
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
+
+              <!-- State / Province dropdown -->
+              <div class="form-group">
+                <label>{{ deliverySubdivisions[0]?.subdivisionType ?? 'State / Province' }}</label>
+                <select [(ngModel)]="deliverySubdivisionCode"
+                        (ngModelChange)="onDeliveryStateSelected($event)"
+                        [disabled]="!deliveryCountryCode || loadingDeliverySubdivisions">
+                  <option value="">{{ loadingDeliverySubdivisions ? 'Loading…' : '— Select —' }}</option>
+                  @for (s of deliverySubdivisions; track s.code) {
+                    <option [value]="s.code">{{ s.name }}</option>
+                  }
+                </select>
+              </div>
+
+              <!-- City dropdown -->
+              <div class="form-group">
+                <label>City</label>
+                <select [(ngModel)]="form.shipToCity"
+                        (ngModelChange)="onDeliveryCitySelected($event)"
+                        [disabled]="!deliverySubdivisionCode || loadingDeliveryCities">
+                  <option value="">{{ loadingDeliveryCities ? 'Loading…' : '— Select City —' }}</option>
+                  @for (c of deliveryCities; track c.id) {
+                    <option [value]="c.name">{{ c.name }}</option>
+                  }
+                </select>
+              </div>
+
+              <!-- Postal code -->
+              <div class="form-group">
+                <label>Postal Code</label>
+                <input type="text" [(ngModel)]="form.shipToPostalCode" placeholder="Postal code" />
+              </div>
+
+              <!-- Expires At -->
+              <div class="form-group">
+                <label>Expires At</label>
+                <input type="datetime-local" [(ngModel)]="form.expiresAt" />
+              </div>
+
+              <!-- Delivery instructions -->
+              <div class="form-group" style="grid-column: 1 / -1">
+                <label>Delivery Instructions</label>
+                <input type="text" [(ngModel)]="form.deliveryInstructions"
+                       placeholder="Special delivery instructions" />
+              </div>
+
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- -- Tab: Items -- -->
+      @if (activeTab === 'items') {
+        <div class="tab-content">
+          <div class="form-section items-section">
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th>Item</th><th>Qty</th><th>Unit Price</th><th>Disc %</th><th>Tax</th><th>Line Total</th><th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (line of form.lines; track $index) {
+                  <tr>
+                    <td>{{ line.productName || line.productCode || itemName(line.productId) }}</td>
+                    <td>
+                      {{ line.quantity }}
+                      @if (availableFor(line.productId) !== null) {
+                        @if (isOverStock(line.productId, line.quantity)) {
+                          <small class="stock-label stock-warn">Only {{ availableFor(line.productId) }} available</small>
+                        } @else {
+                          <small class="stock-label stock-ok">{{ availableFor(line.productId) }} available</small>
+                        }
+                      }
+                    </td>
+                    <td>{{ line.unitPrice | number:'1.2-2' }}</td>
+                    <td>{{ line.discountPercentage ?? 0 }}%</td>
+                    <td>{{ line.taxCategory || '--' }}</td>
+                    <td>{{ lineTotal(line) | number:'1.2-2' }}</td>
+                    <td><button class="btn btn-danger btn-sm" (click)="removeLine($index)">x</button></td>
+                  </tr>
+                }
+                <!-- Add row -->
+                <tr class="items-add-row-inline">
+                  <td>
+                    <lib-entity-picker-input
+                      [options]="itemPickerOptions"
+                      [value]="newLine.productName || ''"
+                      [displayFields]="itemDisplayFields"
+                      [columns]="itemColumns"
+                      [pickerPageSize]="25"
+                      entityLabel="Item"
+                      placeholder="Search items..."
+                      (itemSelected)="onItemSelect($event['id'])"
+                    />
+                  </td>
+                  <td>
+                    <input type="number" [(ngModel)]="newLine.quantity" placeholder="Qty" min="1" class="item-input-num"
+                           [class.input-error]="isOverStock(newLine.productId, newLine.quantity)" />
+                    @if (newLine.productId) {
+                      @if (isStockLoading(newLine.productId)) {
+                        <small class="stock-label">Checking stock…</small>
+                      } @else if (availableFor(newLine.productId) !== null) {
+                        @if (isOverStock(newLine.productId, newLine.quantity)) {
+                          <small class="stock-label stock-warn">Only {{ availableFor(newLine.productId) }} available</small>
+                        } @else {
+                          <small class="stock-label stock-ok">{{ availableFor(newLine.productId) }} available</small>
+                        }
+                      }
+                    }
+                  </td>
+                  <td><input type="number" [(ngModel)]="newLine.unitPrice"          placeholder="Unit Price" min="0" step="0.01" class="item-input-num" /></td>
+                  <td><input type="number" [(ngModel)]="newLine.discountPercentage" placeholder="Disc %"     min="0" max="100"   class="item-input-num" /></td>
+                  <td>
+                    <select [(ngModel)]="newLine.taxCategory" class="item-input-num">
+                      <option [ngValue]="null">None</option>
+                      @for (t of taxCategories; track t.value) {
+                        <option [ngValue]="+t.value">{{ t.label }}</option>
+                      }
+                    </select>
+                  </td>
+                  <td></td>
+                  <td><button class="btn btn-primary btn-sm" (click)="addLine()">+ Add</button></td>
+                </tr>
+              </tbody>
+              @if (form.lines.length > 0) {
+                <tfoot>
+                  <tr>
+                    <td colspan="5" style="text-align:right;font-weight:600">Order Total</td>
+                    <td style="font-weight:700">{{ formTotal | number:'1.2-2' }}</td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              }
+            </table>
+          </div>
+        </div>
+      }
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelCreate()">Cancel</button>
+        <button class="btn btn-primary" (click)="saveOrder()" [disabled]="saving">
+          {{ saving ? 'Saving...' : 'Create Order' }}
+        </button>
+      </div>
+    </div>
+  }
+
+  @if (showShipmentModal) {
+    <div class="qc-modal-overlay" (click)="cancelShipment()">
+      <div class="qc-modal-card" (click)="$event.stopPropagation()" style="max-width:720px">
+        <div class="qc-modal-head">
+          <h4>Create Shipment — {{ selectedOrder?.orderNumber }}</h4>
+          <button type="button" class="qc-modal-close" (click)="cancelShipment()" title="Close">✕</button>
+        </div>
+        <div class="qc-modal-body">
+          <p class="qc-modal-hint">Shipping deducts the quantities below from on-hand stock in the chosen warehouse (and posts COGS).</p>
+          @if (shipError) { <div class="qc-error">{{ shipError }}</div> }
+          <div class="form-group" style="margin-bottom:14px;max-width:320px">
+            <label>Source Warehouse *</label>
+            <select [(ngModel)]="shipWarehouseId">
+              <option value="">-- Select warehouse --</option>
+              @for (w of warehouseList; track w.id) { <option [value]="w.id">{{ w.code ? w.code + ' — ' : '' }}{{ w.name }}</option> }
+            </select>
+          </div>
+          <table class="items-table" style="width:100%">
+            <thead><tr>
+              <th>Item</th>
+              <th style="text-align:right">Available</th>
+              <th style="text-align:right">Ship Qty</th>
+              <th style="text-align:right">Remaining</th>
+            </tr></thead>
+            <tbody>
+              @for (l of shipLines; track l.salesOrderLineId) {
+                <tr>
+                  <td>{{ l.productCode ? l.productCode + ' — ' : '' }}{{ l.productName }}</td>
+                  <td style="text-align:right">
+                    @if (!shipWarehouseId) { <span style="color:#94a3b8">—</span> }
+                    @else if (shipAvailableFor(l.productId) === null) { <span style="color:#94a3b8">…</span> }
+                    @else {
+                      <span [style.color]="(shipAvailableFor(l.productId) ?? 0) < l.shipQty ? '#ef4444' : '#16a34a'">{{ shipAvailableFor(l.productId) }}</span>
+                    }
+                  </td>
+                  <td style="text-align:right">
+                    <input type="number" min="0" [max]="l.remaining" [(ngModel)]="l.shipQty" class="item-input-num" style="width:90px"
+                           [class.input-error]="(shipAvailableFor(l.productId) ?? 0) < l.shipQty || l.shipQty > l.remaining" />
+                  </td>
+                  <td style="text-align:right">{{ l.remaining - (l.shipQty || 0) }}</td>
+                </tr>
+              } @empty {
+                <tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:12px">Nothing left to ship on this order.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <div class="qc-modal-foot">
+          <button type="button" class="btn btn-secondary" (click)="cancelShipment()" [disabled]="shipSaving">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="confirmShipment()" [disabled]="shipSaving || !shipWarehouseId">
+            {{ shipSaving ? 'Shipping…' : 'Create & Ship' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (showQuickContact) {
+    <div class="qc-modal-overlay" (click)="cancelQuickContact()">
+      <div class="qc-modal-card" (click)="$event.stopPropagation()">
+        <div class="qc-modal-head">
+          <h4>Add New Customer</h4>
+          <button type="button" class="qc-modal-close" (click)="cancelQuickContact()" title="Close">✕</button>
+        </div>
+        <div class="qc-modal-body">
+          <p class="qc-modal-hint">Capture the essentials now — you can complete the rest later from the CRM module.</p>
+          @if (qcError) { <div class="qc-error">{{ qcError }}</div> }
+          <div class="qc-form-grid">
+            <div class="form-group"><label>First Name *</label><input type="text" [(ngModel)]="qcFirst" placeholder="First name" /></div>
+            <div class="form-group"><label>Last Name</label><input type="text" [(ngModel)]="qcLast" placeholder="Last name" /></div>
+            <div class="form-group"><label>Phone</label><input type="text" [(ngModel)]="qcPhone" placeholder="Phone" /></div>
+            <div class="form-group"><label>Email</label><input type="email" [(ngModel)]="qcEmail" placeholder="name@email.com" /></div>
+            <div class="form-group">
+              <label>Country</label>
+              <select [ngModel]="qcCountry" (ngModelChange)="onQcCountryChange($event)">
+                <option value="">Select country…</option>
+                @for (c of qcCountryList; track c.code) { <option [value]="c.code">{{ c.name }}</option> }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>City</label>
+              <select [(ngModel)]="qcCity" [disabled]="!qcCountry || qcLoadingCities">
+                <option value="">{{ qcLoadingCities ? 'Loading cities…' : (qcCountry ? 'Select city…' : 'Select a country first') }}</option>
+                @for (city of qcCities; track city.id) { <option [value]="city.name">{{ city.name }}</option> }
+              </select>
+            </div>
+            <div class="form-group qc-span-2"><label>Mailing Address</label><input type="text" [(ngModel)]="qcStreet" placeholder="Street / address" /></div>
+          </div>
+        </div>
+        <div class="qc-modal-foot">
+          <button type="button" class="btn btn-secondary" (click)="cancelQuickContact()">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="saveQuickContact()" [disabled]="qcSaving">{{ qcSaving ? 'Saving…' : 'Create Customer' }}</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

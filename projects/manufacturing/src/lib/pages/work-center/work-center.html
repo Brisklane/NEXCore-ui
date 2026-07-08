@@ -1,0 +1,77 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">precision_manufacturing</span></div>
+      <div>
+        <h1>Work Centers</h1>
+        <p class="inv-hero-sub">Manage manufacturing work centers</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreate()"><span class="material-symbols-outlined">add</span> New Work Center</button>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="ux-help-box" role="note">
+    <strong>Why This Matters</strong>
+    Define accurate machine cost per hour and capacity here. Routing, standard costing, and schedule load use this setup for automation.
+  </div>
+
+  <div class="md-split">
+    <!-- ══ LEFT: work-center rows ══ -->
+    <div class="md-list">
+      <div class="md-list-body">
+        @if (loading) {
+          @for (s of [0,1,2,3]; track s) { <div class="md-rec"><span class="skeleton sk-circle" style="width:34px;height:34px"></span><div style="flex:1"><span class="skeleton sk-line" style="width:70%"></span></div></div> }
+        } @else if (displayRows.length === 0) {
+          <div class="inv-empty" style="padding:36px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">precision_manufacturing</span></div><div class="inv-empty-title">No work centers</div><div class="inv-empty-text">Create your first work center.</div></div>
+        } @else {
+          @for (row of displayRows; track row.id) {
+            <button class="md-rec" [class.selected]="editing?.id === row.id" [class.row-new]="row.id === highlighter.id" (click)="openEdit(row)">
+              <span class="md-rec-ico">{{ (row.name || row.code || '?').charAt(0) }}</span>
+              <div class="md-rec-main"><span class="md-rec-title">{{ row.name }}</span><span class="md-rec-sub"><span class="md-rec-code">{{ row.code }}</span> · {{ row.hourlyMachineCost | number:'1.0-2' }}/hr</span></div>
+              <span class="md-rec-status" [class.on]="row.isActive" [class.off]="!row.isActive"></span>
+            </button>
+          }
+        }
+      </div>
+      @if (totalCount > 0) {
+        <div class="md-list-foot"><span>{{ (page - 1) * pageSize + 1 }}–{{ page * pageSize > totalCount ? totalCount : page * pageSize }} of {{ totalCount }}</span><div class="md-pager"><button class="btn-page" [disabled]="page <= 1" (click)="goToPage(page - 1)">Prev</button><button class="btn-page" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next</button></div></div>
+      }
+    </div>
+
+    <!-- ══ RIGHT: form | empty ══ -->
+    <div class="md-detail">
+      @if (showForm) {
+        <div class="md-detail-head">
+          <span class="md-detail-title">{{ editing ? 'Edit Work Center' : 'New Work Center' }}</span>
+          <button class="icon-btn" title="Close" (click)="cancel()"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="md-detail-body">
+          <div class="form-grid">
+            <div class="form-group"><label>Name *</label><input type="text" [(ngModel)]="formName" placeholder="Work center name" /></div>
+            <div class="form-group"><label>Code <span class="auto-label">auto</span></label><input type="text" [ngModel]="formCode" readonly class="input-readonly" /></div>
+            <div class="form-group"><label>Capacity Per Hour</label><input type="number" [(ngModel)]="formCapacityPerHour" min="0" /></div>
+            <div class="form-group"><label>Hourly Machine Cost</label><input type="number" [(ngModel)]="formHourlyMachineCost" min="0" /></div>
+            <div class="form-group"><label>Description</label><input type="text" [(ngModel)]="formDescription" /></div>
+            @if (editing) { <div class="form-group form-check-row"><label><input type="checkbox" [(ngModel)]="formIsActive" /> Active</label></div> }
+          </div>
+          <div class="form-actions">
+            @if (editing) { <button class="ibtn ibtn--danger" style="margin-right:auto" (click)="delete(editing)"><span class="material-symbols-outlined">delete</span> Delete</button> }
+            <button class="ibtn ibtn--secondary" (click)="cancel()">Cancel</button>
+            <button class="ibtn ibtn--primary" (click)="save()"><span class="material-symbols-outlined">save</span> {{ editing ? 'Update' : 'Create' }}</button>
+          </div>
+        </div>
+      } @else {
+        <div class="md-empty">
+          <div class="md-empty-icon"><span class="material-symbols-outlined">precision_manufacturing</span></div>
+          <div class="md-empty-title">Manage work centers</div>
+          <div class="md-empty-text">Select a work center to edit, or create a new one.</div>
+          <button class="btn-brand" style="margin-top:8px" (click)="openCreate()"><span class="material-symbols-outlined">add</span> New Work Center</button>
+        </div>
+      }
+    </div>
+  </div>
+</div>

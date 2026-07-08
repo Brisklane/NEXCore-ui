@@ -1,0 +1,134 @@
+<div class="page-container">
+
+  <app-page-header icon="verified_user" title="Approved Vendor List (Source List)" subtitle="Which vendors are authorised to supply each item or category — independent of a vendor's approval status. Manage vendor approval on the Vendors page.">
+    <button class="btn btn-primary" (click)="openCreate()">+ New Entry</button>
+  </app-page-header>
+
+  <div class="help-box"><span class="help-icon">ℹ️</span><span>The <strong>Approved Vendor List (AVL)</strong>, or source list, defines which vendors are authorised to supply each <strong>item</strong> or <strong>procurement category</strong>, with their agreed price, lead time and validity dates. Mark a vendor <strong>Preferred</strong> to favour it during sourcing, or <strong>Exclusive</strong> to allow only that vendor for the scope. <strong>Blocking</strong> a vendor here prevents new orders for that item/category without removing the entry. This is independent of a vendor's overall approval status, which is managed on the Vendors page.</span></div>
+
+  <app-alert type="error"   [message]="error"></app-alert>
+  <app-alert type="success" [message]="success"></app-alert>
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editing ? 'Edit AVL Entry' : 'New AVL Entry' }}</h3>
+      <div class="form-grid">
+        <app-select label="Vendor" required [options]="vendorOptions" [(ngModel)]="form.vendorId"
+                    placeholder="-- Select vendor --" [error]="submitted ? errors.vendorId : ''"></app-select>
+        <app-select label="Scope" [options]="scopeOptions" [(ngModel)]="scopeType" placeholder=""></app-select>
+
+        @if (scopeType === 'item') {
+          <div class="form-group">
+            <label>Item</label>
+            <lib-entity-picker-input
+              [apiUrl]="itemApiUrl"
+              [value]="form.itemCode"
+              [displayFields]="itemDisplayFields"
+              [columns]="itemColumns"
+              [pickerPageSize]="25"
+              entityLabel="Item"
+              placeholder="Search items by code or name…"
+              (itemSelected)="onItemSelect($event)">
+            </lib-entity-picker-input>
+          </div>
+          <app-input label="Item Description" required placeholder="Auto-filled from item; editable"
+                     [(ngModel)]="form.itemDescription" [error]="submitted ? errors.scope : ''"></app-input>
+        } @else {
+          <app-select label="Procurement Category" required [options]="categoryOptions"
+                      [(ngModel)]="form.procurementCategoryId" placeholder="-- Select category --"
+                      [error]="submitted ? errors.scope : ''"></app-select>
+        }
+
+        <app-input label="Valid From" type="date" [(ngModel)]="form.validFrom"></app-input>
+        <app-input label="Valid To" type="date" [(ngModel)]="form.validTo"
+                   [error]="submitted ? errors.validTo : ''"></app-input>
+        <app-input label="Default Unit Price" type="number" [min]="0" [step]="0.01" placeholder="0.00" [(ngModel)]="form.defaultUnitPrice"></app-input>
+        <app-select label="Currency" [options]="currencyOptions" [(ngModel)]="form.currencyCode" placeholder=""></app-select>
+        <app-input label="Lead Time (days)" type="number" [min]="0" placeholder="0"
+                   [(ngModel)]="form.leadTimeDays" [error]="submitted ? errors.leadTimeDays : ''"></app-input>
+        <app-input label="Minimum Order Qty" type="number" [min]="0" placeholder="0" [(ngModel)]="form.minimumOrderQuantity"></app-input>
+
+        <div class="form-group form-check-row">
+          <label><input type="checkbox" [(ngModel)]="form.isPreferred" /> Preferred</label>
+          <label style="margin-left:12px"><input type="checkbox" [(ngModel)]="form.isExclusive" /> Exclusive</label>
+        </div>
+        <div class="form-group form-check-row">
+          <label><input type="checkbox" [(ngModel)]="form.requiresQualityInspection" /> Requires QC</label>
+        </div>
+
+        <div class="form-group-full">
+          <app-textarea label="Notes" [rows]="2" placeholder="Sourcing notes" [(ngModel)]="form.notes"></app-textarea>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()" [disabled]="saving">{{ editing ? 'Save' : 'Create Entry' }}</button>
+      </div>
+    </div>
+  }
+
+  <div class="filters-bar">
+    <span class="filter-search">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search item code or description…" [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
+      @if (search) { <button class="search-clear" title="Clear search" (click)="search = ''; onSearchChange()">×</button> }
+    </span>
+    <select class="filter-input" [(ngModel)]="vendorFilter" (ngModelChange)="onVendorFilterChange()">
+      <option value="">All vendors</option>
+      @for (opt of vendorOptions; track opt.value) { <option [ngValue]="opt.value">{{ opt.label }}</option> }
+    </select>
+  </div>
+
+  <app-data-table [sortableAll]="true"
+    [columns]="columns"
+    [data]="filteredEntries"
+    [actions]="actions"
+    [loading]="loading"
+    [totalCount]="totalCount"
+    [page]="page"
+    [pageSize]="pageSize"
+    [sortBy]="sortBy"
+    [sortDirection]="sortDirection"
+    [highlightRowId]="highlighter.id"
+    emptyMessage="No approved vendor entries yet."
+    (rowAction)="onRowAction($event)"
+    (pageChange)="onPageChange($event)"
+    (pageSizeChange)="onPageSizeChange($event)"
+    (sortChange)="onSortChange($event)">
+  </app-data-table>
+
+</div>
+
+@if (showBlockModal) {
+  <div class="modal-overlay">
+    <div class="modal-box">
+      <h4>Block Vendor for Scope</h4>
+      <div class="form-group">
+        <label>Reason <span style="color:#ef4444">*</span></label>
+        <textarea [(ngModel)]="blockReason" rows="3" placeholder="Reason for blocking this vendor on this item/category"
+                  [style.border-color]="blockSubmitted && !blockReason.trim() ? '#ef4444' : null"></textarea>
+        @if (blockSubmitted && !blockReason.trim()) {
+          <span style="color:#ef4444;font-size:12px;margin-top:3px;display:block">A block reason is required.</span>
+        }
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showBlockModal = false">Cancel</button>
+        <button class="btn btn-danger" (click)="confirmBlock()">Block</button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showDeleteConfirm) {
+  <div class="modal-overlay">
+    <div class="modal-box">
+      <h4>Delete AVL Entry</h4>
+      <p>Delete the approved-vendor entry for <strong>{{ deleteTarget?.vendorName }}</strong>?</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showDeleteConfirm = false">Cancel</button>
+        <button class="btn btn-danger" (click)="confirmDelete()">Delete</button>
+      </div>
+    </div>
+  </div>
+}

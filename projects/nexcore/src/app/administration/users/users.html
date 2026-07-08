@@ -1,0 +1,212 @@
+<div class="page-container">
+
+  <div class="page-header">
+    <div>
+      <h2>Users</h2>
+      <p class="subtitle">Manage the people who have access to this workspace.</p>
+    </div>
+    <button class="btn btn-primary" type="button" (click)="openInvite()">+ Invite User</button>
+  </div>
+
+  <div class="stat-strip">
+    <div class="stat-pill">
+      <span class="stat-value">{{ users.length }}</span>
+      <span class="stat-label">Total users</span>
+    </div>
+    <div class="stat-pill">
+      <span class="stat-value pos">{{ activeCount }}</span>
+      <span class="stat-label">Active</span>
+    </div>
+    <div class="stat-pill">
+      <span class="stat-value neg">{{ lockedCount }}</span>
+      <span class="stat-label">Locked</span>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="filters-bar">
+    <div class="filter-search">
+      <span class="search-icon">⌕</span>
+      <input type="text" [(ngModel)]="search" placeholder="Search by name, email or username" />
+      <button class="search-clear" *ngIf="search" (click)="search=''" aria-label="Clear search">×</button>
+    </div>
+    <select [(ngModel)]="statusFilter">
+      <option value="all">All statuses</option>
+      <option value="active">Active only</option>
+      <option value="inactive">Inactive only</option>
+    </select>
+    <select [(ngModel)]="roleFilter">
+      <option value="">All roles</option>
+      <option *ngFor="let r of roles" [value]="r.name">{{ r.name }}</option>
+    </select>
+  </div>
+
+  @if (loading) {
+    <div class="loading-spinner">Loading users...</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Username</th>
+            <th>Roles</th>
+            <th>Status</th>
+            <th>Last login</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (u of filteredUsers; track u.id) {
+            <tr>
+              <td>
+                <div class="user-cell">
+                  <span class="user-avatar">{{ initials(u.fullName) }}</span>
+                  <div class="user-cell-text">
+                    <div class="user-name">{{ u.fullName }}</div>
+                    <div class="user-email">{{ u.email }}</div>
+                  </div>
+                </div>
+              </td>
+              <td>{{ u.username }}</td>
+              <td>
+                <div class="role-chips" *ngIf="u.roles.length; else noRoles">
+                  <span class="role-chip" *ngFor="let r of u.roles">{{ r }}</span>
+                </div>
+                <ng-template #noRoles><span class="muted">No roles assigned</span></ng-template>
+              </td>
+              <td>
+                <app-badge [value]="u.isActive"></app-badge>
+                <span class="badge badge-inactive lock-badge" *ngIf="u.isLockedOut">Locked</span>
+              </td>
+              <td>{{ formatLastLogin(u.lastLoginAt) }}</td>
+              <td class="actions-cell">
+                <button class="btn-icon" title="Manage roles" (click)="openRoleModal(u)">
+                  <span class="material-symbols-outlined">shield_person</span>
+                </button>
+                <button
+                  class="btn-icon"
+                  [title]="u.isLockedOut ? 'Unlock account' : 'Lock account'"
+                  [disabled]="u.id === currentUserId || pendingActionUserId === u.id"
+                  (click)="toggleLock(u)"
+                >
+                  <span class="material-symbols-outlined">{{ u.isLockedOut ? 'lock_open' : 'lock' }}</span>
+                </button>
+                <button
+                  class="btn-icon"
+                  [class.btn-icon-danger]="u.isActive"
+                  [title]="u.isActive ? 'Deactivate user' : 'Activate user'"
+                  [disabled]="u.id === currentUserId || pendingActionUserId === u.id"
+                  (click)="toggleActive(u)"
+                >
+                  <span class="material-symbols-outlined">{{ u.isActive ? 'person_off' : 'how_to_reg' }}</span>
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="6" class="empty-row">No users match your filters.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- ── Invite user modal ─────────────────────────────────────────── -->
+  @if (showInviteModal) {
+    <div class="modal-backdrop" (click)="closeInvite()">
+      <div class="modal-dialog" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div>
+            <h3>Invite a new user</h3>
+            <p class="modal-subtitle">They'll be added directly to your company.</p>
+          </div>
+          <button class="modal-close" type="button" (click)="closeInvite()">✕</button>
+        </div>
+        <div class="modal-body">
+          @if (inviteError) { <div class="alert alert-error">{{ inviteError }}</div> }
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Full name *</label>
+              <input type="text" [(ngModel)]="inviteForm.fullName" placeholder="Jane Doe" />
+            </div>
+            <div class="form-group">
+              <label>Username *</label>
+              <input type="text" [(ngModel)]="inviteForm.userName" placeholder="jane.doe" />
+            </div>
+            <div class="form-group">
+              <label>Email *</label>
+              <input type="email" [(ngModel)]="inviteForm.email" placeholder="jane@company.com" />
+            </div>
+            <div class="form-group">
+              <label>Phone</label>
+              <input type="text" [(ngModel)]="inviteForm.phoneNumber" placeholder="Optional" />
+            </div>
+            <div class="form-group">
+              <label>Password *</label>
+              <input type="password" [(ngModel)]="inviteForm.password" placeholder="Min 8 characters" />
+            </div>
+            <div class="form-group">
+              <label>Confirm password *</label>
+              <input type="password" [(ngModel)]="inviteForm.confirmPassword" />
+            </div>
+            <div class="form-group form-group-full" *ngIf="roles.length">
+              <label>Initial role</label>
+              <select [(ngModel)]="inviteForm.roleId">
+                <option [ngValue]="null">No role (assign later)</option>
+                <option *ngFor="let r of roles" [ngValue]="r.id">{{ r.name }}</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" type="button" (click)="closeInvite()">Cancel</button>
+          <button class="btn btn-primary" type="button" [disabled]="inviteSaving" (click)="submitInvite()">
+            {{ inviteSaving ? 'Inviting...' : 'Send invite' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── Role assignment modal ─────────────────────────────────────── -->
+  @if (showRoleModal && roleModalUser) {
+    <div class="modal-backdrop" (click)="closeRoleModal()">
+      <div class="modal-dialog" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div>
+            <h3>Manage roles</h3>
+            <p class="modal-subtitle">{{ roleModalUser.fullName }}</p>
+          </div>
+          <button class="modal-close" type="button" (click)="closeRoleModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          @if (roleModalError) { <div class="alert alert-error">{{ roleModalError }}</div> }
+          <div class="role-select-list" *ngIf="roles.length; else noRolesDefined">
+            <label class="role-select-row" *ngFor="let r of roles">
+              <input
+                type="checkbox"
+                [checked]="roleModalSelectedIds.has(r.id)"
+                (change)="toggleRoleSelection(r.id)"
+              />
+              <span class="role-select-text">
+                <span class="role-select-name">{{ r.name }}</span>
+                <span class="role-select-desc" *ngIf="r.description">{{ r.description }}</span>
+              </span>
+            </label>
+          </div>
+          <ng-template #noRolesDefined>
+            <p class="muted">No roles have been created for this company yet.</p>
+          </ng-template>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" type="button" (click)="closeRoleModal()">Cancel</button>
+          <button class="btn btn-primary" type="button" [disabled]="roleModalSaving" (click)="saveRoleAssignments()">
+            {{ roleModalSaving ? 'Saving...' : 'Save roles' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+</div>

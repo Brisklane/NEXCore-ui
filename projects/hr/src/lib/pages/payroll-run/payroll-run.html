@@ -1,0 +1,97 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">payments</span></div>
+      <div>
+        <h1>Payroll Runs</h1>
+        <p class="inv-hero-sub">Manage payroll processing cycles</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Payroll Run</button>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="md-split">
+    <!-- ══ LEFT: payroll-run rows ══ -->
+    <div class="md-list">
+      <div class="md-list-body">
+        @if (loading) {
+          @for (s of [0,1,2,3,4]; track s) { <div class="md-rec"><span class="skeleton sk-circle" style="width:34px;height:34px"></span><div style="flex:1"><span class="skeleton sk-line" style="width:70%"></span></div></div> }
+        } @else if (runs.length === 0) {
+          <div class="inv-empty" style="padding:36px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">payments</span></div><div class="inv-empty-title">No payroll runs</div><div class="inv-empty-text">Create your first payroll run.</div></div>
+        } @else {
+          @for (r of runs; track r.id) {
+            <button class="md-rec" [class.selected]="editingRun?.id === r.id" (click)="openEditForm(r)">
+              <span class="md-rec-ico"><span class="material-symbols-outlined" style="font-size:17px">payments</span></span>
+              <div class="md-rec-main"><span class="md-rec-title">{{ r.name }}</span><span class="md-rec-sub">{{ r.periodStart | date:'MMM d' }} – {{ r.periodEnd | date:'MMM d' }} · {{ r.totalAmount | number }} {{ r.currency }}</span></div>
+              <span class="status-pill" [class.pill-instock]="r.status === 'completed'" [class.pill-low]="r.status === 'processing' || r.status === 'draft'" [class.pill-out]="r.status === 'cancelled'" [class.pill-muted]="r.status !== 'completed' && r.status !== 'processing' && r.status !== 'draft' && r.status !== 'cancelled'">{{ r.status }}</span>
+            </button>
+          }
+        }
+      </div>
+    </div>
+
+    <!-- ══ RIGHT: form + Process | empty ══ -->
+    <div class="md-detail">
+      @if (showForm) {
+        <div class="md-detail-head">
+          <span class="md-detail-title">{{ editingRun ? 'Edit Payroll Run' : 'New Payroll Run' }}</span>
+          <div style="display:flex;gap:6px;align-items:center">
+            @if (editingRun && editingRun.status === 'draft') {
+              <button class="ibtn ibtn--sm ibtn--secondary" (click)="processRun(editingRun)"><span class="material-symbols-outlined">play_arrow</span> Process</button>
+            }
+            <button class="icon-btn" title="Close" (click)="cancelForm()"><span class="material-symbols-outlined">close</span></button>
+          </div>
+        </div>
+        <div class="md-detail-body">
+          <div class="form-grid">
+        <div class="form-group">
+          <label>Name *</label>
+          <input type="text" [(ngModel)]="formName" placeholder="e.g. April 2025 Payroll" />
+        </div>
+        @if (!editingRun) {
+          <div class="form-group">
+            <label>Period Start *</label>
+            <input type="date" [(ngModel)]="formPeriodStart" />
+          </div>
+          <div class="form-group">
+            <label>Period End *</label>
+            <input type="date" [(ngModel)]="formPeriodEnd" />
+          </div>
+          <div class="form-group">
+            <label>Currency</label>
+            <input type="text" [(ngModel)]="formCurrency" placeholder="USD" />
+          </div>
+        }
+        @if (editingRun) {
+          <div class="form-group">
+            <label>Status</label>
+            <select [(ngModel)]="formStatus">
+              <option value="draft">Draft</option>
+              <option value="processing">Processing</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+        }
+      </div>
+          <div class="form-actions">
+            @if (editingRun) { <button class="ibtn ibtn--danger" style="margin-right:auto" (click)="deleteRun(editingRun)"><span class="material-symbols-outlined">delete</span> Delete</button> }
+            <button class="ibtn ibtn--secondary" (click)="cancelForm()">Cancel</button>
+            <button class="ibtn ibtn--primary" (click)="saveRun()"><span class="material-symbols-outlined">save</span> {{ editingRun ? 'Update' : 'Create' }}</button>
+          </div>
+        </div>
+      } @else {
+        <div class="md-empty">
+          <div class="md-empty-icon"><span class="material-symbols-outlined">payments</span></div>
+          <div class="md-empty-title">Manage payroll runs</div>
+          <div class="md-empty-text">Select a payroll run to edit and process, or create a new one.</div>
+          <button class="btn-brand" style="margin-top:8px" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Payroll Run</button>
+        </div>
+      }
+    </div>
+  </div>
+</div>

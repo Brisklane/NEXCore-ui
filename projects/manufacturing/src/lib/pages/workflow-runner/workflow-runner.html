@@ -1,0 +1,95 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">play_circle</span></div>
+      <div>
+        <h1>Manufacturing Workflow Runner</h1>
+        <p class="inv-hero-sub">Run end-to-end Sales → MRP → Production → Inventory → Costing</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" [disabled]="loading" (click)="run()">
+        <span class="material-symbols-outlined">play_arrow</span> {{ loading ? 'Running...' : 'Run Scenario' }}
+      </button>
+    </div>
+  </div>
+
+  @if (error) {
+    <div class="alert alert-error">{{ error }}</div>
+  }
+
+  <div class="form-panel">
+    <h3>Scenario Input</h3>
+    <div class="form-grid">
+      <div class="form-group"><label>Product ID or Code *</label><input type="text" [(ngModel)]="productId" /></div>
+      <div class="form-group"><label>Demand Qty *</label><input type="number" min="1" [(ngModel)]="demandQty" /></div>
+      <div class="form-group"><label>Due Date *</label><input type="date" [(ngModel)]="dueDate" /></div>
+      <div class="form-group"><label>Unit</label><input type="text" [(ngModel)]="unit" /></div>
+      <div class="form-group"><label>Source Type</label><input type="text" [(ngModel)]="sourceType" /></div>
+      <div class="form-group"><label>Reference ID / Source Ref</label><input type="text" [(ngModel)]="referenceId" placeholder="Optional; leave as business ref" /></div>
+
+      <div class="form-group">
+        <label>Demand Policy</label>
+        <select [(ngModel)]="demandPolicy">
+          <option value="FullDemand">FullDemand</option>
+          <option value="ShortageOnly">ShortageOnly</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Quality Rejected Qty</label><input type="number" min="0" [(ngModel)]="qualityRejectedQty" /></div>
+      <div class="form-group"><label>FG Warehouse ID</label><input type="text" [(ngModel)]="finishedGoodsWarehouseId" /></div>
+      <div class="form-group"><label>Raw Warehouse ID</label><input type="text" [(ngModel)]="rawMaterialWarehouseId" /></div>
+      <div class="form-group"><label>Inventory Unit ID</label><input type="text" [(ngModel)]="inventoryDocumentUnitId" /></div>
+      <div class="form-group"><label>Posted By User ID</label><input type="text" [(ngModel)]="postedByUserId" /></div>
+
+      <div class="form-group"><label>Material Cost</label><input type="number" min="0" [(ngModel)]="actualMaterialCost" /></div>
+      <div class="form-group"><label>Labor Cost</label><input type="number" min="0" [(ngModel)]="actualLaborCost" /></div>
+      <div class="form-group"><label>Machine Cost</label><input type="number" min="0" [(ngModel)]="actualMachineCost" /></div>
+      <div class="form-group"><label>Overhead Cost</label><input type="number" min="0" [(ngModel)]="actualOverheadCost" /></div>
+      <div class="form-group"><label>Currency</label><input type="text" [(ngModel)]="currency" /></div>
+    </div>
+
+    <div class="form-check-row">
+      <label><input type="checkbox" [(ngModel)]="runMrp" /> Run MRP</label>
+      <label><input type="checkbox" [(ngModel)]="releaseOrder" /> Release Order</label>
+      <label><input type="checkbox" [(ngModel)]="closeOrder" /> Close Order</label>
+      <label><input type="checkbox" [(ngModel)]="useRework" /> Use Rework</label>
+      <label><input type="checkbox" [(ngModel)]="autoPostInventoryDocuments" /> Post Inventory Documents</label>
+    </div>
+  </div>
+
+  @if (result) {
+    <div class="form-panel result-panel">
+      <h3>Execution Result</h3>
+      <p><strong>Status:</strong> {{ result.completed ? 'Completed' : 'Not Completed' }}</p>
+      <p><strong>Message:</strong> {{ result.message }}</p>
+      <p>
+        <strong>Stock:</strong>
+        Available {{ result.stockDecision.availableStock }},
+        Delivered {{ result.stockDecision.deliveredFromStock }},
+        MRP shortage {{ result.stockDecision.mrpShortage }}
+      </p>
+      <p><strong>Planned Quantity:</strong> {{ result.plannedQuantity }}</p>
+
+      <h4>Created IDs</h4>
+      <pre>{{ result.createdIds | json }}</pre>
+
+      @if (result.warnings.length > 0) {
+        <h4>Warnings</h4>
+        <ul>
+          @for (w of result.warnings; track w) {
+            <li>{{ w }}</li>
+          }
+        </ul>
+      }
+
+      @if (result.requiredApiGaps.length > 0) {
+        <h4>Required Additional API Inputs</h4>
+        <ul>
+          @for (gap of result.requiredApiGaps; track gap) {
+            <li>{{ gap }}</li>
+          }
+        </ul>
+      }
+    </div>
+  }
+</div>

@@ -1,0 +1,182 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">build</span></div>
+      <div>
+        <h1>Rework Orders</h1>
+        <p class="inv-hero-sub">Manage product rework decisions following quality inspection failures</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreate()"><span class="material-symbols-outlined">add</span> New Rework Order</button>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="kpi-strip">
+    <div class="kpi-card kpi-brand"><div class="kpi-top"><span class="kpi-label">Total Rework Orders</span><span class="kpi-icon"><span class="material-symbols-outlined">build</span></span></div><div class="kpi-value">{{ totalCount }}</div></div>
+    <div class="kpi-card kpi-cyan"><div class="kpi-top"><span class="kpi-label">Open</span><span class="kpi-icon"><span class="material-symbols-outlined">radio_button_unchecked</span></span></div><div class="kpi-value">{{ openCount }}</div></div>
+    <div class="kpi-card kpi-violet"><div class="kpi-top"><span class="kpi-label">In Progress</span><span class="kpi-icon"><span class="material-symbols-outlined">settings</span></span></div><div class="kpi-value">{{ inProgressCount }}</div></div>
+    <div class="kpi-card kpi-success"><div class="kpi-top"><span class="kpi-label">Completed</span><span class="kpi-icon"><span class="material-symbols-outlined">check_circle</span></span></div><div class="kpi-value">{{ completedCount }}</div></div>
+    <div class="kpi-card kpi-amber"><div class="kpi-top"><span class="kpi-label">Total Rework Qty</span><span class="kpi-icon"><span class="material-symbols-outlined">package_2</span></span></div><div class="kpi-value">{{ totalReworkQty | number:'1.0-0' }}</div></div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (resumeInfo) { <div class="alert alert-info">🔄 {{ resumeInfo }}</div> }
+
+  <div class="ux-help-box" role="note">
+    <strong>Rework Traceability</strong>
+    Link rework orders to the right production context so quality, productivity, and cost drivers remain auditable.
+  </div>
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editing ? 'Edit Rework Order' : 'Create Rework Order' }}</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Production Order ID *</label>
+          @if (editing) {
+            <div class="form-control form-control-readonly">{{ getSelectedOrderLabel() }}</div>
+          } @else {
+            <select [(ngModel)]="formProductionOrderId" (ngModelChange)="onProductionOrderChange()" class="form-control" required>
+              <option value="">-- Select Production Order --</option>
+              @for (opt of productionOrderOptions; track opt.id) {
+                <option [value]="opt.id">{{ opt.label }}</option>
+              }
+            </select>
+          }
+        </div>
+        <div class="form-group">
+          <label>Inspection *</label>
+          @if (editing) {
+            <div class="form-control form-control-readonly">{{ inspectionLabelById[formInspectionId] || 'N/A' }}</div>
+          } @else {
+            <select
+              [(ngModel)]="formInspectionId"
+              (ngModelChange)="onInspectionChange($event)"
+              class="form-control"
+              [disabled]="loadingInspections || !formProductionOrderId"
+              required
+            >
+              <option value="">-- Select Inspection --</option>
+              @for (opt of inspectionOptions; track opt.id) {
+                <option [value]="opt.id">{{ opt.label }}</option>
+              }
+            </select>
+            @if (loadingInspections) {
+              <small class="field-help">Loading inspections...</small>
+            }
+            <small class="field-help">Quantity is auto-filled from the selected inspection's rejected quantity.</small>
+          }
+        </div>
+        <div class="form-group">
+          <label>Quantity *</label>
+          <input type="number" [(ngModel)]="formQuantity" [disabled]="loadingInspections" min="0.001" step="0.001" />
+        </div>
+        <div class="form-group">
+          <label>Unit of Measure *</label>
+          <input type="text" [(ngModel)]="formUnitOfMeasure" placeholder="e.g. EA" />
+        </div>
+        <div class="form-group">
+          <label>Scheduled Start</label>
+          <input type="date" [(ngModel)]="formStartDate" />
+        </div>
+        <div class="form-group">
+          <label>Scheduled End</label>
+          <input type="date" [(ngModel)]="formEndDate" />
+        </div>
+        @if (editing) {
+          <div class="form-group">
+            <label>Status</label>
+            <select [(ngModel)]="formStatus">@for (s of statusOptions; track s) { <option [value]="s">{{ getStatusOptionLabel(s) }}</option> }</select>
+          </div>
+        }
+        <div class="form-group form-group-wide">
+          <label>Reason</label>
+          <textarea [(ngModel)]="formReason" rows="2" placeholder="Describe the rework reason..."></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancel()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()">{{ editing ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <input type="text" class="filter-search" [(ngModel)]="filterSearch" (ngModelChange)="onFilterChange()" placeholder="Search by order or reason..." />
+    <select class="filter-select" [(ngModel)]="filterStatus" (ngModelChange)="onFilterChange()">
+      <option value="all">All Statuses</option>
+      @for (s of statusOptions; track s) { <option [value]="s">{{ getStatusOptionLabel(s) }}</option> }
+    </select>
+    <span class="filter-count">{{ filteredItems.length }} of {{ totalCount }}</span>
+  </div>
+
+  @if (loading) { <div class="loading-spinner">Loading...</div> } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Order #</th>
+            <th class="sortable" [class.sorted]="sortBy === 'quantity'" (click)="sort('quantity')">Qty <span class="sort-icon">{{ sortBy === 'quantity' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'quantityCompleted'" (click)="sort('quantityCompleted')">Completed <span class="sort-icon">{{ sortBy === 'quantityCompleted' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Progress</th>
+            <th class="sortable" [class.sorted]="sortBy === 'scheduledStartDate'" (click)="sort('scheduledStartDate')">Scheduled Start <span class="sort-icon">{{ sortBy === 'scheduledStartDate' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'scheduledEndDate'" (click)="sort('scheduledEndDate')">Scheduled End <span class="sort-icon">{{ sortBy === 'scheduledEndDate' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'reason'" (click)="sort('reason')">Reason <span class="sort-icon">{{ sortBy === 'reason' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'status'" (click)="sort('status')">Status <span class="sort-icon">{{ sortBy === 'status' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of displayRows; track row.id) {
+            <tr [class.row-new]="row.id === highlighter.id">
+              <td class="cell-primary">{{ getOrderLabel(row.productionOrderId) }}</td>
+              <td>{{ row.quantity | number:'1.0-2' }} {{ row.unitOfMeasure }}</td>
+              <td class="text-success">{{ row.quantityCompleted | number:'1.0-2' }}</td>
+              <td>
+                <div class="progress-bar-wrap">
+                  <div class="progress-bar" [style.width.%]="getCompletionPct(row)"></div>
+                </div>
+                <span class="pct-label">{{ getCompletionPct(row) }}%</span>
+              </td>
+              <td>{{ row.scheduledStartDate | date:'mediumDate' }}</td>
+              <td>{{ row.scheduledEndDate | date:'mediumDate' }}</td>
+              <td class="cell-notes">{{ row.reason || '—' }}</td>
+              <td><span class="badge {{ getStatusClass(row.status) }}">{{ row.status }}</span></td>
+              <td class="actions-cell">
+                @if (row.status === 'Open') {
+                  <button class="btn-xs btn-action" (click)="quickUpdateStatus(row, 'InProgress')">Start</button>
+                }
+                @if (row.status === 'InProgress') {
+                  <button class="btn-xs btn-success" (click)="quickUpdateStatus(row, 'Completed')">Complete</button>
+                }
+                <button class="btn-icon" (click)="openEdit(row)" title="Edit">✏️</button>
+                <button class="btn-icon" (click)="delete(row)" title="Delete">🗑️</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="9" class="empty-row">No rework orders found</td></tr>
+          }
+        </tbody>
+      </table>
+      @if (filteredItems.length > 0) {
+        <div class="pagination-bar">
+          <div class="pagination-info">
+            <span>Rows per page:</span>
+            <select [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+              @for (opt of pageSizeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+            </select>
+            <span>Showing {{ (page - 1) * pageSize + 1 }} to {{ page * pageSize > totalCount ? totalCount : page * pageSize }} of {{ totalCount }} entries</span>
+          </div>
+          <div class="pagination-controls">
+            <button class="btn-page" [disabled]="page <= 1" (click)="goToPage(page - 1)">&#8249; Prev</button>
+            <span class="page-indicator">Page {{ page }} of {{ totalPages }}</span>
+            <button class="btn-page" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next &#8250;</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

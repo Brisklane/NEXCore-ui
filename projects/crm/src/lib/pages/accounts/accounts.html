@@ -1,0 +1,231 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">business</span></div>
+      <div>
+        <h1>Accounts</h1>
+        <p class="inv-hero-sub">Manage your customer accounts</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Account</button>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="md-split">
+    <!-- ══ LEFT: account rows ══ -->
+    <div class="md-list">
+      <div class="md-list-head">
+        <span class="inv-search"><span class="material-symbols-outlined">search</span><input type="text" placeholder="Search accounts…" [(ngModel)]="searchTerm" (input)="onSearchChange()" /></span>
+      </div>
+      <div class="md-list-body">
+        @if (loading) {
+          @for (s of [0,1,2,3]; track s) { <div class="md-rec"><span class="skeleton sk-circle" style="width:34px;height:34px"></span><div style="flex:1"><span class="skeleton sk-line" style="width:70%"></span></div></div> }
+        } @else if (filteredAccounts.length === 0) {
+          <div class="inv-empty" style="padding:36px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">business</span></div><div class="inv-empty-title">No accounts</div><div class="inv-empty-text">Create your first account.</div></div>
+        } @else {
+          @for (acc of filteredAccounts; track acc.id) {
+            <button class="md-rec" [class.selected]="editingAccount?.id === acc.id" (click)="openEditForm(acc)">
+              <span class="md-rec-ico">{{ (acc.accountName || '?').charAt(0) }}</span>
+              <div class="md-rec-main"><span class="md-rec-title">{{ acc.accountName }}</span><span class="md-rec-sub">@if (acc.type) { {{ acc.type }} }@if (acc.billingCity) { · {{ acc.billingCity }} }@if (acc.billingCountry) { , {{ acc.billingCountry }} }</span></div>
+            </button>
+          }
+        }
+      </div>
+      @if (totalCount > 0) {
+        <div class="md-list-foot"><span>{{ firstEntry }}–{{ lastEntry }} of {{ totalCount }}</span><div class="md-pager"><button class="btn-page" [disabled]="page <= 1" (click)="goToPage(page - 1)">Prev</button><button class="btn-page" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next</button></div></div>
+      }
+    </div>
+
+    <!-- ══ RIGHT: form | empty ══ -->
+    <div class="md-detail">
+      @if (showForm) {
+        <div class="md-detail-head">
+          <span class="md-detail-title">{{ editingAccount ? 'Edit Account' : 'New Account' }}</span>
+          <button class="icon-btn" title="Close" (click)="cancelForm()"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="md-detail-body">
+      <form class="account-form">
+        <div class="form-section">
+          <div class="section-header">
+            <h4>About</h4>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Account Name <span class="required">*</span></label>
+              <input type="text" [(ngModel)]="formAccountName" name="accountName" placeholder="Account name" />
+            </div>
+
+            <div class="form-group">
+              <label>Website</label>
+              <input type="text" [(ngModel)]="formWebsite" name="website" placeholder="https://" />
+            </div>
+
+            <div class="form-group">
+              <label>Type</label>
+              <crm-lookup-dropdown
+                [(ngModel)]="formType"
+                name="type"
+                [options]="accountTypeOptions"
+                placeholder="Select type"
+                label="Account Type"
+              ></crm-lookup-dropdown>
+            </div>
+
+            <div class="form-group">
+              <label>Parent Account</label>
+              <crm-lookup-dropdown
+                [(ngModel)]="formParentAccountId"
+                name="parentAccountId"
+                [options]="parentAccountSelectOptions"
+                placeholder="Select parent account"
+                label="Parent Account"
+              ></crm-lookup-dropdown>
+            </div>
+
+            <div class="form-group form-group-full">
+              <label>Description</label>
+              <textarea [(ngModel)]="formDescription" name="description" rows="3" placeholder="Description"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="section-header">
+            <h4>Billing Address</h4>
+          </div>
+
+          <div class="form-grid">
+            <!-- Country — select first to unlock phone and state -->
+            <div class="form-group">
+              <label>Billing Country</label>
+              <crm-lookup-dropdown
+                [(ngModel)]="formBillingCountry"
+                (ngModelChange)="onBillingCountryChange($event)"
+                name="billingCountry"
+                [options]="countryOptions"
+                placeholder="Select country"
+                label="Billing Country"
+              ></crm-lookup-dropdown>
+            </div>
+
+            <!-- Phone — dial code badge non-editable; enabled after billing country selected -->
+            <div class="form-group">
+              <label>Phone</label>
+              <div class="phone-field-wrap" [class.field-disabled]="!formBillingCountry">
+                @if (phoneDialCode) {
+                  <span class="phone-dial-badge">{{ phoneDialCode }}</span>
+                }
+                <input
+                  type="tel"
+                  class="phone-number-input"
+                  [class.no-prefix]="!phoneDialCode"
+                  [disabled]="!formBillingCountry"
+                  [value]="phoneDisplayValue"
+                  (input)="onPhoneInput($event)"
+                  [placeholder]="phoneDialCode ? 'Phone number' : 'Select a country first'"
+                  [maxlength]="phoneNumberMax"
+                />
+              </div>
+            </div>
+
+            <div class="form-group form-group-full">
+              <label>Billing Address</label>
+              <input type="text" [(ngModel)]="formBillingStreet" name="billingStreet" placeholder="Street address, building, floor, etc." [maxlength]="addressMax" />
+            </div>
+
+            <div class="form-group">
+              <label>Billing City</label>
+              <input type="text" [(ngModel)]="formBillingCity" name="billingCity" placeholder="City" [maxlength]="cityMax" />
+            </div>
+
+            <div class="form-group">
+              <label>Billing Zip Code</label>
+              <input type="text" [(ngModel)]="formBillingPostalCode" name="billingPostalCode" placeholder="Postal / ZIP code" />
+            </div>
+
+            <!-- State/Province — disabled until country is selected -->
+            <div class="form-group">
+              <label>Billing State/Province</label>
+              <crm-lookup-dropdown
+                [(ngModel)]="formBillingState"
+                name="billingState"
+                [options]="billingStateOptions"
+                [disabled]="!formBillingCountry"
+                placeholder="Select state/province"
+                label="Billing State/Province"
+              ></crm-lookup-dropdown>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="section-header">
+            <h4>Shipping Address</h4>
+          </div>
+
+          <div class="form-grid">
+            <!-- Country — select first to unlock state -->
+            <div class="form-group">
+              <label>Shipping Country</label>
+              <crm-lookup-dropdown
+                [(ngModel)]="formShippingCountry"
+                (ngModelChange)="onShippingCountryChange($event)"
+                name="shippingCountry"
+                [options]="countryOptions"
+                placeholder="Select country"
+                label="Shipping Country"
+              ></crm-lookup-dropdown>
+            </div>
+
+            <div class="form-group form-group-full">
+              <label>Shipping Address</label>
+              <input type="text" [(ngModel)]="formShippingStreet" name="shippingStreet" placeholder="Street address, building, floor, etc." [maxlength]="addressMax" />
+            </div>
+
+            <div class="form-group">
+              <label>Shipping City</label>
+              <input type="text" [(ngModel)]="formShippingCity" name="shippingCity" placeholder="City" [maxlength]="cityMax" />
+            </div>
+
+            <div class="form-group">
+              <label>Shipping Zip Code</label>
+              <input type="text" [(ngModel)]="formShippingPostalCode" name="shippingPostalCode" placeholder="Postal / ZIP code" />
+            </div>
+
+            <!-- State/Province — disabled until country is selected -->
+            <div class="form-group">
+              <label>Shipping State/Province</label>
+              <crm-lookup-dropdown
+                [(ngModel)]="formShippingState"
+                name="shippingState"
+                [options]="shippingStateOptions"
+                [disabled]="!formShippingCountry"
+                placeholder="Select state/province"
+                label="Shipping State/Province"
+              ></crm-lookup-dropdown>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <div class="form-actions">
+        @if (editingAccount) { <button class="ibtn ibtn--danger" style="margin-right:auto" (click)="deleteAccount(editingAccount.id)"><span class="material-symbols-outlined">delete</span> Delete</button> }
+        <button class="ibtn ibtn--secondary" (click)="cancelForm()">Cancel</button>
+        <button class="ibtn ibtn--primary" [disabled]="!formAccountName.trim()" (click)="saveAccount()"><span class="material-symbols-outlined">save</span> {{ editingAccount ? 'Update Account' : 'Create Account' }}</button>
+      </div>
+        </div>
+      } @else {
+        <div class="md-empty">
+          <div class="md-empty-icon"><span class="material-symbols-outlined">business</span></div>
+          <div class="md-empty-title">Manage accounts</div>
+          <div class="md-empty-text">Select an account to edit, or create a new one.</div>
+          <button class="btn-brand" style="margin-top:8px" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> New Account</button>
+        </div>
+      }
+    </div>
+  </div>
+</div>

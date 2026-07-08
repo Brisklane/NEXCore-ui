@@ -1,0 +1,158 @@
+<div class="page-container">
+
+  <app-page-header icon="directions_boat" title="Landed Costs" subtitle="Allocate freight, duty &amp; insurance across received goods for accurate inventory value">
+    <button class="btn btn-primary" (click)="openCreate()">+ New Landed Cost</button>
+  </app-page-header>
+
+  <app-alert type="error"   [message]="error"></app-alert>
+  <app-alert type="success" [message]="success"></app-alert>
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>New Landed Cost</h3>
+
+      <div class="helper-box">
+        <span class="helper-icon">ℹ️</span>
+        <div>Landed costs — <strong>freight</strong>, <strong>customs duty</strong> and <strong>insurance</strong> — are
+          <strong>allocated across the linked goods-receipt lines</strong> to increase their <strong>inventory valuation</strong>.
+          Each cost line splits by <strong>By Value</strong>, <strong>By Quantity</strong>, or <strong>Equal</strong>.
+          <strong>Posting</strong> computes each line's share and <strong>revalues stock</strong> with the per-unit cost addition.</div>
+      </div>
+
+      <div class="form-grid">
+        <app-input label="Description" placeholder="e.g. Sea shipment SHP-0420" [(ngModel)]="form.description"></app-input>
+        <app-select label="Cost Vendor (optional)" [options]="vendorOptions" [(ngModel)]="form.vendorId" placeholder="-- e.g. freight forwarder --"></app-select>
+        <app-input label="Document Date" type="date" [(ngModel)]="form.documentDate"></app-input>
+        <app-select label="Currency" [options]="currencyOptions" [(ngModel)]="form.currencyCode" placeholder=""></app-select>
+        <app-input label="Exchange Rate" type="number" [min]="0" [step]="0.0001" placeholder="1.0000" [(ngModel)]="form.exchangeRate"></app-input>
+      </div>
+
+      <!-- Linked GRNs -->
+      <h4 class="section-title">Goods Receipts Covered</h4>
+      @if (submitted && errors.grns) { <div class="alert alert-error">{{ errors.grns }}</div> }
+      @if (grnIds.length > 0) {
+        <div class="row-list">
+          @for (gid of grnIds; track gid; let i = $index) {
+            <div class="row-item"><span class="row-tag">{{ grnLabel(gid) }}</span><button type="button" class="btn-remove" (click)="removeGrn(i)">✕</button></div>
+          }
+        </div>
+      }
+      <div class="form-grid line-add-grid">
+        <app-select label="Add Goods Receipt" [options]="grnOptions" [(ngModel)]="newGrnId" placeholder="-- Select posted GRN --"></app-select>
+        <div class="form-group form-check-row"><button type="button" class="btn btn-secondary" (click)="addGrn()">+ Add GRN</button></div>
+      </div>
+
+      <!-- Cost lines -->
+      <h4 class="section-title">Cost Components</h4>
+      @if (submitted && errors.lines) { <div class="alert alert-error">{{ errors.lines }}</div> }
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr><th>Type</th><th>Description</th><th style="text-align:right">Amount</th><th style="text-align:right">Tax %</th><th>Allocation</th><th style="text-align:right">Total</th><th></th></tr>
+          </thead>
+          <tbody>
+            @for (l of costLines; track $index; let i = $index) {
+              <tr>
+                <td>{{ typeLabel(l.costType) }}</td>
+                <td>{{ l.description }}</td>
+                <td style="text-align:right">{{ l.amount | number:'1.2-2' }}</td>
+                <td style="text-align:right">{{ l.taxPercent ?? 0 }}</td>
+                <td>{{ methodLabel(l.allocationMethod) }}</td>
+                <td style="text-align:right">{{ lineTotal(l) | number:'1.2-2' }}</td>
+                <td style="text-align:center"><button type="button" class="btn-remove" (click)="removeCostLine(i)">✕</button></td>
+              </tr>
+            } @empty { <tr><td colspan="7" class="empty-row">No cost components added yet.</td></tr> }
+          </tbody>
+        </table>
+      </div>
+      @if (costLines.length) { <div class="lines-total">Total Landed Cost: {{ costTotal | number:'1.2-2' }} {{ form.currencyCode }}</div> }
+
+      <div class="form-grid line-add-grid">
+        <app-select label="Cost Type" [options]="costTypeOptions" [(ngModel)]="newLine.costType" placeholder=""></app-select>
+        <app-input label="Description" placeholder="e.g. Ocean freight" [(ngModel)]="newLine.description"></app-input>
+        <app-input label="Amount" type="number" [min]="0" [step]="0.01" placeholder="0.00" [(ngModel)]="newLine.amount"></app-input>
+        <app-input label="Tax %" type="number" [min]="0" [max]="100" placeholder="0" [(ngModel)]="newLine.taxPercent"></app-input>
+        <app-select label="Allocation Method" [options]="methodOptions" [(ngModel)]="newLine.allocationMethod" placeholder=""></app-select>
+        <div class="form-group form-check-row"><button type="button" class="btn btn-secondary" (click)="addCostLine()">+ Add Cost</button></div>
+      </div>
+
+      <div class="form-grid" style="margin-top:12px">
+        <div class="form-group-full"><app-textarea label="Notes" [rows]="2" [(ngModel)]="form.notes"></app-textarea></div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()" [disabled]="saving">Create Landed Cost</button>
+      </div>
+    </div>
+  }
+
+  <div class="filters-bar">
+    <span class="filter-search">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search by number or description…" [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
+      @if (search) { <button class="search-clear" title="Clear search" (click)="search = ''; onSearchChange()">×</button> }
+    </span>
+    <select class="filter-input" [(ngModel)]="statusFilter" (ngModelChange)="onStatusChange()">
+      <option [ngValue]="''">All statuses</option>
+      @for (opt of statusFilterOptions; track opt.value) { <option [ngValue]="opt.value">{{ opt.label }}</option> }
+    </select>
+  </div>
+
+  <app-data-table [sortableAll]="true"
+    [columns]="columns" [data]="costs" [actions]="actions" [loading]="loading"
+    [highlightRowId]="highlighter.id"
+    [totalCount]="totalCount" [page]="page" [pageSize]="pageSize" [sortBy]="sortBy" [sortDirection]="sortDirection"
+    emptyMessage="No landed costs found." (rowAction)="onRowAction($event)"
+    (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)" (sortChange)="onSortChange($event)">
+  </app-data-table>
+
+</div>
+
+@if (viewing) {
+  <div class="modal-overlay">
+    <div class="modal-box" style="max-width:820px">
+      <h4>{{ viewing.landedCostNumber }} — Allocation</h4>
+      <p class="subtitle">Total {{ viewing.totalLandedCostAmount | number:'1.2-2' }} {{ viewing.currencyCode }} across {{ viewing.goodsReceipts.length }} GRN(s)</p>
+
+      @if (viewing.allocations.length) {
+        <div class="table-container">
+          <table>
+            <thead><tr><th>Item</th><th>Cost Component</th><th>Method</th><th style="text-align:right">%</th><th style="text-align:right">Allocated</th><th style="text-align:right">Per Unit</th></tr></thead>
+            <tbody>
+              @for (a of viewing.allocations; track a.id) {
+                <tr>
+                  <td>{{ a.itemDescription || '—' }}</td>
+                  <td>{{ costLineDesc(a.landedCostLineId) }}</td>
+                  <td>{{ methodLabel(a.allocationMethod) }}</td>
+                  <td style="text-align:right">{{ a.allocationPercent | number:'1.0-2' }}%</td>
+                  <td style="text-align:right">{{ a.allocatedAmount | number:'1.2-2' }}</td>
+                  <td style="text-align:right">{{ a.allocatedAmountPerUnit | number:'1.2-4' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p style="color:#94a3b8;padding:16px;text-align:center">No allocations yet — post the landed cost to compute them.</p>
+      }
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="closeView()">Close</button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showDeleteConfirm) {
+  <div class="modal-overlay">
+    <div class="modal-box">
+      <h4>Delete Landed Cost</h4>
+      <p>Delete <strong>{{ deleteTarget?.landedCostNumber }}</strong>? This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showDeleteConfirm = false">Cancel</button>
+        <button class="btn btn-danger" (click)="confirmDelete()">Delete</button>
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,75 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">badge</span></div>
+      <div>
+        <h1>Designations</h1>
+        <p class="inv-hero-sub">Manage designations</p>
+      </div>
+    </div>
+    <button class="btn btn-primary" (click)="openCreateForm()">+ New Designation</button>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editingJobTitle ? 'Edit Designation' : 'Create Designation' }}</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Designation Name *</label>
+          <input type="text" [(ngModel)]="formDesignationName" placeholder="e.g. Software Engineer" />
+        </div>
+        <div class="form-group">
+          <label>Designation Code</label>
+          <input type="text" [(ngModel)]="formDesignationCode" placeholder="e.g. SWE-01" />
+        </div>
+        @if (editingJobTitle) {
+          <div class="form-group form-check-row">
+            <label><input type="checkbox" [(ngModel)]="formIsActive" /> Active</label>
+          </div>
+        }
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="saveJobTitle()">{{ editingJobTitle ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Designation Name</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (j of jobTitles; track j.id) {
+            <tr>
+              <td>{{ j.designationCode }}</td>
+              <td>{{ j.designationName }}</td>
+              <td>
+                <span class="badge" [class.badge-active]="j.isActive" [class.badge-inactive]="!j.isActive">
+                  {{ j.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td>
+                <button class="btn btn-sm btn-secondary" (click)="openEditForm(j)">Edit</button>
+                <button class="btn btn-sm btn-danger" (click)="deleteJobTitle(j)">Delete</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="4" class="empty-state">No designations found.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

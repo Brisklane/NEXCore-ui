@@ -1,0 +1,103 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">inventory_2</span></div>
+      <div>
+        <h1>Stock on Hand</h1>
+        <p class="inv-hero-sub">Live stock on hand across every location</p>
+      </div>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (success) { <div class="alert alert-success">{{ success }}</div> }
+
+  <div class="md-split">
+    <!-- ══ LEFT: stock rows ══ -->
+    <div class="md-list md-list-wide">
+      <div class="md-list-head">
+        <span class="inv-search"><span class="material-symbols-outlined">search</span><input type="text" placeholder="Search by code or name…" [(ngModel)]="filterSearch" (ngModelChange)="onSearchInput()" (keyup.enter)="applyFilters()" /></span>
+        <div class="md-list-head-row">
+          <select class="inv-select" [(ngModel)]="filterWarehouseId" (ngModelChange)="applyFilters()"><option value="">All Locations</option>@for (w of warehouses; track w.id) { <option [value]="w.id">{{ w.name }}</option> }</select>
+          <select class="inv-select" [(ngModel)]="sortBy" (ngModelChange)="applyFilters()"><option value="itemCode">Sort: SKU</option><option value="quantityAvailable">Sort: Sellable</option><option value="totalValue">Sort: Value</option><option value="lastTransactionDate">Sort: Last moved</option></select>
+        </div>
+      </div>
+      <div class="md-list-body">
+        @if (loading) {
+          @for (s of [0,1,2,3,4,5]; track s) { <div class="md-rec"><span class="skeleton sk-circle" style="width:34px;height:34px"></span><div style="flex:1"><span class="skeleton sk-line" style="width:70%"></span></div></div> }
+        } @else if (items.length === 0) {
+          <div class="inv-empty" style="padding:36px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">inventory_2</span></div><div class="inv-empty-title">No stock data found</div><div class="inv-empty-text">Try a different search or location.</div></div>
+        } @else {
+          @for (item of displayItems; track item.itemId + item.warehouseId) {
+            <button class="md-rec" [class.selected]="adjustItem && rowKey(adjustItem) === rowKey(item)" [class.row-new]="rowKey(item) === highlighter.id" (click)="openAdjust(item)">
+              <span class="md-rec-ico" [class.ico-out]="stockStatus(item)==='out'" [class.ico-low]="stockStatus(item)==='low'">{{ item.quantityAvailable | number:'1.0-0' }}</span>
+              <div class="md-rec-main">
+                <span class="md-rec-title">{{ item.itemName }}</span>
+                <span class="md-rec-sub"><span class="md-rec-code">{{ item.itemCode }}</span> · {{ item.warehouseName }}</span>
+              </div>
+              @if (stockStatus(item) === 'out') { <span class="status-pill pill-out">Out</span> }
+              @else if (stockStatus(item) === 'low') { <span class="status-pill pill-low">Low</span> }
+              @else { <span class="status-pill pill-instock">In stock</span> }
+            </button>
+          }
+        }
+      </div>
+      @if (totalCount > 0) {
+        <div class="md-list-foot"><span>{{ (page - 1) * pageSize + 1 }}–{{ page * pageSize < totalCount ? page * pageSize : totalCount }} of {{ totalCount | number }}</span><div class="md-pager"><button class="btn-page" (click)="goToPage(page - 1)" [disabled]="page <= 1">Prev</button><button class="btn-page" (click)="goToPage(page + 1)" [disabled]="page >= totalPages">Next</button></div></div>
+      }
+    </div>
+
+    <!-- ══ RIGHT: selected stock detail + inline adjust ══ -->
+    <div class="md-detail">
+      @if (adjustItem) {
+        <div class="md-detail-head">
+          <div class="sd-head-titles">
+            <span class="md-detail-title">{{ adjustItem.itemName }}</span>
+            <span class="sd-head-sub">{{ adjustItem.itemCode }} · {{ adjustItem.warehouseName }}</span>
+          </div>
+          <button class="icon-btn" title="Close" (click)="cancelAdjust()"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="md-detail-body">
+          <div class="sd-tiles">
+            <div class="sd-tile"><span class="sd-tile-label">On hand</span><span class="sd-tile-value">{{ adjustItem.quantityOnHand | number:'1.0-2' }}</span></div>
+            <div class="sd-tile"><span class="sd-tile-label">Reserved</span><span class="sd-tile-value">{{ adjustItem.quantityReserved | number:'1.0-2' }}</span></div>
+            <div class="sd-tile sd-tile-accent"><span class="sd-tile-label">Sellable</span><span class="sd-tile-value">{{ adjustItem.quantityAvailable | number:'1.0-2' }}</span></div>
+            <div class="sd-tile"><span class="sd-tile-label">Unit cost</span><span class="sd-tile-value">{{ adjustItem.averageCost | number:'1.2-2' }}</span></div>
+            <div class="sd-tile"><span class="sd-tile-label">Stock value</span><span class="sd-tile-value">{{ adjustItem.totalValue | number:'1.2-2' }}</span></div>
+            <div class="sd-tile"><span class="sd-tile-label">Last moved</span><span class="sd-tile-value sd-tile-sm">{{ adjustItem.lastTransactionDate ? (adjustItem.lastTransactionDate | date:'mediumDate') : '—' }}</span></div>
+          </div>
+
+          <div class="sd-adjust-card">
+            <div class="sd-adjust-title"><span class="material-symbols-outlined">tune</span> Quick adjust quantity</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>New on-hand quantity</label>
+                <input type="number" class="sd-qty-input" [(ngModel)]="adjustNewQty" min="0" step="0.01" />
+                @if (adjustNewQty !== adjustItem.quantityOnHand) {
+                  <span class="adjust-delta" [class.delta-pos]="adjustNewQty > adjustItem.quantityOnHand" [class.delta-neg]="adjustNewQty < adjustItem.quantityOnHand">
+                    {{ adjustNewQty > adjustItem.quantityOnHand ? '+' : '' }}{{ (adjustNewQty - adjustItem.quantityOnHand) | number:'1.0-2' }} vs current
+                  </span>
+                }
+              </div>
+              <div class="form-group">
+                <label>Reason <span class="label-hint">(optional)</span></label>
+                <input type="text" [(ngModel)]="adjustReason" placeholder="e.g. Physical count, damage write-off…" (keyup.enter)="confirmAdjust()" />
+              </div>
+            </div>
+            @if (adjustError) { <div class="alert alert-error">{{ adjustError }}</div> }
+            <div class="form-actions">
+              <button class="ibtn ibtn--secondary" [disabled]="adjustSaving" (click)="cancelAdjust()">Cancel</button>
+              <button class="ibtn ibtn--primary" [disabled]="adjustSaving || adjustNewQty === adjustItem.quantityOnHand" (click)="confirmAdjust()"><span class="material-symbols-outlined">save</span> {{ adjustSaving ? 'Saving…' : 'Confirm adjustment' }}</button>
+            </div>
+          </div>
+        </div>
+      } @else {
+        <div class="md-empty">
+          <div class="md-empty-icon"><span class="material-symbols-outlined">inventory_2</span></div>
+          <div class="md-empty-title">Stock detail</div>
+          <div class="md-empty-text">Select an item to see its stock breakdown and adjust its quantity.</div>
+        </div>
+      }
+    </div>
+  </div>
+</div>

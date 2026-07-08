@@ -1,0 +1,159 @@
+<div class="page-container">
+
+  <app-page-header icon="assignment" title="Purchase Requisitions" subtitle="Request goods and services for approval and sourcing">
+    <button class="btn btn-primary" (click)="openCreate()">+ New Requisition</button>
+  </app-page-header>
+
+  <app-alert type="error"   [message]="error"></app-alert>
+  <app-alert type="success" [message]="success"></app-alert>
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editing ? 'Edit Requisition — ' + editing.requisitionNumber : 'New Requisition' }}</h3>
+
+      <div class="help-box">
+        <span class="help-icon">ℹ️</span>
+        <span>A requisition captures an internal request for goods or services. Once submitted it routes for approval
+          (<strong>Draft → Submitted → Under Approval → Approved/Rejected</strong>). An <strong>approved</strong> requisition
+          can be sourced via an <strong>RFQ</strong> or converted directly into a <strong>Purchase Order</strong>. The
+          <strong>suggested vendor</strong> is only a sourcing hint and does not commit the order to that vendor.</span>
+      </div>
+
+      <div class="tab-bar">
+        <button [class]="formTab === 'details' ? 'tab-btn tab-btn-active' : 'tab-btn'" (click)="formTab = 'details'">Details</button>
+        <button [class]="formTab === 'lines' ? 'tab-btn tab-btn-active' : 'tab-btn'" (click)="formTab = 'lines'">Lines ({{ formLines.length }})</button>
+      </div>
+
+      @if (formTab === 'details') {
+        <div class="form-grid">
+          <app-input label="Title" required placeholder="What is being requested"
+                     [(ngModel)]="form.title" [error]="submitted ? errors.title : ''"></app-input>
+          <app-select label="Priority" [options]="priorityOptions" [(ngModel)]="form.priority" placeholder=""></app-select>
+          <app-input label="Required By" type="date" [(ngModel)]="form.requiredByDate"></app-input>
+          <app-select label="Suggested Vendor" [options]="vendorOptions" [(ngModel)]="form.suggestedVendorId" placeholder="-- None --"></app-select>
+          <app-select label="Currency" [options]="currencyOptions" [(ngModel)]="form.currencyCode" placeholder=""></app-select>
+          <app-input label="Requested By" placeholder="Requester name" [(ngModel)]="form.requestedByName"></app-input>
+          <app-input label="Department" placeholder="Department" [(ngModel)]="form.departmentName"></app-input>
+          <div class="form-group-full">
+            <app-textarea label="Description" [rows]="2" placeholder="Purpose / justification" [(ngModel)]="form.description"></app-textarea>
+          </div>
+          <div class="form-group-full">
+            <app-textarea label="Internal Notes" [rows]="2" placeholder="Internal notes" [(ngModel)]="form.internalNotes"></app-textarea>
+          </div>
+        </div>
+      }
+
+      @if (formTab === 'lines') {
+        @if (submitted && errors.lines) { <div class="alert alert-error">{{ errors.lines }}</div> }
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th><th>Description</th><th style="text-align:right">Qty</th><th>UoM</th>
+                <th style="text-align:right">Est. Unit Price</th><th style="text-align:right">Est. Total</th><th>Category</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (l of formLines; track $index; let i = $index) {
+                <tr>
+                  <td>{{ l.itemCode || '—' }}</td>
+                  <td>{{ l.itemDescription }}</td>
+                  <td style="text-align:right">{{ l.quantity }}</td>
+                  <td>{{ l.unitOfMeasureName || '—' }}</td>
+                  <td style="text-align:right">{{ (l.estimatedUnitPrice ?? 0) | number:'1.2-2' }}</td>
+                  <td style="text-align:right">{{ lineEstimated(l) | number:'1.2-2' }}</td>
+                  <td>{{ categoryName(l.procurementCategoryId) }}</td>
+                  <td style="text-align:center"><button type="button" class="btn-remove" (click)="removeLine(i)">✕</button></td>
+                </tr>
+              } @empty {
+                <tr><td colspan="8" class="empty-row">No lines added yet.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (formLines.length) { <div class="lines-total">Estimated Total: {{ formLinesTotal | number:'1.2-2' }} {{ form.currencyCode }}</div> }
+
+        <h4 class="section-title">Add Line</h4>
+        <div class="form-grid line-add-grid">
+          <div class="form-group">
+            <label>Item</label>
+            <lib-entity-picker-input
+              [apiUrl]="itemApiUrl" [value]="newLineItemLabel"
+              [displayFields]="itemDisplayFields" [columns]="itemColumns" [pickerPageSize]="25"
+              entityLabel="Item" placeholder="Search items…"
+              (itemSelected)="onLineItemSelect($event)">
+            </lib-entity-picker-input>
+          </div>
+          <app-input label="Description" placeholder="Item description" [(ngModel)]="newLine.itemDescription"></app-input>
+          <app-input label="Quantity" type="number" [min]="0" placeholder="1" [(ngModel)]="newLine.quantity"></app-input>
+          <app-select label="UoM" [options]="uomOptions" [(ngModel)]="newLine.unitOfMeasureId" placeholder="-- Unit --"></app-select>
+          <app-input label="Est. Unit Price" type="number" [min]="0" [step]="0.01" placeholder="0.00" [(ngModel)]="newLine.estimatedUnitPrice"></app-input>
+          <app-select label="Category" [options]="categoryOptions" [(ngModel)]="newLine.procurementCategoryId" placeholder="-- None --"></app-select>
+          <div class="form-group form-check-row">
+            <button type="button" class="btn btn-secondary" (click)="addLine()">+ Add Line</button>
+          </div>
+        </div>
+      }
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()" [disabled]="saving">{{ editing ? 'Save Changes' : 'Create Requisition' }}</button>
+      </div>
+    </div>
+  }
+
+  <div class="filters-bar">
+    <span class="filter-search">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search by title or number…" [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
+      @if (search) { <button class="search-clear" title="Clear search" (click)="search = ''; onSearchChange()">×</button> }
+    </span>
+    <select class="filter-input" [(ngModel)]="statusFilter" (ngModelChange)="onStatusChange()">
+      <option [ngValue]="''">All statuses</option>
+      @for (opt of statusFilterOptions; track opt.value) { <option [ngValue]="opt.value">{{ opt.label }}</option> }
+    </select>
+  </div>
+
+  <app-data-table [sortableAll]="true"
+    [columns]="columns" [data]="requisitions" [actions]="actions" [loading]="loading"
+    [totalCount]="totalCount" [page]="page" [pageSize]="pageSize" [sortBy]="sortBy" [sortDirection]="sortDirection"
+    [highlightRowId]="highlighter.id"
+    (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)" (sortChange)="onSortChange($event)"
+    emptyMessage="No requisitions found." (rowAction)="onRowAction($event)">
+  </app-data-table>
+
+</div>
+
+@if (showRejectModal) {
+  <div class="modal-overlay">
+    <div class="modal-box">
+      <h4>Reject Requisition</h4>
+      <div class="form-group">
+        <label>Reason <span style="color:#ef4444">*</span></label>
+        <textarea [(ngModel)]="rejectionReason" rows="3" placeholder="Reason for rejection"
+                  [style.border-color]="rejectSubmitted && !rejectionReason.trim() ? '#ef4444' : null"></textarea>
+        @if (rejectSubmitted && !rejectionReason.trim()) {
+          <span style="color:#ef4444;font-size:12px;margin-top:3px;display:block">A rejection reason is required.</span>
+        }
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showRejectModal = false">Cancel</button>
+        <button class="btn btn-danger" (click)="confirmReject()">Reject</button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showDeleteConfirm) {
+  <div class="modal-overlay">
+    <div class="modal-box">
+      <h4>Delete Requisition</h4>
+      <p>Delete <strong>{{ deleteTarget?.requisitionNumber }}</strong>? This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showDeleteConfirm = false">Cancel</button>
+        <button class="btn btn-danger" (click)="confirmDelete()">Delete</button>
+      </div>
+    </div>
+  </div>
+}

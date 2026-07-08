@@ -1,0 +1,114 @@
+<div class="lookup-wrap" [class.open]="dropdownOpen" [class.disabled]="isDisabled">
+  <div
+    class="lookup-trigger"
+    (click)="toggleDropdown()"
+    [attr.tabindex]="isDisabled ? -1 : 0"
+    (keydown.enter)="toggleDropdown()"
+    (keydown.space)="$event.preventDefault(); toggleDropdown()"
+  >
+    <span [class.lookup-placeholder]="!selectedLabel">{{ selectedLabel || placeholder }}</span>
+    <span class="lookup-chevron" [class.open]="dropdownOpen">&#8964;</span>
+  </div>
+
+  @if (dropdownOpen) {
+    <div class="lookup-panel">
+      <div class="lookup-search-wrap">
+        <input
+          #searchInput
+          type="text"
+          class="lookup-search-input"
+          [(ngModel)]="dropdownSearch"
+          (input)="onDropdownSearch()"
+          placeholder="Search..."
+          autocomplete="off"
+          (mousedown)="$event.stopPropagation()"
+          (click)="$event.stopPropagation()"
+        />
+      </div>
+      <div class="lookup-options-list">
+        <div class="lookup-option lookup-option-clear" (mousedown)="selectOption(null)">
+          {{ placeholder }}
+        </div>
+        @for (opt of visibleOptions; track opt.value) {
+          <div
+            class="lookup-option"
+            [class.lookup-option-selected]="opt.value === value"
+            (mousedown)="selectOption(opt)"
+          >
+            {{ opt.label }}
+          </div>
+        }
+        @if (visibleOptions.length === 0) {
+          <div class="lookup-option lookup-no-results">No results found</div>
+        }
+        @if (hasMore) {
+          <button type="button" class="lookup-show-more" (mousedown)="openPicker()">
+            Show more ({{ options.length - maxVisible }} more)...
+          </button>
+        }
+      </div>
+    </div>
+  }
+</div>
+
+@if (showPicker) {
+  <div class="picker-overlay" (click)="closePicker()">
+    <div class="picker-card" (click)="$event.stopPropagation()">
+      <div class="picker-head">
+        <h4>{{ label || placeholder }}</h4>
+        <button type="button" class="btn-icon" (click)="closePicker()" title="Close">&#x2715;</button>
+      </div>
+      <div class="picker-toolbar">
+        <input
+          type="text"
+          class="input-cell"
+          [(ngModel)]="pickerSearch"
+          (input)="onPickerSearch()"
+          placeholder="Search..."
+          autocomplete="off"
+        />
+        <div class="picker-pagination-controls">
+          <div class="picker-page-stat">{{ pickerStart }}-{{ pickerEnd }}/{{ pickerFiltered.length }}</div>
+          <button
+            type="button"
+            class="btn btn-secondary btn-sm"
+            (click)="pickerPrev()"
+            [disabled]="pickerPage === 1"
+          >&#9664;</button>
+          <button
+            type="button"
+            class="btn btn-secondary btn-sm"
+            (click)="pickerNext()"
+            [disabled]="pickerEnd >= pickerFiltered.length"
+          >&#9654;</button>
+        </div>
+      </div>
+      <div class="picker-table-wrap">
+        <table class="picker-table">
+          <thead>
+            <tr>
+              <th>{{ label || 'Select an option' }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (pickerFiltered.length === 0) {
+              <tr>
+                <td class="empty-row">No options found</td>
+              </tr>
+            } @else {
+              @for (opt of pickerPageItems; track opt.value) {
+                <tr
+                  class="picker-select-row"
+                  [class.picker-row-selected]="opt.value === value"
+                  (click)="selectFromPicker(opt)"
+                >
+                  <td>{{ opt.label }}</td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+}

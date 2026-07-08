@@ -1,0 +1,123 @@
+<div class="page-container">
+
+  <app-page-header icon="price_change" title="Vendor Pricelists" subtitle="Agreed item prices and quantity breaks per vendor">
+    <button class="btn btn-primary" (click)="openCreate()" [disabled]="!selectedVendorId">+ New Pricelist</button>
+  </app-page-header>
+
+  <app-alert type="error"   [message]="error"></app-alert>
+  <app-alert type="success" [message]="success"></app-alert>
+
+  <div class="help-box"><span class="help-icon">ℹ️</span><span>A vendor <strong>pricelist</strong> records the prices a supplier has agreed to charge for specific items over a validity period. Each <strong>price line</strong> can set a <strong>minimum quantity</strong> (a quantity break) so larger orders qualify for a lower unit price — add a separate line per break. The <strong>unit of measure</strong> ties each price to how the item is purchased, keeping it consistent with Inventory.</span></div>
+
+  <div class="filters-bar">
+    <select class="filter-input" [(ngModel)]="selectedVendorId" (ngModelChange)="onVendorChange()">
+      <option value="">-- Select Vendor --</option>
+      @for (opt of vendorOptions; track opt.value) { <option [ngValue]="opt.value">{{ opt.label }}</option> }
+    </select>
+  </div>
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editing ? 'Edit Pricelist' : 'New Pricelist' }}</h3>
+      <div class="form-grid">
+        <app-input label="Name" required placeholder="e.g. 2026 Standard Pricing"
+                   [(ngModel)]="form.name" [error]="submitted ? errors.name : ''"></app-input>
+        <app-select label="Currency" [options]="currencyOptions" [(ngModel)]="form.currencyCode" placeholder=""></app-select>
+        <app-input label="Valid From" type="date" [(ngModel)]="form.validFrom"></app-input>
+        <app-input label="Valid To" type="date" [(ngModel)]="form.validTo"
+                   [error]="submitted ? errors.validTo : ''"></app-input>
+      </div>
+
+      <!-- Line items -->
+      <h4 class="section-title">Price Lines</h4>
+      @if (submitted && errors.items) {
+        <div class="alert alert-error">{{ errors.items }}</div>
+      }
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Item Code</th><th>Description</th><th style="text-align:right">Unit Price</th>
+              <th style="text-align:right">Min Qty</th><th>UoM</th><th>Valid From</th><th>Valid To</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (it of formItems; track $index; let i = $index) {
+              <tr>
+                <td>{{ it.itemCode || '—' }}</td>
+                <td>{{ it.itemDescription }}</td>
+                <td style="text-align:right">{{ it.unitPrice | number:'1.2-2' }}</td>
+                <td style="text-align:right">{{ it.minimumQuantity ?? '—' }}</td>
+                <td>{{ unitName(it.unitOfMeasureId) || '—' }}</td>
+                <td>{{ it.validFrom ? (it.validFrom | date:'dd MMM yyyy') : '—' }}</td>
+                <td>{{ it.validTo ? (it.validTo | date:'dd MMM yyyy') : '—' }}</td>
+                <td style="text-align:center"><button type="button" class="btn-remove" (click)="removeItem(i)">✕</button></td>
+              </tr>
+            } @empty {
+              <tr><td colspan="8" class="empty-row">No price lines added yet.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="form-grid line-add-grid">
+        <div class="form-group">
+          <label>Item</label>
+          <lib-entity-picker-input
+            [apiUrl]="itemApiUrl"
+            [value]="newItem.itemCode || ''"
+            [displayFields]="itemDisplayFields"
+            [columns]="itemColumns"
+            [pickerPageSize]="25"
+            entityLabel="Item"
+            placeholder="Search items…"
+            (itemSelected)="onItemSelect($event)">
+          </lib-entity-picker-input>
+        </div>
+        <app-input label="Description" placeholder="Item description" [(ngModel)]="newItem.itemDescription"></app-input>
+        <app-input label="Unit Price" type="number" [min]="0" [step]="0.01" placeholder="0.00" [(ngModel)]="newItem.unitPrice"></app-input>
+        <app-input label="Min Qty" type="number" [min]="0" placeholder="1" [(ngModel)]="newItem.minimumQuantity"></app-input>
+        <app-select label="UoM" [options]="uomOptions" [(ngModel)]="newItem.unitOfMeasureId" placeholder="-- Unit --"></app-select>
+        <app-input label="Valid From" type="date" [(ngModel)]="newItem.validFrom"></app-input>
+        <app-input label="Valid To" type="date" [(ngModel)]="newItem.validTo"></app-input>
+        <div class="form-group form-check-row">
+          <button type="button" class="btn btn-secondary" (click)="addItem()">+ Add Line</button>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()" [disabled]="saving">{{ editing ? 'Save' : 'Create Pricelist' }}</button>
+      </div>
+    </div>
+  }
+
+  @if (!selectedVendorId) {
+    <div class="empty-row" style="padding:40px;text-align:center;color:#94a3b8">Select a vendor above to view their pricelists.</div>
+  } @else {
+    <app-data-table [sortableAll]="true"
+      [columns]="columns"
+      [data]="pricelists"
+      [actions]="actions"
+      [loading]="loading"
+      [highlightRowId]="highlighter.id"
+      emptyMessage="No pricelists for this vendor."
+      (rowAction)="onRowAction($event)">
+    </app-data-table>
+  }
+
+</div>
+
+@if (showDeleteConfirm) {
+  <div class="modal-overlay">
+    <div class="modal-box">
+      <h4>Delete Pricelist</h4>
+      <p>Delete <strong>{{ deleteTarget?.name }}</strong>? This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showDeleteConfirm = false">Cancel</button>
+        <button class="btn btn-danger" (click)="confirmDelete()">Delete</button>
+      </div>
+    </div>
+  </div>
+}

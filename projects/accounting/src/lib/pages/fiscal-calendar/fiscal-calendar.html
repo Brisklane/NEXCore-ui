@@ -1,0 +1,245 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">calendar_month</span></div>
+      <div>
+        <h1>Fiscal Years</h1>
+        <p class="inv-hero-sub">Create and manage fiscal years and their periods</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreateCalendarForm()"><span class="material-symbols-outlined">add</span> New Fiscal Year</button>
+    </div>
+  </div>
+
+  @if (error) {
+    <div class="alert alert-error">{{ error }}</div>
+  }
+  @if (successMsg) {
+    <div class="alert alert-success">{{ successMsg }}</div>
+  }
+
+  <!-- Help box -->
+  <div class="help-box">
+    <strong>How fiscal years work</strong>
+    <ul>
+      <li><b>Edit</b> is allowed only while a year is <b>open</b> and has <b>no transactions</b>. Once journal entries are posted within its dates, the year is locked.</li>
+      <li>A year that <b>contains transactions cannot be deleted</b> — only years with no activity can be removed.</li>
+      <li><b>Closing</b> a year makes it <b>read-only</b> (no edit or delete). You can <b>Reopen</b> it later if you need to make changes.</li>
+    </ul>
+  </div>
+
+  <!-- Fiscal Year Form -->
+  @if (showCalendarForm) {
+    <div class="form-panel">
+      <h3>{{ editingCalendar ? 'Edit Fiscal Year' : 'New Fiscal Year' }}</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Name *</label>
+          <input type="text" [(ngModel)]="calFormName" placeholder="e.g. FY 2026"
+                 [class.input-invalid]="calTriedSubmit && calFormErrors['name']" />
+          @if (calTriedSubmit && calFormErrors['name']) { <span class="field-error">{{ calFormErrors['name'] }}</span> }
+        </div>
+        <div class="form-group">
+          <label>Start Date *</label>
+          <input type="date" [(ngModel)]="calFormStartDate"
+                 [class.input-invalid]="calTriedSubmit && calFormErrors['startDate']" />
+          @if (calTriedSubmit && calFormErrors['startDate']) { <span class="field-error">{{ calFormErrors['startDate'] }}</span> }
+        </div>
+        <div class="form-group">
+          <label>End Date *</label>
+          <input type="date" [(ngModel)]="calFormEndDate"
+                 [class.input-invalid]="calTriedSubmit && calFormErrors['endDate']" />
+          @if (calTriedSubmit && calFormErrors['endDate']) { <span class="field-error">{{ calFormErrors['endDate'] }}</span> }
+        </div>
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label>Description</label>
+          <input type="text" [(ngModel)]="calFormDescription" placeholder="Optional notes" />
+        </div>
+      </div>
+      <div class="form-actions">
+        @if (calTriedSubmit && !isCalFormValid) {
+          <span class="field-error" style="align-self:center; margin-right:auto;">Please fix the highlighted fields before saving.</span>
+        }
+        <button class="btn btn-secondary" (click)="cancelCalendarForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="saveCalendar()">{{ editingCalendar ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  <!-- Detail Panel with Periods -->
+  @if (selectedCalendar) {
+    <div class="detail-panel">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="margin:0;">{{ selectedCalendar.name }}</h3>
+        <button class="btn btn-secondary btn-sm" (click)="closeDetail()">✕ Close</button>
+      </div>
+      <div class="detail-grid">
+        <div class="detail-item"><label>Start Date</label><span>{{ selectedCalendar.startDate | date:'mediumDate' }}</span></div>
+        <div class="detail-item"><label>End Date</label><span>{{ selectedCalendar.endDate | date:'mediumDate' }}</span></div>
+        <div class="detail-item"><label>Status</label><span><span class="badge" [class.badge-active]="!selectedCalendar.isClosed" [class.badge-reversed]="selectedCalendar.isClosed">{{ selectedCalendar.isClosed ? 'Closed' : 'Open' }}</span></span></div>
+        <div class="detail-item"><label>Transactions</label><span>{{ selectedCalendar.hasTransactions ? 'Yes' : 'None' }}</span></div>
+        <div class="detail-item"><label>Description</label><span>{{ selectedCalendar.description ?? '—' }}</span></div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin:16px 0 8px;">
+        <h4 style="margin:0;">Fiscal Periods</h4>
+        <button class="btn btn-primary btn-sm" (click)="openCreatePeriodForm()">+ Add Period</button>
+      </div>
+
+      <!-- Period Form -->
+      @if (showPeriodForm) {
+        <div class="form-panel" style="margin-bottom:12px;">
+          <h4>{{ editingPeriod ? 'Edit Period' : 'Create Period' }}</h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Period Name *</label>
+              <input type="text" [(ngModel)]="periodFormName" placeholder="e.g. Jan 2026" />
+            </div>
+            <div class="form-group">
+              <label>Start Date *</label>
+              <input type="date" [(ngModel)]="periodFormStartDate" />
+            </div>
+            <div class="form-group">
+              <label>End Date *</label>
+              <input type="date" [(ngModel)]="periodFormEndDate" />
+            </div>
+            <div class="form-group">
+              <label>Description</label>
+              <input type="text" [(ngModel)]="periodFormDescription" placeholder="Description" />
+            </div>
+            @if (editingPeriod) {
+              <div class="form-group form-check-row">
+                <label><input type="checkbox" [(ngModel)]="periodFormIsClosed" /> Closed</label>
+              </div>
+            }
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-secondary" (click)="cancelPeriodForm()">Cancel</button>
+            <button class="btn btn-primary" (click)="savePeriod()">{{ editingPeriod ? 'Update' : 'Create' }}</button>
+          </div>
+        </div>
+      }
+
+      @if (loadingPeriods) {
+        <p>Loading periods...</p>
+      } @else {
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr><th>Period Name</th><th>Start Date</th><th>End Date</th><th>Closed</th><th>Description</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+              @for (p of periods; track p.id) {
+                <tr>
+                  <td>{{ p.periodName }}</td>
+                  <td>{{ p.startDate | date:'mediumDate' }}</td>
+                  <td>{{ p.endDate | date:'mediumDate' }}</td>
+                  <td><span class="badge" [class.badge-reversed]="p.isClosed" [class.badge-active]="!p.isClosed">{{ p.isClosed ? 'Closed' : 'Open' }}</span></td>
+                  <td>{{ p.description ?? '—' }}</td>
+                  <td class="actions-cell">
+                    <button class="btn-icon" title="Edit" (click)="openEditPeriodForm(p)">✏️</button>
+                    @if (!p.isClosed) {
+                      <button class="btn-icon" title="Close Period" (click)="closePeriod(p)">🔒</button>
+                    }
+                    <button class="btn-icon btn-icon-danger" title="Delete" (click)="deletePeriod(p)">🗑️</button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="6" class="empty-row">No periods found</td></tr>
+              }
+            </tbody>
+          </table>
+          @if (periods.length > 0) {
+            <div class="pagination-bar">
+              <div class="pagination-info">
+                <span>Rows per page:</span>
+                <select [(ngModel)]="periodsPageSize" (change)="onPeriodsPageSizeChange()">
+                  @for (opt of pageSizeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+                </select>
+                <span>{{ (periodsPage - 1) * periodsPageSize + 1 }}–{{ periodsPage * periodsPageSize > periodsTotalCount ? periodsTotalCount : periodsPage * periodsPageSize }} of {{ periodsTotalCount }}</span>
+              </div>
+              <div class="pagination-controls">
+                <button class="btn-page" [disabled]="periodsPage <= 1" (click)="goToPeriodsPage(periodsPage - 1)">&#8249; Prev</button>
+                <span class="page-indicator">Page {{ periodsPage }} of {{ periodsTotalPages }}</span>
+                <button class="btn-page" [disabled]="periodsPage >= periodsTotalPages" (click)="goToPeriodsPage(periodsPage + 1)">Next &#8250;</button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Calendar List -->
+  <div class="filters-bar">
+    <span class="filter-search">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search by name…" [(ngModel)]="filterSearch" (ngModelChange)="onSearchInput()" (keyup.enter)="applyFilters()" />
+      @if (filterSearch) { <button class="search-clear" title="Clear search" (click)="filterSearch = ''; applyFilters()">×</button> }
+    </span>
+  </div>
+
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" [class.sorted]="sortBy === 'name'" (click)="sort('name')">Name <span class="sort-icon">{{ sortBy === 'name' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'startDate'" (click)="sort('startDate')">Start Date <span class="sort-icon">{{ sortBy === 'startDate' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'endDate'" (click)="sort('endDate')">End Date <span class="sort-icon">{{ sortBy === 'endDate' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of calendars; track c.id) {
+            <tr [class.row-new]="c.id === highlighter.id">
+              <td>{{ c.name }}</td>
+              <td>{{ c.startDate | date:'mediumDate' }}</td>
+              <td>{{ c.endDate | date:'mediumDate' }}</td>
+              <td>
+                <span class="badge" [class.badge-active]="!c.isClosed" [class.badge-reversed]="c.isClosed">{{ c.isClosed ? 'Closed' : 'Open' }}</span>
+                @if (c.hasTransactions) { <span class="badge badge-info" title="Has posted transactions">Has transactions</span> }
+              </td>
+              <td class="actions-cell">
+                <button class="btn-icon" title="View Periods" (click)="viewCalendar(c)">👁️</button>
+                @if (!c.isClosed) {
+                  @if (canModify(c)) {
+                    <button class="btn-icon" title="Edit" (click)="openEditCalendarForm(c)">✏️</button>
+                    <button class="btn-icon btn-icon-danger" title="Delete" (click)="deleteCalendar(c)">🗑️</button>
+                  } @else {
+                    <button class="btn-icon" title="Edit disabled — year has transactions" disabled>✏️</button>
+                  }
+                  <button class="btn-icon" title="Close fiscal year" (click)="closeCalendar(c)">🔒</button>
+                } @else {
+                  <button class="btn-icon" title="Reopen fiscal year" (click)="reopenCalendar(c)">🔓</button>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="5" class="empty-row">No fiscal years found. Click "New Fiscal Year" to create one.</td></tr>
+          }
+        </tbody>
+      </table>
+      @if (calendars.length > 0) {
+        <div class="pagination-bar">
+          <div class="pagination-info">
+            <span>Rows per page:</span>
+            <select [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+              @for (opt of pageSizeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+            </select>
+            <span>{{ (page - 1) * pageSize + 1 }}–{{ page * pageSize > totalCount ? totalCount : page * pageSize }} of {{ totalCount }}</span>
+          </div>
+          <div class="pagination-controls">
+            <button class="btn-page" [disabled]="page <= 1" (click)="goToPage(page - 1)">&#8249; Prev</button>
+            <span class="page-indicator">Page {{ page }} of {{ totalPages }}</span>
+            <button class="btn-page" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next &#8250;</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

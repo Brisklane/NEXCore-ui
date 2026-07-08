@@ -1,0 +1,158 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">trending_up</span></div>
+      <div>
+        <h1>Demand Management</h1>
+        <p class="inv-hero-sub">Track and manage manufacturing demand across all products</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreate()"><span class="material-symbols-outlined">add</span> New Demand</button>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="kpi-strip">
+    <div class="kpi-card kpi-brand"><div class="kpi-top"><span class="kpi-label">Total Demands</span><span class="kpi-icon"><span class="material-symbols-outlined">list_alt</span></span></div><div class="kpi-value">{{ totalCount }}</div></div>
+    <div class="kpi-card kpi-cyan"><div class="kpi-top"><span class="kpi-label">Open</span><span class="kpi-icon"><span class="material-symbols-outlined">radio_button_unchecked</span></span></div><div class="kpi-value">{{ openCount }}</div></div>
+    <div class="kpi-card kpi-violet"><div class="kpi-top"><span class="kpi-label">In Progress</span><span class="kpi-icon"><span class="material-symbols-outlined">settings</span></span></div><div class="kpi-value">{{ inProgressCount }}</div></div>
+    <div class="kpi-card kpi-success"><div class="kpi-top"><span class="kpi-label">Fulfilled</span><span class="kpi-icon"><span class="material-symbols-outlined">check_circle</span></span></div><div class="kpi-value">{{ fulfilledCount }}</div></div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="ux-help-box" role="note">
+    <strong>How Demand Drives Production</strong>
+    Each demand record signals that a product is needed by a specific date. MRP reads open demands to calculate net requirements and generate Planned Orders. Set the source type accurately — SalesOrder and Forecast demands trigger MRP; Manual demands are for ad-hoc requests. Wrong quantities or due dates cause over- or under-production downstream.
+  </div>
+
+  <div class="row-legend" role="note">
+    <span class="legend-swatch legend-overdue"></span>
+    <span>Highlighted rows indicate overdue demand (due date has passed and status is still Open or In Progress).</span>
+  </div>
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editing ? 'Edit Demand' : 'Create Demand' }}</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Product *</label>
+          <lib-product-picker-input
+            [value]="productDisplayText"
+            [disabled]="!!editing"
+            placeholder="Type product code or name..."
+            (productSelected)="onProductSelected($event)"
+          />
+        </div>
+        <div class="form-group">
+          <label>Quantity *</label>
+          <input type="number" [(ngModel)]="formQuantity" min="1" />
+        </div>
+        <div class="form-group">
+          <label>Due Date</label>
+          <input type="date" [(ngModel)]="formRequiredDate" />
+        </div>
+        <div class="form-group">
+          <label>Source Type</label>
+          <select [(ngModel)]="formSource">
+            <option value="">-- Select Source --</option>
+            @for (s of sourceOptions; track s) { <option [value]="s">{{ s }}</option> }
+          </select>
+        </div>
+        @if (editing) {
+          <div class="form-group">
+            <label>Status</label>
+            <select [(ngModel)]="formStatus">@for (s of statusOptions; track s) { <option [value]="s">{{ s }}</option> }</select>
+          </div>
+        }
+        <div class="form-group form-group-wide">
+          <label>Notes</label>
+          <textarea [(ngModel)]="formNotes" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancel()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()">{{ editing ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <input type="text" class="filter-search" [(ngModel)]="filterSearch" (ngModelChange)="onFilterChange()" placeholder="Search by product or source..." />
+    <select class="filter-select" [(ngModel)]="filterStatus" (ngModelChange)="onFilterChange()">
+      <option value="all">All Statuses</option>
+      @for (s of statusOptions; track s) { <option [value]="s">{{ s }}</option> }
+    </select>
+    <span class="filter-count">{{ filteredItems.length }} of {{ totalCount }}</span>
+  </div>
+
+  @if (loading) { <div class="loading-spinner">Loading...</div> } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" [class.sorted]="sortBy === 'productName'" (click)="sort('productName')">Product <span class="sort-icon">{{ sortBy === 'productName' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'quantity'" (click)="sort('quantity')">Quantity <span class="sort-icon">{{ sortBy === 'quantity' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'fulfilledQty'" (click)="sort('fulfilledQty')">Fulfilled <span class="sort-icon">{{ sortBy === 'fulfilledQty' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Fulfillment</th>
+            <th class="sortable" [class.sorted]="sortBy === 'dueDate'" (click)="sort('dueDate')">Due Date <span class="sort-icon">{{ sortBy === 'dueDate' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'sourceType'" (click)="sort('sourceType')">Source <span class="sort-icon">{{ sortBy === 'sourceType' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'status'" (click)="sort('status')">Status <span class="sort-icon">{{ sortBy === 'status' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of displayRows; track row.id) {
+            <tr [class.row-overdue]="isOverdue(row)" [class.row-new]="row.id === highlighter.id">
+              <td>
+                <div class="cell-primary">{{ getProductDisplayLabel(row.productId, row.productName) }}</div>
+                @if (!row.productName && !hasProductCatalogLabel(row.productId)) { <div class="cell-secondary guid-hint">Product profile missing</div> }
+              </td>
+              <td>{{ row.quantity | number:'1.0-2' }}</td>
+              <td>{{ row.fulfilledQty | number:'1.0-2' }}</td>
+              <td>
+                <div class="progress-bar-wrap">
+                  <div class="progress-bar" [style.width.%]="getFulfillmentPct(row)"></div>
+                </div>
+                <span class="pct-label">{{ getFulfillmentPct(row) }}%</span>
+              </td>
+              <td [class.overdue-date]="isOverdue(row)">{{ row.dueDate | date:'mediumDate' }}</td>
+              <td>{{ row.sourceType || '—' }}</td>
+              <td><span class="badge {{ getStatusClass(row.status) }}">{{ row.status }}</span></td>
+              <td class="actions-cell">
+                @if (row.status === 'Open') {
+                  <button class="btn-xs btn-action" (click)="quickUpdateStatus(row, 'InProgress')">Start</button>
+                }
+                @if (row.status === 'InProgress') {
+                  <button class="btn-xs btn-success" (click)="quickUpdateStatus(row, 'Fulfilled')">Fulfill</button>
+                }
+                <button class="btn-icon" (click)="openEdit(row)" title="Edit">✏️</button>
+                <button class="btn-icon" (click)="delete(row)" title="Delete">🗑️</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="8" class="empty-row">No demands found</td></tr>
+          }
+        </tbody>
+      </table>
+      @if (filteredItems.length > 0) {
+        <div class="pagination-bar">
+          <div class="pagination-info">
+            <span>Rows per page:</span>
+            <select [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+              @for (opt of pageSizeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+            </select>
+            <span>Showing {{ (page - 1) * pageSize + 1 }} to {{ page * pageSize > totalCount ? totalCount : page * pageSize }} of {{ totalCount }} entries</span>
+          </div>
+          <div class="pagination-controls">
+            <button class="btn-page" [disabled]="page <= 1" (click)="goToPage(page - 1)">&#8249; Prev</button>
+            <span class="page-indicator">Page {{ page }} of {{ totalPages }}</span>
+            <button class="btn-page" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next &#8250;</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

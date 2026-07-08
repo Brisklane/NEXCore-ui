@@ -1,0 +1,7 @@
+@import '../shared-styles.css';
+
+/* Manufacturing dashboard — brand cyan→blue accent (global .dsh kit supplies the layout) */
+.mfg-dsh {
+  --dsh-accent: #2b7fff;
+  --dsh-accent-2: #22c7e6;
+}

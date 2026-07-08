@@ -1,0 +1,301 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">price_check</span></div>
+      <div>
+        <h1>Standard Costs</h1>
+        <p class="inv-hero-sub">Manage product standard costs for variance analysis</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreate()"><span class="material-symbols-outlined">add</span> New Standard Cost</button>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <!-- Summary Cards -->
+  <div class="kpi-strip">
+    <div class="kpi-card kpi-brand"><div class="kpi-top"><span class="kpi-label">Total Items</span><span class="kpi-icon"><span class="material-symbols-outlined">list_alt</span></span></div><div class="kpi-value">{{ totalItemsCount }}</div></div>
+    <div class="kpi-card kpi-success"><div class="kpi-top"><span class="kpi-label">Active Costs</span><span class="kpi-icon"><span class="material-symbols-outlined">check_circle</span></span></div><div class="kpi-value">{{ activeItemsCount }}</div></div>
+    <div class="kpi-card kpi-cyan"><div class="kpi-top"><span class="kpi-label">Total Value</span><span class="kpi-icon"><span class="material-symbols-outlined">payments</span></span></div><div class="kpi-value">{{ totalCostValue | number:'1.2-2' }}</div></div>
+    <div class="kpi-card kpi-amber"><div class="kpi-top"><span class="kpi-label">Average Cost</span><span class="kpi-icon"><span class="material-symbols-outlined">price_check</span></span></div><div class="kpi-value">{{ averageCost | number:'1.2-2' }}</div></div>
+  </div>
+
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editing ? 'Edit Standard Cost' : 'Create Standard Cost' }}</h3>
+
+      <div class="cost-help-box" role="note">
+        <strong>How Cost Is Calculated</strong>
+        <div class="calc-hint">Use ↻ Recalculate to auto-fill from master data, or type any cost (e.g. Overhead) directly — Total updates automatically.</div>
+        <div class="calc-source-grid">
+          <div class="calc-source-item">
+            <span class="csrc-dot" style="background:#ff6b6b"></span>
+            <div><span class="csrc-label">Material</span> — BOM components × unit cost (inventory avg. or purchase price)</div>
+          </div>
+          <div class="calc-source-item">
+            <span class="csrc-dot" style="background:#ffd93d"></span>
+            <div><span class="csrc-label">Machine</span> — Routing machine-hours × Work Center hourly machine cost</div>
+          </div>
+          <div class="calc-source-item">
+            <span class="csrc-dot" style="background:#4ecdc4"></span>
+            <div><span class="csrc-label">Labor</span> — Active Labor Rate rules × routing labor-hours</div>
+          </div>
+          <div class="calc-source-item">
+            <span class="csrc-dot" style="background:#a78bfa"></span>
+            <div><span class="csrc-label">Overhead</span> — Active Overhead Rules (%, per-hour, fixed, or per-unit)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group autocomplete-group">
+          <div class="product-label-row">
+            <label>Product *</label>
+            @if (formProductId) {
+              <button type="button" class="btn-recalc" (click)="autoCalculateCosts()" [disabled]="autoCostLoading" title="Recalculate costs from master data">
+                {{ autoCostLoading ? '...' : '↻ Recalculate' }}
+              </button>
+            }
+          </div>
+          <div class="autocomplete-wrap">
+            <input
+              type="text"
+              [(ngModel)]="formProductCode"
+              placeholder="Type product code or name..."
+              [readonly]="!!editing"
+              (focus)="onProductFocus()"
+              (input)="onProductInput()"
+              (blur)="closeProductDropdown()"
+              autocomplete="off"
+            />
+            @if (showProductDropdown && !editing) {
+              <div class="autocomplete-dropdown">
+                @if (productDropdownLoading) {
+                  <div class="autocomplete-empty">Searching...</div>
+                }
+                @for (item of productSuggestions; track item.id) {
+                  <div class="autocomplete-option" (mousedown)="selectProductSuggestion(item)">
+                    <span class="opt-code">{{ item.code }}</span>
+                    <span class="opt-name">{{ item.name }}</span>
+                    @if (item.itemType) { <span class="opt-badge">{{ item.itemType }}</span> }
+                  </div>
+                }
+                <button type="button" class="autocomplete-more" (mousedown)="openProductPicker()">Search more...</button>
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="form-group"><label>Product Reference</label><input type="text" [(ngModel)]="formProductId" readonly /></div>
+        <div class="form-group"><label>Product Name</label><input type="text" [(ngModel)]="formProductName" readonly /></div>
+        <div class="form-group"><label>Currency Code</label><input type="text" [(ngModel)]="formCurrencyCode" maxlength="3" placeholder="USD" /></div>
+
+        <div class="form-group"><label>Material Cost</label><input type="number" [(ngModel)]="formMaterialCost" (ngModelChange)="calcTotal()" min="0" step="0.01" /></div>
+        <div class="form-group"><label>Labor Cost</label><input type="number" [(ngModel)]="formLaborCost" (ngModelChange)="calcTotal()" min="0" step="0.01" /></div>
+        <div class="form-group"><label>Machine Cost</label><input type="number" [(ngModel)]="formMachineCost" (ngModelChange)="calcTotal()" min="0" step="0.01" /></div>
+        <div class="form-group"><label>Overhead Cost</label><input type="number" [(ngModel)]="formOverheadCost" (ngModelChange)="calcTotal()" min="0" step="0.01" /></div>
+        <div class="form-group"><label>Total Cost <span class="label-hint">(auto-summed)</span></label><input type="number" [ngModel]="formTotalCost" readonly class="readonly-input" /></div>
+        <div class="form-group form-span-2"><label>Notes</label><input type="text" [(ngModel)]="formNotes" placeholder="Optional notes" /></div>
+        @if (editing) { <div class="form-group form-check-row"><label><input type="checkbox" [(ngModel)]="formIsActive" /> Active</label></div> }
+      </div>
+
+      @if (autoCostLoading) {
+        <div class="calc-loading-bar">
+          <span class="calc-spinner-sm"></span>
+          Calculating costs for <strong>{{ formProductCode }}</strong>...
+        </div>
+      }
+
+      @if (calculationBreakdown.length > 0 && !autoCostLoading) {
+        <div class="cost-breakdown-panel">
+          <div class="breakdown-header">Calculation result — <strong>{{ formProductCode }}</strong></div>
+          <div class="breakdown-rows">
+            @for (entry of calculationBreakdown; track entry.label) {
+              <div class="breakdown-row" [class.bd-found]="entry.found" [class.bd-missing]="!entry.found">
+                <span [class]="'bd-indicator bd-' + entry.label.toLowerCase()"></span>
+                <span class="bd-label">{{ entry.label }}</span>
+                <span class="bd-source">{{ entry.source }}</span>
+                <span class="bd-amount">{{ entry.amount | number:'1.2-2' }}</span>
+              </div>
+            }
+            <div class="breakdown-total">
+              <span>Total Cost</span>
+              <span class="bd-total-value">{{ formTotalCost | number:'1.2-2' }}</span>
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (showProductPicker) {
+        <div class="picker-overlay" (click)="closeProductPicker()">
+          <div class="picker-card" (click)="$event.stopPropagation()">
+            <div class="picker-head">
+              <h4>Search: Product</h4>
+              <div class="picker-head-actions">
+                <button type="button" class="btn-icon" (click)="closeProductPicker()" title="Close">✕</button>
+              </div>
+            </div>
+            <div class="picker-toolbar">
+              <input
+                type="text"
+                class="input-cell"
+                [(ngModel)]="productPickerSearch"
+                (input)="onProductPickerSearchChange()"
+                placeholder="Search by code or name..."
+              />
+              <div class="picker-pagination-controls">
+                @if (productPickerLoading) {
+                  <div class="picker-loading-spinner"></div>
+                }
+                <div class="picker-page-stat">{{ productPickerStart }}-{{ productPickerEnd }}/{{ productPickerTotal }}</div>
+                <button type="button" class="btn btn-secondary btn-sm" (click)="goToProductPickerPage(productPickerPage - 1)" [disabled]="!productPickerHasPreviousPage || productPickerLoading">◀</button>
+                <button type="button" class="btn btn-secondary btn-sm" (click)="goToProductPickerPage(productPickerPage + 1)" [disabled]="!productPickerHasNextPage || productPickerLoading">▶</button>
+              </div>
+            </div>
+            <div class="picker-table-wrap">
+              <table class="picker-table">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Type</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @if (productPickerLoading) {
+                    <tr><td colspan="3" class="empty-row">Loading products...</td></tr>
+                  } @else if (productPickerTotal === 0) {
+                    <tr><td colspan="3" class="empty-row">No products found</td></tr>
+                  } @else {
+                    @for (item of productPickerPageItems; track item.id) {
+                      <tr class="picker-select-row" (click)="selectProductFromPicker(item)">
+                        <td>{{ item.code || '-' }}</td>
+                        <td>{{ item.name || '-' }}</td>
+                        <td>{{ item.itemType || '-' }}</td>
+                      </tr>
+                    }
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      }
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancel()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()">{{ editing ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  <!-- Filter Controls -->
+  <div class="filter-panel">
+    <div class="filter-group">
+      <input type="text" [(ngModel)]="filterSearch" (ngModelChange)="onFilterChange()" placeholder="Search by product name or ID..." class="filter-input" />
+    </div>
+    <div class="filter-group">
+      <input type="text" [(ngModel)]="filterCurrency" (ngModelChange)="onFilterChange()" placeholder="Filter by currency (e.g. USD)..." class="filter-input" />
+    </div>
+    <div class="filter-group">
+      <select [(ngModel)]="filterStatus" (ngModelChange)="onFilterChange()" class="filter-select">
+        <option value="all">All Costs</option>
+        <option value="active">Active Only</option>
+        <option value="inactive">Inactive Only</option>
+      </select>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else {
+    <div class="table-container">
+      <table class="cost-table">
+        <thead>
+          <tr>
+            <th class="sortable" [class.sorted]="sortBy === 'productName'" (click)="sort('productName')">Product <span class="sort-icon">{{ sortBy === 'productName' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'currencyCode'" (click)="sort('currencyCode')">Currency <span class="sort-icon">{{ sortBy === 'currencyCode' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'materialCost'" (click)="sort('materialCost')">Material <span class="sort-icon">{{ sortBy === 'materialCost' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'laborCost'" (click)="sort('laborCost')">Labor <span class="sort-icon">{{ sortBy === 'laborCost' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'machineCost'" (click)="sort('machineCost')">Machine <span class="sort-icon">{{ sortBy === 'machineCost' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'overheadCost'" (click)="sort('overheadCost')">Overhead <span class="sort-icon">{{ sortBy === 'overheadCost' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'totalCost'" (click)="sort('totalCost')">Total <span class="sort-icon">{{ sortBy === 'totalCost' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Composition</th>
+            <th class="sortable" [class.sorted]="sortBy === 'notes'" (click)="sort('notes')">Notes <span class="sort-icon">{{ sortBy === 'notes' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'isActive'" (click)="sort('isActive')">Status <span class="sort-icon">{{ sortBy === 'isActive' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of displayRows; track row.id) {
+            <tr [class.inactive-row]="!row.isActive" [class.row-new]="row.id === highlighter.id">
+              <td class="product-col"><strong>{{ getProductDisplay(row) }}</strong></td>
+              <td class="currency-col">{{ row.currencyCode }}</td>
+              <td class="cost-col" title="Material Cost">{{ row.materialCost | number:'1.2-2' }}</td>
+              <td class="cost-col" title="Labor Cost">{{ row.laborCost | number:'1.2-2' }}</td>
+              <td class="cost-col" title="Machine Cost">{{ row.machineCost | number:'1.2-2' }}</td>
+              <td class="cost-col" title="Overhead Cost">{{ row.overheadCost | number:'1.2-2' }}</td>
+              <td class="total-cost-col">
+                <strong class="total-value">{{ row.totalCost | number:'1.2-2' }}</strong>
+              </td>
+              <td class="composition-col">
+                <div class="cost-bar">
+                  @if (getCostComposition(row).material > 5) {
+                    <div class="cost-segment segment-material" [style.width.%]="getCostComposition(row).material" title="Material"></div>
+                  }
+                  @if (getCostComposition(row).labor > 5) {
+                    <div class="cost-segment segment-labor" [style.width.%]="getCostComposition(row).labor" title="Labor"></div>
+                  }
+                  @if (getCostComposition(row).machine > 5) {
+                    <div class="cost-segment segment-machine" [style.width.%]="getCostComposition(row).machine" title="Machine"></div>
+                  }
+                  @if (getCostComposition(row).overhead > 5) {
+                    <div class="cost-segment segment-overhead" [style.width.%]="getCostComposition(row).overhead" title="Overhead"></div>
+                  }
+                </div>
+              </td>
+              <td class="notes-col">{{ row.notes || '-' }}</td>
+              <td>
+                <span class="badge" [class.badge-active]="row.isActive" [class.badge-inactive]="!row.isActive">
+                  {{ row.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td class="actions-cell">
+                <button class="btn-icon" (click)="openEdit(row)" title="Edit">✏️</button>
+                <button class="btn-icon btn-danger" (click)="delete(row)" title="Delete">🗑️</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="11" class="empty-row">No standard costs found</td></tr>
+          }
+        </tbody>
+      </table>
+      @if (filteredItems.length > 0) {
+        <div class="pagination-bar">
+          <div class="pagination-info">
+            <span>Rows per page:</span>
+            <select [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+              @for (opt of pageSizeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+            </select>
+            <span>Showing {{ (page - 1) * pageSize + 1 }} to {{ page * pageSize > totalCount ? totalCount : page * pageSize }} of {{ totalCount }} entries</span>
+          </div>
+          <div class="pagination-controls">
+            <button class="btn-page" [disabled]="page <= 1" (click)="goToPage(page - 1)">&#8249; Prev</button>
+            <span class="page-indicator">Page {{ page }} of {{ totalPages }}</span>
+            <button class="btn-page" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next &#8250;</button>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Legend -->
+    <div class="legend">
+      <span class="legend-item"><span class="legend-color segment-material"></span>Material</span>
+      <span class="legend-item"><span class="legend-color segment-labor"></span>Labor</span>
+      <span class="legend-item"><span class="legend-color segment-machine"></span>Machine</span>
+      <span class="legend-item"><span class="legend-color segment-overhead"></span>Overhead</span>
+    </div>
+  }
+</div>

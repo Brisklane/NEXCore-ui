@@ -1,0 +1,658 @@
+<div class="page-container">
+
+  <!-- Header -->
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">event_note</span></div>
+      <div>
+        <h1>Activities</h1>
+        <p class="inv-hero-sub">Log calls, schedule meetings, and track tasks</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button type="button" class="btn-brand" (click)="openCreateForm()">
+        <span class="material-symbols-outlined">add</span> {{ activeTab === 'calls' ? 'Log / Schedule Call' : activeTab === 'events' ? 'New Meeting' : 'New Task' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="kpi-strip">
+    <div class="kpi-card kpi-brand"><div class="kpi-top"><span class="kpi-label">Total</span><span class="kpi-icon"><span class="material-symbols-outlined">insights</span></span></div><div class="kpi-value">{{ totalCount }}</div></div>
+    <div class="kpi-card kpi-cyan"><div class="kpi-top"><span class="kpi-label">Calls</span><span class="kpi-icon"><span class="material-symbols-outlined">call</span></span></div><div class="kpi-value">{{ callsCount }}</div></div>
+    <div class="kpi-card kpi-violet"><div class="kpi-top"><span class="kpi-label">Meetings</span><span class="kpi-icon"><span class="material-symbols-outlined">event</span></span></div><div class="kpi-value">{{ eventsCount }}</div></div>
+    <div class="kpi-card kpi-amber"><div class="kpi-top"><span class="kpi-label">Tasks</span><span class="kpi-icon"><span class="material-symbols-outlined">task_alt</span></span></div><div class="kpi-value">{{ tasksCount }}</div></div>
+    <div class="kpi-card kpi-success"><div class="kpi-top"><span class="kpi-label">Completed</span><span class="kpi-icon"><span class="material-symbols-outlined">flag</span></span></div><div class="kpi-value">{{ completedCount }}</div></div>
+    <div class="kpi-card kpi-danger"><div class="kpi-top"><span class="kpi-label">Overdue</span><span class="kpi-icon"><span class="material-symbols-outlined">warning</span></span></div><div class="kpi-value">{{ overdueCount }}</div></div>
+  </div>
+
+  @if (error) {
+    <div class="alert alert-error">{{ error }}</div>
+  }
+
+  <!-- Tab Navigation -->
+  <div class="tab-nav">
+    <button type="button" class="tab-btn" [class.active]="activeTab === 'calls'" (click)="setTab('calls')">
+      <span class="tab-icon">📞</span> Calls <span class="tab-count">{{ callsCount }}</span>
+    </button>
+    <button type="button" class="tab-btn" [class.active]="activeTab === 'events'" (click)="setTab('events')">
+      <span class="tab-icon">📅</span> Meetings <span class="tab-count">{{ eventsCount }}</span>
+    </button>
+    <button type="button" class="tab-btn" [class.active]="activeTab === 'tasks'" (click)="setTab('tasks')">
+      <span class="tab-icon">✅</span> Tasks <span class="tab-count">{{ tasksCount }}</span>
+    </button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- CALLS TAB                                                   -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  @if (activeTab === 'calls') {
+
+    @if (showForm) {
+      <div class="form-panel">
+        <h3>{{ editingActivity ? 'Edit Call' : 'Log / Schedule a Call' }}</h3>
+        <form class="activity-form">
+
+          <div class="call-mode-bar">
+            <label class="call-mode-label">Call Type</label>
+            <div class="call-mode-toggle">
+              <button type="button" class="mode-btn" [class.active]="formCallMode === 'log'" (click)="formCallMode = 'log'">Log a Call</button>
+              <button type="button" class="mode-btn" [class.active]="formCallMode === 'schedule'" (click)="formCallMode = 'schedule'">Schedule Call</button>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="section-header"><h4>About the Call</h4></div>
+            <div class="form-grid">
+              <div class="form-group form-group-full">
+                <label>Subject <span class="required">*</span></label>
+                <input type="text" [(ngModel)]="formSubject" name="subject" placeholder="Call subject" />
+              </div>
+              <div class="form-group form-group-full">
+                <label>Comments</label>
+                <textarea [(ngModel)]="formComments" name="comments" rows="3" placeholder="Add call notes or summary..."></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="section-header"><h4>Name</h4></div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Type</label>
+                <select [(ngModel)]="formNameType" name="nameType" (ngModelChange)="onNameTypeChange()">
+                  @for (opt of nameTypeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>{{ formNameType }}</label>
+                <crm-lookup-dropdown [(ngModel)]="formNameId" name="nameId"
+                  [options]="nameOptions" [placeholder]="'Select ' + formNameType" [label]="formNameType">
+                </crm-lookup-dropdown>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="section-header"><h4>Related To</h4></div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Type</label>
+                <select [(ngModel)]="formRelatedToType" name="relatedToType" (ngModelChange)="onRelatedToTypeChange()">
+                  @for (opt of relatedToTypeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>{{ formRelatedToType }}</label>
+                <crm-lookup-dropdown [(ngModel)]="formRelatedToId" name="relatedToId"
+                  [options]="relatedToOptions" [placeholder]="'Select ' + formRelatedToType" [label]="formRelatedToType">
+                </crm-lookup-dropdown>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="section-header"><h4>Call Details</h4></div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Direction</label>
+                <select [(ngModel)]="formCallType" name="callType">
+                  <option value="">Select</option>
+                  @for (opt of callTypeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Purpose</label>
+                <select [(ngModel)]="formCallPurpose" name="callPurpose">
+                  <option value="">Select</option>
+                  @for (opt of callPurposeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Result</label>
+                <select [(ngModel)]="formCallResult" name="callResult">
+                  <option value="">Select</option>
+                  @for (opt of callResultOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Duration (minutes)</label>
+                <input type="number" [(ngModel)]="formDurationMinutes" name="duration" min="1" placeholder="e.g. 15" />
+              </div>
+              <div class="form-group">
+                <label>Priority</label>
+                <select [(ngModel)]="formPriority" name="priority">
+                  @for (opt of priorityOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Status</label>
+                <select [(ngModel)]="formStatus" name="status">
+                  @for (opt of taskStatusOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section" [class.section-disabled]="!isScheduleCall">
+            <div class="section-header">
+              <h4>Schedule</h4>
+              @if (!isScheduleCall) { <span class="section-note">Switch to "Schedule Call" to set a date</span> }
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Due Date</label>
+                <input type="date" [(ngModel)]="formDueDate" name="dueDate" [disabled]="!isScheduleCall" />
+              </div>
+              <div class="form-group">
+                <label>Due Time</label>
+                <input type="time" [(ngModel)]="formDueTime" name="dueTime" [disabled]="!isScheduleCall" />
+              </div>
+            </div>
+          </div>
+
+        </form>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+          <button type="button" class="btn btn-primary" [disabled]="!formSubject.trim()" (click)="saveActivity()">
+            {{ editingActivity ? 'Update Call' : (isScheduleCall ? 'Schedule Call' : 'Log Call') }}
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- Call Log table -->
+    <div class="sub-section">
+      <div class="sub-section-header open-header">
+        <h4>Call Log</h4>
+        <span class="count-chip">{{ callsTotal }}</span>
+      </div>
+      <div class="filter-bar">
+        <input type="text" class="filter-search" placeholder="Search calls..."
+          [(ngModel)]="callsSearch" name="callsSearch" (input)="onCallsSearchChange()" />
+      </div>
+      @if (loading) {
+        <div class="loading-spinner">Loading...</div>
+      } @else {
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Subject</th><th>Type</th><th>Direction</th><th>Purpose</th>
+                <th>Name</th><th>Related To</th><th>Due / Logged</th>
+                <th>Priority</th><th>Status</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (a of pagedCalls; track a.id) {
+                <tr [class.row-overdue]="isOverdue(a)" [class.row-done]="a.status === 'Completed'">
+                  <td class="cell-subject">{{ a.subject }}</td>
+                  <td><span class="badge badge-mode">{{ getCallModeLabel(a) }}</span></td>
+                  <td>{{ a.callType || '—' }}</td>
+                  <td>{{ a.callPurpose || '—' }}</td>
+                  <td>{{ getNameDisplay(a) }}</td>
+                  <td>{{ getRelatedToDisplay(a) }}</td>
+                  <td>{{ getDateDisplay(a) }}</td>
+                  <td><span class="badge {{ getPriorityClass(a.priority) }}">{{ a.priority || 'Normal' }}</span></td>
+                  <td><span class="badge {{ getStatusClass(a.status) }}">{{ a.status || 'Not Started' }}</span></td>
+                  <td class="actions-cell">
+                    @if (a.status !== 'Completed') {
+                      <button type="button" class="btn-xs btn-done" (click)="markDone(a)">Done</button>
+                    }
+                    <button type="button" class="btn-icon" title="Edit" (click)="openEditForm(a)">✏️</button>
+                    <button type="button" class="btn-icon btn-icon-danger" title="Delete" (click)="deleteActivity(a.id)">🗑️</button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="10" class="empty-row">No calls yet. Click "+ Log / Schedule Call" to add one.</td></tr>
+              }
+            </tbody>
+          </table>
+          <div class="pagination-bar">
+            <div class="pagination-info">
+              <span>Rows per page:</span>
+              <select [(ngModel)]="callsPageSize" name="callsPageSize" (change)="onCallsPageSizeChange()">
+                @for (opt of pageSizeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+              </select>
+              <span>Showing {{ callsFirstEntry }}–{{ callsLastEntry }} of {{ callsTotal }}</span>
+            </div>
+            <div class="pagination-controls">
+              <button type="button" class="btn-page" [disabled]="callsPage <= 1" (click)="goToCallsPage(callsPage - 1)">&#8249; Prev</button>
+              <span class="page-indicator">Page {{ callsPage }} of {{ callsTotalPages }}</span>
+              <button type="button" class="btn-page" [disabled]="callsPage >= callsTotalPages" (click)="goToCallsPage(callsPage + 1)">Next &#8250;</button>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- MEETINGS (EVENTS) TAB                                       -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  @if (activeTab === 'events') {
+
+    @if (showForm) {
+      <div class="form-panel">
+        <h3>{{ editingActivity ? 'Edit Meeting' : 'New Meeting' }}</h3>
+        <form class="activity-form">
+
+          <div class="form-section">
+            <div class="section-header"><h4>About the Meeting</h4></div>
+            <div class="form-grid">
+              <div class="form-group form-group-full">
+                <label>Subject <span class="required">*</span></label>
+                <input type="text" [(ngModel)]="formSubject" name="subject" placeholder="Meeting subject" />
+              </div>
+              <div class="form-group form-group-full">
+                <label>Description</label>
+                <textarea [(ngModel)]="formDescription" name="description" rows="3" placeholder="Agenda, notes, or description..."></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="section-header"><h4>When</h4></div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Start Date <span class="required">*</span></label>
+                <input type="date" [(ngModel)]="formStartDate" name="startDate" />
+              </div>
+              <div class="form-group">
+                <label>Start Time</label>
+                <input type="time" [(ngModel)]="formStartTime" name="startTime" />
+              </div>
+              <div class="form-group">
+                <label>End Date</label>
+                <input type="date" [(ngModel)]="formEndDate" name="endDate" />
+              </div>
+              <div class="form-group">
+                <label>End Time</label>
+                <input type="time" [(ngModel)]="formEndTime" name="endTime" />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="section-header"><h4>Name</h4></div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Type</label>
+                <select [(ngModel)]="formNameType" name="nameType" (ngModelChange)="onNameTypeChange()">
+                  @for (opt of nameTypeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>{{ formNameType }}</label>
+                <crm-lookup-dropdown [(ngModel)]="formNameId" name="nameId"
+                  [options]="nameOptions" [placeholder]="'Select ' + formNameType" [label]="formNameType">
+                </crm-lookup-dropdown>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="section-header"><h4>Related To</h4></div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Type</label>
+                <select [(ngModel)]="formRelatedToType" name="relatedToType" (ngModelChange)="onRelatedToTypeChange()">
+                  @for (opt of relatedToTypeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>{{ formRelatedToType }}</label>
+                <crm-lookup-dropdown [(ngModel)]="formRelatedToId" name="relatedToId"
+                  [options]="relatedToOptions" [placeholder]="'Select ' + formRelatedToType" [label]="formRelatedToType">
+                </crm-lookup-dropdown>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="section-header"><h4>Details</h4></div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Priority</label>
+                <select [(ngModel)]="formPriority" name="priority">
+                  @for (opt of priorityOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Status</label>
+                <select [(ngModel)]="formStatus" name="status">
+                  @for (opt of taskStatusOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+                </select>
+              </div>
+            </div>
+          </div>
+
+        </form>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+          <button type="button" class="btn btn-primary" [disabled]="!formSubject.trim()" (click)="saveActivity()">
+            {{ editingActivity ? 'Update Meeting' : 'Create Meeting' }}
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- Category filter tabs -->
+    <div class="category-filter-bar">
+      <button type="button" class="cat-btn" [class.active]="eventsFilter === 'all'"
+        (click)="setEventsFilter('all')">
+        All <span class="tab-count">{{ eventsCount }}</span>
+      </button>
+      <button type="button" class="cat-btn" [class.active]="eventsFilter === 'upcoming'"
+        (click)="setEventsFilter('upcoming')">
+        Upcoming <span class="tab-count">{{ upcomingEventsCount }}</span>
+      </button>
+      <button type="button" class="cat-btn" [class.active]="eventsFilter === 'active'"
+        (click)="setEventsFilter('active')">
+        Needs Follow-up <span class="tab-count">{{ activeEventsCount }}</span>
+      </button>
+      <button type="button" class="cat-btn" [class.active]="eventsFilter === 'completed'"
+        (click)="setEventsFilter('completed')">
+        Completed <span class="tab-count">{{ completedEventsCount }}</span>
+      </button>
+    </div>
+
+    <!-- Category legend -->
+    <div class="category-legend">
+      @if (eventsFilter === 'all') {
+        <span class="legend-text">Showing all meetings.</span>
+      }
+      @if (eventsFilter === 'upcoming') {
+        <span class="legend-text">📅 <strong>Upcoming</strong> — meetings whose start date is in the future. Includes Not Started, Waiting, and Deferred meetings.</span>
+      }
+      @if (eventsFilter === 'active') {
+        <span class="legend-text">⚡ <strong>Needs Follow-up</strong> — meetings whose start date has passed but are not yet marked Completed. Action required.</span>
+      }
+      @if (eventsFilter === 'completed') {
+        <span class="legend-text">✅ <strong>Completed</strong> — meetings that have been marked as done.</span>
+      }
+    </div>
+
+    <!-- Meetings table -->
+    <div class="sub-section">
+      <div class="filter-bar">
+        <input type="text" class="filter-search" placeholder="Search meetings..."
+          [(ngModel)]="eventsSearch" name="eventsSearch" (input)="onEventsSearchChange()" />
+      </div>
+      @if (loading) {
+        <div class="loading-spinner">Loading...</div>
+      } @else {
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Subject</th><th>Start</th><th>End</th>
+                <th>Name</th><th>Related To</th><th>Priority</th><th>Status</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (a of pagedEvents; track a.id) {
+                <tr [class.row-overdue]="isOverdue(a)" [class.row-done]="a.status === 'Completed'">
+                  <td class="cell-subject">{{ a.subject }}</td>
+                  <td>{{ a.startDateTime ? (a.startDateTime | date:'MMM d, y, h:mm a') : '—' }}</td>
+                  <td>{{ a.endDateTime   ? (a.endDateTime   | date:'MMM d, y, h:mm a') : '—' }}</td>
+                  <td>{{ getNameDisplay(a) }}</td>
+                  <td>{{ getRelatedToDisplay(a) }}</td>
+                  <td><span class="badge {{ getPriorityClass(a.priority) }}">{{ a.priority || 'Normal' }}</span></td>
+                  <td><span class="badge {{ getStatusClass(a.status) }}">{{ a.status || 'Not Started' }}</span></td>
+                  <td class="actions-cell">
+                    @if (a.status !== 'Completed') {
+                      <button type="button" class="btn-xs btn-done" (click)="markDone(a)">Done</button>
+                    }
+                    <button type="button" class="btn-icon" title="Edit" (click)="openEditForm(a)">✏️</button>
+                    <button type="button" class="btn-icon btn-icon-danger" title="Delete" (click)="deleteActivity(a.id)">🗑️</button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="8" class="empty-row">
+                  @if (eventsFilter === 'all') { No meetings yet. Click "+ New Meeting" to add one. }
+                  @if (eventsFilter === 'upcoming') { No upcoming meetings. }
+                  @if (eventsFilter === 'active') { No meetings need follow-up. }
+                  @if (eventsFilter === 'completed') { No completed meetings yet. }
+                </td></tr>
+              }
+            </tbody>
+          </table>
+          <div class="pagination-bar">
+            <div class="pagination-info">
+              <span>Rows per page:</span>
+              <select [(ngModel)]="eventsPageSize" name="eventsPageSize" (change)="onEventsPageSizeChange()">
+                @for (opt of pageSizeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+              </select>
+              <span>Showing {{ eventsFirstEntry }}–{{ eventsLastEntry }} of {{ eventsTotal }}</span>
+            </div>
+            <div class="pagination-controls">
+              <button type="button" class="btn-page" [disabled]="eventsPage <= 1" (click)="goToEventsPage(eventsPage - 1)">&#8249; Prev</button>
+              <span class="page-indicator">Page {{ eventsPage }} of {{ eventsTotalPages }}</span>
+              <button type="button" class="btn-page" [disabled]="eventsPage >= eventsTotalPages" (click)="goToEventsPage(eventsPage + 1)">Next &#8250;</button>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- TASKS TAB                                                   -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  @if (activeTab === 'tasks') {
+
+    @if (showForm) {
+      <div class="form-panel">
+        <h3>{{ editingActivity ? 'Edit Task' : 'New Task' }}</h3>
+        <form class="activity-form">
+
+          <div class="form-section">
+            <div class="section-header"><h4>About the Task</h4></div>
+            <div class="form-grid">
+              <div class="form-group form-group-full">
+                <label>Subject <span class="required">*</span></label>
+                <input type="text" [(ngModel)]="formSubject" name="subject" placeholder="Task subject" />
+              </div>
+              <div class="form-group form-group-full">
+                <label>Description</label>
+                <textarea [(ngModel)]="formDescription" name="description" rows="3" placeholder="Describe the task..."></textarea>
+              </div>
+              <div class="form-group">
+                <label>Due Date</label>
+                <input type="date" [(ngModel)]="formDueDate" name="dueDate" />
+              </div>
+              <div class="form-group">
+                <label>Priority</label>
+                <select [(ngModel)]="formPriority" name="priority">
+                  @for (opt of priorityOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Status</label>
+                <select [(ngModel)]="formStatus" name="status">
+                  @for (opt of taskStatusOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="section-header"><h4>Name</h4></div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Type</label>
+                <select [(ngModel)]="formNameType" name="nameType" (ngModelChange)="onNameTypeChange()">
+                  @for (opt of nameTypeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>{{ formNameType }}</label>
+                <crm-lookup-dropdown [(ngModel)]="formNameId" name="nameId"
+                  [options]="nameOptions" [placeholder]="'Select ' + formNameType" [label]="formNameType">
+                </crm-lookup-dropdown>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="section-header"><h4>Related To</h4></div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Type</label>
+                <select [(ngModel)]="formRelatedToType" name="relatedToType" (ngModelChange)="onRelatedToTypeChange()">
+                  @for (opt of relatedToTypeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>{{ formRelatedToType }}</label>
+                <crm-lookup-dropdown [(ngModel)]="formRelatedToId" name="relatedToId"
+                  [options]="relatedToOptions" [placeholder]="'Select ' + formRelatedToType" [label]="formRelatedToType">
+                </crm-lookup-dropdown>
+              </div>
+            </div>
+          </div>
+
+        </form>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+          <button type="button" class="btn btn-primary" [disabled]="!formSubject.trim()" (click)="saveActivity()">
+            {{ editingActivity ? 'Update Task' : 'Create Task' }}
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- Category filter tabs -->
+    <div class="category-filter-bar">
+      <button type="button" class="cat-btn" [class.active]="tasksFilter === 'all'"
+        (click)="setTasksFilter('all')">
+        All <span class="tab-count">{{ tasksCount }}</span>
+      </button>
+      <button type="button" class="cat-btn" [class.active]="tasksFilter === 'upcoming'"
+        (click)="setTasksFilter('upcoming')">
+        Upcoming <span class="tab-count">{{ upcomingTasksCount }}</span>
+      </button>
+      <button type="button" class="cat-btn cat-btn-active" [class.active]="tasksFilter === 'active'"
+        (click)="setTasksFilter('active')">
+        Active / Overdue <span class="tab-count">{{ activeTasksCount }}</span>
+      </button>
+      <button type="button" class="cat-btn cat-btn-deferred" [class.active]="tasksFilter === 'deferred'"
+        (click)="setTasksFilter('deferred')">
+        Deferred <span class="tab-count">{{ deferredTasksCount }}</span>
+      </button>
+      <button type="button" class="cat-btn" [class.active]="tasksFilter === 'completed'"
+        (click)="setTasksFilter('completed')">
+        Completed <span class="tab-count">{{ completedTasksCount }}</span>
+      </button>
+    </div>
+
+    <!-- Category legend -->
+    <div class="category-legend">
+      @if (tasksFilter === 'all') {
+        <span class="legend-text">Showing all tasks.</span>
+      }
+      @if (tasksFilter === 'upcoming') {
+        <span class="legend-text">📋 <strong>Upcoming</strong> — tasks with status <em>Not Started</em> whose due date is today, in the future, or not yet set.</span>
+      }
+      @if (tasksFilter === 'active') {
+        <span class="legend-text">⚡ <strong>Active / Overdue</strong> — tasks that are <em>In Progress</em>, <em>Waiting</em> on someone, or <em>overdue</em> (Not Started but past their due date).</span>
+      }
+      @if (tasksFilter === 'deferred') {
+        <span class="legend-text">⏸ <strong>Deferred</strong> — tasks explicitly postponed. Change status to bring them back into the active workflow.</span>
+      }
+      @if (tasksFilter === 'completed') {
+        <span class="legend-text">✅ <strong>Completed</strong> — tasks that have been finished.</span>
+      }
+    </div>
+
+    <!-- Tasks table -->
+    <div class="sub-section">
+      <div class="filter-bar">
+        <input type="text" class="filter-search" placeholder="Search tasks..."
+          [(ngModel)]="tasksSearch" name="tasksSearch" (input)="onTasksSearchChange()" />
+      </div>
+      @if (loading) {
+        <div class="loading-spinner">Loading...</div>
+      } @else {
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Subject</th><th>Due Date</th><th>Name</th>
+                <th>Related To</th><th>Priority</th><th>Status</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (a of pagedTasks; track a.id) {
+                <tr [class.row-overdue]="isOverdueTask(a)" [class.row-done]="a.status === 'Completed'">
+                  <td class="cell-subject">
+                    {{ a.subject }}
+                    @if (isOverdueTask(a)) { <span class="badge badge-overdue-inline">Overdue</span> }
+                  </td>
+                  <td [class.overdue-date]="isOverdueTask(a)">
+                    {{ a.dueDate ? (a.dueDate | date:'MMM d, y') : '—' }}
+                  </td>
+                  <td>{{ getNameDisplay(a) }}</td>
+                  <td>{{ getRelatedToDisplay(a) }}</td>
+                  <td><span class="badge {{ getPriorityClass(a.priority) }}">{{ a.priority || 'Normal' }}</span></td>
+                  <td><span class="badge {{ getStatusClass(a.status) }}">{{ a.status || 'Not Started' }}</span></td>
+                  <td class="actions-cell">
+                    @if (a.status !== 'Completed') {
+                      <button type="button" class="btn-xs btn-done" (click)="markDone(a)">Done</button>
+                    }
+                    <button type="button" class="btn-icon" title="Edit" (click)="openEditForm(a)">✏️</button>
+                    <button type="button" class="btn-icon btn-icon-danger" title="Delete" (click)="deleteActivity(a.id)">🗑️</button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="7" class="empty-row">
+                  @if (tasksFilter === 'all') { No tasks yet. Click "+ New Task" to add one. }
+                  @if (tasksFilter === 'upcoming') { No upcoming tasks. Tasks here are Not Started with a future or no due date. }
+                  @if (tasksFilter === 'active') { No active or overdue tasks — great! }
+                  @if (tasksFilter === 'deferred') { No deferred tasks. }
+                  @if (tasksFilter === 'completed') { No completed tasks yet. }
+                </td></tr>
+              }
+            </tbody>
+          </table>
+          <div class="pagination-bar">
+            <div class="pagination-info">
+              <span>Rows per page:</span>
+              <select [(ngModel)]="tasksPageSize" name="tasksPageSize" (change)="onTasksPageSizeChange()">
+                @for (opt of pageSizeOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+              </select>
+              <span>Showing {{ tasksFirstEntry }}–{{ tasksLastEntry }} of {{ tasksTotal }}</span>
+            </div>
+            <div class="pagination-controls">
+              <button type="button" class="btn-page" [disabled]="tasksPage <= 1" (click)="goToTasksPage(tasksPage - 1)">&#8249; Prev</button>
+              <span class="page-indicator">Page {{ tasksPage }} of {{ tasksTotalPages }}</span>
+              <button type="button" class="btn-page" [disabled]="tasksPage >= tasksTotalPages" (click)="goToTasksPage(tasksPage + 1)">Next &#8250;</button>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+</div>

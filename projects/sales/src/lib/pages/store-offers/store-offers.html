@@ -1,0 +1,189 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Store Offers</h2>
+      <p class="subtitle">Manage banners and promotional offers per store</p>
+    </div>
+    <button class="btn btn-primary" (click)="openCreateForm()">+ New Offer</button>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (successMsg) { <div class="alert alert-success">{{ successMsg }}</div> }
+
+  <!-- ── Store filter ──────────────────────────────────────── -->
+  <div class="form-panel">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Store *</label>
+        <select [(ngModel)]="filterStoreId" (ngModelChange)="onFilterStoreChange()">
+          <option value="">-- Select a store --</option>
+          @for (s of stores; track s.id) {
+            <option [value]="s.id">{{ s.tradingName }}</option>
+          }
+        </select>
+      </div>
+      <div class="form-group" style="flex-direction:row;align-items:center;gap:8px;padding-top:20px;">
+        <input type="checkbox" [(ngModel)]="showAll" id="showAll" style="width:auto;" />
+        <label for="showAll" style="margin:0;">Show inactive</label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Create / Edit form ───────────────────────────────── -->
+  @if (showForm) {
+    <div class="form-panel">
+      <h3>{{ editingOffer ? 'Edit Offer' : 'New Offer' }}</h3>
+      <div class="form-grid">
+        @if (!editingOffer) {
+          <div class="form-group">
+            <label>Store *</label>
+            <select [(ngModel)]="formStoreId">
+              <option value="">-- Select store --</option>
+              @for (s of stores; track s.id) {
+                <option [value]="s.id">{{ s.tradingName }}</option>
+              }
+            </select>
+          </div>
+        }
+        <div class="form-group">
+          <label>Type</label>
+          <select [(ngModel)]="formOfferType">
+            @for (t of offerTypes; track t) {
+              <option [value]="t">{{ t }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Title *</label>
+          <input type="text" [(ngModel)]="formTitle" placeholder="Offer title" />
+        </div>
+        <div class="form-group">
+          <label>Subtitle</label>
+          <input type="text" [(ngModel)]="formSubtitle" placeholder="Short subtitle" />
+        </div>
+        <div class="form-group">
+          <label>Call to Action</label>
+          <input type="text" [(ngModel)]="formCallToAction" placeholder="e.g. Shop Now" />
+        </div>
+        <div class="form-group">
+          <label>Badge Text</label>
+          <input type="text" [(ngModel)]="formBadgeText" placeholder="e.g. HOT" />
+        </div>
+        <div class="form-group">
+          <label>Badge Color</label>
+          <input type="text" [(ngModel)]="formBadgeColor" placeholder="e.g. #ef4444" />
+        </div>
+        <div class="form-group">
+          <label>Display Order</label>
+          <input type="number" [(ngModel)]="formDisplayOrder" min="0" />
+        </div>
+        <div class="form-group">
+          <label>Start Date</label>
+          <input type="date" [(ngModel)]="formStartDate" />
+        </div>
+        <div class="form-group">
+          <label>End Date</label>
+          <input type="date" [(ngModel)]="formEndDate" />
+        </div>
+        <div class="form-group">
+          <label>Linked Promotion</label>
+          <select [(ngModel)]="formPromotionId">
+            <option value="">-- None --</option>
+            @for (p of promotions; track p.id) {
+              <option [value]="p.id">{{ p.name }}{{ p.promotionCode ? ' (' + p.promotionCode + ')' : '' }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Linked Item</label>
+          <select [(ngModel)]="formItemId">
+            <option value="">-- None --</option>
+            @for (i of items; track i.id) {
+              <option [value]="i.id">{{ i.name }}{{ i.code ? ' (' + i.code + ')' : '' }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group form-group-full">
+          <label>Image URL</label>
+          <input type="text" [(ngModel)]="formImageUrl" placeholder="https://…" />
+        </div>
+        <div class="form-group form-group-full">
+          <label>Banner URL</label>
+          <input type="text" [(ngModel)]="formBannerUrl" placeholder="https://…" />
+        </div>
+        <div class="form-group form-group-full">
+          <label>Deep Link URL</label>
+          <input type="text" [(ngModel)]="formDeepLinkUrl" placeholder="app://…" />
+        </div>
+        <div class="form-group form-group-full">
+          <label>Description</label>
+          <textarea [(ngModel)]="formDescription" rows="2" placeholder="Optional description"></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" (click)="cancelForm()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()">{{ editingOffer ? 'Update' : 'Create' }}</button>
+      </div>
+    </div>
+  }
+
+  <!-- ── Table ─────────────────────────────────────────────── -->
+  @if (loading) {
+    <div class="loading-spinner">Loading offers…</div>
+  } @else if (offers.length > 0) {
+    <div class="filters-bar">
+      <input type="text" [(ngModel)]="searchQuery" placeholder="Search by title or type…" style="flex:1;" />
+      <span class="filter-count">{{ filteredOffers.length }} record(s)</span>
+    </div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" [class.sorted]="sortBy === 'displayOrder'" (click)="sort('displayOrder')"># <span class="sort-icon">{{ sortBy === 'displayOrder' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'title'" (click)="sort('title')">Title <span class="sort-icon">{{ sortBy === 'title' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th class="sortable" [class.sorted]="sortBy === 'offerType'" (click)="sort('offerType')">Type <span class="sort-icon">{{ sortBy === 'offerType' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Period</th>
+            <th class="sortable" [class.sorted]="sortBy === 'isActive'" (click)="sort('isActive')">Active <span class="sort-icon">{{ sortBy === 'isActive' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (o of filteredOffers; track o.id) {
+            <tr [class.row-new]="o.id === highlighter.id">
+              <td style="color:#94a3b8;font-size:12px;">{{ o.displayOrder }}</td>
+              <td>
+                <div style="font-weight:500;">{{ o.title }}</div>
+                @if (o.subtitle) { <div style="font-size:12px;color:#94a3b8;">{{ o.subtitle }}</div> }
+                @if (o.badgeText) {
+                  <span class="badge-chip" [style.background]="o.badgeColor ?? '#ef4444'">{{ o.badgeText }}</span>
+                }
+              </td>
+              <td style="font-size:12px;color:#64748b;">{{ o.offerType }}</td>
+              <td style="font-size:12px;color:#64748b;">
+                @if (o.startDate || o.endDate) {
+                  {{ o.startDate | date:'mediumDate' }} – {{ o.endDate | date:'mediumDate' }}
+                } @else { Always }
+              </td>
+              <td>
+                <span [class]="o.isActive ? 'badge badge-accepted' : 'badge badge-cancelled'">
+                  {{ o.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td class="actions-cell">
+                <button class="btn btn-secondary btn-sm" (click)="openEditForm(o)" title="Edit">✎</button>
+                <button class="btn btn-secondary btn-sm" (click)="toggle(o.id)" title="Toggle"
+                  [style.background]="o.isActive ? '#fef9c3' : '#dcfce7'"
+                  [style.color]="o.isActive ? '#92400e' : '#15803d'">
+                  {{ o.isActive ? 'Hide' : 'Show' }}
+                </button>
+                <button class="btn btn-danger btn-sm" (click)="delete(o.id)" title="Delete">✕</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="6" style="text-align:center;padding:32px;color:#94a3b8;">No offers found for this store.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

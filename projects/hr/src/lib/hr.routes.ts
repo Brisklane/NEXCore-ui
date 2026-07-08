@@ -1,0 +1,133 @@
+import { Routes } from '@angular/router';
+import { Dashboard } from './pages/recruitment/dashboard/dashboard';
+import { HiringRequests } from './pages/recruitment/hiring-management/hiring-requests/hiring-requests';
+import { ApprovalWorkflow } from './pages/recruitment/hiring-management/approval-workflow/approval-workflow';
+import { Applications } from './pages/recruitment/candidate-pipeline/applications/applications';
+import { Screening } from './pages/recruitment/candidate-pipeline/screening/screening';
+import { Shortlisting } from './pages/recruitment/candidate-pipeline/shortlisting/shortlisting';
+import { Interview } from './pages/recruitment/candidate-pipeline/interview/interview';
+import { Contract } from './pages/recruitment/candidate-pipeline/contract/contract';
+import { Blacklisted } from './pages/recruitment/candidate-pipeline/blacklisted/blacklisted';
+import { Hired } from './pages/recruitment/candidate-pipeline/hired/hired';
+import { Onboarding } from './pages/recruitment/candidate-pipeline/onboarding/onboarding';
+import { Schedule } from './pages/recruitment/interviews/schedule/schedule';
+import { Feedback } from './pages/recruitment/interviews/feedback/feedback';
+import { Payroll } from './pages/recruitment/payroll/payroll';
+import { Tasks } from './pages/recruitment/tasks/tasks';
+import { ReportsAnalytics } from './pages/recruitment/reports-analytics/reports-analytics';
+import { EmailTemplates } from './pages/recruitment/settings/email-templates/email-templates';
+import { CareerPageBuilder } from './pages/recruitment/settings/career-page-builder/career-page-builder';
+import { JobBoardIntegration } from './pages/recruitment/settings/job-board-integration/job-board-integration';
+import { GeneralSettings } from './pages/recruitment/settings/general-settings/general-settings';
+import { AllowancesProfileComponent } from './pages/allowances-profile/allowances-profile';
+import { HrApplicationComponent } from './pages/application/hr-application';
+import { BenefitsPlanComponent } from './pages/benefits-plan/benefits-plan';
+import { EmployeeComponent } from './pages/employee/employee';
+import { DepartmentComponent } from './pages/department/department';
+import { JobTitleComponent } from './pages/job-title/job-title';
+import { JobRequisitionCrudComponent } from './pages/job-requisition-crud/job-requisition-crud';
+import { JobCrudComponent } from './pages/job-crud/job-crud';
+import { CandidateComponent } from './pages/candidate/candidate';
+import { InterviewCrudComponent } from './pages/interview-crud/interview-crud';
+import { OfferLetterComponent } from './pages/offer-letter/offer-letter';
+import { EmployeeContractComponent } from './pages/employee-contract/employee-contract';
+import { OnboardingTaskComponent } from './pages/onboarding-task/onboarding-task';
+import { LeaveTypeComponent } from './pages/leave-type/leave-type';
+import { LeaveRequestComponent } from './pages/leave-request/leave-request';
+import { AttendanceRecordComponent } from './pages/attendance-record/attendance-record';
+import { PayrollRunComponent } from './pages/payroll-run/payroll-run';
+import { SalaryStructureComponent } from './pages/salary-structure/salary-structure';
+import { DeductionComponent } from './pages/deduction/deduction';
+// Settings - Master Data
+import { SettingsDepartmentsComponent } from './pages/settings/master-data/departments/departments';
+import { SettingsDesignationsComponent } from './pages/settings/master-data/designations/designations';
+import { SettingsLocationsComponent } from './pages/settings/master-data/locations/locations';
+import { LookupValuesComponent } from './pages/settings/master-data/lookup-values/lookup-values';
+import { SkillsCompetenciesComponent } from './pages/settings/master-data/skills-competencies/skills-competencies';
+import { SettingsCurrenciesComponent } from './pages/settings/master-data/currencies/currencies';
+import { SettingsPositionsComponent } from './pages/settings/master-data/positions/positions';
+import { SettingsJobLocationsComponent } from './pages/settings/master-data/job-locations/job-locations';
+import { SettingsJobPostingChannelsComponent } from './pages/settings/master-data/job-posting-channels/job-posting-channels';
+// Settings - Templates
+import { JobTemplatesComponent } from './pages/settings/templates/job-templates/job-templates';
+import { InterviewPlanTemplatesComponent } from './pages/settings/templates/interview-plan-templates/interview-plan-templates';
+import { InterviewRoundTemplatesComponent } from './pages/settings/templates/interview-round-templates/interview-round-templates';
+import { InterviewFeedbackTemplatesComponent } from './pages/settings/templates/interview-feedback-templates/interview-feedback-templates';
+import { OnboardingTaskTemplatesComponent } from './pages/settings/templates/onboarding-task-templates/onboarding-task-templates';
+// Settings - Workflow Configuration
+import { WorkflowConfigurationsComponent } from './pages/settings/workflow-configuration/workflow-configurations/workflow-configurations';
+import { WorkflowStepsComponent } from './pages/settings/workflow-configuration/workflow-steps/workflow-steps';
+import { WorkflowConditionsComponent } from './pages/settings/workflow-configuration/workflow-conditions/workflow-conditions';
+import { WorkflowEscalationsComponent } from './pages/settings/workflow-configuration/workflow-escalations/workflow-escalations';
+// Settings - System Settings
+import { NotificationSettingsComponent } from './pages/settings/system-settings/notification-settings/notification-settings';
+import { IntegrationSettingsComponent } from './pages/settings/system-settings/integration-settings/integration-settings';
+import { SettingsEmailTemplatesComponent } from './pages/settings/system-settings/email-templates/email-templates';
+
+export const hrRoutes: Routes = [
+  { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+  { path: 'dashboard', component: Dashboard },
+  { path: 'hiring-requests', component: HiringRequests },
+  { path: 'approval-workflow', component: ApprovalWorkflow },
+  { path: 'job-requisitions', component: JobRequisitionCrudComponent },
+  { path: 'applications', component: Applications },
+  { path: 'screening', component: Screening },
+  { path: 'shortlisting', component: Shortlisting },
+  { path: 'interview', component: Interview },
+  { path: 'contract', component: Contract },
+  { path: 'blacklisted', component: Blacklisted },
+  { path: 'hired', component: Hired },
+  { path: 'onboarding', component: Onboarding },
+  { path: 'schedule', component: Schedule },
+  { path: 'feedback', component: Feedback },
+  { path: 'payroll', component: Payroll },
+  { path: 'tasks', component: Tasks },
+  { path: 'reports', component: ReportsAnalytics },
+  { path: 'career-page-builder', component: CareerPageBuilder },
+  { path: 'job-board-integration', component: JobBoardIntegration },
+  { path: 'general-settings', component: GeneralSettings },
+  // API-backed CRUD pages
+  { path: 'allowances-profiles', component: AllowancesProfileComponent },
+  { path: 'job-applications', component: HrApplicationComponent },
+  { path: 'benefits-plans', component: BenefitsPlanComponent },
+  { path: 'employees', component: EmployeeComponent },
+  { path: 'new-hires', component: EmployeeComponent },
+  { path: 'job-titles', component: JobTitleComponent },
+  { path: 'job', component: JobCrudComponent },
+  { path: 'candidates', component: CandidateComponent },
+  { path: 'interview-management', component: InterviewCrudComponent },
+  { path: 'offer-letters', component: OfferLetterComponent },
+  { path: 'employee-contracts', component: EmployeeContractComponent },
+  { path: 'onboarding-tasks', component: OnboardingTaskComponent },
+  { path: 'leave-types', component: LeaveTypeComponent },
+  { path: 'leave-requests', component: LeaveRequestComponent },
+  { path: 'attendance', component: AttendanceRecordComponent },
+  { path: 'payroll-runs', component: PayrollRunComponent },
+  { path: 'salary-structures', component: SalaryStructureComponent },
+  { path: 'deductions', component: DeductionComponent },
+  // Settings - Master Data
+  { path: 'departments', component: SettingsDepartmentsComponent },
+  { path: 'designations', component: SettingsDesignationsComponent },
+  { path: 'locations', component: SettingsLocationsComponent },
+  { path: 'lookup-values', component: LookupValuesComponent },
+  { path: 'skills-competencies', component: SkillsCompetenciesComponent },
+  { path: 'currencies', component: SettingsCurrenciesComponent },
+  { path: 'positions', component: SettingsPositionsComponent },
+  { path: 'job-locations', component: SettingsJobLocationsComponent },
+  { path: 'job-posting-channels', component: SettingsJobPostingChannelsComponent },
+  // Settings - Templates
+  { path: 'job-templates', component: JobTemplatesComponent },
+  { path: 'interview-plan-templates', component: InterviewPlanTemplatesComponent },
+  { path: 'interview-round-templates', component: InterviewRoundTemplatesComponent },
+  { path: 'interview-feedback-templates', component: InterviewFeedbackTemplatesComponent },
+  { path: 'onboarding-task-templates', component: OnboardingTaskTemplatesComponent },
+  // Settings - Workflow Configuration
+  { path: 'configurations', component: WorkflowConfigurationsComponent },
+  { path: 'steps', component: WorkflowStepsComponent },
+  { path: 'conditions', component: WorkflowConditionsComponent },
+  { path: 'escalations', component: WorkflowEscalationsComponent },
+  // Settings - System Settings
+  { path: 'notification-settings', component: NotificationSettingsComponent },
+  { path: 'integration-settings', component: IntegrationSettingsComponent },
+  { path: 'email-templates', component: SettingsEmailTemplatesComponent },
+];

@@ -1,0 +1,350 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "cli": {
+    "packageManager": "npm",
+    "analytics": false,
+    "cache": {
+      "enabled": false
+    }
+  },
+  "newProjectRoot": "projects",
+  "projects": {
+    "nexcore": {
+      "projectType": "application",
+      "schematics": {},
+      "root": "projects/nexcore",
+      "sourceRoot": "projects/nexcore/src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "outputPath": "dist/nexcore",
+            "index": "projects/nexcore/src/index.html",
+            "browser": "projects/nexcore/src/main.ts",
+            "tsConfig": "projects/nexcore/tsconfig.app.json",
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "projects/nexcore/public"
+              },
+              {
+                "glob": "**/*",
+                "input": "projects/nexcore/src/assets",
+                "output": "assets"
+              }
+            ],
+            "styles": [
+              "projects/nexcore/src/styles.css",
+              "node_modules/leaflet/dist/leaflet.css",
+              "node_modules/@fortawesome/fontawesome-free/css/all.min.css"
+            ],
+            "allowedCommonJsDependencies": [
+              "leaflet"
+            ]
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kB",
+                  "maximumError": "1MB"
+                }
+              ],
+              "outputHashing": "all",
+              "fileReplacements": [
+                {
+                  "replace": "projects/nexcore/src/environments/environment.ts",
+                  "with": "projects/nexcore/src/environments/environment.prod.ts"
+                }
+              ]
+            },
+            "development": {}
+          },
+          "defaultConfiguration": "development"
+        },
+        "serve": {
+          "builder": "@angular/build:dev-server",
+          "configurations": {
+            "production": {
+              "buildTarget": "nexcore:build:production"
+            },
+            "development": {
+              "buildTarget": "nexcore:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "extract-i18n": {
+          "builder": "@angular/build:extract-i18n",
+          "options": {
+            "buildTarget": "nexcore:build"
+          }
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/nexcore/tsconfig.spec.json",
+            "runner": "vitest"
+          }
+        }
+      }
+    },
+    "shared": {
+      "projectType": "library",
+      "root": "projects/shared",
+      "sourceRoot": "projects/shared/src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "options": {
+            "project": "projects/shared/ng-package.json"
+          }
+        }
+      }
+    },
+    "core": {
+      "projectType": "library",
+      "root": "projects/core",
+      "sourceRoot": "projects/core/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "options": {
+            "project": "projects/core/ng-package.json"
+          },
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/core/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/core/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/core/tsconfig.spec.json",
+            "runner": "vitest"
+          }
+        }
+      }
+    },
+    "accounting": {
+      "projectType": "library",
+      "root": "projects/accounting",
+      "sourceRoot": "projects/accounting/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "options": {
+            "project": "projects/accounting/ng-package.json"
+          },
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/accounting/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/accounting/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/accounting/tsconfig.spec.json",
+            "runner": "vitest"
+          }
+        }
+      }
+    },
+    "inventory": {
+      "projectType": "library",
+      "root": "projects/inventory",
+      "sourceRoot": "projects/inventory/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "options": {
+            "project": "projects/inventory/ng-package.json"
+          },
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/inventory/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/inventory/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/inventory/tsconfig.spec.json",
+            "runner": "vitest"
+          }
+        }
+      }
+    },
+    "sales": {
+      "projectType": "library",
+      "root": "projects/sales",
+      "sourceRoot": "projects/sales/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "options": {
+            "project": "projects/sales/ng-package.json"
+          },
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/sales/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/sales/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/sales/tsconfig.spec.json",
+            "runner": "vitest"
+          }
+        }
+      }
+    },
+    "procurement": {
+      "projectType": "library",
+      "root": "projects/procurement",
+      "sourceRoot": "projects/procurement/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "options": {
+            "project": "projects/procurement/ng-package.json"
+          },
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/procurement/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/procurement/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/procurement/tsconfig.spec.json",
+            "runner": "vitest"
+          }
+        }
+      }
+    },
+    "hr": {
+      "projectType": "library",
+      "root": "projects/hr",
+      "sourceRoot": "projects/hr/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "options": {
+            "project": "projects/hr/ng-package.json"
+          },
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/hr/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/hr/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/hr/tsconfig.spec.json",
+            "runner": "vitest"
+          }
+        }
+      }
+    },
+    "crm": {
+      "projectType": "library",
+      "root": "projects/crm",
+      "sourceRoot": "projects/crm/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "options": {
+            "project": "projects/crm/ng-package.json"
+          },
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/crm/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/crm/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/crm/tsconfig.spec.json",
+            "runner": "vitest"
+          }
+        }
+      }
+    },
+    "manufacturing": {
+      "projectType": "library",
+      "root": "projects/manufacturing",
+      "sourceRoot": "projects/manufacturing/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "options": {
+            "project": "projects/manufacturing/ng-package.json"
+          },
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/manufacturing/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/manufacturing/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/manufacturing/tsconfig.spec.json",
+            "runner": "vitest"
+          }
+        }
+      }
+    }
+  }
+}

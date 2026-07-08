@@ -1,0 +1,116 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">payments</span></div>
+      <div>
+        <h1>Sales Payments</h1>
+        <p class="inv-hero-sub">Record and view customer payments</p>
+      </div>
+    </div>
+    <div class="inv-hero-actions">
+      <button class="btn-brand" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> Record Payment</button>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (successMsg) { <div class="alert alert-success">{{ successMsg }}</div> }
+
+  <div class="md-split">
+    <!-- ══ LEFT: payment rows ══ -->
+    <div class="md-list">
+      <div class="md-list-head">
+        <span class="inv-search"><span class="material-symbols-outlined">search</span><input type="text" [(ngModel)]="searchQuery" placeholder="Search payments…" /></span>
+      </div>
+      <div class="md-list-body">
+        @if (loading) {
+          @for (s of [0,1,2,3]; track s) { <div class="md-rec"><span class="skeleton sk-circle" style="width:34px;height:34px"></span><div style="flex:1"><span class="skeleton sk-line" style="width:70%"></span></div></div> }
+        } @else if (filteredPayments.length === 0) {
+          <div class="inv-empty" style="padding:36px 16px"><div class="inv-empty-icon"><span class="material-symbols-outlined">payments</span></div><div class="inv-empty-title">No payments</div><div class="inv-empty-text">Record your first customer payment.</div></div>
+        } @else {
+          @for (p of filteredPayments; track p.id) {
+            <button class="md-rec" [class.selected]="selectedPayment?.id === p.id" [class.row-new]="p.id === highlighter.id" (click)="viewPayment(p)">
+              <span class="md-rec-ico"><span class="material-symbols-outlined" style="font-size:17px">receipt</span></span>
+              <div class="md-rec-main"><span class="md-rec-title">{{ p.paymentNumber || '—' }}</span><span class="md-rec-sub">{{ displayContact(p) || '—' }} · {{ p.paidAt | date:'mediumDate' }}</span></div>
+              <span style="font-weight:800;font-size:13px;color:var(--text-heading,#0f172a);font-variant-numeric:tabular-nums;white-space:nowrap">{{ p.amount | number:'1.0-2' }}</span>
+            </button>
+          }
+        }
+      </div>
+    </div>
+
+    <!-- ══ RIGHT: create form | detail | empty ══ -->
+    <div class="md-detail">
+      @if (showForm) {
+        <div class="md-detail-head">
+          <span class="md-detail-title">Record Payment</span>
+          <button class="icon-btn" title="Close" (click)="cancelForm()"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="md-detail-body">
+          <div class="form-grid form-grid-3">
+            <div class="form-group">
+              <label>Customer</label>
+              <lib-entity-picker-input [options]="contactOptions" [value]="contactLabelFor(formContactId)" [displayFields]="contactDisplayFields" [columns]="contactColumns" [pickerPageSize]="25" entityLabel="Customer" placeholder="Search customers..." (itemSelected)="formContactId = $event['id']" />
+            </div>
+            <div class="form-group"><label>Amount *</label><input type="number" [(ngModel)]="formAmount" min="0.01" step="0.01" placeholder="0.00" /></div>
+            <div class="form-group">
+              <label>Payment Date{{ formSalesInvoiceId ? ' *' : '' }}</label>
+              <input type="date" [(ngModel)]="formPaymentDate" [disabled]="!formSalesInvoiceId" />
+              @if (!formSalesInvoiceId) { <small style="color:var(--text-muted);font-size:11px;">Date is set automatically for non-invoice payments.</small> }
+            </div>
+            <div class="form-group"><label>Payment Method *</label><select [(ngModel)]="formPaymentMethod">@for (m of methods; track m) { <option [value]="m">{{ m }}</option> }</select></div>
+            <div class="form-group"><label>Sales Order</label><select [(ngModel)]="formSalesOrderId"><option value="">-- None --</option>@for (o of orders; track o.id) { <option [value]="o.id">{{ o.orderNumber || o.id }}{{ o.contactName ? ' · ' + o.contactName : '' }}</option> }</select></div>
+            <div class="form-group">
+              <label>Invoice</label>
+              <select [(ngModel)]="formSalesInvoiceId" (ngModelChange)="onInvoiceChange()"><option value="">-- None --</option>@for (i of payableInvoices; track i.id) { <option [value]="i.id">{{ i.invoiceNumber || i.id }}{{ i.contactName ? ' · ' + i.contactName : '' }}{{ i.balanceDue ? ' (Due: ' + (i.balanceDue | number:'1.2-2') + ')' : '' }}</option> }</select>
+              @if (payableInvoices.length === 0) { <small style="color:var(--text-muted);font-size:11px;">No unpaid posted invoices.</small> }
+            </div>
+            @if (formSalesInvoiceId) {
+              <div class="form-group">
+                <label>Journal / GL Account</label>
+                <lib-entity-picker-input [options]="glAccounts" [value]="formJournal" [displayFields]="accountDisplayFields" [columns]="accountColumns" [pickerPageSize]="25" entityLabel="Account" placeholder="Search accounts..." (itemSelected)="onJournalSelected($event)" />
+                <small style="color:var(--text-muted);font-size:11px;">Accounting journal the payment posts to.</small>
+              </div>
+            }
+            <div class="form-group"><label>Reference Number</label><input type="text" [(ngModel)]="formReferenceNumber" placeholder="Cheque / transaction ref" /></div>
+            <div class="form-group"><label>Bank Name</label><input type="text" [(ngModel)]="formBankName" placeholder="Bank name (if applicable)" /></div>
+            <div class="form-group form-group-full"><label>Notes</label><textarea [(ngModel)]="formNotes" placeholder="Optional notes" rows="2"></textarea></div>
+          </div>
+          <div class="form-actions">
+            <button class="ibtn ibtn--secondary" (click)="cancelForm()">Cancel</button>
+            <button class="ibtn ibtn--primary" (click)="savePayment()"><span class="material-symbols-outlined">save</span> Record Payment</button>
+          </div>
+        </div>
+      } @else if (selectedPayment) {
+        <div class="md-detail-head">
+          <span class="md-detail-title">{{ selectedPayment.paymentNumber || 'Payment' }}</span>
+          <button class="icon-btn" title="Close" (click)="closeDetail()"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="md-detail-body">
+          <div class="detail-grid">
+            <div class="detail-section">
+              <div class="detail-section-title">Payment</div>
+              <div class="detail-row"><span>Customer</span><span>{{ displayContact(selectedPayment) || '—' }}</span></div>
+              <div class="detail-row"><span>Amount</span><span>{{ selectedPayment.amount | number:'1.2-2' }} {{ selectedPayment.currencyCode || '' }}</span></div>
+              <div class="detail-row"><span>Method</span><span>{{ selectedPayment.paymentMethod || '—' }}</span></div>
+              <div class="detail-row"><span>Date</span><span>{{ selectedPayment.paidAt ? (selectedPayment.paidAt | date:'medium') : '—' }}</span></div>
+            </div>
+            <div class="detail-section">
+              <div class="detail-section-title">Reference</div>
+              <div class="detail-row"><span>Reference #</span><span>{{ selectedPayment.referenceNumber || '—' }}</span></div>
+              <div class="detail-row"><span>Bank</span><span>{{ selectedPayment.bankName || '—' }}</span></div>
+              <div class="detail-row"><span>Order #</span><span>{{ orderNumberFor(selectedPayment) || '—' }}</span></div>
+              <div class="detail-row"><span>Notes</span><span>{{ selectedPayment.notes || '—' }}</span></div>
+            </div>
+          </div>
+        </div>
+      } @else {
+        <div class="md-empty">
+          <div class="md-empty-icon"><span class="material-symbols-outlined">payments</span></div>
+          <div class="md-empty-title">Payment details</div>
+          <div class="md-empty-text">Select a payment to view it, or record a new one.</div>
+          <button class="btn-brand" style="margin-top:8px" (click)="openCreateForm()"><span class="material-symbols-outlined">add</span> Record Payment</button>
+        </div>
+      }
+    </div>
+  </div>
+</div>

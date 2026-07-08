@@ -1,0 +1,46 @@
+@import '../shared-styles.css';
+
+.input-readonly {
+  background: #f3f4f6;
+  color: #374151;
+  cursor: default;
+}
+
+.manual-code-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #4b5563;
+  cursor: pointer;
+}
+.manual-code-toggle input {
+  width: auto;
+  margin: 0;
+}
+
+.form-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #6b7280;
+}
+.form-hint code {
+  background: var(--accent-soft, #eef5ff);
+  color: var(--accent, #2b7fff);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.code-status {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.code-status-ok { color: #15803d; }
+.code-status-dup { color: #b91c1c; }

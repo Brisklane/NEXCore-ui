@@ -1,0 +1,92 @@
+@import '../shared-styles.css';
+
+/* POS dashboard — bento kit + live-monitor styling */
+.pos-dsh { --dsh-accent: #2b7fff; --dsh-accent-2: #22c7e6; }
+
+/* Connectivity chip on the banner */
+.pos-conn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 13px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18); color: #fff;
+  font-size: 12.5px; font-weight: 650;
+}
+.pos-conn-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.3); }
+.pos-conn.off { background: rgba(255, 255, 255, 0.14); }
+.pos-conn-dot.off { background: #f87171; box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.3); }
+
+.pos-alert {
+  padding: 12px 16px; margin-bottom: 16px; border-radius: 12px;
+  background: var(--c-danger-surface, #fef2f2); color: var(--c-danger-text, #b91c1c);
+  font-size: 13px; font-weight: 550;
+}
+
+/* Toolbar in the live-monitor tile header */
+.pos-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.pos-toggle { display: flex; gap: 3px; background: var(--bg-muted, #f1f5f9); padding: 3px; border-radius: 11px; }
+.pos-toggle button {
+  display: flex; align-items: center; gap: 6px;
+  border: none; background: transparent; cursor: pointer;
+  padding: 7px 13px; border-radius: 9px;
+  font-size: 12.5px; font-weight: 600; color: var(--text-secondary, #64748b);
+}
+.pos-toggle button .material-symbols-outlined { font-size: 17px; }
+.pos-toggle button.active { background: var(--bg-surface, #fff); color: var(--accent, #2b7fff); box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1); }
+.pos-search { position: relative; display: flex; align-items: center; min-width: 220px; flex: 1; max-width: 340px; }
+.pos-search .material-symbols-outlined { position: absolute; left: 11px; font-size: 18px; color: var(--text-muted, #94a3b8); }
+.pos-search input {
+  width: 100%; padding: 8px 12px 8px 36px;
+  border: 1px solid var(--border-default, #e2e8f0); border-radius: 10px;
+  background: var(--bg-subtle, #f8fafc); color: var(--text-heading, #0f172a); font-size: 13px;
+}
+.pos-search input:focus { outline: none; border-color: var(--accent, #2b7fff); box-shadow: 0 0 0 3px var(--accent-soft, rgba(43, 127, 255, 0.14)); }
+
+.pos-loading { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 48px; color: var(--text-secondary, #64748b); font-size: 14px; }
+.dsh-spinner-x { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border-default, #e2e8f0); border-top-color: var(--accent, #2b7fff); animation: dsh-spin 0.8s linear infinite; }
+@keyframes dsh-spin { to { transform: rotate(360deg); } }
+.pos-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 44px; color: var(--text-muted, #94a3b8); }
+.pos-empty .material-symbols-outlined { font-size: 40px; opacity: 0.5; }
+.pos-empty p { margin: 0; font-size: 13.5px; }
+
+/* Branch cards */
+.pos-branch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; margin-top: 6px; }
+.pos-branch {
+  border: 1px solid var(--border-default, #e8edf3); border-radius: 16px;
+  background: var(--bg-surface, #fff); padding: 15px; display: flex; flex-direction: column; gap: 12px;
+  transition: border-color 0.14s, box-shadow 0.14s, transform 0.14s;
+}
+.pos-branch:hover { border-color: var(--accent, #2b7fff); box-shadow: 0 12px 28px -12px rgba(43, 127, 255, 0.3); transform: translateY(-2px); }
+.pos-branch-head { display: flex; align-items: center; gap: 11px; }
+.pos-branch-ico { width: 40px; height: 40px; flex-shrink: 0; border-radius: 12px; display: grid; place-items: center; color: #fff; background: var(--brand-grad, linear-gradient(135deg, #22c7e6, #2b7fff)); }
+.pos-branch-ico .material-symbols-outlined { font-size: 22px; }
+.pos-branch-id { flex: 1; min-width: 0; }
+.pos-branch-name { font-size: 14.5px; font-weight: 700; color: var(--text-heading, #0f172a); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pos-branch-code { font-size: 11px; color: var(--text-muted, #94a3b8); }
+.pos-branch-figs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px 0; border-top: 1px solid var(--border-light, #f1f5f9); border-bottom: 1px solid var(--border-light, #f1f5f9); }
+.pbf { text-align: center; }
+.pbf-val { font-size: 17px; font-weight: 750; color: var(--text-heading, #0f172a); letter-spacing: -0.01em; }
+.pbf-lbl { font-size: 10.5px; color: var(--text-muted, #94a3b8); text-transform: uppercase; letter-spacing: 0.03em; margin-top: 2px; }
+.pos-branch-pays { display: flex; gap: 8px; flex-wrap: wrap; }
+.pbp { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--text-secondary, #64748b); background: var(--bg-muted, #f1f5f9); padding: 3px 9px; border-radius: 999px; }
+.pbp .material-symbols-outlined { font-size: 14px; }
+.pos-branch-cashier { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-secondary, #64748b); }
+.pos-branch-cashier .material-symbols-outlined { font-size: 16px; }
+.pos-since { color: var(--text-muted, #94a3b8); }
+.pos-open-btn {
+  margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 6px;
+  border: none; cursor: pointer; padding: 10px; border-radius: 12px;
+  background: var(--accent-soft, rgba(43, 127, 255, 0.1)); color: var(--accent, #2b7fff);
+  font-size: 13px; font-weight: 700; transition: background 0.14s;
+}
+.pos-open-btn .material-symbols-outlined { font-size: 18px; }
+.pos-open-btn:hover { background: var(--brand-grad, linear-gradient(135deg, #22c7e6, #2b7fff)); color: #fff; }
+
+/* Terminals grid */
+.pos-term-grid .pos-sub { font-size: 11px; color: var(--text-muted, #94a3b8); }
+.pos-term-grid tr.row-inactive { opacity: 0.55; }
+.pos-term-grid tr.pos-totals td { background: var(--bg-subtle, #f8fafc); border-top: 2px solid var(--border-default, #e2e8f0); }
+.pos-open-sm {
+  border: none; cursor: pointer; padding: 5px 12px; border-radius: 8px;
+  background: var(--accent-soft, rgba(43, 127, 255, 0.1)); color: var(--accent, #2b7fff);
+  font-size: 12px; font-weight: 650;
+}
+.pos-open-sm:hover { background: var(--brand-grad, linear-gradient(135deg, #22c7e6, #2b7fff)); color: #fff; }

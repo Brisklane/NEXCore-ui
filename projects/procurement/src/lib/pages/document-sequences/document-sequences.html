@@ -1,0 +1,96 @@
+<div class="page-container">
+  <div class="inv-hero">
+    <div class="inv-hero-titles">
+      <div class="inv-hero-mark"><span class="material-symbols-outlined">format_list_numbered</span></div>
+      <div>
+        <h1>Document Sequences</h1>
+        <p class="inv-hero-sub">Configure number sequences for procurement documents</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="help-box"><span class="help-icon">ℹ️</span><span>These sequences define how document numbers for <strong>POs, RFQs, and invoices</strong> are generated automatically. Each row controls the <strong>prefix</strong>, <strong>separator</strong>, optional <strong>year/month</strong> segments, and the zero-<strong>padding</strong> of the running number — combined as shown in the <strong>Preview</strong> column. The <strong>Reset</strong> setting restarts numbering (e.g. yearly), and <strong>Next #</strong> is the value the next document will use.</span></div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (success) { <div class="alert alert-success">{{ success }}</div> }
+
+  @if (loading) {
+    <div class="loading-spinner">Loading...</div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead><tr>
+          <th class="sortable" (click)="sort('documentType')">Document Type <span class="sort-icon">{{ sortIcon('documentType') }}</span></th>
+          <th class="sortable" (click)="sort('prefix')">Prefix <span class="sort-icon">{{ sortIcon('prefix') }}</span></th>
+          <th class="sortable" (click)="sort('separator')">Separator <span class="sort-icon">{{ sortIcon('separator') }}</span></th>
+          <th class="sortable" (click)="sort('includeYear')">Year <span class="sort-icon">{{ sortIcon('includeYear') }}</span></th>
+          <th class="sortable" (click)="sort('includeMonth')">Month <span class="sort-icon">{{ sortIcon('includeMonth') }}</span></th>
+          <th class="sortable" (click)="sort('sequencePadding')">Padding <span class="sort-icon">{{ sortIcon('sequencePadding') }}</span></th>
+          <th class="sortable" (click)="sort('resetOn')">Reset <span class="sort-icon">{{ sortIcon('resetOn') }}</span></th>
+          <th class="sortable" (click)="sort('nextSequenceNumber')">Next # <span class="sort-icon">{{ sortIcon('nextSequenceNumber') }}</span></th>
+          <th>Preview</th>
+          <th class="sortable" (click)="sort('isActive')">Active <span class="sort-icon">{{ sortIcon('isActive') }}</span></th>
+          <th>Actions</th>
+        </tr></thead>
+        <tbody>
+          @if (sequences.length === 0) { <tr><td colspan="11" class="empty-row">No sequences found</td></tr> }
+          @for (seq of pagedSequences; track seq.id) {
+            @if (editingId === seq.id) {
+              <tr class="editing-row">
+                <td>{{ docTypeLabel(seq.documentType) }}</td>
+                <td><input type="text" [(ngModel)]="seq.prefix" style="width:80px" /></td>
+                <td><input type="text" [(ngModel)]="seq.separator" style="width:40px" /></td>
+                <td><input type="checkbox" [(ngModel)]="seq.includeYear" /></td>
+                <td><input type="checkbox" [(ngModel)]="seq.includeMonth" /></td>
+                <td><input type="number" [(ngModel)]="seq.sequencePadding" style="width:50px" min="1" max="10" /></td>
+                <td>
+                  <select [(ngModel)]="seq.resetOn" style="width:90px">
+                    @for (opt of resetPeriodOptions; track opt.value) { <option [value]="opt.value">{{ opt.label }}</option> }
+                  </select>
+                </td>
+                <td>{{ seq.nextSequenceNumber }}</td>
+                <td><code>{{ preview(seq) }}</code></td>
+                <td><input type="checkbox" [(ngModel)]="seq.isActive" /></td>
+                <td class="actions-cell">
+                  <button class="btn btn-sm btn-primary" (click)="save(seq)">Save</button>
+                  <button class="btn btn-sm btn-secondary" (click)="cancelEdit()">Cancel</button>
+                </td>
+              </tr>
+            } @else {
+              <tr>
+                <td>{{ docTypeLabel(seq.documentType) }}</td>
+                <td>{{ seq.prefix }}</td>
+                <td>{{ seq.separator }}</td>
+                <td>{{ seq.includeYear ? '✓' : '' }}</td>
+                <td>{{ seq.includeMonth ? '✓' : '' }}</td>
+                <td>{{ seq.sequencePadding }}</td>
+                <td>{{ resetLabel(seq.resetOn) }}</td>
+                <td>{{ seq.nextSequenceNumber }}</td>
+                <td><code>{{ preview(seq) }}</code></td>
+                <td><span [class]="seq.isActive ? 'badge badge-active' : 'badge badge-inactive'">{{ seq.isActive ? 'Active' : 'Off' }}</span></td>
+                <td><button class="btn-icon" (click)="edit(seq)">✏️</button></td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+
+      @if (sequences.length > 0) {
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 4px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:8px;color:#6b7280;font-size:13px">
+            <span>Rows per page:</span>
+            <select [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()" style="padding:4px 8px">
+              @for (opt of pageSizeOptions; track opt) { <option [ngValue]="opt">{{ opt }}</option> }
+            </select>
+            <span>{{ (page - 1) * pageSize + 1 }}–{{ page * pageSize > sequences.length ? sequences.length : page * pageSize }} of {{ sequences.length }}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;font-size:13px">
+            <button class="btn btn-secondary" [disabled]="page <= 1" (click)="page = page - 1">‹ Prev</button>
+            <span>Page {{ page }} of {{ totalPages }}</span>
+            <button class="btn btn-secondary" [disabled]="page >= totalPages" (click)="page = page + 1">Next ›</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

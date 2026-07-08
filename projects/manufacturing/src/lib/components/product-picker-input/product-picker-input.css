@@ -1,0 +1,302 @@
+/* Host block */
+:host {
+  display: block;
+  position: relative;
+}
+
+.ppi-wrap {
+  position: relative;
+}
+
+/* Input — matches shared-styles.css .form-group input exactly */
+.ppi-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #1e293b;
+  background: #fff;
+  transition: border-color 0.2s;
+}
+
+.ppi-input:focus {
+  outline: none;
+  border-color: var(--accent, #2b7fff);
+  box-shadow: 0 0 0 3px rgba(43, 127, 255, 0.12);
+}
+
+.ppi-input:disabled {
+  background: #f3f4f6;
+  cursor: not-allowed;
+  color: #6b7280;
+}
+
+/* Dropdown — matches BOM .autocomplete-dropdown exactly */
+.ppi-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 200;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  max-height: 240px;
+  overflow-y: auto;
+  min-width: 100%;
+  width: 420px;
+  max-width: min(520px, 90vw);
+}
+
+/* Option row — matches BOM .autocomplete-option exactly */
+.ppi-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background 0.12s;
+}
+
+.ppi-option:hover {
+  background: #eff6ff;
+}
+
+/* Code — matches BOM .opt-code exactly */
+.ppi-code {
+  font-weight: 600;
+  color: #3b82f6;
+  min-width: 80px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Name — matches BOM .opt-name, adds truncation */
+.ppi-name {
+  flex: 1;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* Badge — matches BOM .opt-badge exactly */
+.ppi-badge {
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  background: #f3f4f6;
+  border-radius: 10px;
+  color: #6b7280;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Search more — matches BOM .autocomplete-more exactly */
+.ppi-more {
+  width: 100%;
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  background: #f8fafc;
+  color: #3b82f6;
+  text-align: left;
+  padding: 9px 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.ppi-more:hover {
+  background: #eff6ff;
+}
+
+/* Empty state — matches BOM .autocomplete-empty exactly */
+.ppi-empty {
+  padding: 10px 12px;
+  color: #64748b;
+  font-size: 0.82rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Picker overlay — matches BOM .picker-overlay exactly */
+.ppi-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: rgba(2, 6, 23, 0.52);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: ppiOverlayIn 180ms ease-out;
+}
+
+.ppi-card {
+  width: min(980px, 100%);
+  max-height: 84vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  border: 1px solid #d7e2ef;
+  border-radius: 14px;
+  box-shadow: 0 18px 46px rgba(15, 23, 42, 0.24);
+  overflow: hidden;
+  animation: ppiCardEnter 220ms cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+
+.ppi-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid #dbe7f5;
+  background: linear-gradient(180deg, #eff6ff 0%, #f8fbff 100%);
+}
+
+.ppi-card-head h4 {
+  margin: 0;
+  font-size: 1.08rem;
+  color: #0f2f55;
+}
+
+.ppi-close-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid #cfe0f5;
+  background: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ppi-close-btn:hover {
+  background: #eff6ff;
+  border-color: #b7d0ef;
+}
+
+.ppi-card-toolbar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e2ebf7;
+  background: #ffffff;
+}
+
+.ppi-search-input {
+  border: 1px solid #c8d8ec;
+  border-radius: 8px;
+  background: #ffffff;
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 0.875rem;
+  box-sizing: border-box;
+}
+
+.ppi-search-input:focus {
+  outline: none;
+  border-color: #4b8bd8;
+  box-shadow: 0 0 0 3px rgba(75, 139, 216, 0.16);
+}
+
+.ppi-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ppi-page-stat {
+  font-size: 0.8rem;
+  color: #4b647f;
+  background: #eef5ff;
+  border: 1px solid #d4e4f8;
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+.ppi-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e5ecf5;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: ppiSpin 0.8s linear infinite;
+}
+
+.ppi-table-wrap {
+  overflow: auto;
+  padding: 0 8px 8px;
+  contain: content;
+}
+
+.ppi-table {
+  width: 100%;
+  margin-top: 8px;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+  border: 1px solid #deebfb;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.ppi-table th {
+  background: linear-gradient(180deg, #f1f6fd 0%, #eaf2fc 100%);
+  color: #2f4f73;
+  text-align: left;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 10px 12px;
+  border-bottom: 1px solid #d2e1f1;
+}
+
+.ppi-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eef3fa;
+  color: #0f2740;
+}
+
+.ppi-select-row {
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.ppi-select-row:hover {
+  background: #eef6ff;
+}
+
+.ppi-empty-row {
+  text-align: center;
+  color: #64748b;
+  padding: 20px;
+  font-size: 0.875rem;
+}
+
+@keyframes ppiOverlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes ppiCardEnter {
+  from { opacity: 0; transform: translateY(10px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes ppiSpin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ppi-overlay,
+  .ppi-card { animation: none; }
+}
