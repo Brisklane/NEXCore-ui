@@ -97,7 +97,7 @@
             placeholder="Search"
           />
           <button type="button" class="secondary-btn" (click)="searchOnMap()">Search</button>
-          <button type="button" class="map-close" (click)="closeMapModal()">âœ•</button>
+          <button type="button" class="map-close" (click)="closeMapModal()">&#10005;</button>
         </div>
 
         <div id="leafletMap" class="map-canvas"></div>
@@ -129,7 +129,8 @@
     <div *ngIf="step !== 3" class="stepper">
       <div class="step-box">
         <div class="step-circle" [class.active]="step === 1" [class.done]="step >= 2">
-          {{ step >= 2 ? 'âœ“' : '1' }}
+          <i *ngIf="step >= 2; else stepOneNum" class="fa-solid fa-check"></i>
+          <ng-template #stepOneNum>1</ng-template>
         </div>
         <div class="step-label" [class.active-label]="step === 1 || step >= 2">
           Enter Company Details
@@ -140,7 +141,8 @@
 
       <div class="step-box">
         <div class="step-circle" [class.active]="step === 2" [class.done]="step === 3">
-          {{ step === 3 ? 'âœ“' : '2' }}
+          <i *ngIf="step === 3; else stepTwoNum" class="fa-solid fa-check"></i>
+          <ng-template #stepTwoNum>2</ng-template>
         </div>
         <div class="step-label" [class.active-label]="step === 2 || step === 3">
           Create Admin Account

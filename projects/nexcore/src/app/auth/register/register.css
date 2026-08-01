@@ -157,6 +157,11 @@
   color: #fff;
 }
 
+.step-circle i {
+  font-size: 10px;
+  line-height: 1;
+}
+
 .step-label {
   margin-top: 6px;
   font-size: 11px;
