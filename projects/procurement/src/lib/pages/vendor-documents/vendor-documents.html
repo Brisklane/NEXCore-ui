@@ -51,7 +51,7 @@
   }
 
   @if (viewMode === 'vendor' && !selectedVendorId) {
-    <div class="empty-row" style="padding:40px;text-align:center;color:#94a3b8">Select a vendor above to view their documents.</div>
+    <div class="empty-row" style="padding:40px;text-align:center;color:var(--text-muted,#94a3b8)">Select a vendor above to view their documents.</div>
   } @else {
     <app-data-table [sortableAll]="true"
       [columns]="columns"

@@ -20,6 +20,33 @@ export interface SidebarItem {
   children?: SidebarChild[];
 }
 
+/** True when `url` is this node's route, or sits underneath it. */
+export function routeMatches(route: string | undefined, url: string): boolean {
+  return !!route && (url === route || url.startsWith(route + '/'));
+}
+
+/** True when any node in this subtree owns `url`. */
+export function subtreeOwnsRoute(nodes: SidebarChild[] | undefined, url: string): boolean {
+  if (!nodes) return false;
+  return nodes.some((n) => routeMatches(n.route, url) || subtreeOwnsRoute(n.children, url));
+}
+
+/**
+ * Opens every group on the path to `url`, at any depth, and closes the rest.
+ *
+ * This has to recurse: the POS app nests four deep (App > Back Office > Products &
+ * Pricing > Price Lists), and an expander that only walked two levels left the deepest
+ * group shut — so the active page was not in the DOM and nothing looked selected.
+ */
+export function expandToRoute(nodes: SidebarChild[] | undefined, url: string): void {
+  if (!nodes) return;
+  for (const n of nodes) {
+    if (!n.children?.length) continue;
+    n.expanded = subtreeOwnsRoute(n.children, url);
+    expandToRoute(n.children, url);
+  }
+}
+
     export const SIDEBAR_MENU: SidebarItem[] = [
       {
         label: 'Dashboard',
@@ -241,7 +268,6 @@ export interface SidebarItem {
               { label: 'Coupons', route: '/sales/coupons', icon: 'sell' },
             ],
           },
-          { label: 'Customer Portal', route: '/sales/customer-portal', icon: 'storefront' },
         ],
       },
       {
@@ -566,6 +592,22 @@ export interface SidebarItem {
         iconType: 'app',
         moduleImage: 'images/pos.svg',
         expanded: false,
+        /**
+         * The POS app has exactly two modes, so the sidebar has exactly two groups:
+         * **Point of Sale** is what you touch while serving a customer, **Back Office**
+         * is everything you do when you are not. That split matches how a shop is
+         * actually staffed — and later maps straight onto roles, where a cashier sees
+         * the first group and a manager sees both.
+         *
+         * "Stores & Offers" and "Configuration" now live inside Back Office. As
+         * siblings of the till they implied daily work; setting up a store or a receipt
+         * template is something you do once and then leave alone.
+         *
+         * Inside Back Office the sub-groups are named for the job, not the module that
+         * owns the screen. The `/pos-office/*` entries are Inventory and Procurement
+         * screens mounted under a POS-owned URL so the sidebar stays in this app
+         * instead of throwing the user into another module mid-task.
+         */
         children: [
           { label: 'POS Dashboard', route: '/sales/pos-dashboard', icon: 'dashboard' },
           {
@@ -574,27 +616,82 @@ export interface SidebarItem {
             expanded: false,
             children: [
               { label: 'NexCore POS', route: '/sales/pos', icon: 'point_of_sale' },
-              { label: 'POS Terminals', route: '/sales/pos-terminals', icon: 'devices' },
-              { label: 'POS Cashiers', route: '/sales/pos-cashiers', icon: 'badge' },
+              { label: 'POS Customers', route: '/sales/pos-customers', icon: 'group' },
+              { label: 'Sales Orders', route: '/pos-office/orders', icon: 'receipt_long' },
+              { label: 'Invoices', route: '/pos-office/invoices', icon: 'description' },
+              { label: 'Payments', route: '/pos-office/payments', icon: 'payments' },
+              { label: 'Deliveries', route: '/pos-office/deliveries', icon: 'local_shipping' },
             ],
           },
           {
-            label: 'Stores & Offers',
-            icon: 'storefront',
+            label: 'Back Office',
+            icon: 'apps',
             expanded: false,
             children: [
-              { label: 'POS Stores', route: '/sales/pos-stores', icon: 'storefront' },
-              { label: 'Store Offers', route: '/sales/store-offers', icon: 'local_activity' },
-            ],
-          },
-          {
-            label: 'Configuration',
-            icon: 'settings',
-            expanded: false,
-            children: [
-              { label: 'Receipt Templates', route: '/sales/receipt-templates', icon: 'receipt_long' },
-              { label: 'Document Sequences', route: '/sales/document-sequences', icon: 'format_list_numbered' },
-              { label: 'POS Settings', route: '/sales/pos-settings', icon: 'settings' },
+              { label: 'Overview', route: '/sales/pos-backoffice', icon: 'apps' },
+              {
+                label: 'Products & Pricing',
+                icon: 'inventory_2',
+                expanded: false,
+                children: [
+                  { label: 'POS Catalogue', route: '/sales/pos-catalogue', icon: 'inventory_2' },
+                  { label: 'Price Lists', route: '/pos-office/price-lists', icon: 'sell' },
+                  { label: 'Promotions', route: '/pos-office/promotions', icon: 'campaign' },
+                  { label: 'Store Offers', route: '/sales/store-offers', icon: 'local_activity' },
+                  { label: 'Coupons', route: '/pos-office/coupons', icon: 'confirmation_number' },
+                  { label: 'Categories', route: '/pos-office/categories', icon: 'category' },
+                  { label: 'Brands', route: '/pos-office/brands', icon: 'label' },
+                  { label: 'Units', route: '/pos-office/units', icon: 'straighten' },
+                  { label: 'Tax Rates', route: '/pos-office/tax-rates', icon: 'percent' },
+                  { label: 'Shelf Labels', route: '/pos-office/labels', icon: 'qr_code_2' },
+                  { label: 'All Products', route: '/pos-office/products', icon: 'list_alt' },
+                ],
+              },
+              {
+                label: 'Stock',
+                icon: 'inventory',
+                expanded: false,
+                children: [
+                  { label: 'POS Stock', route: '/sales/pos-stock', icon: 'inventory' },
+                  { label: 'Goods Received', route: '/sales/pos-receipts', icon: 'move_to_inbox' },
+                  { label: 'Adjustments', route: '/pos-office/adjustments', icon: 'tune' },
+                  { label: 'Stock Movements', route: '/pos-office/documents', icon: 'swap_horiz' },
+                  { label: 'Stock Valuation', route: '/pos-office/stock-valuation', icon: 'account_balance_wallet' },
+                  { label: 'Warehouses', route: '/pos-office/warehouses', icon: 'warehouse' },
+                ],
+              },
+              {
+                label: 'Buying',
+                icon: 'local_shipping',
+                expanded: false,
+                children: [
+                  { label: 'Suppliers', route: '/pos-office/suppliers', icon: 'local_shipping' },
+                  { label: 'Purchase Orders', route: '/pos-office/purchase-orders', icon: 'shopping_cart' },
+                  { label: 'Purchase Invoices', route: '/pos-office/purchase-invoices', icon: 'request_quote' },
+                  { label: 'Supplier Payments', route: '/pos-office/supplier-payments', icon: 'payments' },
+                ],
+              },
+              {
+                label: 'Money & Day-end',
+                icon: 'summarize',
+                expanded: false,
+                children: [
+                  { label: 'POS Reports', route: '/sales/pos-reports', icon: 'summarize' },
+                  { label: 'POS Cashiers', route: '/sales/pos-cashiers', icon: 'badge' },
+                  { label: 'POS Terminals', route: '/sales/pos-terminals', icon: 'devices' },
+                ],
+              },
+              {
+                label: 'Setup',
+                icon: 'settings',
+                expanded: false,
+                children: [
+                  { label: 'POS Stores', route: '/sales/pos-stores', icon: 'storefront' },
+                  { label: 'POS Settings', route: '/sales/pos-settings', icon: 'settings' },
+                  { label: 'Receipt Templates', route: '/sales/receipt-templates', icon: 'receipt_long' },
+                  { label: 'Document Sequences', route: '/sales/document-sequences', icon: 'format_list_numbered' },
+                ],
+              },
             ],
           },
         ],

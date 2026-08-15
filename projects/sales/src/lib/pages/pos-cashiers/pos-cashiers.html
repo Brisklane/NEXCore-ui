@@ -257,11 +257,11 @@
             <tr [class.row-new]="c.id === highlighter.id">
               <td>
                 <div style="font-weight:500;">{{ c.displayName ?? '—' }}</div>
-                <div style="font-size:11px;color:#94a3b8;">{{ c.employeeId ?? '' }}</div>
+                <div style="font-size:11px;color:var(--text-muted,#94a3b8);">{{ c.employeeId ?? '' }}</div>
               </td>
-              <td style="font-size:12px;color:#64748b;">{{ storeName(c.branchId) }}</td>
+              <td style="font-size:12px;color:var(--text-secondary,#64748b);">{{ storeName(c.branchId) }}</td>
               <td style="font-family:monospace;font-size:12px;">{{ c.badgeNumber ?? '—' }}</td>
-              <td style="font-size:11px;color:#475569;">
+              <td style="font-size:11px;color:var(--text-primary,#475569);">
                 @if (c.canApplyManualDiscount) { <span class="perm-chip">Discount</span> }
                 @if (c.canVoidTransaction) { <span class="perm-chip">Void</span> }
                 @if (c.canIssueRefund) { <span class="perm-chip">Refund</span> }
@@ -278,17 +278,17 @@
               <td class="actions-cell">
                 <button class="btn btn-secondary btn-sm" (click)="openEditForm(c)" title="Edit">✎</button>
                 <button class="btn btn-secondary btn-sm" (click)="openSetPin(c)" title="Set PIN"
-                  style="background:#ede9fe;color:#5b21b6;">PIN</button>
+                  style="background:var(--violet-soft,#ede9fe);color:var(--violet,#5b21b6);">PIN</button>
                 <button class="btn btn-secondary btn-sm" (click)="openChangePin(c)" title="Change PIN"
-                  style="background:#fef9c3;color:#92400e;">🔑</button>
+                  style="background:var(--warning-soft,#fef9c3);color:var(--warning-text,#92400e);">🔑</button>
                 <button class="btn btn-secondary btn-sm" (click)="viewOpenSession(c.id)" title="View Session"
-                  style="background:#dbeafe;color:#1d4ed8;">📋</button>
+                  style="background:var(--info-soft,#dbeafe);color:var(--info-text,#1d4ed8);">📋</button>
                 <button class="btn btn-danger btn-sm" (click)="deleteCashier(c.id)" title="Delete">✕</button>
               </td>
             </tr>
           }
           @empty {
-            <tr><td colspan="6" style="text-align:center;padding:24px;color:#94a3b8;">No cashiers found.</td></tr>
+            <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted,#94a3b8);">No cashiers found.</td></tr>
           }
         </tbody>
       </table>
@@ -319,11 +319,11 @@
         <div class="form-actions" style="justify-content:flex-start;">
           <button class="btn btn-secondary btn-sm" (click)="loadCashMovements(openSession.id)">Movements</button>
           <button class="btn btn-secondary btn-sm" (click)="openCashMove(openSession.id)"
-            style="background:#dcfce7;color:#15803d;">+ Add Movement</button>
+            style="background:var(--success-soft,#dcfce7);color:var(--success-text,#15803d);">+ Add Movement</button>
           <button class="btn btn-danger btn-sm" (click)="checkOut(openSession.id)">Check Out</button>
         </div>
       } @else {
-        <p style="font-size:13px;color:#94a3b8;">No open session for this cashier.</p>
+        <p style="font-size:13px;color:var(--text-muted,#94a3b8);">No open session for this cashier.</p>
       }
     </div>
   }
@@ -349,7 +349,7 @@
                 </span>
               </td>
               <td>{{ m.amount | number:'1.2-2' }}</td>
-              <td style="font-size:12px;color:#64748b;">{{ m.reason ?? '—' }}</td>
+              <td style="font-size:12px;color:var(--text-secondary,#64748b);">{{ m.reason ?? '—' }}</td>
               <td style="font-size:12px;">{{ m.movementDate | date:'short' }}</td>
             </tr>
           }

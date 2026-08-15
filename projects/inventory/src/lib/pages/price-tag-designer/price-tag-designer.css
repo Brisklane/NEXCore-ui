@@ -121,21 +121,21 @@
 
 .ptd-sheet {
   display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start;
-  background: #fff; padding: 18px; border-radius: 14px; box-shadow: var(--shadow-sm, 0 1px 4px rgba(0,0,0,.08));
+  background: var(--bg-surface, #fff); padding: 18px; border-radius: 14px; box-shadow: var(--shadow-sm, 0 1px 4px rgba(0,0,0,.08));
 }
 
 /* Tags are sized in mm (set inline) so the on-screen preview matches print. */
 .ptd-tag {
   box-sizing: border-box; display: flex; flex-direction: column;
   align-items: center; justify-content: center; text-align: center;
-  padding: 1mm; overflow: hidden; background: #fff;
+  padding: 1mm; overflow: hidden; background: var(--bg-surface, #fff);
 }
 .ptd-tag-bordered { border: 1px solid #000; }
 .ptd-tag-name { font-weight: 700; line-height: 1.05; max-width: 100%; overflow: hidden; }
 .ptd-tag-price { font-weight: 700; margin: 1px 0; }
 .ptd-tag-barcode {
   width: 90%; margin-top: 1px;
-  background: repeating-linear-gradient(90deg, #000 0 1px, #fff 1px 3px);
+  background: repeating-linear-gradient(90deg, #000 0 1px, var(--bg-surface, #fff) 1px 3px);
 }
 .ptd-tag-barcode-img { max-width: 90%; object-fit: contain; margin-top: 1px; }
 .ptd-tag-barcode-text { font-size: 5pt; letter-spacing: 1px; line-height: 1; }

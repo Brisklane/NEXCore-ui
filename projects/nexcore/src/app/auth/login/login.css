@@ -9,37 +9,43 @@
   font-family: 'Inter', sans-serif;
 }
 
-/* ===== Brand panel ===== */
+/* ===== Brand panel =====
+   Enterprise restraint: the panel is the theme's own surface, not a saturated
+   accent wall. Brand presence comes from a faint accent glow and the tick marks;
+   the only fully saturated element on the screen is the primary button. */
 .auth-brand {
   position: relative;
   overflow: hidden;
   flex: 0 0 44%;
   max-width: 580px;
   padding: 52px 48px;
-  color: #fff;
-  background: linear-gradient(155deg, #2563eb 0%, #2b7fff 42%, #22c7e6 100%);
+  color: var(--text-heading, #0f172a);
+  background: var(--bg-subtle, #f8fafc);
+  border-right: 1px solid var(--border-default, #e6eaf0);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
 }
+/* Two soft accent washes give the panel depth without colouring it outright. */
 .ab-glow {
   position: absolute;
   border-radius: 50%;
-  background: #ffffff;
-  filter: blur(46px);
+  background: var(--accent, #2b7fff);
+  filter: blur(90px);
   pointer-events: none;
 }
-.ab-glow-1 { width: 280px; height: 280px; top: -70px; right: -50px; opacity: 0.22; }
-.ab-glow-2 { width: 220px; height: 220px; bottom: 30px; left: -70px; opacity: 0.16; }
+.ab-glow-1 { width: 340px; height: 340px; top: -110px; right: -80px; opacity: 0.16; }
+.ab-glow-2 { width: 260px; height: 260px; bottom: 10px; left: -100px; opacity: 0.10; }
 
 .ab-logo {
   position: relative;
   z-index: 1;
   align-self: flex-start;
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-default, #e6eaf0);
   border-radius: 14px;
   padding: 10px 16px;
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.18);
+  box-shadow: var(--shadow-sm);
 }
 .ab-logo img { height: 38px; display: block; }
 
@@ -50,20 +56,21 @@
   line-height: 1.1;
   font-weight: 800;
   letter-spacing: -0.6px;
+  color: var(--text-heading, #0f172a);
 }
 .ab-sub {
   margin: 0 0 26px;
   max-width: 400px;
   font-size: 15px;
   line-height: 1.65;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text-secondary, #64748b);
 }
 .ab-points { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 13px; }
 .ab-points li {
   position: relative;
   padding-left: 30px;
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.95);
+  color: var(--text-primary, #334155);
 }
 .ab-points li::before {
   content: "✓";
@@ -73,14 +80,14 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.22);
-  color: #fff;
+  background: var(--accent-soft, rgba(43, 127, 255, 0.12));
+  color: var(--accent, #2b7fff);
   font-size: 12px;
   font-weight: 700;
   display: grid;
   place-items: center;
 }
-.ab-foot { position: relative; z-index: 1; font-size: 12px; color: rgba(255, 255, 255, 0.72); }
+.ab-foot { position: relative; z-index: 1; font-size: 12px; color: var(--text-muted, #94a3b8); }
 
 /* ===== Form panel ===== */
 .auth-form {
@@ -145,17 +152,22 @@ label {
   box-shadow: 0 0 0 3px var(--accent-soft, rgba(43, 127, 255, 0.12));
 }
 
+/* Chrome paints its own background on autofilled inputs. Overpaint it with the
+   themed field colour so picking a saved credential doesn't flash a white box. */
 .input input:-webkit-autofill,
 .input input:-webkit-autofill:hover,
 .input input:-webkit-autofill:focus,
 .input input:-webkit-autofill:active {
-  -webkit-box-shadow: 0 0 0 1000px #e8f1fb inset !important;
-  box-shadow: 0 0 0 1000px #e8f1fb inset !important;
-  -webkit-text-fill-color: rgb(17, 24, 39) !important;
-  caret-color: rgb(17, 24, 39);
+  -webkit-box-shadow: 0 0 0 1000px var(--bg-surface, #ffffff) inset !important;
+  box-shadow: 0 0 0 1000px var(--bg-surface, #ffffff) inset !important;
+  -webkit-text-fill-color: var(--text-heading, #111827) !important;
+  caret-color: var(--text-heading, #111827);
   transition: background-color 5000s ease-in-out 0s;
 }
-.input:has(input:-webkit-autofill) { background: #e8f1fb; }
+.input:has(input:-webkit-autofill) {
+  background: var(--bg-surface, #ffffff);
+  border-color: var(--border-default, #e6eaf0);
+}
 
 .input input {
   border: none;
@@ -188,14 +200,14 @@ label {
 }
 
 .eye {
-  width: 18px; height: 18px; border: none; padding: 0; background: transparent; cursor: pointer;
-  opacity: .7; background-size: 18px 18px; background-repeat: no-repeat;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12Z'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E");
+  width: 22px; height: 22px; flex: 0 0 22px;
+  border: none; padding: 0; background: transparent; cursor: pointer;
+  display: grid; place-items: center;
+  color: var(--text-muted, #9ca3af);
+  transition: color .15s ease;
 }
-.eye.off {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-10-8-10-8a21.81 21.81 0 0 1 5.06-6.94'/%3E%3Cpath d='M1 1l22 22'/%3E%3Cpath d='M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 10 8 10 8a21.82 21.82 0 0 1-4.2 5.94'/%3E%3Cpath d='M14.12 14.12a3 3 0 0 1-4.24-4.24'/%3E%3C/svg%3E");
-}
-.eye:hover { opacity: 1; }
+.eye i { font-size: 15px; line-height: 1; }
+.eye:hover { color: var(--accent, #2b7fff); }
 
 .custom-link {
   color: var(--accent, #2b7fff);
@@ -204,6 +216,17 @@ label {
   font-size: 13px;
 }
 .custom-link:hover { text-decoration: underline; }
+
+/* "Keep me signed in" and "Forgot password?" share one row under the field */
+.pw-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+.pw-row .custom-chk { margin: 0; }
 
 .custom-chk {
   display: flex;
@@ -217,28 +240,33 @@ label {
 .custom-checkbox { width: 16px; height: 16px; accent-color: var(--accent, #2b7fff); cursor: pointer; }
 
 /* ===== Sign in button ===== */
+/* Flat accent fill — a control, not a marketing CTA. */
 .login {
   width: 100%;
   height: 48px;
   margin-top: 8px;
   border: none;
   border-radius: var(--radius-sm, 8px);
-  color: #fff;
+  color: var(--accent-contrast, #fff);
   font-weight: 600;
   font-size: 15.5px;
   letter-spacing: 0.2px;
   font-family: 'Inter', sans-serif;
   cursor: pointer;
-  background: var(--brand-grad, linear-gradient(135deg, #22c7e6, #2b7fff));
-  box-shadow: 0 6px 16px rgba(43, 127, 255, 0.28);
+  background: var(--accent, #2b7fff);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: filter .15s ease, box-shadow .15s ease, transform .1s ease;
+  transition: background .15s ease, box-shadow .15s ease, transform .1s ease;
 }
-.login:not(:disabled):hover { filter: brightness(1.05); box-shadow: 0 8px 20px rgba(43, 127, 255, 0.36); }
-.login:not(:disabled):active { transform: translateY(1px); }
-.login:disabled { opacity: 0.7; cursor: not-allowed; }
+.login:not(:disabled):hover { background: var(--accent-hover, #1f6ae6); }
+.login:not(:disabled):active { background: var(--accent-active, #1a5fd0); transform: translateY(1px); }
+.login:focus-visible { outline: none; box-shadow: var(--focus-ring, 0 0 0 3px rgba(43,127,255,.35)); }
+.login:disabled {
+  background: var(--btn-disabled-bg, #e2e8f0);
+  color: var(--btn-disabled-fg, #94a3b8);
+  cursor: not-allowed;
+}
 
 /* ===== Footer / messages ===== */
 .footer { margin-top: 24px; text-align: center; font-size: 14px; color: var(--text-secondary, #64748b); }
@@ -248,21 +276,21 @@ label {
 .hint {
   margin: 6px 0 0;
   font-size: 12px;
-  color: #ef4444;
+  color: var(--danger, #ef4444);
   text-align: left;
   display: block;
   line-height: 16px;
   min-height: 16px;
 }
-.input.bad { border: 1.5px solid #ef4444 !important; background: #fff6f6; }
+.input.bad { border: 1.5px solid var(--danger, #ef4444) !important; background: var(--input-error-bg, #fff6f6); }
 
 .session-expired-banner {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   margin: 0 0 16px; padding: 10px 14px; border-radius: 8px;
   background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.4);
-  color: #d97706; font-size: 13px; text-align: center; line-height: 19px;
+  color: var(--warning, #d97706); font-size: 13px; text-align: center; line-height: 19px;
 }
-.error { margin: 0 0 14px; font-size: 13px; color: #ef4444; text-align: center; line-height: 19px; }
+.error { margin: 0 0 14px; font-size: 13px; color: var(--danger, #ef4444); text-align: center; line-height: 19px; }
 
 /* ===== Responsive ===== */
 @media (max-width: 900px) {

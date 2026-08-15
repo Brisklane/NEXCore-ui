@@ -24,10 +24,10 @@ export class SalesDashboardPage {
   trendX = ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
 
   channels = [
-    { label: 'Online',    count: '$214K', color: '#2b7fff', dash: '110.6 251.3', off: '0' },
-    { label: 'Retail',    count: '$136K', color: '#22c7e6', dash: '70.4 251.3',  off: '-110.6' },
-    { label: 'Wholesale', count: '$78K',  color: '#7c3aed', dash: '40.2 251.3',  off: '-181.0' },
-    { label: 'POS',       count: '$58K',  color: '#f59e0b', dash: '30.2 251.3',  off: '-221.2' },
+    { label: 'Online',    count: '$214K', color: 'var(--kpi-1, #2b7fff)', dash: '110.6 251.3', off: '0' },
+    { label: 'Retail',    count: '$136K', color: 'var(--kpi-2, #22c7e6)', dash: '70.4 251.3',  off: '-110.6' },
+    { label: 'Wholesale', count: '$78K',  color: 'var(--kpi-3, #7c3aed)', dash: '40.2 251.3',  off: '-181.0' },
+    { label: 'POS',       count: '$58K',  color: 'var(--kpi-4, #f59e0b)', dash: '30.2 251.3',  off: '-221.2' },
   ];
 
   products = [

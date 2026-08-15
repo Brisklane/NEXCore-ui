@@ -1,0 +1,77 @@
+/* All design tokens, so the page follows whichever theme is active. */
+
+.bo { padding: 22px 26px 40px; }
+
+.bo-banner {
+  display: flex; justify-content: space-between; align-items: center; gap: 20px;
+  padding: 22px 26px; margin-bottom: 22px;
+  border-radius: 16px;
+  background: var(--brand-grad, linear-gradient(135deg, #22c7e6, #2b7fff));
+  color: #fff;
+}
+.bo-eyebrow {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  opacity: .9;
+}
+.bo-eyebrow .material-symbols-outlined { font-size: 15px; }
+.bo-banner h1 { margin: 6px 0 4px; font-size: 26px; font-weight: 750; letter-spacing: -.02em; }
+.bo-banner p { margin: 0; font-size: 13.5px; opacity: .92; }
+
+.bo-group { margin-bottom: 26px; }
+.bo-group-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.bo-group-ico {
+  display: grid; place-items: center; flex: none;
+  width: 34px; height: 34px; border-radius: 10px;
+  background: var(--accent-soft, rgba(43, 127, 255, .1)); color: var(--accent, #2b7fff);
+}
+.bo-group-ico .material-symbols-outlined { font-size: 19px; }
+.bo-group-head h2 { margin: 0; font-size: 15px; font-weight: 700; color: var(--text-heading, #0f172a); }
+.bo-group-head p { margin: 1px 0 0; font-size: 12px; color: var(--text-muted, #94a3b8); }
+
+.bo-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); }
+
+.bo-card {
+  display: flex; align-items: center; gap: 12px; text-align: left; cursor: pointer;
+  padding: 13px 14px;
+  border: 1px solid var(--border-default, #e2e8f0); border-radius: 13px;
+  background: var(--bg-surface, #fff);
+  transition: border-color .14s, transform .14s, box-shadow .14s;
+}
+.bo-card:hover {
+  border-color: var(--accent, #2b7fff);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm, 0 4px 14px rgba(15, 23, 42, .08));
+}
+.bo-card-ico {
+  display: grid; place-items: center; flex: none;
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--bg-muted, #f1f5f9); color: var(--text-secondary, #64748b);
+}
+.bo-card:hover .bo-card-ico { background: var(--accent-soft, rgba(43, 127, 255, .1)); color: var(--accent, #2b7fff); }
+.bo-card-ico .material-symbols-outlined { font-size: 20px; }
+
+.bo-card-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.bo-card-label {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 13.5px; font-weight: 650; color: var(--text-heading, #0f172a);
+}
+.bo-card-hint { font-size: 11.5px; color: var(--text-muted, #94a3b8); }
+
+/* Marks the screens built for the shop floor rather than borrowed from a module. */
+.bo-tag {
+  padding: 1px 6px; border-radius: 999px;
+  font-size: 9.5px; font-weight: 700; letter-spacing: .05em;
+  color: var(--accent, #2b7fff);
+  background: var(--accent-soft, rgba(43, 127, 255, .12));
+  border: 1px solid var(--accent-border, rgba(43, 127, 255, .25));
+}
+
+.bo-card-go { flex: none; font-size: 18px; color: var(--text-muted, #cbd5e1); }
+.bo-card:hover .bo-card-go { color: var(--accent, #2b7fff); }
+
+@media (max-width: 640px) {
+  .bo { padding: 16px 14px 30px; }
+  .bo-banner { padding: 18px; }
+  .bo-banner h1 { font-size: 21px; }
+}

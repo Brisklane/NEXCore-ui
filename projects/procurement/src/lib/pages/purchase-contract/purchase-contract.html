@@ -84,7 +84,7 @@
                 </tr>
                 @if (committedExceedsMax) {
                   <tr>
-                    <td colspan="9" style="color:#ef4444;font-size:12px">
+                    <td colspan="9" style="color:var(--danger,#ef4444);font-size:12px">
                       Committed total exceeds the Max Contract Value of {{ form.maximumContractValue | number:'1.2-2' }}.
                     </td>
                   </tr>
@@ -162,11 +162,11 @@
     <div class="modal-box">
       <h4>Terminate Contract</h4>
       <div class="form-group">
-        <label>Termination Reason <span style="color:#ef4444">*</span></label>
+        <label>Termination Reason <span style="color:var(--danger,#ef4444)">*</span></label>
         <textarea [(ngModel)]="terminationReason" rows="3" placeholder="Reason for termination"
                   [style.border-color]="terminateSubmitted && !terminationReason.trim() ? '#ef4444' : null"></textarea>
         @if (terminateSubmitted && !terminationReason.trim()) {
-          <span style="color:#ef4444;font-size:12px;margin-top:3px;display:block">A termination reason is required.</span>
+          <span style="color:var(--danger,#ef4444);font-size:12px;margin-top:3px;display:block">A termination reason is required.</span>
         }
       </div>
       <div class="modal-actions">

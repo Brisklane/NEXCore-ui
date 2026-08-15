@@ -7,7 +7,7 @@
 
 .val-hero-card {
   border-radius: 16px; padding: 20px 20px 18px;
-  background: linear-gradient(150deg, var(--accent, #2b7fff), #1e40af);
+  background: linear-gradient(150deg, var(--accent, #2b7fff), var(--info, #1e40af));
   color: #fff; box-shadow: var(--shadow-md, 0 6px 20px rgba(37, 99, 235, 0.28));
   display: flex; flex-direction: column; gap: 8px;
 }

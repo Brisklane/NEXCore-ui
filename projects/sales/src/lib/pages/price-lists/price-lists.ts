@@ -2,7 +2,11 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PriceListService } from '../../services/price-list.service';
-import { PriceListDto, CreatePriceListDto, UpdatePriceListDto } from '../../models/price-list.model';
+import { PriceListDto, CreatePriceListDto, UpdatePriceListDto,
+         PriceListItemDto } from '../../models/price-list.model';
+import { CatalogService, CatalogResolutionDto } from '@nexcore/inventory';
+import { SearchableSelect, SearchableOption } from '@nexcore/core';
+import { firstValueFrom } from 'rxjs';
 import { CurrencyService } from '../../services/currency.service';
 import { GeoCurrencyDto } from '../../models/currency.model';
 import { RowHighlighter } from '@nexcore/shared';
@@ -10,7 +14,7 @@ import { RowHighlighter } from '@nexcore/shared';
 @Component({
   selector: 'lib-price-lists',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SearchableSelect],
   templateUrl: './price-lists.html',
   styleUrl: './price-lists.css',
 })
@@ -21,6 +25,24 @@ export class PriceListsComponent implements OnInit {
   successMsg = '';
   showForm = false;
   editingItem: PriceListDto | null = null;
+
+  // ── Lines ───────────────────────────────────────────────────────────────
+  /** Priced lines for the selected list. */
+  lines: PriceListItemDto[] = [];
+  linesLoading = false;
+  lineError = '';
+
+  /** Product suggestions for the picker, fed by the catalogue resolver. */
+  productOptions: SearchableOption[] = [];
+  productSearching = false;
+  private productsById = new Map<string, CatalogResolutionDto>();
+
+  newLine: {
+    productId: string;
+    unitPrice: number | null;
+    minQuantity: number | null;
+    maxQuantity: number | null;
+  } = { productId: '', unitPrice: null, minQuantity: null, maxQuantity: null };
   searchQuery = '';
   highlighter = new RowHighlighter();
   sortBy = '';
@@ -82,6 +104,7 @@ export class PriceListsComponent implements OnInit {
   constructor(
     private priceListService: PriceListService,
     private currencyService: CurrencyService,
+    private catalog: CatalogService,
     private cdr: ChangeDetectorRef,
   ) {}
 
@@ -147,6 +170,7 @@ export class PriceListsComponent implements OnInit {
   }
 
   openEditForm(item: PriceListDto) {
+    void this.loadLines(item.id);
     this.editingItem = item;
     this.formCode = item.code ?? '';
     this.formName = item.name ?? '';
@@ -226,6 +250,114 @@ export class PriceListsComponent implements OnInit {
         },
       });
     }
+  }
+
+  // ── Lines ───────────────────────────────────────────────────────────────
+
+  private async loadLines(priceListId?: string): Promise<void> {
+    this.lines = [];
+    this.lineError = '';
+    this.resetNewLine();
+    if (!priceListId) return;
+
+    this.linesLoading = true;
+    const res = await firstValueFrom(this.priceListService.getItems(priceListId)).catch(() => null);
+    this.lines = res?.data ?? [];
+    this.linesLoading = false;
+
+    // Names aren't stored on the line, so resolve the ones we're showing.
+    await this.labelProducts(this.lines.map(l => l.productId));
+    this.cdr.detectChanges();
+  }
+
+  /** Fill in product code/name for lines, using the catalogue resolver. */
+  private async labelProducts(ids: string[]): Promise<void> {
+    for (const id of new Set(ids)) {
+      if (this.productsById.has(id)) continue;
+      // The resolver matches by code, so ask by id through the item search fallback.
+      const hit = await firstValueFrom(this.catalog.search(id, 1)).catch(() => []);
+      if (hit[0]) this.productsById.set(id, hit[0]);
+    }
+  }
+
+  productLabel(productId: string): string {
+    const hit = this.productsById.get(productId);
+    return hit ? `${hit.itemCode} — ${hit.itemName}` : productId.slice(0, 8) + '…';
+  }
+
+  async onProductSearch(term: string): Promise<void> {
+    if (!term?.trim()) { this.productOptions = []; return; }
+    this.productSearching = true;
+    const results = await firstValueFrom(this.catalog.search(term, 25)).catch(() => []);
+    for (const r of results) this.productsById.set(r.itemId, r);
+    this.productOptions = results.map(r => ({
+      value: r.itemId,
+      label: `${r.itemCode} — ${r.itemName}`,
+    }));
+    this.productSearching = false;
+    this.cdr.detectChanges();
+  }
+
+  private resetNewLine(): void {
+    this.newLine = { productId: '', unitPrice: null, minQuantity: null, maxQuantity: null };
+    this.productOptions = [];
+  }
+
+  async addLine(): Promise<void> {
+    const list = this.editingItem;
+    if (!list?.id) { this.lineError = 'Save the price list first.'; return; }
+
+    const { productId, unitPrice, minQuantity, maxQuantity } = this.newLine;
+    if (!productId) { this.lineError = 'Pick a product.'; return; }
+    if (unitPrice == null || unitPrice < 0) { this.lineError = 'Enter a price.'; return; }
+    if (minQuantity != null && maxQuantity != null && minQuantity > maxQuantity) {
+      this.lineError = 'Minimum quantity cannot exceed the maximum.'; return;
+    }
+
+    this.lineError = '';
+    const res = await firstValueFrom(
+      this.priceListService.addItem(list.id, { productId, unitPrice, minQuantity, maxQuantity })
+    ).catch((e: any) => {
+      // The API rejects overlapping quantity bands — surface that verbatim.
+      this.lineError = e?.error?.message ?? 'Could not add that line.';
+      return null;
+    });
+
+    if (res?.data) {
+      this.lines = [...this.lines, res.data];
+      this.resetNewLine();
+    }
+    this.cdr.detectChanges();
+  }
+
+  async savePrice(line: PriceListItemDto, value: string): Promise<void> {
+    const price = parseFloat(value);
+    if (isNaN(price) || price < 0) return;
+    if (price === line.unitPrice) return;
+
+    const res = await firstValueFrom(
+      this.priceListService.updateItem(line.id, { unitPrice: price })
+    ).catch(() => null);
+
+    if (res?.data) line.unitPrice = res.data.unitPrice;
+    else this.lineError = 'Could not update that price.';
+    this.cdr.detectChanges();
+  }
+
+  async removeLine(line: PriceListItemDto): Promise<void> {
+    await firstValueFrom(this.priceListService.deleteItem(line.id)).catch(() => null);
+    this.lines = this.lines.filter(l => l.id !== line.id);
+    this.cdr.detectChanges();
+  }
+
+  /** Human-readable quantity band; null bounds are unbounded. */
+  band(line: PriceListItemDto): string {
+    const lo = line.minQuantity ?? null;
+    const hi = line.maxQuantity ?? null;
+    if (lo == null && hi == null) return 'Any qty';
+    if (hi == null) return `${lo}+`;
+    if (lo == null) return `up to ${hi}`;
+    return `${lo}–${hi}`;
   }
 
   delete(id: string) {

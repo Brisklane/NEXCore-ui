@@ -95,12 +95,12 @@ td {
   margin-bottom: 18px;
 }
 .alert-info {
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: var(--accent-soft, #eff6ff);
+  color: var(--info-text, #1d4ed8);
 }
 .alert-error {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--danger-soft, #fee2e2);
+  color: var(--danger-text, #991b1b);
 }
 .empty-row {
   text-align: center;
@@ -111,7 +111,7 @@ td {
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--border-default, #e2e8f0);
   background: var(--bg-subtle, #f8fafc);
   border-radius: 0 0 8px 8px;
   flex-wrap: wrap;

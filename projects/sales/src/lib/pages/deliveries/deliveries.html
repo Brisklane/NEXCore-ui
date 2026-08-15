@@ -57,7 +57,7 @@
           @if (selectedDelivery.shipToCity) { <div class="detail-row"><span>City</span><span>{{ selectedDelivery.shipToCity }}</span></div> }
           @if (selectedDelivery.shipToCountry) { <div class="detail-row"><span>Country</span><span>{{ selectedDelivery.shipToCountry }}</span></div> }
           @if (!selectedDelivery.shipToName && !selectedDelivery.shipToStreet) {
-            <div style="color:#94a3b8;font-size:12px">No shipping address</div>
+            <div style="color:var(--text-muted,#94a3b8);font-size:12px">No shipping address</div>
           }
         </div>
       </div>

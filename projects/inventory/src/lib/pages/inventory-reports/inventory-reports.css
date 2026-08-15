@@ -38,7 +38,7 @@
 }
 
 .qty-negative {
-  color: #dc2626;
+  color: var(--danger, #dc2626);
   font-weight: 600;
 }
 
@@ -60,16 +60,16 @@
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 6px;
   font-size: 14px;
-  background: #fff;
+  background: var(--bg-surface, #fff);
   min-width: 180px;
 }
 
 .row-warning td {
-  background-color: #fffbeb;
+  background-color: var(--warning-soft, #fffbeb);
 }
 
 .row-danger td {
-  background-color: #fef2f2;
+  background-color: var(--danger-soft, #fef2f2);
 }
 
 .filter-hint {
@@ -79,8 +79,8 @@
 }
 
 .badge-warning {
-  background-color: #fef3c7;
-  color: #92400e;
+  background-color: var(--warning-soft, #fef3c7);
+  color: var(--warning-text, #92400e);
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 12px;

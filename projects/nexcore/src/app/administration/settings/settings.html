@@ -70,17 +70,18 @@
         <p class="hint-text">Choose how NexCore looks. This applies immediately and stays in sync with the theme switcher in the header.</p>
 
         <div class="theme-picker">
-          <button class="theme-opt" [class.active]="form.theme === 'Light'" (click)="selectTheme('Light')">
-            <span class="theme-swatch theme-swatch-light"></span>
-            <span>Light</span>
-          </button>
-          <button class="theme-opt" [class.active]="form.theme === 'Dark'" (click)="selectTheme('Dark')">
-            <span class="theme-swatch theme-swatch-dark"></span>
-            <span>Dark</span>
-          </button>
-          <button class="theme-opt" [class.active]="form.theme === 'Midnight'" (click)="selectTheme('Midnight')">
-            <span class="theme-swatch theme-swatch-midnight"></span>
-            <span>Midnight</span>
+          <button
+            *ngFor="let opt of themes"
+            class="theme-opt"
+            [class.active]="form.theme === opt.id"
+            (click)="selectTheme(opt.id)"
+            [title]="opt.description"
+          >
+            <span class="theme-swatch" [class]="'theme-swatch theme-swatch-' + opt.id.toLowerCase()">
+              <span class="ts-bar"></span>
+              <span class="ts-dot"></span>
+            </span>
+            <span class="theme-opt-name">{{ opt.label }}</span>
           </button>
         </div>
 

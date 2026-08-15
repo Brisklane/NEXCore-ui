@@ -2,13 +2,13 @@
 
 /* Inventory dashboard — brand cyan→blue accent (global .dsh kit supplies the layout) */
 .inv-dsh {
-  --dsh-accent: #2b7fff;
-  --dsh-accent-2: #22c7e6;
+  --dsh-accent: var(--accent, #2b7fff);
+  --dsh-accent-2: var(--brand-cyan, #22c7e6);
 }
 
 /* Alert avatars show the remaining quantity, tinted by severity */
-.inv-dsh .dsh-li-av.av-danger { background: linear-gradient(135deg, #f87171, #dc2626); }
-.inv-dsh .dsh-li-av.av-amber  { background: linear-gradient(135deg, #fbbf24, #d97706); }
+.inv-dsh .dsh-li-av.av-danger { background: linear-gradient(135deg, var(--danger, #f87171), var(--danger, #dc2626)); }
+.inv-dsh .dsh-li-av.av-amber  { background: linear-gradient(135deg, var(--warning, #fbbf24), var(--warning, #d97706)); }
 
-.inv-dsh .dsh-chip.chip-low { background: #fffbeb; color: #b45309; }
-.inv-dsh .dsh-chip.chip-out { background: #fef2f2; color: #b91c1c; }
+.inv-dsh .dsh-chip.chip-low { background: var(--warning-soft, #fffbeb); color: var(--warning-text, #b45309); }
+.inv-dsh .dsh-chip.chip-out { background: var(--danger-soft, #fef2f2); color: var(--danger-text, #b91c1c); }

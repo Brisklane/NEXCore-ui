@@ -5,7 +5,7 @@
   <title>NexCore-erp</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light">
+  <meta name="color-scheme" content="dark light">
 <link rel="icon" type="image/png" href="/images/nexcore-mark.svg">
   <!-- PWA: installable on the local system -->
   <link rel="manifest" href="/manifest.webmanifest">
@@ -22,6 +22,25 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
 </head>
 <body>
+  <script>
+    // Paint the saved theme before Angular boots, so the first frame is already the
+    // right colour instead of flashing the default. ThemeService re-applies (and
+    // migrates legacy names) once it starts — this only avoids the flash.
+    (function () {
+      var DEFAULT = 'theme-graphite';
+      var MAP = {
+        Light: '', Graphite: 'theme-graphite', Slate: 'theme-slate',
+        Carbon: 'theme-carbon', Obsidian: 'theme-obsidian', Sepia: 'theme-sepia',
+        Dark: 'theme-carbon', Midnight: 'theme-slate'   /* legacy names */
+      };
+      try {
+        var saved = localStorage.getItem('ui_theme');
+        var cls = saved == null ? DEFAULT : MAP[saved];
+        if (cls === undefined) cls = DEFAULT;
+        if (cls) document.body.className = cls;
+      } catch (e) { document.body.className = DEFAULT; }
+    })();
+  </script>
   <app-root></app-root>
   <script>
     // Stash the browser's install prompt so the in-app "Install app" button can fire it later.

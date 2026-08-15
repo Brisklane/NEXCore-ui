@@ -4,10 +4,10 @@
 .phone-field-wrap {
   display: flex;
   align-items: stretch;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--border-strong, #cbd5e1);
   border-radius: 6px;
   overflow: hidden;
-  background: #fff;
+  background: var(--bg-surface, #fff);
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
@@ -17,7 +17,7 @@
 }
 
 .phone-field-wrap.field-disabled {
-  background: #f8fafc;
+  background: var(--bg-subtle, #f8fafc);
   opacity: 0.65;
 }
 
@@ -25,11 +25,11 @@
   display: flex;
   align-items: center;
   padding: 0 10px;
-  background: #f1f5f9;
-  color: #374151;
+  background: var(--bg-muted, #f1f5f9);
+  color: var(--text-primary, #374151);
   font-size: 14px;
   font-weight: 600;
-  border-right: 1px solid #cbd5e1;
+  border-right: 1px solid var(--border-strong, #cbd5e1);
   user-select: none;
   white-space: nowrap;
   cursor: default;
@@ -42,7 +42,7 @@
   outline: none;
   padding: 8px 12px;
   font-size: 14px;
-  color: #1e293b;
+  color: var(--text-heading, #1e293b);
   background: transparent;
   width: 0;
 }
@@ -51,10 +51,10 @@
 
 .phone-number-input:disabled {
   cursor: not-allowed;
-  color: #94a3b8;
+  color: var(--text-muted, #94a3b8);
 }
 
-.phone-number-input::placeholder { color: #94a3b8; }
+.phone-number-input::placeholder { color: var(--text-muted, #94a3b8); }
 
 /* Align account create/edit form with shared accounting/inventory form style */
 .form-panel {
@@ -131,7 +131,7 @@
 }
 
 .required {
-	color: #ef4444;
+	color: var(--danger, #ef4444);
 	margin-left: 2px;
 }
 
@@ -175,12 +175,12 @@
 
 .filter-search {
 	padding: 8px 12px;
-	border: 1px solid #cbd5e1;
+	border: 1px solid var(--border-strong, #cbd5e1);
 	border-radius: 6px;
 	font-size: 13px;
 	width: 260px;
-	background: #fff;
-	color: #1e293b;
+	background: var(--bg-surface, #fff);
+	color: var(--text-heading, #1e293b);
 	transition: border-color 0.2s;
 }
 
@@ -196,8 +196,8 @@
 	justify-content: space-between;
 	align-items: center;
 	padding: 12px 16px;
-	border-top: 1px solid #e2e8f0;
-	background: #f8fafc;
+	border-top: 1px solid var(--border-default, #e2e8f0);
+	background: var(--bg-subtle, #f8fafc);
 	flex-wrap: wrap;
 	gap: 12px;
 }
@@ -207,15 +207,15 @@
 	align-items: center;
 	gap: 10px;
 	font-size: 13px;
-	color: #475569;
+	color: var(--text-primary, #475569);
 }
 
 .pagination-info select {
 	padding: 4px 8px;
-	border: 1px solid #cbd5e1;
+	border: 1px solid var(--border-strong, #cbd5e1);
 	border-radius: 6px;
 	font-size: 13px;
-	background: #fff;
+	background: var(--bg-surface, #fff);
 }
 
 .pagination-controls {
@@ -226,17 +226,17 @@
 
 .btn-page {
 	padding: 5px 14px;
-	border: 1px solid #cbd5e1;
+	border: 1px solid var(--border-strong, #cbd5e1);
 	border-radius: 6px;
-	background: #fff;
+	background: var(--bg-surface, #fff);
 	font-size: 13px;
 	cursor: pointer;
-	color: #334155;
+	color: var(--text-primary, #334155);
 	transition: background 0.2s;
 }
 
 .btn-page:hover:not(:disabled) {
-	background: #e2e8f0;
+	background: var(--bg-muted, #e2e8f0);
 }
 
 .btn-page:disabled {
@@ -246,6 +246,6 @@
 
 .page-indicator {
 	font-size: 13px;
-	color: #475569;
+	color: var(--text-primary, #475569);
 	white-space: nowrap;
 }

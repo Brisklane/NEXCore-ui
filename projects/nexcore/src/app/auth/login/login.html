@@ -61,10 +61,7 @@
 
         <!-- Password -->
         <div class="field">
-          <div class="label-row">
-            <label>Password</label>
-            <a class="custom-link" href="#">Forgot password?</a>
-          </div>
+          <label>Password</label>
           <div class="input" [ngClass]="{ bad: !!passwordError }">
             <span class="ico lock" aria-hidden="true"></span>
             <input
@@ -76,22 +73,27 @@
             <button
               type="button"
               class="eye"
-              [class.off]="!showPassword"
               (click)="showPassword = !showPassword"
               [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
-            ></button>
+            >
+              <i class="fa-regular" [ngClass]="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+            </button>
           </div>
           <p class="hint" *ngIf="passwordError">{{ passwordError }}</p>
 
-          <label class="chk custom-chk">
-            <input
-              class="custom-checkbox"
-              type="checkbox"
-              name="remember"
-              [(ngModel)]="remember"
-            />
-            <span>Remember me for 30 days</span>
-          </label>
+          <!-- Sits under the field it belongs to, opposite the "keep signed in" choice -->
+          <div class="pw-row">
+            <label class="chk custom-chk">
+              <input
+                class="custom-checkbox"
+                type="checkbox"
+                name="remember"
+                [(ngModel)]="remember"
+              />
+              <span>Keep me signed in on this device</span>
+            </label>
+            <a class="custom-link" href="#">Forgot password?</a>
+          </div>
         </div>
 
         <!-- Button -->

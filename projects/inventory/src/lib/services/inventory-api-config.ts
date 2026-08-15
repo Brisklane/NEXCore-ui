@@ -92,6 +92,17 @@ export const INVENTORY_API = {
   },
 
   // Item
+  /**
+   * Catalogue identity for selling surfaces. Product identity spans item SKU, item
+   * barcode, variant SKU and variant barcode — and a barcode can belong to a non-base
+   * unit — so callers resolve through here instead of matching columns themselves.
+   */
+  catalog: {
+    resolve: `${BASE_URL}/api/inventory/catalog/resolve`,
+    search: `${BASE_URL}/api/inventory/catalog/search`,
+    sync: `${BASE_URL}/api/inventory/catalog/sync`,
+  },
+
   item: {
     getAll: `${BASE_URL}/api/Item`,
     basic: `${BASE_URL}/api/Item/basic`,

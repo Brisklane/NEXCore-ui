@@ -1,8 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-
-type ThemeMode = 'Light' | 'Dark' | 'Midnight';
+import { ThemeService, ThemeMode } from '@nexcore/core';
 type SettingsTab = 'general' | 'appearance' | 'security' | 'notifications';
 
 interface SettingsForm {
@@ -35,6 +34,11 @@ export class AdminSettings implements OnInit {
   ];
   activeTab: SettingsTab = 'general';
 
+  private readonly themeService = inject(ThemeService);
+
+  /** The five shipped appearances, straight from the theme service. */
+  get themes() { return this.themeService.themes; }
+
   saved = false;
 
   /** 'rail' = two-tier icon rail (default) · 'classic' = single-column sidebar. */
@@ -46,7 +50,7 @@ export class AdminSettings implements OnInit {
     this.form = { ...this.defaults(), ...this.readStored() };
     // Appearance always reflects whatever theme is actually applied right now, even if it
     // was changed elsewhere (header dropdown) since this page was last saved.
-    this.form.theme = (localStorage.getItem('ui_theme') as ThemeMode) || this.form.theme;
+    this.form.theme = this.themeService.stored();
     this.sidebarLayout = localStorage.getItem('ui_sidebar_layout') === 'classic' ? 'classic' : 'rail';
   }
 
@@ -79,10 +83,7 @@ export class AdminSettings implements OnInit {
 
   selectTheme(mode: ThemeMode): void {
     this.form.theme = mode;
-    localStorage.setItem('ui_theme', mode);
-    document.body.classList.remove('theme-dark', 'theme-midnight');
-    if (mode === 'Dark') document.body.classList.add('theme-dark');
-    else if (mode === 'Midnight') document.body.classList.add('theme-midnight');
+    this.themeService.set(mode);
   }
 
   /** Switch sidebar layout — persists + notifies the shell to swap immediately. */

@@ -1,0 +1,142 @@
+/* Layout comes from the shared module styles; screen-specific bits only, on tokens. */
+
+.num { text-align: right; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+.hint { margin: 10px 0 0; font-size: 11.5px; line-height: 1.5; color: var(--text-muted, #94a3b8); }
+
+/* ── Tabs ── */
+.rp-tabs { display: flex; gap: 4px; margin: 4px 0 16px; border-bottom: 1px solid var(--border-default, #e6eaf0); }
+.rp-tabs button {
+  padding: 9px 16px; border: none; background: none; cursor: pointer;
+  font-size: 13.5px; font-weight: 600; color: var(--text-secondary, #64748b);
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.rp-tabs button:hover { color: var(--text-heading, #0f172a); }
+.rp-tabs button.active { color: var(--accent, #2b7fff); border-bottom-color: var(--accent, #2b7fff); }
+
+.rp-filters { flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.rp-field { display: flex; flex-direction: column; gap: 4px; min-width: 170px; }
+.rp-field-wide { flex: 1 1 340px; }
+.rp-field label { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted, #94a3b8); }
+.rp-field input {
+  height: 36px; padding: 0 10px;
+  border: 1px solid var(--input-border, #cbd5e1); border-radius: 8px;
+  background: var(--input-bg, #fff); color: var(--input-text, #1e293b);
+  font-size: 13px; outline: none;
+}
+.rp-field input:focus { border-color: var(--input-border-focus, #2b7fff); box-shadow: 0 0 0 3px var(--input-ring, rgba(43,127,255,.15)); }
+.rp-presets { display: flex; gap: 6px; align-items: flex-end; }
+.rp-presets .active { border-color: var(--accent, #2b7fff); color: var(--accent, #2b7fff); }
+
+.rp-empty {
+  padding: 28px; margin-top: 12px;
+  border: 1px dashed var(--border-strong, #cbd5e1); border-radius: 12px;
+  text-align: center; font-size: 13px; color: var(--text-muted, #94a3b8);
+}
+
+.rp-section {
+  margin: 22px 0 10px; font-size: 12.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary, #64748b);
+}
+
+/* ── Stat strip ── */
+.rp-stats { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin: 14px 0; }
+.rp-stat {
+  display: flex; flex-direction: column; gap: 3px; padding: 12px 15px;
+  border: 1px solid var(--border-default, #e6eaf0); border-radius: 11px;
+  background: var(--bg-subtle, #f8fafc);
+}
+.rp-stat-label { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted, #94a3b8); }
+.rp-stat-value { font-size: 20px; font-weight: 750; color: var(--text-heading, #0f172a); letter-spacing: -.01em; }
+.rp-stat-foot { font-size: 11px; color: var(--text-muted, #94a3b8); }
+
+/* ── Hourly chart ── */
+.rp-chart {
+  display: flex; align-items: flex-end; gap: 3px;
+  height: 170px; padding: 12px 12px 0;
+  border: 1px solid var(--border-default, #e6eaf0); border-radius: 12px;
+  background: var(--bg-surface, #fff);
+  overflow-x: auto;
+}
+.rp-bar-col { flex: 1 1 0; min-width: 18px; display: flex; flex-direction: column; align-items: center; gap: 5px; height: 100%; }
+.rp-bar-track { flex: 1; width: 100%; display: flex; align-items: flex-end; }
+.rp-bar {
+  width: 100%; border-radius: 4px 4px 0 0;
+  background: var(--accent-soft, rgba(43, 127, 255, .35));
+  transition: height .18s;
+}
+.rp-bar-peak { background: var(--accent, #2b7fff); }
+.rp-bar-label { font-size: 9.5px; color: var(--text-muted, #94a3b8); height: 12px; }
+
+.rp-cols { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); }
+
+.rp-variant {
+  margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 10.5px; font-weight: 600;
+  color: var(--violet-text, #6d28d9); background: var(--violet-soft, #ede9fe);
+  border: 1px solid var(--violet-border, #ddd6fe);
+}
+.rp-code { display: block; color: var(--text-muted, #94a3b8); }
+
+.rp-share {
+  display: inline-block; width: 46px; height: 5px; margin-right: 7px; vertical-align: middle;
+  border-radius: 999px; background: var(--bg-muted, #f1f5f9); overflow: hidden;
+}
+.rp-share-fill { display: block; height: 100%; background: var(--accent, #2b7fff); }
+
+/* ── Shift read ── */
+.rp-read {
+  margin-top: 14px; padding: 18px;
+  border: 1px solid var(--border-default, #e6eaf0); border-radius: 14px;
+  background: var(--bg-surface, #fff);
+}
+.rp-read-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; flex-wrap: wrap; }
+.rp-read-head h3 { margin: 0 0 3px; font-size: 16px; font-weight: 700; color: var(--text-heading, #0f172a); }
+.rp-read-sub { margin: 0; font-size: 12px; color: var(--text-muted, #94a3b8); }
+
+.rp-flag {
+  display: inline-block; padding: 5px 11px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 600;
+}
+.rp-flag-info { color: var(--info-text, #1d4ed8); background: var(--info-soft, #dbeafe); border: 1px solid var(--info-border, #bfdbfe); }
+.rp-flag-warn { color: var(--warning-text, #92400e); background: var(--warning-soft, #fef3c7); border: 1px solid var(--warning-border, #fde68a); }
+.rp-flag-block { display: block; margin: 14px 0 0; border-radius: 9px; line-height: 1.55; font-weight: 500; }
+
+.rp-read-cols { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); margin-top: 18px; }
+.rp-panel {
+  padding: 15px; border: 1px solid var(--border-light, #eef1f5); border-radius: 11px;
+  background: var(--bg-subtle, #f8fafc);
+}
+.rp-panel h4 {
+  margin: 0 0 12px; font-size: 12px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary, #64748b);
+}
+.rp-sub {
+  margin: 16px 0 8px; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted, #94a3b8);
+}
+
+.rp-dl { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; margin: 0; }
+.rp-dl dt { font-size: 12.5px; color: var(--text-secondary, #64748b); }
+.rp-dl dd { margin: 0; font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; color: var(--text-primary, #334155); }
+.rp-dl-sub { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-light, #eef1f5); }
+.rp-dt-total { padding-top: 7px; border-top: 1px solid var(--border-default, #e2e8f0); font-weight: 700; color: var(--text-heading, #0f172a); }
+.rp-dd-total { padding-top: 7px; border-top: 1px solid var(--border-default, #e2e8f0); font-weight: 750; color: var(--text-heading, #0f172a); }
+
+/* A short drawer is the finding worth colouring — an over is odd too, just less alarming. */
+.rp-short { color: var(--danger, #ef4444) !important; }
+.rp-over { color: var(--warning-text, #92400e) !important; }
+
+.rp-mini { width: 100%; border-collapse: collapse; }
+.rp-mini td {
+  padding: 5px 0; font-size: 12.5px; color: var(--text-primary, #334155);
+  border-bottom: 1px solid var(--border-light, #eef1f5);
+  font-variant-numeric: tabular-nums;
+}
+.rp-mini tr:last-child td { border-bottom: none; }
+.rp-mini-when { color: var(--text-muted, #94a3b8); font-size: 11.5px; text-align: right; }
+
+/* A Z read gets filed on paper, so printing drops the chrome and keeps the figures. */
+@media print {
+  .rp-tabs, .rp-filters, .page-header .btn { display: none !important; }
+  .rp-read, .rp-panel { border-color: #999; background: #fff; }
+}

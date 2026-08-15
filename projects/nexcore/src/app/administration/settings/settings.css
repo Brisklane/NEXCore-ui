@@ -169,16 +169,58 @@
   box-shadow: 0 0 0 3px var(--accent-soft, rgba(43, 127, 255, 0.12));
 }
 
+/* Mini page preview: page background + a surface bar + the theme's accent dot */
 .theme-swatch {
+  position: relative;
   width: 64px;
   height: 42px;
   border-radius: 8px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
+  overflow: hidden;
+  display: block;
+}
+.theme-swatch .ts-bar {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  top: 8px;
+  height: 12px;
+  border-radius: 3px;
+}
+.theme-swatch .ts-dot {
+  position: absolute;
+  left: 6px;
+  bottom: 7px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
 }
 
-.theme-swatch-light { background: linear-gradient(135deg, #f6f8fb 50%, #ffffff 50%); }
-.theme-swatch-dark { background: linear-gradient(135deg, #1c1c1e 50%, #111111 50%); }
-.theme-swatch-midnight { background: linear-gradient(135deg, #111c30 50%, #0b1220 50%); }
+.theme-swatch-light           { background: #f6f8fb; }
+.theme-swatch-light .ts-bar   { background: #ffffff; box-shadow: 0 0 0 1px #e6eaf0; }
+.theme-swatch-light .ts-dot   { background: #2b7fff; }
+
+.theme-swatch-graphite        { background: #131313; }
+.theme-swatch-graphite .ts-bar{ background: #1b1b1b; box-shadow: 0 0 0 1px #2e2e2e; }
+.theme-swatch-graphite .ts-dot{ background: #3b8cff; }
+
+.theme-swatch-slate           { background: #0b1220; }
+.theme-swatch-slate .ts-bar   { background: #111c30; box-shadow: 0 0 0 1px #243349; }
+.theme-swatch-slate .ts-dot   { background: #3b8cff; }
+
+.theme-swatch-carbon          { background: #0a0a0a; }
+.theme-swatch-carbon .ts-bar  { background: #141414; box-shadow: 0 0 0 1px #262626; }
+.theme-swatch-carbon .ts-dot  { background: #f5921e; }
+
+.theme-swatch-obsidian        { background: #000000; }
+.theme-swatch-obsidian .ts-bar{ background: #0e0e12; box-shadow: 0 0 0 1px #26262e; }
+.theme-swatch-obsidian .ts-dot{ background: #8b5cf6; }
+
+.theme-swatch-sepia           { background: #efe8d9; }
+.theme-swatch-sepia .ts-bar   { background: #faf5ea; box-shadow: 0 0 0 1px #ded3bf; }
+.theme-swatch-sepia .ts-dot   { background: #0f766e; }
+
+.theme-opt-name { font-weight: 600; }
 
 /* ── Sidebar Layout picker ── */
 .layout-picker { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 8px; }

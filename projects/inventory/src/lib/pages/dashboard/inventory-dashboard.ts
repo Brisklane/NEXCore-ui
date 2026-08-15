@@ -27,11 +27,11 @@ export class InventoryDashboard {
   ];
 
   categories = [
-    { label: 'Electronics', count: 700, color: '#2b7fff', dash: '95.5 251.3',  off: '0' },
-    { label: 'Apparel',     count: 442, color: '#22c7e6', dash: '60.3 251.3',  off: '-95.5' },
-    { label: 'Home',        count: 331, color: '#7c3aed', dash: '45.2 251.3',  off: '-155.8' },
-    { label: 'Grocery',     count: 221, color: '#16a34a', dash: '30.2 251.3',  off: '-201.0' },
-    { label: 'Other',       count: 148, color: '#f59e0b', dash: '20.1 251.3',  off: '-231.2' },
+    { label: 'Electronics', count: 700, color: 'var(--kpi-1, #2b7fff)', dash: '95.5 251.3',  off: '0' },
+    { label: 'Apparel',     count: 442, color: 'var(--kpi-2, #22c7e6)', dash: '60.3 251.3',  off: '-95.5' },
+    { label: 'Home',        count: 331, color: 'var(--kpi-3, #7c3aed)', dash: '45.2 251.3',  off: '-155.8' },
+    { label: 'Grocery',     count: 221, color: 'var(--kpi-5, #16a34a)', dash: '30.2 251.3',  off: '-201.0' },
+    { label: 'Other',       count: 148, color: 'var(--kpi-4, #f59e0b)', dash: '20.1 251.3',  off: '-231.2' },
   ];
 
   alerts = [

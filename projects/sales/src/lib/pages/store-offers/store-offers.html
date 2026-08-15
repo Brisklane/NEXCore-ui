@@ -150,16 +150,16 @@
         <tbody>
           @for (o of filteredOffers; track o.id) {
             <tr [class.row-new]="o.id === highlighter.id">
-              <td style="color:#94a3b8;font-size:12px;">{{ o.displayOrder }}</td>
+              <td style="color:var(--text-muted,#94a3b8);font-size:12px;">{{ o.displayOrder }}</td>
               <td>
                 <div style="font-weight:500;">{{ o.title }}</div>
-                @if (o.subtitle) { <div style="font-size:12px;color:#94a3b8;">{{ o.subtitle }}</div> }
+                @if (o.subtitle) { <div style="font-size:12px;color:var(--text-muted,#94a3b8);">{{ o.subtitle }}</div> }
                 @if (o.badgeText) {
                   <span class="badge-chip" [style.background]="o.badgeColor ?? '#ef4444'">{{ o.badgeText }}</span>
                 }
               </td>
-              <td style="font-size:12px;color:#64748b;">{{ o.offerType }}</td>
-              <td style="font-size:12px;color:#64748b;">
+              <td style="font-size:12px;color:var(--text-secondary,#64748b);">{{ o.offerType }}</td>
+              <td style="font-size:12px;color:var(--text-secondary,#64748b);">
                 @if (o.startDate || o.endDate) {
                   {{ o.startDate | date:'mediumDate' }} – {{ o.endDate | date:'mediumDate' }}
                 } @else { Always }
@@ -180,7 +180,7 @@
               </td>
             </tr>
           } @empty {
-            <tr><td colspan="6" style="text-align:center;padding:32px;color:#94a3b8;">No offers found for this store.</td></tr>
+            <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted,#94a3b8);">No offers found for this store.</td></tr>
           }
         </tbody>
       </table>

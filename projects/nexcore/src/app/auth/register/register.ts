@@ -1,9 +1,12 @@
-import { Component, ChangeDetectorRef, NgZone } from '@angular/core';
+import { Component, ChangeDetectorRef, NgZone, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { finalize } from 'rxjs/operators';
-import { AuthService } from '@nexcore/core';
+import {
+  AuthService, GeoService, CountryDto, CityDto,
+  SearchableSelect, SearchableOption,
+} from '@nexcore/core';
 import { API_CONFIG } from '../../config/api.config';
 import * as L from 'leaflet';
 
@@ -13,14 +16,17 @@ interface Country {
   code: string;
 }
 
+/** Most sign-ups are local, so the form opens on Pakistan. */
+const DEFAULT_COUNTRY_CODE = 'PK';
+
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SearchableSelect],
   templateUrl: './register.html',
   styleUrls: ['./register.css']
 })
-export class Register {
+export class Register implements OnInit {
   step = 1;
   showBranch = false;
   showBU = false;
@@ -61,9 +67,21 @@ export class Register {
   address = '';
   preferredCurrency = '';
   postalCode = '';
-  country = '';
+  country = '';       // country NAME — this is what the API stores
   state = '';
   city = '';
+
+  // ---- Country / city lookups (served by the backend's public geo endpoints) ----
+  /** ISO 3166-1 alpha-2 of the selected country; drives the city list and currency. */
+  countryCode = DEFAULT_COUNTRY_CODE;
+  geoCountries: CountryDto[] = [];
+  cities: CityDto[] = [];
+  /** Every currency in use by a country, so an auto-selected code is always an option. */
+  currencies: string[] = [];
+  loadingCountries = false;
+  loadingCities = false;
+  /** Current text in the city search box — drives the empty-state wording. */
+  citySearchTerm = '';
 
   companyLogo: File | null = null;
   companyLogoBase64 = '';
@@ -112,6 +130,10 @@ export class Register {
   adminPhone = '';
   adminEmail = '';
   adminPassword = '';
+  confirmPassword = '';
+
+  showPassword = false;
+  showConfirmPassword = false;
 
   registeredEmail = '';
   errors: any = {};
@@ -191,9 +213,132 @@ export class Register {
   constructor(
     private router: Router,
     private authService: AuthService,
+    private geo: GeoService,
     private cdr: ChangeDetectorRef,
     private ngZone: NgZone
   ) {}
+
+  ngOnInit(): void {
+    this.loadCountries();
+  }
+
+  /**
+   * Countries come from the backend's public geo endpoint (all 249 ISO 3166-1
+   * entries) and are cached by GeoService for the rest of the session.
+   */
+  private loadCountries(): void {
+    this.loadingCountries = true;
+
+    this.geo.getCountries()
+      .pipe(finalize(() => { this.loadingCountries = false; this.cdr.detectChanges(); }))
+      .subscribe((list) => {
+        this.ngZone.run(() => {
+          this.geoCountries = (list ?? [])
+            .filter((c) => !!c.code && !!c.name)
+            .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
+
+          // Every currency any country uses, so auto-selection always has a match.
+          this.currencies = [...new Set(
+            this.geoCountries.map((c) => c.currencyCode).filter((c): c is string => !!c)
+          )].sort();
+
+          // Open on the default country (falls back to the first one if absent).
+          const initial =
+            this.geoCountries.find((c) => c.code === DEFAULT_COUNTRY_CODE) ?? this.geoCountries[0];
+
+          if (initial?.code) {
+            this.countryCode = initial.code;
+            this.onCountryChange();
+          }
+          this.cdr.detectChanges();
+        });
+      });
+  }
+
+  /**
+   * Country picked: store its name for the payload, adopt its ISO 4217 currency, and
+   * reload the city list. The currency stays editable — this only pre-fills it.
+   */
+  onCountryChange(): void {
+    const country = this.geoCountries.find((c) => c.code === this.countryCode);
+
+    this.country = country?.name ?? '';
+    if (country?.currencyCode) this.preferredCurrency = country.currencyCode;
+
+    this.city = '';
+    this.cities = [];
+
+    this.clearError('country');
+    this.clearError('city');
+    this.clearError('preferredCurrency');
+
+    if (this.countryCode) this.loadCities(this.countryCode);
+    this.autoFillBranchAndBusinessUnit();
+  }
+
+  /**
+   * Opening list for the city picker: the most populous cities in the country. The
+   * table holds ~156k cities, so the rest are reached by typing — see onCitySearch.
+   */
+  private loadCities(countryCode: string): void {
+    this.loadingCities = true;
+    this.citySearchTerm = '';
+
+    this.geo.getCities(countryCode)
+      .pipe(finalize(() => { this.loadingCities = false; this.cdr.detectChanges(); }))
+      .subscribe((list) => {
+        this.ngZone.run(() => {
+          this.cities = list ?? [];
+          this.cdr.detectChanges();
+        });
+      });
+  }
+
+  /**
+   * Typing in the city box queries the server, so every city in the country is
+   * reachable — not just the ones in the opening list. Blanking the box restores it.
+   */
+  onCitySearch(term: string): void {
+    this.citySearchTerm = term;
+
+    if (!term) {
+      if (this.countryCode) this.loadCities(this.countryCode);
+      return;
+    }
+
+    this.loadingCities = true;
+    this.geo.searchCities(this.countryCode, term)
+      .pipe(finalize(() => { this.loadingCities = false; this.cdr.detectChanges(); }))
+      .subscribe((list) => {
+        this.ngZone.run(() => {
+          this.cities = list ?? [];
+          this.cdr.detectChanges();
+        });
+      });
+  }
+
+  onCityChange(): void {
+    this.clearError('city');
+    this.autoFillBranchAndBusinessUnit();
+  }
+
+  // ---- Options for the searchable pickers ----
+  get countryOptions(): SearchableOption[] {
+    return this.geoCountries.map((c) => ({
+      value: c.code ?? '',
+      label: c.name ?? '',
+      prefix: c.flagEmoji ?? '',
+    }));
+  }
+
+  get cityOptions(): SearchableOption[] {
+    return this.cities.map((c) => ({ value: c.name ?? '', label: c.name ?? '' }));
+  }
+
+  get cityEmptyText(): string {
+    if (!this.countryCode) return 'Pick a country first';
+    return this.citySearchTerm ? 'No city matches' : 'No cities listed';
+  }
 
 
   openMapModal(index: number) {
@@ -537,6 +682,46 @@ export class Register {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 
+  // ---- Live password strength / match feedback ----
+  // Each rule mirrors the backend password policy so the checklist below the
+  // field turns green the moment a requirement is satisfied.
+  get passwordRules(): { label: string; ok: boolean }[] {
+    const pwd = this.adminPassword || '';
+
+    return [
+      { label: '8+ characters', ok: pwd.length >= 8 },
+      { label: 'Uppercase letter', ok: /[A-Z]/.test(pwd) },
+      { label: 'Lowercase letter', ok: /[a-z]/.test(pwd) },
+      { label: 'Number', ok: /\d/.test(pwd) },
+      { label: 'Special character', ok: /[^A-Za-z0-9]/.test(pwd) }
+    ];
+  }
+
+  get isPasswordValid(): boolean {
+    return this.passwordRules.every(r => r.ok);
+  }
+
+  get passwordsMatch(): boolean {
+    return !!this.adminPassword && this.adminPassword === this.confirmPassword;
+  }
+
+  onPasswordChange() {
+    this.clearError('adminPassword');
+    if (this.passwordsMatch) this.clearError('confirmPassword');
+  }
+
+  onConfirmPasswordChange() {
+    this.clearError('confirmPassword');
+  }
+
+  togglePasswordVisibility() {
+    this.showPassword = !this.showPassword;
+  }
+
+  toggleConfirmPasswordVisibility() {
+    this.showConfirmPassword = !this.showConfirmPassword;
+  }
+
   validateStepOneFrontend(): boolean {
     this.errors = {};
     this.autoFillBranchAndBusinessUnit();
@@ -545,6 +730,9 @@ export class Register {
     // All other company / branch / business-unit details default sensibly and
     // can be edited later in Administration → Manage Company.
     if (!this.companyName.trim()) this.errors.companyName = 'Company name is required';
+    if (!this.countryCode.trim()) this.errors.country = 'Country is required';
+    // Only enforced when the country actually has a list — never a dead end.
+    if (this.cities.length && !this.city.trim()) this.errors.city = 'City is required';
     if (!this.preferredCurrency.trim()) this.errors.preferredCurrency = 'Preferred currency is required';
 
     // Company code is generated automatically when not supplied.
@@ -579,6 +767,13 @@ export class Register {
       // Mirror the backend rule so users see the requirement before submitting.
       this.errors.adminPassword =
         'Use 8+ characters with an uppercase, lowercase, number and special character.';
+    }
+
+    const confirm = this.confirmPassword.trim();
+    if (!confirm) {
+      this.errors.confirmPassword = 'Please confirm your password';
+    } else if (pwd !== confirm) {
+      this.errors.confirmPassword = 'Passwords do not match';
     }
 
     this.cdr.detectChanges();

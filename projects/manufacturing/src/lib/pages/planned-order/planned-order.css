@@ -6,10 +6,10 @@
 	gap: 8px;
 	margin: 0 0 12px;
 	padding: 8px 10px;
-	border: 1px solid #fed7aa;
+	border: 1px solid var(--warning-border, #fed7aa);
 	border-radius: 8px;
-	background: #fff7ed;
-	color: #9a3412;
+	background: var(--warning-soft, #fff7ed);
+	color: var(--warning-text, #9a3412);
 	font-size: 12px;
 	font-weight: 600;
 }
@@ -22,7 +22,7 @@
 }
 
 .legend-overdue {
-	background: #fff7ed;
+	background: var(--warning-soft, #fff7ed);
 }
 
 .form-group {
@@ -37,7 +37,7 @@
 	max-height: 260px;
 	overflow-y: auto;
 	background: var(--bg-surface, #fff);
-	border: 1px solid #d0d7de;
+	border: 1px solid var(--border-default, #d0d7de);
 	border-radius: 8px;
 	box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
 	z-index: 20;
@@ -56,12 +56,12 @@
 }
 
 .autocomplete-item:hover {
-	background: #f5f9ff;
+	background: var(--accent-soft, #f5f9ff);
 }
 
 .option-main {
 	font-weight: 600;
-	color: #1f2937;
+	color: var(--text-heading, #1f2937);
 }
 
 .option-sub {
@@ -73,20 +73,20 @@
 .field-note {
 	display: block;
 	margin-top: 6px;
-	color: #6b7280;
+	color: var(--text-secondary, #6b7280);
 	font-size: 11px;
 }
 
 .btn-convert {
-	border-color: #a5b4fc;
-	background: #eef2ff;
-	color: #3730a3;
+	border-color: var(--violet-border, #a5b4fc);
+	background: var(--violet-soft, #eef2ff);
+	color: var(--violet-text, #3730a3);
 	font-weight: 600;
 }
 
 .btn-convert:hover {
-	background: #e0e7ff;
-	border-color: #818cf8;
+	background: var(--violet-soft, #e0e7ff);
+	border-color: var(--violet, #818cf8);
 }
 
 /* Conversion modal */
@@ -102,7 +102,7 @@
 }
 
 .modal-panel {
-	background: #fff;
+	background: var(--bg-surface, #fff);
 	border-radius: 12px;
 	box-shadow: 0 20px 60px rgba(15, 23, 42, 0.2);
 	width: 100%;
@@ -123,12 +123,12 @@
 	margin: 0;
 	font-size: 17px;
 	font-weight: 700;
-	color: #1e293b;
+	color: var(--text-heading, #1e293b);
 }
 
 .convert-summary {
-	background: #f8fafc;
-	border: 1px solid #e2e8f0;
+	background: var(--bg-subtle, #f8fafc);
+	border: 1px solid var(--border-default, #e2e8f0);
 	border-radius: 8px;
 	padding: 12px 16px;
 	margin-bottom: 20px;
@@ -145,13 +145,13 @@
 
 .summary-label {
 	width: 90px;
-	color: #64748b;
+	color: var(--text-secondary, #64748b);
 	font-weight: 600;
 	flex-shrink: 0;
 }
 
 .summary-value {
-	color: #1e293b;
+	color: var(--text-heading, #1e293b);
 	font-weight: 500;
 }
 

@@ -209,8 +209,8 @@
           @for (t of displayTemplates; track t.id) {
             <tr [class.row-new]="t.id === highlighter.id">
               <td style="font-weight:500;">{{ t.templateName ?? '—' }}</td>
-              <td style="font-size:12px;color:#64748b;">{{ t.paperSize }}</td>
-              <td style="font-size:12px;color:#64748b;">{{ t.headerBusinessName ?? '—' }}</td>
+              <td style="font-size:12px;color:var(--text-secondary,#64748b);">{{ t.paperSize }}</td>
+              <td style="font-size:12px;color:var(--text-secondary,#64748b);">{{ t.headerBusinessName ?? '—' }}</td>
               <td>
                 @if (t.isDefault) {
                   <span class="badge badge-accepted">Default</span>
@@ -225,7 +225,7 @@
             </tr>
           }
           @empty {
-            <tr><td colspan="5" style="text-align:center;padding:32px;color:#94a3b8;">No templates yet.</td></tr>
+            <tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text-muted,#94a3b8);">No templates yet.</td></tr>
           }
         </tbody>
       </table>

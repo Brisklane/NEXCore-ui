@@ -1,0 +1,165 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Customers</h2>
+      <p class="subtitle">The people your tills sell to. Same record the till attaches to a sale.</p>
+    </div>
+    <button class="btn btn-primary" type="button" (click)="startNew()">+ New Customer</button>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <div class="filters-bar">
+    <input
+      class="cs-search"
+      type="text"
+      [ngModel]="search"
+      (ngModelChange)="onSearchInput($event)"
+      placeholder="Search name, phone or email…"
+      autocomplete="off"
+    />
+    <span class="cs-count">{{ total }} customer{{ total === 1 ? '' : 's' }}</span>
+  </div>
+
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr><th>Name</th><th>Phone</th><th>Email</th><th>City</th><th>Account</th><th></th></tr>
+      </thead>
+      <tbody>
+        @if (loading) {
+          <tr><td colspan="6" class="empty-row">Loading…</td></tr>
+        } @else if (!rows.length) {
+          <tr><td colspan="6" class="empty-row">
+            {{ search ? 'No customers match "' + search + '".' : 'No customers yet.' }}
+          </td></tr>
+        } @else {
+          @for (c of rows; track trackById($index, c)) {
+            <tr>
+              <td>
+                {{ name(c) }}
+                @if (c.isAnonymous) { <span class="cs-tag">walk-in</span> }
+              </td>
+              <td class="mono">{{ c.phone ?? '—' }}</td>
+              <td>{{ c.email ?? '—' }}</td>
+              <td>{{ c.mailingCity ?? '—' }}</td>
+              <td>{{ c.accountName ?? '—' }}</td>
+              <td class="actions-cell">
+                <button class="btn btn-secondary btn-sm" type="button" (click)="edit(c)">Edit</button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  @if (totalPages > 1) {
+    <div class="cs-pager">
+      <button class="btn btn-secondary btn-sm" type="button" [disabled]="page <= 1" (click)="goToPage(page - 1)">Previous</button>
+      <span>Page {{ page }} of {{ totalPages }}</span>
+      <button class="btn btn-secondary btn-sm" type="button" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">Next</button>
+    </div>
+  }
+
+  <!-- ── Editor ─────────────────────────────────────────────────────── -->
+  @if (draft) {
+    <div class="cs-overlay" (click)="close()"></div>
+    <aside class="cs-editor">
+      <header class="cs-editor-head">
+        <h3>{{ draft.id ? 'Edit customer' : 'New customer' }}</h3>
+        <button class="btn-icon" type="button" (click)="close()" aria-label="Close">✕</button>
+      </header>
+
+      <div class="cs-editor-body">
+        <div class="cs-grid">
+          <div class="form-group">
+            <label>First name</label>
+            <input type="text" [(ngModel)]="draft.firstName" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label>Last name</label>
+            <input type="text" [(ngModel)]="draft.lastName" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label>Phone</label>
+            <input type="tel" [(ngModel)]="draft.phone" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" [(ngModel)]="draft.email" autocomplete="off" />
+          </div>
+        </div>
+
+        <p class="hint">A phone number or an email is required — without one the record cannot be found again at a till.</p>
+
+        <h4 class="cs-section">Address</h4>
+        <div class="form-group">
+          <label>Street</label>
+          <input type="text" [(ngModel)]="draft.mailingStreet" autocomplete="off" />
+        </div>
+        <div class="cs-grid">
+          <div class="form-group">
+            <label>City</label>
+            <input type="text" [(ngModel)]="draft.mailingCity" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label>Country</label>
+            <input type="text" [(ngModel)]="draft.mailingCountry" autocomplete="off" />
+          </div>
+        </div>
+
+        <h4 class="cs-section">Notes</h4>
+        <div class="form-group">
+          <textarea rows="2" [(ngModel)]="draft.description" placeholder="Anything the shop should remember"></textarea>
+        </div>
+        <label class="cs-check">
+          <input type="checkbox" [(ngModel)]="draft.emailOptOut" />
+          Do not send marketing email
+        </label>
+
+        @if (draft.id) {
+          <h4 class="cs-section">Recent purchases</h4>
+          @if (historyLoading) {
+            <div class="cs-empty">Loading…</div>
+          } @else if (!history.length) {
+            <div class="cs-empty">No invoices yet.</div>
+          } @else {
+            <table class="cs-history">
+              <thead>
+                <tr><th>Invoice</th><th>Date</th><th class="num">Total</th><th class="num">Balance</th></tr>
+              </thead>
+              <tbody>
+                @for (i of history; track i.id) {
+                  <tr>
+                    <td class="mono">{{ i.invoiceNumber ?? '—' }}</td>
+                    <td>{{ i.invoiceDate ? (i.invoiceDate | date:'mediumDate') : '—' }}</td>
+                    <td class="num">{{ i.totalAmount | number:'1.2-2' }}</td>
+                    <td class="num" [class.cs-owing]="i.balanceDue > 0">{{ i.balanceDue | number:'1.2-2' }}</td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="2" class="num cs-total-label">Last {{ history.length }}</td>
+                  <td class="num cs-total">{{ historyTotal | number:'1.2-2' }}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          }
+        }
+
+        @if (formError) { <div class="alert alert-error cs-form-error">{{ formError }}</div> }
+      </div>
+
+      <footer class="cs-editor-foot">
+        <button class="btn btn-secondary" type="button" (click)="close()">Cancel</button>
+        <button class="btn btn-primary" type="button" [disabled]="saving" (click)="save()">
+          {{ saving ? 'Saving…' : (draft.id ? 'Save changes' : 'Add customer') }}
+        </button>
+      </footer>
+    </aside>
+  }
+</div>

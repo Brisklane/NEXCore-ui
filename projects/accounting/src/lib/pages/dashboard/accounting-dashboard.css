@@ -1,5 +1,5 @@
 /* Accounting dashboard — brand cyan→blue accent (global .dsh kit supplies the layout) */
 .acc-dsh {
-  --dsh-accent: #2b7fff;
-  --dsh-accent-2: #22c7e6;
+  --dsh-accent: var(--accent, #2b7fff);
+  --dsh-accent-2: var(--brand-cyan, #22c7e6);
 }

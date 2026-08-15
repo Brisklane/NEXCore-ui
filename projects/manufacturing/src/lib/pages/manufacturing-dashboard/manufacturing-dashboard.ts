@@ -29,9 +29,9 @@ export class ManufacturingDashboard {
 
   // OEE rings — dash = pct/100 * 213.6 (r=34)
   rings = [
-    { label: 'Availability', pct: 91, dash: '194.4 213.6', color: '#2b7fff' },
-    { label: 'Performance',  pct: 88, dash: '188.0 213.6', color: '#7c3aed' },
-    { label: 'Quality',      pct: 96, dash: '205.0 213.6', color: '#16a34a' },
+    { label: 'Availability', pct: 91, dash: '194.4 213.6', color: 'var(--kpi-1, #2b7fff)' },
+    { label: 'Performance',  pct: 88, dash: '188.0 213.6', color: 'var(--kpi-3, #7c3aed)' },
+    { label: 'Quality',      pct: 96, dash: '205.0 213.6', color: 'var(--kpi-5, #16a34a)' },
   ];
 
   orderStatus = [
@@ -43,9 +43,9 @@ export class ManufacturingDashboard {
   ];
 
   quality = [
-    { label: 'Passed',   count: 1284, color: '#16a34a', dash: '221.1 251.3', off: '0' },
-    { label: 'Reworked', count: 96,   color: '#d97706', dash: '16.5 251.3',  off: '-221.1' },
-    { label: 'Rejected', count: 78,   color: '#dc2626', dash: '13.4 251.3',  off: '-237.6' },
+    { label: 'Passed',   count: 1284, color: 'var(--kpi-5, #16a34a)', dash: '221.1 251.3', off: '0' },
+    { label: 'Reworked', count: 96,   color: 'var(--kpi-4, #d97706)', dash: '16.5 251.3',  off: '-221.1' },
+    { label: 'Rejected', count: 78,   color: 'var(--kpi-6, #dc2626)', dash: '13.4 251.3',  off: '-237.6' },
   ];
 
   feed = [

@@ -38,15 +38,15 @@ import { ChartPoint } from './bar-chart.component';
   styles: [`
     .dn { display: flex; gap: 28px; align-items: center; flex-wrap: wrap; }
     .dn-ring { width: 180px; height: 180px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-    .dn-hole { width: 116px; height: 116px; background: #fff; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: inset 0 0 0 1px #f1f5f9; }
-    .dn-total { font-size: 18px; font-weight: 700; color: #1e293b; }
-    .dn-cap { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: .04em; }
+    .dn-hole { width: 116px; height: 116px; background: var(--bg-surface, #fff); border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: inset 0 0 0 1px var(--border-default, #f1f5f9); }
+    .dn-total { font-size: 18px; font-weight: 700; color: var(--text-heading, #1e293b); }
+    .dn-cap { font-size: 11px; color: var(--text-muted, #94a3b8); text-transform: uppercase; letter-spacing: .04em; }
     .dn-legend { display: flex; flex-direction: column; gap: 8px; min-width: 220px; }
     .dn-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
     .dn-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
-    .dn-name { color: #475569; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .dn-val { color: #1e293b; font-weight: 600; white-space: nowrap; }
-    .dn-empty { color: #94a3b8; font-size: 13px; padding: 16px; }
+    .dn-name { color: var(--text-primary, #475569); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dn-val { color: var(--text-heading, #1e293b); font-weight: 600; white-space: nowrap; }
+    .dn-empty { color: var(--text-muted, #94a3b8); font-size: 13px; padding: 16px; }
   `],
 })
 export class DonutChartComponent {
@@ -55,14 +55,14 @@ export class DonutChartComponent {
   @Input() asCurrency = true;
   @Input() caption = 'Total';
 
-  private readonly palette = ['#2b7fff', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#64748b'];
+  private readonly palette = ['var(--kpi-1, #2b7fff)', 'var(--kpi-2, #0ea5e9)', 'var(--kpi-5, #10b981)', 'var(--kpi-4, #f59e0b)', 'var(--kpi-6, #ef4444)', 'var(--kpi-3, #8b5cf6)', 'var(--violet, #ec4899)', 'var(--brand-cyan, #14b8a6)', 'var(--text-secondary, #64748b)'];
 
   get total(): number { return this.data.reduce((s, d) => s + (d.value ?? 0), 0); }
   color(i: number): string { return this.palette[i % this.palette.length]; }
   share(v: number): string { return this.total > 0 ? ((v / this.total) * 100).toFixed(1) : '0'; }
 
   get gradient(): string {
-    if (this.total <= 0) return '#f1f5f9';
+    if (this.total <= 0) return 'var(--chart-track, #f1f5f9)';
     let acc = 0;
     const stops: string[] = [];
     this.data.forEach((p, i) => {

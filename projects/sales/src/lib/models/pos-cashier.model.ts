@@ -53,8 +53,21 @@ export interface PosSessionDto {
   closingNotes: string | null;
 }
 
-// PosCashMovementType: 0=CashIn, 1=CashOut, 2=Float, 3=Adjustment, 4=Opening, 5=Closing
-export type PosCashMovementType = number;
+/**
+ * Matches `Sales.Domain.Enums.PosCashMovementType`.
+ *
+ * SafeDrop and PettyCash are money that left the drawer, so they reduce what should be in
+ * it at close — a fact the previous comment here got wrong (it called 2 and 3 "Float" and
+ * "Adjustment").
+ */
+export enum PosCashMovementType {
+  CashIn = 0,
+  CashOut = 1,
+  SafeDrop = 2,
+  PettyCash = 3,
+  OpeningFloat = 4,
+  ClosingFloat = 5,
+}
 
 export interface PosCashMovementDto {
   id: string;

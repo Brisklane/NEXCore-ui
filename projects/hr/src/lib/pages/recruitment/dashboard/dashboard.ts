@@ -25,10 +25,10 @@ export class Dashboard {
   headcountX = ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
 
   attendance = [
-    { label: 'On-site', count: 213, color: '#2b7fff', dash: '216.7 251.3', off: '0' },
-    { label: 'Remote',  count: 18,  color: '#22c7e6', dash: '18.3 251.3',  off: '-216.7' },
-    { label: 'On leave',count: 11,  color: '#d97706', dash: '11.2 251.3',  off: '-235.0' },
-    { label: 'Absent',  count: 5,   color: '#dc2626', dash: '5.1 251.3',   off: '-246.2' },
+    { label: 'On-site', count: 213, color: 'var(--kpi-1, #2b7fff)', dash: '216.7 251.3', off: '0' },
+    { label: 'Remote',  count: 18,  color: 'var(--kpi-2, #22c7e6)', dash: '18.3 251.3',  off: '-216.7' },
+    { label: 'On leave',count: 11,  color: 'var(--kpi-4, #d97706)', dash: '11.2 251.3',  off: '-235.0' },
+    { label: 'Absent',  count: 5,   color: 'var(--kpi-6, #dc2626)', dash: '5.1 251.3',   off: '-246.2' },
   ];
 
   pipeline = [

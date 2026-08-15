@@ -2,9 +2,7 @@ import { ChangeDetectorRef, Component, ElementRef, EventEmitter, HostListener, O
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { AuthService, ContextSwitcherService } from '@nexcore/core';
-
-type ThemeMode = 'Light' | 'Dark' | 'Midnight';
+import { AuthService, ContextSwitcherService, ThemeService, ThemeMode } from '@nexcore/core';
 
 @Component({
   selector: 'app-header',
@@ -59,6 +57,7 @@ export class Header implements OnInit, OnDestroy {
   theme: ThemeMode = 'Light';
 
   fullName = 'Kaynat Waleed';
+
   role = 'Business Analyst';
 
   t: Record<string, string> = {};
@@ -87,8 +86,12 @@ export class Header implements OnInit, OnDestroy {
     private authService: AuthService,
     private router: Router,
     private cdr: ChangeDetectorRef,
-    public contextSwitcher: ContextSwitcherService
+    public contextSwitcher: ContextSwitcherService,
+    public themeService: ThemeService
   ) {}
+
+  /** The five shipped appearances, straight from the theme service. */
+  get themes() { return this.themeService.themes; }
 
   // Kept as fields so they can be removed on destroy. The deferred prompt is captured
   // in index.html (it can fire before Angular boots); here we just react to its presence.
@@ -100,10 +103,8 @@ export class Header implements OnInit, OnDestroy {
     if (user?.fullName) this.fullName = user.fullName;
     if (Array.isArray(user?.roles) && user.roles.length) this.role = user.roles[0];
 
-    const savedTheme = (localStorage.getItem('ui_theme') as ThemeMode) || 'Light';
-    this.theme = savedTheme;
-
-    this.applyTheme(this.theme);
+    this.theme = this.themeService.stored();
+    window.addEventListener('ui-theme', this.onThemeChanged);
 
     this.canInstall = !!(window as any).__deferredInstallPrompt;
     window.addEventListener('pwa-installable', this.onInstallable);
@@ -115,6 +116,7 @@ export class Header implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     window.removeEventListener('pwa-installable', this.onInstallable);
     window.removeEventListener('pwa-installed', this.onInstalled);
+    window.removeEventListener('ui-theme', this.onThemeChanged);
   }
 
   /** Trigger the browser's PWA install flow (installs the app on the local system). */
@@ -159,15 +161,14 @@ export class Header implements OnInit, OnDestroy {
   setTheme(mode: ThemeMode, event?: MouseEvent) {
     if (event) event.stopPropagation();
     this.theme = mode;
-    localStorage.setItem('ui_theme', mode);
-    this.applyTheme(mode);
+    this.themeService.set(mode);
   }
 
-  private applyTheme(mode: ThemeMode) {
-    document.body.classList.remove('theme-dark', 'theme-midnight');
-    if (mode === 'Dark') document.body.classList.add('theme-dark');
-    else if (mode === 'Midnight') document.body.classList.add('theme-midnight');
-  }
+  /** Keep the header in sync when the theme is changed from Settings. */
+  private readonly onThemeChanged = (e: Event) => {
+    this.theme = (e as CustomEvent<ThemeMode>).detail ?? this.themeService.stored();
+    this.cdr.detectChanges();
+  };
 
   // private applyLang(lang: LangMode) {
   //   this.t = this.dict[lang];

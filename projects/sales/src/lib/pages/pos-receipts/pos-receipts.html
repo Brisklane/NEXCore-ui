@@ -1,0 +1,196 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Goods Received</h2>
+      <p class="subtitle">Book stock into this store. A draft moves nothing until it is posted.</p>
+    </div>
+    <button class="btn btn-primary" type="button" (click)="startReceipt()">+ New Receipt</button>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <div class="filters-bar">
+    <div class="rc-store">
+      <label>Store</label>
+      <nx-searchable-select
+        [(ngModel)]="storeId"
+        (ngModelChange)="onStoreChange()"
+        [options]="storeOptions"
+        placeholder="Select a store"
+      ></nx-searchable-select>
+    </div>
+  </div>
+
+  <!-- ── Drafts ─────────────────────────────────────────────────────── -->
+  <h3 class="rc-section">Drafts</h3>
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Document</th><th>Date</th><th>Reference</th>
+          <th class="num">Qty</th><th class="num">Value</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading) {
+          <tr><td colspan="6" class="empty-row">Loading…</td></tr>
+        } @else if (!drafts.length) {
+          <tr><td colspan="6" class="empty-row">No drafts waiting.</td></tr>
+        } @else {
+          @for (d of drafts; track trackByDoc($index, d)) {
+            <tr>
+              <td class="mono">{{ d.documentNumber ?? '—' }}</td>
+              <td>{{ d.documentDate | date:'mediumDate' }}</td>
+              <td>{{ d.description ?? '—' }}</td>
+              <td class="num">{{ d.totalQuantity | number:'1.0-3' }}</td>
+              <td class="num">{{ d.totalCost | number:'1.2-2' }}</td>
+              <td class="actions-cell">
+                <button class="btn btn-primary btn-sm" type="button" (click)="askToPost(d)">Post</button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── Posted ─────────────────────────────────────────────────────── -->
+  <h3 class="rc-section">Recently posted</h3>
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Document</th><th>Posted</th><th>Reference</th>
+          <th class="num">Qty</th><th class="num">Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (!posted.length) {
+          <tr><td colspan="5" class="empty-row">Nothing posted yet.</td></tr>
+        } @else {
+          @for (d of posted; track trackByDoc($index, d)) {
+            <tr>
+              <td class="mono">{{ d.documentNumber ?? '—' }}</td>
+              <td>{{ (d.postingDate ?? d.documentDate) | date:'mediumDate' }}</td>
+              <td>{{ d.description ?? '—' }}</td>
+              <td class="num">{{ d.totalQuantity | number:'1.0-3' }}</td>
+              <td class="num">{{ d.totalCost | number:'1.2-2' }}</td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── Entry ──────────────────────────────────────────────────────── -->
+  @if (entry) {
+    <div class="rc-overlay" (click)="cancelEntry()"></div>
+    <aside class="rc-editor">
+      <header class="rc-editor-head">
+        <div>
+          <h3>New goods receipt</h3>
+          <span class="rc-editor-sub">into {{ store?.tradingName }}</span>
+        </div>
+        <button class="btn-icon" type="button" (click)="cancelEntry()" aria-label="Close">✕</button>
+      </header>
+
+      <div class="rc-editor-body">
+        <div class="form-group">
+          <label>Reference / note</label>
+          <input type="text" [(ngModel)]="entry.description" placeholder="e.g. Supplier invoice 4471" />
+        </div>
+
+        <section class="rc-lines">
+          <h4>Lines</h4>
+
+          <div class="rc-add">
+            <nx-searchable-select
+              class="rc-add-pick"
+              [(ngModel)]="pickedProductId"
+              [options]="productOptions"
+              [loading]="productSearching"
+              [remote]="true"
+              placeholder="Type a name, SKU or barcode…"
+              emptyText="No product matches"
+              (search)="onProductSearch($event)"
+            ></nx-searchable-select>
+            <button class="btn btn-secondary" type="button" (click)="addLine()">Add line</button>
+          </div>
+
+          @if (!entry.lines.length) {
+            <div class="rc-empty">No lines yet.</div>
+          } @else {
+            <table class="rc-line-table">
+              <thead>
+                <tr>
+                  <th>Product</th><th class="num">Qty</th>
+                  <th class="num">Unit cost</th><th class="num">Value</th><th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (l of entry.lines; track $index) {
+                  <tr>
+                    <td>
+                      <span class="rc-line-name">{{ l.name }}</span>
+                      <span class="mono rc-line-code">{{ l.code }}</span>
+                    </td>
+                    <td class="num">
+                      <input class="rc-num" type="number" min="0" step="0.001" [(ngModel)]="l.quantity" />
+                      @if (l.unitName) { <span class="rc-unit">{{ l.unitName }}</span> }
+                    </td>
+                    <td class="num">
+                      <input class="rc-num" type="number" min="0" step="0.01" [(ngModel)]="l.unitCost" />
+                    </td>
+                    <td class="num">{{ ((l.quantity ?? 0) * (l.unitCost ?? 0)) | number:'1.2-2' }}</td>
+                    <td class="num">
+                      <button class="btn-icon btn-icon-danger" type="button" (click)="removeLine($index)" title="Remove">✕</button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="3" class="num rc-total-label">Total</td>
+                  <td class="num rc-total">{{ entryTotal | number:'1.2-2' }}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          }
+
+          <p class="hint">
+            Quantities are in each product's base unit. Unit cost is what you paid — it
+            feeds the moving average, so a guess here misprices the stock you already hold.
+          </p>
+        </section>
+      </div>
+
+      <footer class="rc-editor-foot">
+        <button class="btn btn-secondary" type="button" (click)="cancelEntry()">Cancel</button>
+        <button class="btn btn-primary" type="button" [disabled]="saving" (click)="saveDraft()">
+          {{ saving ? 'Saving…' : 'Save draft' }}
+        </button>
+      </footer>
+    </aside>
+  }
+
+  <!-- ── Post confirmation ──────────────────────────────────────────── -->
+  @if (confirming) {
+    <div class="rc-overlay" (click)="cancelPost()"></div>
+    <aside class="rc-confirm">
+      <h3>Post {{ confirming.documentNumber ?? 'this receipt' }}?</h3>
+      <p>
+        This adds {{ confirming.totalQuantity | number:'1.0-3' }} units worth
+        {{ confirming.totalCost | number:'1.2-2' }} and updates the moving-average cost.
+        Posting cannot be undone — a mistake has to be corrected with a counter-document.
+      </p>
+      <div class="rc-confirm-actions">
+        <button class="btn btn-secondary" type="button" (click)="cancelPost()">Cancel</button>
+        <button class="btn btn-primary" type="button" [disabled]="saving" (click)="confirmPost()">
+          {{ saving ? 'Posting…' : 'Post receipt' }}
+        </button>
+      </div>
+    </aside>
+  }
+</div>

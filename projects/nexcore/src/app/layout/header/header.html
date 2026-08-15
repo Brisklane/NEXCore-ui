@@ -181,17 +181,20 @@
           <svg class="pm-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path></svg>
           <span class="pm-label">{{ t.theme || 'Theme' }}</span>
           <div class="pm-theme" (click)="$event.stopPropagation()">
-            <!-- Light -->
-            <button class="pm-theme-opt" type="button" [class.active]="theme === 'Light'" (click)="setTheme('Light', $event)" title="Light">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path></svg>
-            </button>
-            <!-- Dark (graphite) -->
-            <button class="pm-theme-opt" type="button" [class.active]="theme === 'Dark'" (click)="setTheme('Dark', $event)" title="Dark">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-            </button>
-            <!-- Midnight (navy blue) -->
-            <button class="pm-theme-opt" type="button" [class.active]="theme === 'Midnight'" (click)="setTheme('Midnight', $event)" title="Midnight">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"></path><path d="M19.5 15l.6 1.6 1.6.6-1.6.6-.6 1.6-.6-1.6-1.6-.6 1.6-.6z"></path></svg>
+            <button
+              *ngFor="let opt of themes"
+              class="pm-theme-opt"
+              type="button"
+              [class.active]="theme === opt.id"
+              (click)="setTheme(opt.id, $event)"
+              [title]="opt.label"
+              [attr.aria-label]="opt.label"
+              [attr.aria-pressed]="theme === opt.id"
+            >
+              <span
+                class="pm-theme-dot"
+                [style.background]="'linear-gradient(135deg, ' + opt.swatch[0] + ' 50%, ' + opt.swatch[1] + ' 50%)'"
+              ></span>
             </button>
           </div>
         </div>

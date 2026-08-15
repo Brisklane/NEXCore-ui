@@ -1,1 +1,87 @@
 @import '../shared-styles.css';
+
+/* ── Priced lines ── */
+.pl-lines {
+  margin-top: 26px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border-light, #eef1f5);
+}
+.pl-lines-title {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-secondary, #64748b);
+}
+.pl-lines-hint {
+  margin: 0 0 14px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-muted, #94a3b8);
+}
+
+.pl-line-empty {
+  padding: 16px;
+  border: 1px dashed var(--border-strong, #cbd5e1);
+  border-radius: 10px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--text-muted, #94a3b8);
+}
+
+.pl-line-table { width: 100%; border-collapse: collapse; }
+.pl-line-table th {
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--table-head-text, #64748b);
+  border-bottom: 1px solid var(--table-border, #e6eaf0);
+}
+.pl-line-table td {
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--text-primary, #334155);
+  border-bottom: 1px solid var(--table-border, #eef1f5);
+}
+.pl-line-table .num { text-align: right; }
+
+.pl-band {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--info-text, #1d4ed8);
+  background: var(--info-soft, #dbeafe);
+  border: 1px solid var(--info-border, #bfdbfe);
+}
+
+.pl-price, .pl-add-num {
+  height: 34px;
+  padding: 0 9px;
+  border: 1px solid var(--input-border, #cbd5e1);
+  border-radius: 8px;
+  background: var(--input-bg, #fff);
+  color: var(--input-text, #1e293b);
+  font-size: 13px;
+  outline: none;
+}
+.pl-price { width: 110px; text-align: right; }
+.pl-price:focus, .pl-add-num:focus {
+  border-color: var(--input-border-focus, #2b7fff);
+  box-shadow: 0 0 0 3px var(--input-ring, rgba(43, 127, 255, .15));
+}
+
+.pl-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+.pl-add-product { flex: 1 1 240px; min-width: 200px; }
+.pl-add-num { width: 110px; }

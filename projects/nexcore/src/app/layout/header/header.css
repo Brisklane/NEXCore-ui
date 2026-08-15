@@ -311,7 +311,7 @@ button.pm-row:hover .pm-ico { color: var(--accent, #2b7fff); }
   flex-shrink: 0;
 }
 .pm-theme-opt {
-  width: 30px;
+  width: 26px;
   height: 26px;
   border: 0;
   border-radius: var(--radius-pill, 999px);
@@ -330,6 +330,17 @@ button.pm-row:hover .pm-ico { color: var(--accent, #2b7fff); }
   background: var(--bg-surface, #fff);
   color: var(--accent, #2b7fff);
   box-shadow: var(--shadow-sm);
+}
+/* Swatch: half that theme's surface, half its accent */
+.pm-theme-dot {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  display: block;
+  box-shadow: 0 0 0 1px var(--border-strong, #cbd5e1);
+}
+.pm-theme-opt.active .pm-theme-dot {
+  box-shadow: 0 0 0 1px var(--accent, #2b7fff);
 }
 
 /* Language select */
@@ -364,7 +375,7 @@ button.pm-row:hover .pm-ico { color: var(--accent, #2b7fff); }
   justify-content: center;
   font-size: 17px;
   overflow: hidden;
-  border: 1px solid #8bb6fc;
+  border: 1px solid var(--info-border, #8bb6fc);
 }
 
 .menu-user-info {
@@ -655,7 +666,7 @@ button.pm-row:hover .pm-ico { color: var(--accent, #2b7fff); }
 }
 
 .ctx-sel option {
-  color: #1f2a44;     /* keep options readable regardless of theme */
+  color: var(--text-heading, #1f2a44);     /* keep options readable regardless of theme */
   font-weight: 500;
 }
 

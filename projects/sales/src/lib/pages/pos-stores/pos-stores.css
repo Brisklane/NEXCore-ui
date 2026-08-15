@@ -12,8 +12,8 @@
 }
 
 .badge-warning {
-  background: #fef9c3;
-  color: #92400e;
+  background: var(--warning-soft, #fef9c3);
+  color: var(--warning-text, #92400e);
 }
 
 .map-link {
@@ -68,18 +68,18 @@
 .dial-code {
   font-size: 13px;
   font-weight: 500;
-  color: #374151;
+  color: var(--text-primary, #374151);
 }
 
 .dial-code-sm {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--text-secondary, #6b7280);
   margin-left: auto;
 }
 
 .arrow-down {
   font-size: 10px;
-  color: #9ca3af;
+  color: var(--text-muted, #9ca3af);
 }
 
 .phone-dropdown {
@@ -102,7 +102,7 @@
   padding: 9px 12px;
   cursor: pointer;
   font-size: 13px;
-  color: #374151;
+  color: var(--text-primary, #374151);
   transition: background 0.1s;
 }
 
@@ -137,7 +137,7 @@
 .vendor-status-label {
   font-weight: 600;
   font-size: 13px;
-  color: #475569;
+  color: var(--text-primary, #475569);
 }
 
 .vendor-tab-bar {
@@ -158,14 +158,14 @@
   background: transparent;
   font-size: 13px;
   font-weight: 500;
-  color: #64748b;
+  color: var(--text-secondary, #64748b);
   cursor: pointer;
   transition: color 0.15s, background 0.15s, border-color 0.15s;
 }
 
 .vendor-tab-btn:hover {
   background: var(--hover-bg, #f1f5f9);
-  color: #1e293b;
+  color: var(--text-heading, #1e293b);
 }
 
 .vendor-tab-btn.active {

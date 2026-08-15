@@ -10,11 +10,11 @@ import { SelectOption } from '../../models/ui.models';
   template: `
     <div class="form-group">
       @if (label) {
-        <label>{{ label }}@if (required) {<span style="color:#ef4444"> *</span>}</label>
+        <label>{{ label }}@if (required) {<span style="color:var(--danger, #ef4444)"> *</span>}</label>
       }
       <select
         [disabled]="isDisabled"
-        [style.border-color]="error ? '#ef4444' : null"
+        [style.border-color]="error ? 'var(--input-error-border, #ef4444)' : null"
         (change)="onSelect($event)"
         (blur)="_onTouched()"
       >
@@ -28,7 +28,7 @@ import { SelectOption } from '../../models/ui.models';
         }
       </select>
       @if (error) {
-        <span style="color:#ef4444;font-size:12px;margin-top:3px;display:block">{{ error }}</span>
+        <span style="color:var(--danger, #ef4444);font-size:12px;margin-top:3px;display:block">{{ error }}</span>
       }
     </div>
   `,

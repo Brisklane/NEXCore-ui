@@ -1,0 +1,52 @@
+<div class="ss" [class.disabled]="disabled" [class.open]="open" [class.invalid]="invalid">
+  <!-- A real input: Tab reaches it, typing filters straight away, no click needed. -->
+  <input
+    #field
+    type="text"
+    class="ss-field"
+    role="combobox"
+    autocomplete="off"
+    spellcheck="false"
+    [value]="text"
+    [placeholder]="placeholder"
+    [disabled]="disabled"
+    [attr.aria-expanded]="open"
+    aria-autocomplete="list"
+    (focus)="onFocus()"
+    (input)="onInput($any($event.target).value)"
+    (blur)="onBlur()"
+    (keydown)="onKeydown($event)"
+  />
+
+  <button
+    *ngIf="hasSelection && !disabled"
+    type="button"
+    class="ss-clear"
+    tabindex="-1"
+    aria-label="Clear selection"
+    (mousedown)="clear($event)"
+  >&#10005;</button>
+
+  <span class="ss-caret" aria-hidden="true"></span>
+
+  <div class="ss-panel" *ngIf="open">
+    <ul class="ss-list" role="listbox">
+      <li *ngIf="loading" class="ss-note">Searching…</li>
+
+      <li
+        *ngFor="let opt of visibleOptions; let i = index; trackBy: trackByValue"
+        class="ss-option"
+        role="option"
+        [class.active]="i === activeIndex"
+        [attr.aria-selected]="i === activeIndex"
+        (mouseenter)="activeIndex = i"
+        (mousedown)="onOptionMouseDown($event, opt)"
+      >
+        <span *ngIf="opt.prefix" class="ss-prefix">{{ opt.prefix }}</span>
+        <span class="ss-label">{{ opt.label }}</span>
+      </li>
+
+      <li *ngIf="!loading && !visibleOptions.length" class="ss-note">{{ emptyText }}</li>
+    </ul>
+  </div>
+</div>

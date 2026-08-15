@@ -159,19 +159,58 @@
           [(ngModel)]="companyName"
           name="companyName"
           placeholder="e.g. Acme Corporation"
+          [class.is-invalid]="!!errors.companyName"
           (ngModelChange)="autoFillBranchAndBusinessUnit(); clearError('companyName')"
         />
         <p class="field-error">{{ errors.companyName }}</p>
       </div>
 
+      <div class="field">
+        <label>Country <span>*</span></label>
+        <nx-searchable-select
+          [(ngModel)]="countryCode"
+          name="countryCode"
+          [options]="countryOptions"
+          [loading]="loadingCountries"
+          [disabled]="loadingCountries"
+          [invalid]="!!errors.country"
+          placeholder="Type or select a country"
+          emptyText="No country matches"
+          (ngModelChange)="onCountryChange()"
+        ></nx-searchable-select>
+        <p class="field-error">{{ errors.country }}</p>
+      </div>
+
+      <div class="field">
+        <label>City <span>*</span></label>
+        <nx-searchable-select
+          [(ngModel)]="city"
+          name="city"
+          [options]="cityOptions"
+          [loading]="loadingCities"
+          [disabled]="!countryCode"
+          [invalid]="!!errors.city"
+          remote="true"
+          placeholder="Type or select a city"
+          [emptyText]="cityEmptyText"
+          (search)="onCitySearch($event)"
+          (ngModelChange)="onCityChange()"
+        ></nx-searchable-select>
+        <p class="field-error">{{ errors.city }}</p>
+      </div>
+
       <div class="field full">
         <label>Preferred Currency <span>*</span></label>
-        <select [(ngModel)]="preferredCurrency" name="preferredCurrency" (ngModelChange)="clearError('preferredCurrency')">
+        <select
+          [(ngModel)]="preferredCurrency"
+          name="preferredCurrency"
+          [class.is-invalid]="!!errors.preferredCurrency"
+          (ngModelChange)="clearError('preferredCurrency')"
+        >
           <option value="">Select currency</option>
-          <option>PKR</option>
-          <option>USD</option>
-          <option>AED</option>
+          <option *ngFor="let code of currencies" [value]="code">{{ code }}</option>
         </select>
+        <p class="field-hint">Set automatically from the country — change it if you bill in another currency.</p>
         <p class="field-error">{{ errors.preferredCurrency }}</p>
       </div>
 
@@ -210,11 +249,62 @@
         <p class="field-error">{{ errors.adminEmail }}</p>
       </div>
 
-      <div class="field full">
+      <div class="field">
         <label>Password <span>*</span></label>
-        <input type="password" [(ngModel)]="adminPassword" name="adminPassword" autocomplete="new-password" (ngModelChange)="clearError('adminPassword')" />
-        <p class="field-hint">At least 8 characters, with an uppercase, lowercase, number and special character.</p>
+        <div class="pwd-wrap">
+          <input
+            [type]="showPassword ? 'text' : 'password'"
+            [(ngModel)]="adminPassword"
+            name="adminPassword"
+            autocomplete="new-password"
+            (ngModelChange)="onPasswordChange()"
+          />
+          <button
+            type="button"
+            class="pwd-toggle"
+            (click)="togglePasswordVisibility()"
+            [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+          >
+            <i class="fa-regular" [ngClass]="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+          </button>
+        </div>
         <p class="field-error">{{ errors.adminPassword }}</p>
+      </div>
+
+      <div class="field">
+        <label>Confirm Password <span>*</span></label>
+        <div class="pwd-wrap">
+          <input
+            [type]="showConfirmPassword ? 'text' : 'password'"
+            [(ngModel)]="confirmPassword"
+            name="confirmPassword"
+            autocomplete="new-password"
+            (ngModelChange)="onConfirmPasswordChange()"
+          />
+          <button
+            type="button"
+            class="pwd-toggle"
+            (click)="toggleConfirmPasswordVisibility()"
+            [attr.aria-label]="showConfirmPassword ? 'Hide password' : 'Show password'"
+          >
+            <i class="fa-regular" [ngClass]="showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+          </button>
+        </div>
+        <p *ngIf="confirmPassword && passwordsMatch" class="match-ok">
+          <i class="fa-solid fa-circle-check"></i> Passwords match
+        </p>
+        <p *ngIf="confirmPassword && !passwordsMatch && !errors.confirmPassword" class="field-error">
+          Passwords do not match
+        </p>
+        <p *ngIf="errors.confirmPassword" class="field-error">{{ errors.confirmPassword }}</p>
+      </div>
+
+      <div class="pwd-rules full">
+        <span class="pwd-rules-title">Password must contain:</span>
+        <span class="pwd-rule" *ngFor="let rule of passwordRules" [class.ok]="rule.ok">
+          <i class="fa-solid" [ngClass]="rule.ok ? 'fa-circle-check' : 'fa-circle'"></i>
+          {{ rule.label }}
+        </span>
       </div>
 
       <div class="seed-option full">

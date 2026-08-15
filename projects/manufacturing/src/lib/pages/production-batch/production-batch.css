@@ -30,19 +30,19 @@
 }
 
 .qty-hint-over {
-	color: #92400e;
-	background: #fef3c7;
-	border: 1px solid #fcd34d;
+	color: var(--warning-text, #92400e);
+	background: var(--warning-soft, #fef3c7);
+	border: 1px solid var(--warning, #fcd34d);
 }
 
 .qty-hint-exact {
-	color: #065f46;
-	background: #d1fae5;
-	border: 1px solid #6ee7b7;
+	color: var(--success-text, #065f46);
+	background: var(--success-soft, #d1fae5);
+	border: 1px solid var(--success-border, #6ee7b7);
 }
 
 .qty-hint-under {
-	color: #1e40af;
-	background: #dbeafe;
-	border: 1px solid #93c5fd;
+	color: var(--info-text, #1e40af);
+	background: var(--info-soft, #dbeafe);
+	border: 1px solid var(--info-border, #93c5fd);
 }
