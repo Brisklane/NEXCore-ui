@@ -1,0 +1,119 @@
+/* Colours come entirely from the app's design tokens, so the control matches
+   whichever theme is active without any per-theme rules here. */
+:host { display: block; }
+
+.ss { position: relative; width: 100%; }
+
+/* The control is a real input — same metrics as the native fields beside it. */
+.ss-field {
+  width: 100%;
+  height: 38px;
+  padding: 0 46px 0 10px;      /* room for the clear button + caret */
+  border: 1px solid var(--input-border, #dbe4ef);
+  border-radius: 7px;
+  background: var(--input-bg, #f5f7fa);
+  color: var(--input-text, #374151);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+  text-overflow: ellipsis;
+  transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
+}
+.ss-field::placeholder { color: var(--input-placeholder, #94a3b8); }
+.ss-field:hover:not(:disabled):not(:focus) { border-color: var(--input-border-hover, #94a3b8); }
+.ss-field:focus {
+  border-color: var(--input-border-focus, #2b7fff);
+  background: var(--input-bg-focus, #fff);
+  box-shadow: 0 0 0 3px var(--input-ring, rgba(43, 127, 255, .15));
+}
+.ss-field:disabled {
+  background: var(--input-bg-disabled, #f1f5f9);
+  color: var(--input-text-disabled, #94a3b8);
+  cursor: not-allowed;
+}
+
+/* Invalid mirrors the shared form-control error treatment. */
+.ss.invalid .ss-field {
+  border-color: var(--input-error-border, #ef4444);
+  background: var(--input-error-bg, #fff6f6);
+}
+.ss.invalid .ss-field:focus {
+  box-shadow: 0 0 0 3px var(--input-error-ring, rgba(239, 68, 68, .15));
+}
+
+.ss-clear {
+  position: absolute;
+  right: 26px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted, #94a3b8);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+}
+.ss-clear:hover { color: var(--danger, #ef4444); background: var(--bg-hover, rgba(15, 23, 42, .06)); }
+
+.ss-caret {
+  position: absolute;
+  right: 11px;
+  top: 50%;
+  margin-top: -2px;
+  width: 0; height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--text-muted, #94a3b8);
+  pointer-events: none;
+}
+.ss.disabled .ss-caret { opacity: .5; }
+
+/* ── Suggestion list ── */
+.ss-panel {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--bg-elevated, #fff);
+  border: 1px solid var(--border-default, #e6eaf0);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg, 0 12px 32px rgba(15, 23, 42, .12));
+  overflow: hidden;
+}
+
+.ss-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.ss-option {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 9px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-primary, #374151);
+  cursor: pointer;
+}
+.ss-option.active { background: var(--accent-soft, rgba(43, 127, 255, .1)); color: var(--accent, #2b7fff); }
+.ss-prefix { flex-shrink: 0; }
+.ss-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.ss-note {
+  padding: 12px 10px;
+  font-size: 12px;
+  text-align: center;
+  color: var(--text-muted, #94a3b8);
+}

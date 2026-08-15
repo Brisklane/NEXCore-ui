@@ -13,7 +13,7 @@
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 6px;
   font-size: 14px;
-  background: #fff;
+  background: var(--bg-surface, #fff);
 }
 
 .num-cell {
@@ -22,16 +22,16 @@
 }
 
 .row-warning td {
-  background-color: #fffbeb;
+  background-color: var(--warning-soft, #fffbeb);
 }
 
 .row-danger td {
-  background-color: #fef2f2;
+  background-color: var(--danger-soft, #fef2f2);
 }
 
 .badge-warning {
-  background-color: #fef3c7;
-  color: #92400e;
+  background-color: var(--warning-soft, #fef3c7);
+  color: var(--warning-text, #92400e);
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 12px;
@@ -41,14 +41,14 @@
 .btn-adjust {
   font-size: 12px;
   padding: 4px 10px;
-  background-color: #ede9fe;
-  color: #5b21b6;
-  border: 1px solid #c4b5fd;
+  background-color: var(--violet-soft, #ede9fe);
+  color: var(--violet-text, #5b21b6);
+  border: 1px solid var(--violet-border, #c4b5fd);
   border-radius: 5px;
   cursor: pointer;
   white-space: nowrap;
 }
-.btn-adjust:hover { background-color: #ddd6fe; }
+.btn-adjust:hover { background-color: var(--violet-soft, #ddd6fe); }
 
 /* ── Master–detail: wider list + status-coloured count chips ─────────────────── */
 .md-list-wide { flex-basis: 380px; }
@@ -96,5 +96,5 @@
   padding: 2px 8px;
   border-radius: 4px;
 }
-.delta-pos { background: #dcfce7; color: #15803d; }
-.delta-neg { background: #fee2e2; color: #dc2626; }
+.delta-pos { background: var(--success-soft, #dcfce7); color: var(--success-text, #15803d); }
+.delta-neg { background: var(--danger-soft, #fee2e2); color: var(--danger, #dc2626); }

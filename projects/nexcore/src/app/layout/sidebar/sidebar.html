@@ -34,7 +34,7 @@
               (mouseenter)="openFlyout(item, $event)"
               (mouseleave)="scheduleCloseFlyout()"
               [title]="item.label">
-        <span class="rail-ico"><img [src]="item.moduleImage" [alt]="item.label" class="rail-img" /></span>
+        <span class="rail-ico"><span class="rail-img" role="img" [attr.aria-label]="item.label" [style.--mod-img]="'url(' + item.moduleImage + ')'"></span></span>
         <span class="rail-label">{{ item.label }}</span>
       </button>
 
@@ -48,7 +48,7 @@
                 (mouseenter)="openFlyout(item, $event)"
                 (mouseleave)="scheduleCloseFlyout()"
                 [title]="item.label">
-          <span class="rail-ico"><img [src]="item.moduleImage" [alt]="item.label" class="rail-img" /></span>
+          <span class="rail-ico"><span class="rail-img" role="img" [attr.aria-label]="item.label" [style.--mod-img]="'url(' + item.moduleImage + ')'"></span></span>
           <span class="rail-label">{{ item.label }}</span>
         </button>
       </ng-container>

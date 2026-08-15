@@ -146,7 +146,7 @@
     <!-- No type selected state -->
     @if (!selectedTypeId) {
       <div class="lookup-empty-state">
-        <span class="material-icons" style="font-size:48px;color:#cbd5e1">list_alt</span>
+        <span class="material-icons" style="font-size:48px;color:var(--text-muted,#cbd5e1)">list_alt</span>
         <p>Select a Lookup Type above to view and manage its values.</p>
         <button class="btn btn-secondary" (click)="switchTab('types')">← Go to Lookup Types</button>
       </div>
@@ -155,7 +155,7 @@
     <!-- Create Value Form -->
     @if (selectedTypeId && showValueForm) {
       <div class="form-panel">
-        <h3>Add Value <span style="color:#64748b;font-weight:400">to <strong>{{ selectedType?.name }}</strong></span></h3>
+        <h3>Add Value <span style="color:var(--text-secondary,#64748b);font-weight:400">to <strong>{{ selectedType?.name }}</strong></span></h3>
         <div class="form-grid">
           <div class="form-group">
             <label>Name *</label>

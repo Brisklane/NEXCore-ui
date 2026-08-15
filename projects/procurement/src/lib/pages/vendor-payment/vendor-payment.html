@@ -69,7 +69,7 @@
           @if (submitted && errors.allocation) { <div class="alert alert-error">{{ errors.allocation }}</div> }
         }
       } @else {
-        <div class="empty-row" style="padding:24px;text-align:center;color:#94a3b8">Select a vendor to load outstanding bills.</div>
+        <div class="empty-row" style="padding:24px;text-align:center;color:var(--text-muted,#94a3b8)">Select a vendor to load outstanding bills.</div>
       }
 
       <div class="form-grid" style="margin-top:12px">
@@ -112,9 +112,9 @@
   <div class="modal-overlay">
     <div class="modal-box">
       <h4>Mark as Paid</h4>
-      <p style="margin:0 0 12px;color:#6b7280">This records the payment, reduces the bill's outstanding balance, and posts it to the ledger.</p>
+      <p style="margin:0 0 12px;color:var(--text-secondary,#6b7280)">This records the payment, reduces the bill's outstanding balance, and posts it to the ledger.</p>
       <div class="form-group">
-        <label>Reference <span style="color:#9ca3af">(optional)</span></label>
+        <label>Reference <span style="color:var(--text-muted,#9ca3af)">(optional)</span></label>
         <input type="text" [(ngModel)]="bankReference" placeholder="e.g. bank transfer / cheque ref" />
       </div>
       <div class="modal-actions">

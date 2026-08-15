@@ -71,6 +71,72 @@
             <button class="ibtn ibtn--secondary" (click)="cancelForm()">Cancel</button>
             <button class="ibtn ibtn--primary" (click)="save()"><span class="material-symbols-outlined">save</span> {{ editingItem ? 'Update' : 'Create' }}</button>
           </div>
+
+          <!-- ══ Priced lines ══ -->
+          @if (editingItem) {
+            <section class="pl-lines">
+              <h3 class="pl-lines-title">Prices on this list</h3>
+              <p class="pl-lines-hint">
+                What this list actually charges. Add a quantity band for a volume break —
+                bands for the same product may not overlap.
+              </p>
+
+              @if (lineError) { <div class="alert alert-error">{{ lineError }}</div> }
+
+              @if (linesLoading) {
+                <div class="pl-line-empty">Loading…</div>
+              } @else if (!lines.length) {
+                <div class="pl-line-empty">No prices yet — this list has no effect until you add one.</div>
+              } @else {
+                <table class="pl-line-table">
+                  <thead>
+                    <tr><th>Product</th><th>Quantity</th><th class="num">Price</th><th></th></tr>
+                  </thead>
+                  <tbody>
+                    @for (l of lines; track l.id) {
+                      <tr>
+                        <td>{{ productLabel(l.productId) }}</td>
+                        <td><span class="pl-band">{{ band(l) }}</span></td>
+                        <td class="num">
+                          <input class="pl-price" type="number" min="0" step="0.01"
+                                 [value]="l.unitPrice"
+                                 (blur)="savePrice(l, $any($event.target).value)" />
+                        </td>
+                        <td class="num">
+                          <button class="ibtn ibtn--danger ibtn--sm" (click)="removeLine(l)"
+                                  title="Remove"><span class="material-symbols-outlined">close</span></button>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+
+              <div class="pl-add">
+                <nx-searchable-select
+                  class="pl-add-product"
+                  [(ngModel)]="newLine.productId"
+                  [options]="productOptions"
+                  [loading]="productSearching"
+                  remote="true"
+                  placeholder="Type to find a product…"
+                  emptyText="No product matches"
+                  (search)="onProductSearch($event)"
+                ></nx-searchable-select>
+
+                <input class="pl-add-num" type="number" min="0" step="0.01"
+                       [(ngModel)]="newLine.unitPrice" placeholder="Price" />
+                <input class="pl-add-num" type="number" min="0" step="1"
+                       [(ngModel)]="newLine.minQuantity" placeholder="Min qty" />
+                <input class="pl-add-num" type="number" min="0" step="1"
+                       [(ngModel)]="newLine.maxQuantity" placeholder="Max qty" />
+
+                <button class="ibtn ibtn--primary" (click)="addLine()">
+                  <span class="material-symbols-outlined">add</span> Add
+                </button>
+              </div>
+            </section>
+          }
         </div>
       } @else {
         <div class="md-empty">

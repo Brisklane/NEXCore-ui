@@ -2,7 +2,7 @@
 
 /* Muted placeholder for auto-populated fields */
 .form-control-muted {
-  color: #9ca3af;
+  color: var(--text-muted, #9ca3af);
   font-style: italic;
 }
 
@@ -12,25 +12,25 @@
   font-size: 0.78rem;
   font-weight: 500;
   color: var(--accent, #2b7fff);
-  background: #eef2ff;
+  background: var(--violet-soft, #eef2ff);
   border-radius: 4px;
   padding: 1px 6px;
 }
 
 /* Input border states */
 .input-over-limit {
-  border-color: #ef4444 !important;
-  background-color: #fef2f2 !important;
+  border-color: var(--danger, #ef4444) !important;
+  background-color: var(--danger-soft, #fef2f2) !important;
 }
 
 .input-valid {
-  border-color: #22c55e !important;
-  background-color: #f0fdf4 !important;
+  border-color: var(--success, #22c55e) !important;
+  background-color: var(--success-soft, #f0fdf4) !important;
 }
 
 .input-invalid {
-  border-color: #ef4444 !important;
-  background-color: #fef2f2 !important;
+  border-color: var(--danger, #ef4444) !important;
+  background-color: var(--danger-soft, #fef2f2) !important;
 }
 
 /* Qty sum feedback line */
@@ -43,17 +43,17 @@
 }
 
 .qty-sum-valid {
-  color: #15803d;
-  background: #dcfce7;
+  color: var(--success-text, #15803d);
+  background: var(--success-soft, #dcfce7);
 }
 
 .qty-sum-invalid {
-  color: #b91c1c;
-  background: #fee2e2;
+  color: var(--danger-text, #b91c1c);
+  background: var(--danger-soft, #fee2e2);
 }
 
 .qty-sum-neutral {
-  color: #6b7280;
+  color: var(--text-secondary, #6b7280);
 }
 
 /* Warning below inspected qty */
@@ -61,8 +61,8 @@
   margin-top: 4px;
   font-size: 0.78rem;
   font-weight: 500;
-  color: #b45309;
-  background: #fef3c7;
+  color: var(--warning-text, #b45309);
+  background: var(--warning-soft, #fef3c7);
   padding: 3px 8px;
   border-radius: 4px;
 }

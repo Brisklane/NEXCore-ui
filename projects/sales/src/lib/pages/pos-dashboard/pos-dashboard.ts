@@ -56,6 +56,23 @@ export class PosDashboardComponent implements OnInit, OnDestroy {
     this.router.navigate(['/sales/pos'], { queryParams: { storeId: branchId } });
   }
 
+  /**
+   * The handful of back-office jobs done most often. Everything else lives on the Back
+   * Office page — a dashboard that lists forty links stops being a dashboard.
+   */
+  readonly backOffice = [
+    { label: 'Back Office',    hint: 'Everything, grouped by job', icon: 'apps',          route: '/sales/pos-backoffice' },
+    { label: 'Catalogue',      hint: 'Products, barcodes, packs',  icon: 'inventory_2',   route: '/sales/pos-catalogue' },
+    { label: 'Stock',          hint: 'On hand and stock counts',   icon: 'inventory',     route: '/sales/pos-stock' },
+    { label: 'Goods Received', hint: 'Book in deliveries',         icon: 'move_to_inbox', route: '/sales/pos-receipts' },
+    { label: 'Customers',      hint: 'Contacts and purchases',     icon: 'group',         route: '/sales/pos-customers' },
+    { label: 'Reports',        hint: 'X/Z reads and trading',      icon: 'summarize',     route: '/sales/pos-reports' },
+  ];
+
+  go(route: string) {
+    this.router.navigate([route]);
+  }
+
   ngOnInit() {
     this.onlineSub = this.offline.online$.subscribe(v => { this.isOnline = v; this.cdr.detectChanges(); });
     this.posSettingsService.getSettings().subscribe({

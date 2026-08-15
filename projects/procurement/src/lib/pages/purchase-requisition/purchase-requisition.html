@@ -130,11 +130,11 @@
     <div class="modal-box">
       <h4>Reject Requisition</h4>
       <div class="form-group">
-        <label>Reason <span style="color:#ef4444">*</span></label>
+        <label>Reason <span style="color:var(--danger,#ef4444)">*</span></label>
         <textarea [(ngModel)]="rejectionReason" rows="3" placeholder="Reason for rejection"
                   [style.border-color]="rejectSubmitted && !rejectionReason.trim() ? '#ef4444' : null"></textarea>
         @if (rejectSubmitted && !rejectionReason.trim()) {
-          <span style="color:#ef4444;font-size:12px;margin-top:3px;display:block">A rejection reason is required.</span>
+          <span style="color:var(--danger,#ef4444);font-size:12px;margin-top:3px;display:block">A rejection reason is required.</span>
         }
       </div>
       <div class="modal-actions">

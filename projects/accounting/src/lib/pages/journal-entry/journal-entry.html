@@ -127,9 +127,9 @@
               <td>{{ totalCredit | number:'1.2-2' }}</td>
               <td colspan="3">
                 @if (!isBalanced) {
-                  <span style="color:#b91c1c; font-size:12px;">⚠ Unbalanced (diff: {{ totalDebit - totalCredit | number:'1.2-2' }})</span>
+                  <span style="color:var(--danger-text,#b91c1c); font-size:12px;">⚠ Unbalanced (diff: {{ totalDebit - totalCredit | number:'1.2-2' }})</span>
                 } @else {
-                  <span style="color:#15803d; font-size:12px;">✓ Balanced</span>
+                  <span style="color:var(--success-text,#15803d); font-size:12px;">✓ Balanced</span>
                 }
               </td>
             </tr>

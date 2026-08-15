@@ -5,7 +5,7 @@
 .kanban-page {
   padding: 20px;
   font-family: 'Segoe UI', sans-serif;
-  color: #1a1a2e;
+  color: var(--text-heading, #1a1a2e);
 }
 
 /* ════════════════════════════════════════════════════════════════════
@@ -26,7 +26,7 @@
 
 .meta-text {
   font-size: 13px;
-  color: #555;
+  color: var(--text-primary, #555);
   transition: opacity 0.2s;
   white-space: nowrap;
 }
@@ -51,11 +51,11 @@
   pointer-events: none;
   transition: opacity 0.2s ease;
   /* style — no border, bigger */
-  background: #fee2e2;
+  background: var(--danger-soft, #fee2e2);
   border: none;
   border-radius: 10px;
   padding: 11px 26px;
-  color: #c0392b;
+  color: var(--danger, #c0392b);
   font-size: 15px;
   font-weight: 700;
   white-space: nowrap;
@@ -69,7 +69,7 @@
 }
 /* Highlight when card hovers over it */
 .closed-lost-drop.cdk-drop-list-receiving {
-  background: #fca5a5;
+  background: var(--danger-soft, #fca5a5);
 }
 
 /* ════════════════════════════════════════════════════════════════════
@@ -93,7 +93,7 @@
   flex-direction: column;
   justify-content: center;
   padding: 0 14px 0 24px;
-  background: #1565C0;
+  background: var(--info, #1565C0);
   color: #fff;
   user-select: none;
   transition: filter 0.15s;
@@ -146,14 +146,14 @@
 .columns-wrapper {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  background: #fff;
-  border: 1px solid #e2e6ea;
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-default, #e2e6ea);
   border-top: none;
   align-items: stretch;
 }
 
 .col {
-  border-right: 1px solid #e2e6ea;
+  border-right: 1px solid var(--border-default, #e2e6ea);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -162,16 +162,16 @@
   transition: background 0.15s;
 }
 .col:last-child { border-right: none; }
-.col.col-won    { background: #f0fdf4; }
+.col.col-won    { background: var(--success-soft, #f0fdf4); }
 
-.col.cdk-drop-list-receiving          { background: #e8f0fe; }
-.col.col-won.cdk-drop-list-receiving  { background: #dcfce7; }
+.col.cdk-drop-list-receiving          { background: var(--info-soft, #e8f0fe); }
+.col.col-won.cdk-drop-list-receiving  { background: var(--success-soft, #dcfce7); }
 
 .col-amount {
   text-align: center;
   font-size: 20px;
   font-weight: 600;
-  color: #1a8a6e;
+  color: var(--brand-cyan, #1a8a6e);
   letter-spacing: -0.3px;
   pointer-events: none;
   flex-shrink: 0;
@@ -183,9 +183,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #94a3b8;
+  color: var(--text-muted, #94a3b8);
   font-size: 12px;
-  border: 2px dashed #e2e6ea;
+  border: 2px dashed var(--border-default, #e2e6ea);
   border-radius: 6px;
   min-height: 120px;
 }
@@ -194,8 +194,8 @@
    DEAL CARDS
    ════════════════════════════════════════════════════════════════════ */
 .deal-card {
-  background: #fff;
-  border: 1px solid #d0d7de;
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-default, #d0d7de);
   border-radius: 8px;
   padding: 10px 10px 8px;
   cursor: grab;
@@ -210,14 +210,14 @@
   transform: translateY(-1px);
 }
 .deal-card.card-won {
-  background: #f0fdf4;
-  border-color: #bbf7d0;
+  background: var(--success-soft, #f0fdf4);
+  border-color: var(--success-border, #bbf7d0);
 }
 
 /* CDK: element that follows the cursor */
 .deal-card.cdk-drag-preview {
   cursor: grabbing;
-  border-color: #1565C0;
+  border-color: var(--info, #1565C0);
   box-shadow:
     8px 8px 0 rgba(255,255,255,.55),
     8px 8px 0 1px rgba(180,200,230,.60),
@@ -232,8 +232,8 @@
 
 /* Placeholder shown at the insertion point during drag */
 .drag-placeholder {
-  background: #e8f0fe;
-  border: 2px dashed #1565C0;
+  background: var(--info-soft, #e8f0fe);
+  border: 2px dashed var(--info, #1565C0);
   border-radius: 8px;
   min-height: 88px;
   flex-shrink: 0;
@@ -251,7 +251,7 @@
 .card-title {
   font-size: 13px;
   font-weight: 600;
-  color: #1565C0;
+  color: var(--info-text, #1565C0);
   line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -261,7 +261,7 @@
 
 .card-stage-label {
   font-size: 12px;
-  color: #555;
+  color: var(--text-primary, #555);
   margin-bottom: 4px;
 }
 
@@ -271,10 +271,10 @@
   justify-content: space-between;
   gap: 6px;
   padding-top: 6px;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--border-light, #f1f5f9);
 }
-.card-date   { font-size: 11px; color: #666; }
-.card-amount { font-size: 12px; font-weight: 700; color: #1e293b; }
+.card-date   { font-size: 11px; color: var(--text-secondary, #666); }
+.card-amount { font-size: 12px; font-weight: 700; color: var(--text-heading, #1e293b); }
 
 /* ════════════════════════════════════════════════════════════════════
    STAGE-SELECT DROPDOWN ON DEAL CARDS
@@ -289,8 +289,8 @@
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  border: 1px solid #c8d0d8;
-  background: #fff;
+  border: 1px solid var(--border-strong, #c8d0d8);
+  background: var(--bg-surface, #fff);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -301,8 +301,8 @@
 }
 .dd-trigger:hover,
 .dd-trigger.dd-open {
-  background: #eff6ff;
-  border-color: #1565C0;
+  background: var(--accent-soft, #eff6ff);
+  border-color: var(--info, #1565C0);
 }
 .dd-trigger svg {
   /* nudge chevron to optical center — it reads slightly high without this */
@@ -315,8 +315,8 @@
   top: calc(100% + 6px);
   right: 0;
   z-index: 3000;
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-default, #e2e8f0);
   border-radius: 8px;
   box-shadow: 0 6px 20px rgba(0,0,0,.13);
   min-width: 168px;
@@ -331,15 +331,15 @@
   gap: 8px;
   padding: 9px 14px;
   font-size: 13px;
-  color: #1e293b;
+  color: var(--text-heading, #1e293b);
   cursor: pointer;
   transition: background 0.1s;
   white-space: nowrap;
 }
-.dd-item:hover       { background: #f1f5f9; }
+.dd-item:hover       { background: var(--bg-muted, #f1f5f9); }
 .dd-item.dd-current  {
-  background: #eff6ff;
-  color: #1565C0;
+  background: var(--accent-soft, #eff6ff);
+  color: var(--info-text, #1565C0);
   font-weight: 600;
 }
 

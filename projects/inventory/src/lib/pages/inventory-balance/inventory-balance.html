@@ -103,9 +103,9 @@
         <span class="val-hero-foot">Valued at average cost{{ filterWarehouseId ? ' · this location' : ' · all locations' }}</span>
       </div>
       <div class="val-stat"><span class="val-stat-ic" style="--vc:var(--accent,#2b7fff)"><span class="material-symbols-outlined">inventory_2</span></span><div class="val-stat-body"><span class="val-stat-label">Unique items</span><span class="val-stat-value">{{ uniqueItemCount | number }}</span></div></div>
-      <div class="val-stat"><span class="val-stat-ic" style="--vc:#06b6d4"><span class="material-symbols-outlined">inventory</span></span><div class="val-stat-body"><span class="val-stat-label">Units in stock</span><span class="val-stat-value">{{ totalUnitsOnHand | number:'1.0-0' }}</span></div></div>
-      <div class="val-stat"><span class="val-stat-ic" style="--vc:#d97706"><span class="material-symbols-outlined">lock</span></span><div class="val-stat-body"><span class="val-stat-label">Reserved</span><span class="val-stat-value">{{ totalUnitsReserved | number:'1.0-0' }}</span></div></div>
-      <div class="val-stat"><span class="val-stat-ic" style="--vc:#16a34a"><span class="material-symbols-outlined">sell</span></span><div class="val-stat-body"><span class="val-stat-label">Sellable units</span><span class="val-stat-value">{{ totalUnitsAvailable | number:'1.0-0' }}</span></div></div>
+      <div class="val-stat"><span class="val-stat-ic" style="--vc:var(--kpi-2, #06b6d4)"><span class="material-symbols-outlined">inventory</span></span><div class="val-stat-body"><span class="val-stat-label">Units in stock</span><span class="val-stat-value">{{ totalUnitsOnHand | number:'1.0-0' }}</span></div></div>
+      <div class="val-stat"><span class="val-stat-ic" style="--vc:var(--kpi-4, #d97706)"><span class="material-symbols-outlined">lock</span></span><div class="val-stat-body"><span class="val-stat-label">Reserved</span><span class="val-stat-value">{{ totalUnitsReserved | number:'1.0-0' }}</span></div></div>
+      <div class="val-stat"><span class="val-stat-ic" style="--vc:var(--kpi-5, #16a34a)"><span class="material-symbols-outlined">sell</span></span><div class="val-stat-body"><span class="val-stat-label">Sellable units</span><span class="val-stat-value">{{ totalUnitsAvailable | number:'1.0-0' }}</span></div></div>
     </aside>
   </div>
 </div>

@@ -12,9 +12,9 @@
   gap: 12px;
   margin-bottom: 24px;
   padding: 16px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+  background: linear-gradient(135deg, var(--bg-muted, #f5f7fa) 0%, var(--bg-muted, #e9ecef) 100%);
   border-radius: 8px;
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--border-default, #dee2e6);
 }
 
 .filter-group {
@@ -25,7 +25,7 @@
 .filter-input,
 .filter-select {
   padding: 10px 12px;
-  border: 1px solid #ced4da;
+  border: 1px solid var(--border-strong, #ced4da);
   border-radius: 4px;
   font-size: 14px;
   font-family: inherit;
@@ -35,7 +35,7 @@
 .filter-input:focus,
 .filter-select:focus {
   outline: none;
-  border-color: #0d6efd;
+  border-color: var(--accent, #0d6efd);
   box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
 }
 
@@ -47,7 +47,7 @@
 }
 
 .overhead-table thead {
-  background: linear-gradient(135deg, #1a365d 0%, #2d5a8c 100%);
+  background: linear-gradient(135deg, #1a365d 0%, var(--info, #2d5a8c) 100%);
   color: white;
 }
 
@@ -59,21 +59,21 @@
 }
 
 .overhead-table tbody tr {
-  border-bottom: 1px solid #e9ecef;
+  border-bottom: 1px solid var(--border-default, #e9ecef);
   transition: background-color 0.2s;
 }
 
 .overhead-table tbody tr:hover {
-  background-color: #f8f9fa;
+  background-color: var(--bg-subtle, #f8f9fa);
 }
 
 .overhead-table tbody tr.inactive-row {
   opacity: 0.7;
-  background-color: #f9f9f9;
+  background-color: var(--bg-subtle, #f9f9f9);
 }
 
 .overhead-table tbody tr.effective-now {
-  border-left: 4px solid #28a745;
+  border-left: 4px solid var(--success, #28a745);
 }
 
 /* Legend below table */
@@ -83,12 +83,12 @@
   flex-wrap: wrap;
   gap: 8px;
   padding: 10px 16px;
-  background: #f8f9fa;
+  background: var(--bg-subtle, #f8f9fa);
   border: 1px solid var(--border-default, #e2e8f0);
   border-top: none;
   border-radius: 0 0 8px 8px;
   font-size: 12.5px;
-  color: #555;
+  color: var(--text-primary, #555);
 }
 
 .legend-item {
@@ -101,19 +101,19 @@
   display: inline-block;
   width: 4px;
   height: 18px;
-  background: #28a745;
+  background: var(--success, #28a745);
   border-radius: 2px;
   flex-shrink: 0;
 }
 
 .legend-divider {
-  color: #ccc;
+  color: var(--text-muted, #ccc);
   font-size: 14px;
   user-select: none;
 }
 
 .legend-muted {
-  color: #777;
+  color: var(--text-muted, #777);
   font-style: italic;
 }
 
@@ -124,7 +124,7 @@
 /* Column Specific Styles */
 .code-col {
   font-weight: 600;
-  color: #2d5a8c;
+  color: var(--info-text, #2d5a8c);
   font-family: 'Courier New', monospace;
 }
 
@@ -133,7 +133,7 @@
 }
 
 .basis-col {
-  color: #666;
+  color: var(--text-secondary, #666);
 }
 
 .rate-type-col {
@@ -143,19 +143,19 @@
 .value-col {
   text-align: right;
   font-size: 15px;
-  color: #2d5a8c;
+  color: var(--info-text, #2d5a8c);
 }
 
 .value-col .unit {
   font-size: 12px;
-  color: #999;
+  color: var(--text-muted, #999);
   margin-left: 4px;
   font-weight: normal;
 }
 
 .period-col {
   font-size: 12px;
-  color: #666;
+  color: var(--text-secondary, #666);
 }
 
 .period-text {
@@ -173,28 +173,28 @@
 }
 
 .badge-active {
-  background-color: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
+  background-color: var(--success-soft, #d4edda);
+  color: var(--success-text, #155724);
+  border: 1px solid var(--success-border, #c3e6cb);
 }
 
 .badge-inactive {
-  background-color: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
+  background-color: var(--danger-soft, #f8d7da);
+  color: var(--danger-text, #721c24);
+  border: 1px solid var(--danger-border, #f5c6cb);
 }
 
 .badge-current {
-  background-color: #d1ecf1;
-  color: #0c5460;
-  border: 1px solid #bee5eb;
+  background-color: var(--info-soft, #d1ecf1);
+  color: var(--info-text, #0c5460);
+  border: 1px solid var(--info-border, #bee5eb);
   margin-left: 6px;
 }
 
 .badge-rate {
-  background-color: #e7f3ff;
-  color: #004085;
-  border: 1px solid #b8daff;
+  background-color: var(--info-soft, #e7f3ff);
+  color: var(--info-text, #004085);
+  border: 1px solid var(--info-border, #b8daff);
 }
 
 /* Actions Column */
@@ -215,18 +215,18 @@
 }
 
 .btn-icon:hover {
-  background-color: #f0f0f0;
+  background-color: var(--bg-subtle, #f0f0f0);
 }
 
 .btn-icon.btn-danger:hover {
-  background-color: #ffe6e6;
+  background-color: var(--danger-soft, #ffe6e6);
 }
 
 /* Empty State */
 .empty-row {
   text-align: center;
   padding: 40px 12px !important;
-  color: #999;
+  color: var(--text-muted, #999);
   font-size: 14px;
 }
 

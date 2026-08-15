@@ -1,0 +1,37 @@
+<div class="bo">
+  <header class="bo-banner">
+    <div>
+      <span class="bo-eyebrow"><span class="material-symbols-outlined">apps</span> Point of Sale · Back Office</span>
+      <h1>Back Office</h1>
+      <p>Everything that keeps the shop running, in one place. No need to go hunting through modules.</p>
+    </div>
+  </header>
+
+  @for (g of groups; track g.title) {
+    <section class="bo-group">
+      <div class="bo-group-head">
+        <span class="bo-group-ico"><span class="material-symbols-outlined">{{ g.icon }}</span></span>
+        <div>
+          <h2>{{ g.title }}</h2>
+          <p>{{ g.blurb }}</p>
+        </div>
+      </div>
+
+      <div class="bo-grid">
+        @for (l of g.links; track l.route) {
+          <button class="bo-card" type="button" (click)="go(l.route)">
+            <span class="bo-card-ico"><span class="material-symbols-outlined">{{ l.icon }}</span></span>
+            <span class="bo-card-text">
+              <span class="bo-card-label">
+                {{ l.label }}
+                @if (l.native) { <span class="bo-tag">POS</span> }
+              </span>
+              <span class="bo-card-hint">{{ l.hint }}</span>
+            </span>
+            <span class="bo-card-go material-symbols-outlined">chevron_right</span>
+          </button>
+        }
+      </div>
+    </section>
+  }
+</div>

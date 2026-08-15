@@ -2,13 +2,16 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PromotionService } from '../../services/promotion.service';
-import { PromotionDto, PromotionStatus, PromotionTargetType } from '../../models/promotion.model';
+import { PromotionDto, PromotionItemDto, PromotionStatus, PromotionTargetType } from '../../models/promotion.model';
+import { CatalogService, CatalogResolutionDto, ItemCategoryService, ItemCategoryDto } from '@nexcore/inventory';
+import { SearchableSelect, SearchableOption } from '@nexcore/core';
+import { firstValueFrom } from 'rxjs';
 import { RowHighlighter } from '@nexcore/shared';
 
 @Component({
   selector: 'lib-promotions',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SearchableSelect],
   templateUrl: './promotions.html',
   styleUrl: './promotions.css',
 })
@@ -121,11 +124,18 @@ export class PromotionsComponent implements OnInit {
 
   constructor(
     private promotionService: PromotionService,
+    private catalog: CatalogService,
+    private categories: ItemCategoryService,
     private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
     this.load();
+    // Categories back the "whole category" targeting option.
+    this.categories.getActive().subscribe({
+      next: (r) => { this.categoryList = r.data ?? []; this.cdr.detectChanges(); },
+      error: () => { /* targeting falls back to per-product */ },
+    });
   }
 
   load() {
@@ -165,7 +175,142 @@ export class PromotionsComponent implements OnInit {
     this.showForm = true;
   }
 
+  // ── Targeting ───────────────────────────────────────────────────────────
+  // A promotion with no targets is inert: it looks configured on the list but
+  // discounts nothing. These are the rows that say what it applies to.
+
+  targets: PromotionItemDto[] = [];
+  targetsLoading = false;
+  targetError = '';
+
+  categoryList: ItemCategoryDto[] = [];
+  productOptions: SearchableOption[] = [];
+  productSearching = false;
+  private productsById = new Map<string, CatalogResolutionDto>();
+
+  newTarget: {
+    scope: 'product' | 'category';
+    itemId: string;
+    itemCategoryId: string;
+    discountType: number;
+    value: number | null;
+  } = { scope: 'product', itemId: '', itemCategoryId: '', discountType: 0, value: null };
+
+  /** Mirrors PromotionDiscountType on the server. */
+  readonly discountTypes = [
+    { value: 0, label: 'Percentage off' },
+    { value: 1, label: 'Fixed amount off' },
+    { value: 2, label: 'New price' },
+  ];
+
+  private async loadTargets(promotionId?: string): Promise<void> {
+    this.targets = [];
+    this.targetError = '';
+    this.resetNewTarget();
+    if (!promotionId) return;
+
+    this.targetsLoading = true;
+    const res = await firstValueFrom(this.promotionService.getById(promotionId)).catch(() => null);
+    this.targets = res?.data?.items ?? [];
+    this.targetsLoading = false;
+
+    await this.labelProducts(this.targets.map(t => t.itemId).filter((x): x is string => !!x));
+    this.cdr.detectChanges();
+  }
+
+  private async labelProducts(ids: string[]): Promise<void> {
+    for (const id of new Set(ids)) {
+      if (this.productsById.has(id)) continue;
+      const hit = await firstValueFrom(this.catalog.search(id, 1)).catch(() => []);
+      if (hit[0]) this.productsById.set(id, hit[0]);
+    }
+  }
+
+  /** What a target row applies to, in words. */
+  targetLabel(t: PromotionItemDto): string {
+    if (t.itemCategoryId) {
+      const cat = this.categoryList.find(c => c.id === t.itemCategoryId);
+      return `Category: ${cat?.name ?? t.itemCategoryId.slice(0, 8)}`;
+    }
+    if (t.itemId) {
+      const hit = this.productsById.get(t.itemId);
+      return hit ? `${hit.itemCode} — ${hit.itemName}` : t.itemId.slice(0, 8) + '…';
+    }
+    return 'Whole basket';
+  }
+
+  discountLabel(t: PromotionItemDto): string {
+    // The union type spells the display name, but the wire carries the int — same
+    // convention as normStatus() above, so coerce before comparing.
+    switch (Number(t.discountType)) {
+      case 0: return `${t.value}% off`;
+      case 1: return `${t.value} off`;
+      case 2: return `New price ${t.value}`;
+      default: return `${t.value}`;
+    }
+  }
+
+  async onProductSearch(term: string): Promise<void> {
+    if (!term?.trim()) { this.productOptions = []; return; }
+    this.productSearching = true;
+    const results = await firstValueFrom(this.catalog.search(term, 25)).catch(() => []);
+    for (const r of results) this.productsById.set(r.itemId, r);
+    this.productOptions = results.map(r => ({ value: r.itemId, label: `${r.itemCode} — ${r.itemName}` }));
+    this.productSearching = false;
+    this.cdr.detectChanges();
+  }
+
+  get categoryOptions(): SearchableOption[] {
+    return this.categoryList.map(c => ({ value: c.id, label: c.name ?? '' }));
+  }
+
+  private resetNewTarget(): void {
+    this.newTarget = { scope: 'product', itemId: '', itemCategoryId: '', discountType: 0, value: null };
+    this.productOptions = [];
+  }
+
+  async addTarget(): Promise<void> {
+    const promo = this.editingPromotion;
+    if (!promo?.id) { this.targetError = 'Save the promotion first.'; return; }
+
+    const t = this.newTarget;
+    const byProduct = t.scope === 'product';
+
+    if (byProduct && !t.itemId) { this.targetError = 'Pick a product.'; return; }
+    if (!byProduct && !t.itemCategoryId) { this.targetError = 'Pick a category.'; return; }
+    if (t.value == null || t.value < 0) { this.targetError = 'Enter a discount value.'; return; }
+    if (t.discountType === 0 && t.value > 100) {
+      this.targetError = 'A percentage discount cannot exceed 100.'; return;
+    }
+
+    this.targetError = '';
+    const res = await firstValueFrom(this.promotionService.addItem(promo.id, {
+      itemId: byProduct ? t.itemId : null,
+      itemCategoryId: byProduct ? null : t.itemCategoryId,
+      discountType: t.discountType,
+      value: t.value,
+    } as any)).catch((e: any) => {
+      this.targetError = e?.error?.message ?? 'Could not add that target.';
+      return null;
+    });
+
+    if (res?.data) {
+      this.targets = [...this.targets, res.data];
+      this.resetNewTarget();
+    }
+    this.cdr.detectChanges();
+  }
+
+  async removeTarget(t: PromotionItemDto): Promise<void> {
+    const promo = this.editingPromotion;
+    if (!promo?.id) return;
+    await firstValueFrom(this.promotionService.deleteItem(promo.id, t.id)).catch(() => null);
+    this.targets = this.targets.filter(x => x.id !== t.id);
+    this.cdr.detectChanges();
+  }
+
   openEditForm(p: PromotionDto) {
+    void this.loadTargets(p.id);
     this.editingPromotion = p;
     this.formName = p.name;
     this.formDescription = p.description ?? '';

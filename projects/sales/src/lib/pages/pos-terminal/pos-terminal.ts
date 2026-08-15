@@ -12,11 +12,13 @@ import { CouponService } from '../../services/coupon.service';
 import { PricingService } from '../../services/pricing.service';
 import { PosTransactionService } from '../../services/pos-transaction.service';
 import { AuthService } from '@nexcore/core';
-import { ItemService, ItemDto, ItemCategoryService, ItemCategoryDto, InventoryReportService } from '@nexcore/inventory';
+import { ItemService, ItemDto, ItemCategoryService, ItemCategoryDto, InventoryReportService,
+         CatalogService, CatalogResolutionDto, CatalogMatchType, CachedCatalogItem } from '@nexcore/inventory';
 import { BomService, ProductionOrderService } from '@nexcore/manufacturing';
 import { environment } from '@env';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { OfflineService } from '../../services/offline.service';
+import { PosCatalogIndex } from '../../services/pos-catalog-index.service';
 import { PosDataCache, OutboxOrder } from '../../services/pos-data-cache.service';
 import { PosSyncService } from '../../services/pos-sync.service';
 import { PromotionService } from '../../services/promotion.service';
@@ -33,6 +35,8 @@ import { PricedOrderDto, PricedLineDto, PriceOrderRequestDto } from '../../model
 import { PosCheckoutResultDto, PosTenderDto, PosTenderType, PosTransactionDto, PosTransactionLineDto } from '../../models/pos-transaction.model';
 import { ThermalReceiptDto, PosSettingsDto } from '../../models/pos-settings.model';
 import { PosSettingsService } from '../../services/pos-settings.service';
+import { PosReportService } from '../../services/pos-report.service';
+import { PosShiftReportDto } from '../../models/pos-report.model';
 
 // SalesChannel.PosWalkIn = 8, FulfillmentType.Immediate = 0
 const POS_WALK_IN_CHANNEL = 8;
@@ -49,10 +53,27 @@ export interface CartItem {
   inventoryItemId: string;
   itemName: string;
   sku: string | null;
+  /**
+   * ALWAYS in base (stock-keeping) units. Pricing and checkout send this straight
+   * through, so a case of 24 is quantity 24 — `packSize` records how it was rung up.
+   */
   quantity: number;
   unitPrice: number;
   discount: number;
   taxRate: number;
+
+  // ── Identity beyond the item, so distinct sellables never merge into one line ──
+  /** Set when a specific variant was rung up (Red / XL). */
+  variantId?: string | null;
+  variantName?: string | null;
+  /** Unit the line was rung up in — the barcode's unit for a pack/case scan. */
+  unitId?: string | null;
+  unitName?: string | null;
+  /**
+   * Base units per one rung-up unit: 1 for a loose item, 24 for a case-of-24 barcode.
+   * Quantity steppers move by this, so +1 on a case line adds a case, not a bottle.
+   */
+  packSize?: number;
 }
 
 /** An in-progress (held) sale kept on the terminal until it is paid or voided. */
@@ -366,11 +387,14 @@ export class PosTerminalComponent implements OnInit, OnDestroy {
     private posSettingsService: PosSettingsService,
     private authService: AuthService,
     private itemService: ItemService,
+    private catalog: CatalogService,
+    private catalogIndex: PosCatalogIndex,
     private reportService: InventoryReportService,
     private bomService: BomService,
     private productionOrderService: ProductionOrderService,
     private categoryService: ItemCategoryService,
     private contactService: ContactService,
+    private posReportService: PosReportService,
     private dashboardService: PosDashboardService,
     private offline: OfflineService,
     private dataCache: PosDataCache,
@@ -447,8 +471,27 @@ export class PosTerminalComponent implements OnInit, OnDestroy {
     await this.authService.ensureFreshToken(150); // refresh when within ~2.5 min of expiry
   }
 
+  /**
+   * Leave the full-screen till for the POS dashboard. The terminal covers the whole
+   * shell, so this is the way out — from the command bar or the side menu.
+   * An open sale only lives in memory, so warn before walking away from one.
+   */
   goToDashboard() {
+    if (this.cart.length &&
+        !confirm('You have items in the current sale. Leaving the till will discard them. Continue?')) {
+      return;
+    }
     this.router.navigate(['/sales/pos-dashboard']);
+  }
+
+  /** "Management" from the till lands on the back office, not the dashboard — a cashier
+   *  leaving the register wants to *do* something, not read today's figures. */
+  goToBackOffice() {
+    if (this.cart.length &&
+        !confirm('You have items in the current sale. Leaving the till will discard them. Continue?')) {
+      return;
+    }
+    this.router.navigate(['/sales/pos-backoffice']);
   }
 
   goToStores() {
@@ -975,10 +1018,13 @@ export class PosTerminalComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Add a catalogue item picked from the product grid (no code involved, so it is always
+   * the item's base unit). Delegates to {@link addResolved} so grid picks, scans and
+   * search hits build cart lines by exactly the same rules — otherwise the same product
+   * added two ways would split into two lines.
+   */
   addItem(item: ItemDto | any) {
-    // A quantity typed on the qty-pad before scanning applies to this add, then resets.
-    const qty = this.pendingQty && this.pendingQty > 0 ? this.pendingQty : 1;
-    this.pendingQty = null;
     const id: string = (item as ItemDto).id ?? item.inventoryItemId;
 
     // Warn (don't block) when the item has no stock in this store's warehouse — usually means the
@@ -990,30 +1036,31 @@ export class PosTerminalComponent implements OnInit, OnDestroy {
       this.showToast(`${name} shows 0 stock in this store's warehouse. If that's wrong, set the store's Default Warehouse in POS Stores settings.`);
     }
 
-    const existing = this.cart.find((c) => c.inventoryItemId === id);
-    if (existing) {
-      existing.quantity += qty;
-      this.selectedCartIndex = this.cart.indexOf(existing);
-    } else {
-      const priceEntry = (item as ItemDto).prices?.find(p => p.isActive) ?? (item as ItemDto).prices?.[0];
-      const unitPrice = priceEntry?.salePrice ?? item.price ?? item.unitPrice ?? 0;
-      const taxEntry = (item as ItemDto).taxes?.find(t => t.isActive) ?? (item as ItemDto).taxes?.[0];
-      const taxRate = taxEntry?.effectiveRate ?? item.taxRate ?? 0;
-      this.cart.push({
-        inventoryItemId: id,
-        itemName: (item as ItemDto).name ?? item.itemName ?? 'Item',
-        sku: (item as ItemDto).code ?? item.sku ?? null,
-        quantity: qty,
-        unitPrice,
-        discount: 0,
-        taxRate,
-      });
-      this.selectedCartIndex = this.cart.length - 1;
-    }
-    this.scheduleQuote();
-    this.discardPendingOrder();
-    this.syncOpenSale();
-    this.cdr.detectChanges();
+    const priceEntry = (item as ItemDto).prices?.find(p => p.isActive) ?? (item as ItemDto).prices?.[0];
+    const taxEntry = (item as ItemDto).taxes?.find(t => t.isActive) ?? (item as ItemDto).taxes?.[0];
+
+    this.addResolved({
+      matchType: CatalogMatchType.ItemCode,
+      matchedValue: (item as ItemDto).code ?? null,
+      itemId: id,
+      itemCode: (item as ItemDto).code ?? item.sku ?? '',
+      itemName: (item as ItemDto).name ?? item.itemName ?? 'Item',
+      itemType: (item as any).itemType ?? null,
+      trackingType: (item as any).trackingType ?? null,
+      categoryId: (item as any).categoryId ?? null,
+      categoryName: null,
+      imageUrl: null,
+      isActive: true,
+      variantId: null,
+      variantCode: null,
+      variantName: null,
+      unitId: (item as any).baseUnitId ?? '',
+      unitName: (item as any).baseUnitName ?? null,
+      baseUnitId: (item as any).baseUnitId ?? '',
+      baseUnitName: (item as any).baseUnitName ?? null,
+      quantityInBaseUnits: 1,
+      listPrice: priceEntry?.salePrice ?? item.price ?? item.unitPrice ?? 0,
+    }, undefined, taxEntry?.effectiveRate ?? item.taxRate ?? 0);
   }
 
   selectRow(i: number) { this.selectedCartIndex = i; this.numpadBuffer = ''; }
@@ -1022,7 +1069,9 @@ export class PosTerminalComponent implements OnInit, OnDestroy {
   // ── Change-quantity popup ───────────────────────────────────────────────────────
   openQtyPad() {
     const it = this.selectedItem;
-    this.qtyBuffer = it ? String(it.quantity) : '';
+    // Seed with packs so what the pad shows matches what applyQty reads back.
+    const packSize = it?.packSize && it.packSize > 0 ? it.packSize : 1;
+    this.qtyBuffer = it ? String(it.quantity / packSize) : '';
     this.qtyPrefilled = !!this.qtyBuffer;
     this.showQtyPad = true;
     this.cdr.detectChanges();
@@ -1059,7 +1108,10 @@ export class PosTerminalComponent implements OnInit, OnDestroy {
     const it = this.selectedItem;
     if (it) {
       if (!isNaN(val) && val > 0) {
-        it.quantity = val;
+        // The pad types packs, the line stores base units: "2" on a Case (x24) line
+        // means two cases — 48 — not two bottles.
+        const packSize = it.packSize && it.packSize > 0 ? it.packSize : 1;
+        it.quantity = val * packSize;
         this.scheduleQuote();
         this.discardPendingOrder();
         this.syncOpenSale();
@@ -1092,7 +1144,9 @@ export class PosTerminalComponent implements OnInit, OnDestroy {
   changeQty(i: number, delta: number) {
     const item = this.cart[i];
     if (!item) return;
-    const newQty = item.quantity + delta;
+    // A case line steps by the case: +1 on "Case (x24)" adds 24 base units.
+    const step = item.packSize && item.packSize > 0 ? item.packSize : 1;
+    const newQty = item.quantity + delta * step;
     if (newQty <= 0) {
       this.cart.splice(i, 1);
       this.selectedCartIndex = Math.min(i, this.cart.length - 1);
@@ -2152,9 +2206,11 @@ export class PosTerminalComponent implements OnInit, OnDestroy {
     const get = (o: any) => firstValueFrom(o).catch(() => null) as Promise<any>;
     const storeId = this.selectedStore?.id;
     const [items, cats, contacts, cfg, promos, priceLists, cashiers, terms] = await Promise.all([
-      this.fetchAllActiveItems().catch(() => null),
+      this.fetchAllActiveItems().catch(() => null),   // syncs the index internally
       get(this.categoryService.getActive()),
-      get(this.contactService.getAll({ pageSize: 500 })),
+      // Paged, not one big request: the API caps PageSize at 100, so asking for 500
+      // silently snapshots only the first 100 customers for offline use.
+      get(this.contactService.getAllPages()),
       get(this.posSettingsService.getSettings()),
       get(this.promotionService.getActive()),
       get(this.priceListService.getActive()),
@@ -2163,7 +2219,7 @@ export class PosTerminalComponent implements OnInit, OnDestroy {
     ]);
     if (items)         { this.menuItems = items; this.dataCache.set('menuItems', this.menuItems); this.lastKnownSignature = this.catalogSignature(this.menuItems); }
     if (cats?.data)    { this.categories = cats.data; this.dataCache.set('categories', this.categories); }
-    if (contacts?.data){ this.contacts = contacts.data; if (!this.contactId) this.selectWalkIn(); this.dataCache.set('contacts', this.contacts); }
+    if (contacts)      { this.contacts = contacts; if (!this.contactId) this.selectWalkIn(); this.dataCache.set('contacts', this.contacts); }
     if (cfg?.data)     { this.posConfig = cfg.data; this.dataCache.set('posConfig', this.posConfig); }
     if (promos?.data)  { this.cachedPromotions = promos.data; this.dataCache.set('promotions', this.cachedPromotions); }
     if (priceLists?.data) { this.dataCache.set('priceLists', priceLists.data); }
@@ -2226,8 +2282,8 @@ export class PosTerminalComponent implements OnInit, OnDestroy {
     if (cats?.data) { this.categories = cats.data; this.dataCache.set('categories', this.categories); }
     markDone(1);
 
-    const contacts = await get(this.contactService.getAll({ pageSize: 500 }));
-    if (contacts?.data) { this.contacts = contacts.data; if (!this.contactId) this.selectWalkIn(); this.dataCache.set('contacts', this.contacts); }
+    const contacts = await get(this.contactService.getAllPages());
+    if (contacts) { this.contacts = contacts; if (!this.contactId) this.selectWalkIn(); this.dataCache.set('contacts', this.contacts); }
     markDone(2);
 
     const cfg = await get(this.posSettingsService.getSettings());
@@ -2737,14 +2793,157 @@ ${invoiceRows}
   }
 
   // ── Search ────────────────────────────────────────────────────────────────────
-  get searchResults(): any[] {
-    if (!this.searchQuery) return [];
-    const q = this.searchQuery.toLowerCase();
-    return this.menuItems.filter(i =>
-      (i.name ?? '').toLowerCase().includes(q) ||
-      (i.code ?? '').toLowerCase().includes(q) ||
-      (i.barcodes ?? []).some(b => (b.barcode ?? '').toLowerCase().includes(q))
-    );
+  /**
+   * Results shown under the search box. Filled by the catalogue resolver (server when
+   * online, the cached snapshot when not) rather than by substring-matching the whole
+   * catalogue in the browser — a scan has to be an exact match, or the till rings up
+   * whichever product merely *contains* those digits.
+   */
+  searchResults: CatalogResolutionDto[] = [];
+  searchBusy = false;
+  private searchSeq = 0;
+  private searchDebounce: any = null;
+
+  /** Called on every keystroke in the search box. */
+  onSearchInput(): void {
+    const term = (this.searchQuery ?? '').trim();
+    this.searchHighlightIndex = -1;
+
+    clearTimeout(this.searchDebounce);
+    if (!term) { this.searchResults = []; this.cdr.detectChanges(); return; }
+
+    this.searchDebounce = setTimeout(() => void this.runSearch(term), 200);
+  }
+
+  private async runSearch(term: string): Promise<void> {
+    const seq = ++this.searchSeq;
+    this.searchBusy = true;
+
+    const results = this.isOffline
+      ? this.catalog.resolveLocal(term, this.catalogSnapshot()).candidates
+      : await firstValueFrom(this.catalog.search(term, 25)).catch(() => [] as CatalogResolutionDto[]);
+
+    // A slower earlier request must not overwrite a newer one.
+    if (seq !== this.searchSeq) return;
+
+    this.searchResults = results;
+    this.searchBusy = false;
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Scan or Enter. Resolves the code exactly — item barcode, variant barcode, variant
+   * SKU, item SKU — and only falls back to showing candidates when nothing matches, so
+   * an ambiguous code never silently sells the wrong product.
+   */
+  async resolveAndAdd(code: string): Promise<void> {
+    const needle = (code ?? '').trim();
+    if (!needle) return;
+
+    const result = this.isOffline
+      ? this.catalog.resolveLocal(needle, this.catalogSnapshot())
+      : await firstValueFrom(this.catalog.resolve(needle)).catch(() => null);
+
+    if (result?.isExactMatch && result.match) {
+      this.addResolved(result.match);
+      this.searchQuery = '';
+      this.searchResults = [];
+      this.searchHighlightIndex = -1;
+      this.showSearch = false;
+      this.cdr.detectChanges();
+      return;
+    }
+
+    const candidates = result?.candidates ?? [];
+    if (candidates.length === 1) { this.addResolved(candidates[0]); this.searchQuery = ''; this.searchResults = []; this.showSearch = false; this.cdr.detectChanges(); return; }
+
+    this.searchResults = candidates;
+    if (!candidates.length) this.showToast(`No product matches "${needle}".`);
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Add a resolved line. Quantity is converted to base units here — scanning a
+   * case-of-24 barcode adds 24 — while the line remembers the pack it was rung up in.
+   * Lines are keyed by item + variant + unit so a case and a single stay separate.
+   */
+  addResolved(res: CatalogResolutionDto, packs?: number, taxRate = 0): void {
+    const scannedPacks = packs ?? (this.pendingQty && this.pendingQty > 0 ? this.pendingQty : 1);
+    this.pendingQty = null;
+
+    const packSize = res.quantityInBaseUnits > 0 ? res.quantityInBaseUnits : 1;
+    const baseQty = scannedPacks * packSize;
+
+    const existing = this.cart.find(c =>
+      c.inventoryItemId === res.itemId &&
+      (c.variantId ?? null) === (res.variantId ?? null) &&
+      (c.unitId ?? null) === (res.unitId ?? null));
+
+    if (existing) {
+      existing.quantity += baseQty;
+      this.selectedCartIndex = this.cart.indexOf(existing);
+    } else {
+      const label = [res.itemName, res.variantName].filter(Boolean).join(' - ');
+      this.cart.push({
+        inventoryItemId: res.itemId,
+        itemName: packSize > 1 ? `${label} (${res.unitName ?? 'Pack'} x${packSize})` : label,
+        sku: res.variantCode ?? res.itemCode ?? null,
+        quantity: baseQty,
+        unitPrice: res.listPrice ?? 0,   // Sales pricing overwrites this on the next quote
+        discount: 0,
+        taxRate,
+        variantId: res.variantId ?? null,
+        variantName: res.variantName ?? null,
+        unitId: res.unitId ?? null,
+        unitName: res.unitName ?? null,
+        packSize,
+      });
+      this.selectedCartIndex = this.cart.length - 1;
+    }
+
+    this.scheduleQuote();
+    this.discardPendingOrder();
+    this.syncOpenSale();
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Cached catalogue shaped for offline resolution.
+   *
+   * Prefers the delta-synced index, whose barcodes carry real `quantityInBaseUnits`, so
+   * an offline till sells a case of 24 as 24. Falls back to the legacy menuItems
+   * snapshot (pack factors unknown, so 1) only when the index has not synced yet.
+   */
+  private catalogSnapshot(): CachedCatalogItem[] {
+    if (this.catalogIndex.size > 0) return this.catalogIndex.snapshot();
+
+    return (this.menuItems ?? []).map((i: any) => ({
+      id: i.id,
+      code: i.code,
+      name: i.name,
+      baseUnitId: i.baseUnitId,
+      baseUnitName: i.baseUnitName ?? i.unitName ?? null,
+      itemType: i.itemType ?? null,
+      trackingType: i.trackingType ?? null,
+      categoryId: i.categoryId ?? null,
+      categoryName: i.categoryName ?? null,
+      isActive: i.isActive !== false,
+      listPrice: (i.prices?.find((p: any) => p.isActive) ?? i.prices?.[0])?.salePrice ?? null,
+      barcodes: (i.barcodes ?? []).map((b: any) => ({
+        barcode: b.barcode,
+        unitId: b.unitId ?? null,
+        unitName: b.unitName ?? null,
+        // The cached item payload carries no conversion factor, so a pack barcode
+        // resolves as 1 offline. Phase 0c's synced index will carry the real factor.
+        quantityInBaseUnits: b.quantityInBaseUnits ?? 1,
+      })),
+      variants: (i.variants ?? []).map((v: any) => ({
+        id: v.id,
+        variantCode: v.variantCode,
+        variantName: v.variantName ?? null,
+        barcode: v.barcode ?? null,
+      })),
+    }));
   }
 
   /** On a failed load (offline / server unreachable), fall back to the cached snapshot. */
@@ -2755,33 +2954,21 @@ ${invoiceRows}
   }
 
   /**
-   * Fetch ALL active items by paging through the catalog. The API caps PageSize
-   * at 100, so a single call only returns the first page — the POS needs every
-   * item, so we loop until the catalog is exhausted.
+   * Products for the picker grid, from the delta-synced local index.
+   *
+   * This used to page the whole catalogue on every till start (100 at a time, up to
+   * 100k rows). The index carries the same rows, is brought up to date with a delta —
+   * usually a single small request — and survives a restart, so the till opens without
+   * re-downloading anything.
    */
   private async fetchAllActiveItems(): Promise<ItemDto[]> {
-    const pageSize = 100;
-    const all: ItemDto[] = [];
-    let page = 1;
-    // Hard cap as a safety net against a misbehaving total/page meta.
-    for (let guard = 0; guard < 1000; guard++) {
-      const res = await firstValueFrom(
-        this.itemService.getActivePaged({ pageNumber: page, pageSize })
-      );
-      const batch = res?.data ?? [];
-      all.push(...batch);
+    await this.catalogIndex.sync().catch(() => null);
 
-      const total = res?.pagination?.totalCount ?? res?.totalCount;
-      const totalPages = res?.pagination?.totalPages ?? res?.totalPages;
-      const reachedTotal = total != null && all.length >= total;
-      const reachedLastPage = totalPages != null && page >= totalPages;
-      // A short page means there is nothing left to fetch.
-      if (batch.length < pageSize || reachedTotal || reachedLastPage) break;
-      page++;
-    }
+    const items = this.catalogIndex.asMenuItems() as ItemDto[];
+
     // Raw materials (ingredients like flour, cheese, sauce) are consumed in
     // production — they are never sold at the till, so keep them out of the POS.
-    return all.filter(i => (i.itemType ?? '') !== 'RawMaterial');
+    return items.filter(i => (i.itemType ?? '') !== 'RawMaterial');
   }
 
   /**
@@ -2810,17 +2997,23 @@ ${invoiceRows}
       }));
   }
 
-  /** Add the top search match to the cart (Enter key in the search box). */
+  /**
+   * Enter in the search box. With a row highlighted, take that row; otherwise treat the
+   * text as a code and resolve it — which is what a barcode scanner produces, since it
+   * types the code and presses Enter.
+   */
   addFirstSearchResult() {
-    const idx = this.searchHighlightIndex >= 0 && this.searchHighlightIndex < this.searchResults.length
-      ? this.searchHighlightIndex : 0;
-    const item = this.searchResults[idx];
-    if (!item) return;
-    this.addItem(item);
-    this.searchQuery = '';
-    this.searchHighlightIndex = -1;
-    this.showSearch = false;
-    this.cdr.detectChanges();
+    if (this.searchHighlightIndex >= 0 && this.searchHighlightIndex < this.searchResults.length) {
+      this.addResolved(this.searchResults[this.searchHighlightIndex]);
+      this.searchQuery = '';
+      this.searchResults = [];
+      this.searchHighlightIndex = -1;
+      this.showSearch = false;
+      this.cdr.detectChanges();
+      return;
+    }
+
+    void this.resolveAndAdd(this.searchQuery);
   }
 
   searchArrowDown(e: Event) {
@@ -2962,9 +3155,12 @@ ${invoiceRows}
   // ── Customer / contact selection ───────────────────────────────────────────────
   loadContacts() {
     this.contactsLoading = true;
-    this.contactService.getAll({ pageSize: 500 }).subscribe({
-      next: (res) => {
-        this.contacts = res.data ?? [];
+    // Paged: `PageSize` is capped at 100 server-side, so a single big request would
+    // leave a shop of any size unable to find most of its customers — and could miss
+    // the walk-in record the till defaults to.
+    this.contactService.getAllPages().subscribe({
+      next: (rows) => {
+        this.contacts = rows;
         if (!this.contactId) this.selectWalkIn();
         this.contactsLoading = false;
         this.dataCache.set('contacts', this.contacts);
@@ -2989,10 +3185,50 @@ ${invoiceRows}
 
   contactLabel(c: ContactDto): string {
     const name = `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim();
-    return (name || c.accountName || c.email || 'Unnamed') + (name && c.accountName ? ` — ${c.accountName}` : '');
+    const who = name || c.accountName || c.email || 'Unnamed';
+    // Phone is the identifier a cashier reads back to the customer, so it earns a place
+    // in the label rather than hiding behind a details panel.
+    const tail = [name && c.accountName ? c.accountName : '', c.phone ?? ''].filter(Boolean).join(' · ');
+    return tail ? `${who} — ${tail}` : who;
+  }
+
+  /**
+   * Customer lookup.
+   *
+   * The list held in memory is the offline snapshot, which is complete but only as fresh
+   * as the last sync. While online the search goes to the server so a customer added at
+   * another till is found immediately; offline it falls back to the snapshot, matching
+   * the same fields case-insensitively.
+   */
+  private contactSearchTimer: any = null;
+  contactSearchResults: ContactDto[] | null = null;
+
+  onCustomerSearchInput(term: string): void {
+    this.customerSearch = term;
+    if (this.contactSearchTimer) clearTimeout(this.contactSearchTimer);
+
+    const q = term.trim();
+    if (!q) { this.contactSearchResults = null; this.cdr.detectChanges(); return; }
+    if (!this.isOnline) { this.contactSearchResults = null; this.cdr.detectChanges(); return; }
+
+    this.contactSearchTimer = setTimeout(() => {
+      this.contactsLoading = true;
+      this.cdr.detectChanges();
+      this.contactService.getAll({ page: 1, pageSize: 25, search: q }).subscribe({
+        next: (res) => {
+          this.contactSearchResults = res.data ?? [];
+          this.contactsLoading = false;
+          this.cdr.detectChanges();
+        },
+        // Falling back to the snapshot beats showing nothing mid-sale.
+        error: () => { this.contactSearchResults = null; this.contactsLoading = false; this.cdr.detectChanges(); },
+      });
+    }, 300);
   }
 
   get filteredContacts(): ContactDto[] {
+    if (this.contactSearchResults) return this.contactSearchResults;
+
     const q = this.customerSearch.trim().toLowerCase();
     if (!q) return this.contacts;
     return this.contacts.filter(c => {
@@ -3004,9 +3240,81 @@ ${invoiceRows}
     });
   }
 
+  // ── Quick-create ──────────────────────────────────────────────────────────────
+  // A cashier who has the customer in front of them should not have to leave the sale
+  // and open CRM to record a name and a phone number.
+
+  showNewCustomer = false;
+  newCustomer = { firstName: '', lastName: '', phone: '', email: '' };
+  savingCustomer = false;
+  customerError = '';
+
+  openNewCustomer(): void {
+    // Seed from whatever was typed: a digit-led search is almost always a phone number.
+    const typed = this.customerSearch.trim();
+    const looksLikePhone = /^[+\d][\d\s()-]{4,}$/.test(typed);
+    this.newCustomer = {
+      firstName: looksLikePhone ? '' : typed,
+      lastName: '',
+      phone: looksLikePhone ? typed : '',
+      email: '',
+    };
+    this.customerError = '';
+    this.showNewCustomer = true;
+  }
+
+  cancelNewCustomer(): void {
+    this.showNewCustomer = false;
+    this.customerError = '';
+  }
+
+  saveNewCustomer(): void {
+    const n = this.newCustomer;
+    const name = `${n.firstName} ${n.lastName}`.trim();
+    if (!name) { this.customerError = 'Enter a name.'; return; }
+    if (!n.phone.trim() && !n.email.trim()) {
+      // Without one of these the record cannot be found again, which makes it useless.
+      this.customerError = 'Enter a phone number or an email.';
+      return;
+    }
+    if (!this.isOnline) { this.customerError = 'Customers cannot be created while offline.'; return; }
+
+    this.savingCustomer = true;
+    this.customerError = '';
+    // The API requires a last name. For a single name, put it there and leave the first
+    // blank — duplicating it would read back as "Ayesha Ayesha" on every receipt.
+    const single = !n.lastName.trim();
+    this.contactService.create({
+      firstName: single ? null : n.firstName.trim() || null,
+      lastName: single ? n.firstName.trim() : n.lastName.trim(),
+      phone: n.phone.trim() || null,
+      email: n.email.trim() || null,
+      emailOptOut: false,
+    }).subscribe({
+      next: (res) => {
+        this.savingCustomer = false;
+        const created = res.data;
+        if (!created) { this.customerError = 'Could not create the customer.'; this.cdr.detectChanges(); return; }
+        this.contacts = [created, ...this.contacts];
+        this.dataCache.set('contacts', this.contacts);
+        this.contactSearchResults = null;
+        this.customerSearch = '';
+        this.showNewCustomer = false;
+        this.onContactSelect(created.id);
+      },
+      error: (err) => {
+        this.savingCustomer = false;
+        this.customerError = err?.error?.message ?? 'Could not create the customer.';
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
   onContactSelect(id: string) {
     this.contactId = id;
-    const c = this.contacts.find(x => x.id === id);
+    // Server results are not necessarily in the offline snapshot yet, so look in both.
+    const c = (this.contactSearchResults ?? []).find(x => x.id === id)
+           ?? this.contacts.find(x => x.id === id);
     this.customerName = c ? this.contactLabel(c) : '';
     this.requestQuote();
     this.cdr.detectChanges();
@@ -3203,12 +3511,25 @@ ${invoiceRows}
     return this.sessionTransactions.reduce((s, t) => s + (t.totalAmount || 0), 0);
   }
 
+  /** The X read for this session: drawer arithmetic, tenders, and the sale list. */
+  xRead: PosShiftReportDto | null = null;
+
   openSessionReport() {
     this.showSideMenu = false;
     this.sessionTransactions = [];
+    this.xRead = null;
     if (!this.activeSession?.id) { this.showToast('No active session.'); return; }
     this.showSessionReport = true;
     this.sessionReportLoading = true;
+
+    // A list of receipts is not an X read. What a cashier needs mid-shift is what should
+    // be in the drawer, which means float, cash taken, refunds and anything dropped to
+    // the safe — so fetch the real read alongside the transactions.
+    this.posReportService.xRead(this.activeSession.id).subscribe({
+      next: (res) => { this.xRead = res.data ?? null; this.cdr.detectChanges(); },
+      error: () => { /* offline or unreachable — the transaction list still shows */ },
+    });
+
     this.posTransactionService.getBySession(this.activeSession.id).subscribe({
       next: (res) => {
         this.sessionTransactions = res.data ?? [];
@@ -3456,6 +3777,22 @@ ${invoiceRows}
     } else {
       document.exitFullscreen?.();
     }
+  }
+
+  /** True when the till is working from cache — either the session was opened
+   *  offline or the device has since lost connectivity. */
+  get isOffline(): boolean {
+    return this.sessionIsOffline || !this.offline.isOnline;
+  }
+
+  /** 1–2 letter monogram for the cashier avatar on the command sheet. */
+  get cashierInitials(): string {
+    const name = this.loggedCashier?.displayName ?? this.loggedUser?.fullName ?? '';
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '?';
+    const first = parts[0].charAt(0);
+    const last = parts.length > 1 ? parts[parts.length - 1].charAt(0) : '';
+    return (first + last).toUpperCase();
   }
 
   terminalName(id: string): string {

@@ -43,6 +43,21 @@ export class GeoService {
       );
   }
 
+  /**
+   * Search a country's cities by partial name. The table holds ~156k cities, far more
+   * than is worth shipping to the browser, so anything past the first page of results
+   * is reached by typing rather than scrolling.
+   */
+  searchCities(countryCode: string, query: string, limit = 50): Observable<CityDto[]> {
+    if (!query?.trim()) return of([]);
+    return this.http
+      .get<ApiResponse<CityDto[]>>(API_CONFIG.geo.searchCities(countryCode, query.trim(), limit))
+      .pipe(
+        map(r => r.data ?? []),
+        catchError(() => of([])),
+      );
+  }
+
   flagUrl(countryCode: string | null): string {
     return `https://flagcdn.com/w40/${(countryCode ?? '').toLowerCase()}.png`;
   }

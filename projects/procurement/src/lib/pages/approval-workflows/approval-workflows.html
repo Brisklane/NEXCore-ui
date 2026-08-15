@@ -129,7 +129,7 @@
 
       @if (workflows.length > 0) {
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 4px;flex-wrap:wrap">
-          <div style="display:flex;align-items:center;gap:8px;color:#6b7280;font-size:13px">
+          <div style="display:flex;align-items:center;gap:8px;color:var(--text-secondary,#6b7280);font-size:13px">
             <span>Rows per page:</span>
             <select [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()" style="padding:4px 8px">
               @for (opt of pageSizeOptions; track opt) { <option [ngValue]="opt">{{ opt }}</option> }

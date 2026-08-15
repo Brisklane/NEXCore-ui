@@ -1,0 +1,149 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>POS Stock</h2>
+      <p class="subtitle">What this store has on hand, and corrections after a count.</p>
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <!-- ── Store + filters ─────────────────────────────────────────────── -->
+  <div class="filters-bar">
+    <div class="st-store">
+      <label>Store</label>
+      <nx-searchable-select
+        [(ngModel)]="storeId"
+        [options]="storeOptions"
+        placeholder="Select a store"
+        (ngModelChange)="onStoreChange()"
+      ></nx-searchable-select>
+    </div>
+
+    <div class="filter-search">
+      <span class="search-icon">⌕</span>
+      <input type="text" [(ngModel)]="query" placeholder="Filter by product or SKU…" />
+      @if (query) { <button class="search-clear" type="button" (click)="query = ''">✕</button> }
+    </div>
+
+    <label class="st-toggle">
+      <input type="checkbox" [(ngModel)]="lowStockOnly" />
+      Out of stock only
+    </label>
+  </div>
+
+  <!-- ── Summary ─────────────────────────────────────────────────────── -->
+  @if (!loading && rows.length) {
+    <div class="st-summary">
+      <div class="st-stat">
+        <span class="st-stat-label">Lines</span>
+        <span class="st-stat-value">{{ rows.length }}</span>
+      </div>
+      <div class="st-stat">
+        <span class="st-stat-label">Out of stock</span>
+        <span class="st-stat-value" [class.st-warn]="outOfStockCount > 0">{{ outOfStockCount }}</span>
+      </div>
+      <div class="st-stat">
+        <span class="st-stat-label">Stock value</span>
+        <span class="st-stat-value">{{ totalValue | number:'1.2-2' }}</span>
+      </div>
+    </div>
+  }
+
+  <!-- ── On hand ─────────────────────────────────────────────────────── -->
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>SKU</th>
+          <th>Product</th>
+          <th class="num">On hand</th>
+          <th class="num">Reserved</th>
+          <th class="num">Available</th>
+          <th class="num">Value</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading) {
+          <tr><td colspan="7" class="empty-row">Loading…</td></tr>
+        } @else if (!visibleRows.length) {
+          <tr><td colspan="7" class="empty-row">
+            @if (rows.length) { Nothing matches that filter. }
+            @else { No stock recorded in this store's warehouse yet. }
+          </td></tr>
+        } @else {
+          @for (r of visibleRows; track trackByRow($index, r)) {
+            <tr [class.st-row-out]="r.balance.quantityAvailable <= 0">
+              <td class="mono">{{ r.code }}</td>
+              <td>
+                {{ r.name }}
+                @if (r.variantName) { <span class="st-variant">{{ r.variantName }}</span> }
+              </td>
+              <td class="num">{{ r.balance.quantityOnHand | number:'1.0-3' }}</td>
+              <td class="num">{{ r.balance.quantityReserved | number:'1.0-3' }}</td>
+              <td class="num">
+                <span [class.st-warn]="r.balance.quantityAvailable <= 0">
+                  {{ r.balance.quantityAvailable | number:'1.0-3' }}
+                </span>
+              </td>
+              <td class="num">{{ r.balance.totalValue | number:'1.2-2' }}</td>
+              <td class="actions-cell">
+                <button class="btn btn-secondary btn-sm" type="button" (click)="startAdjust(r)">Count</button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── Count / correct ─────────────────────────────────────────────── -->
+  @if (adjusting) {
+    <div class="st-overlay" (click)="cancelAdjust()"></div>
+    <aside class="st-dialog">
+      <header class="st-dialog-head">
+        <h3>Count stock</h3>
+        <button class="btn-icon" type="button" (click)="cancelAdjust()" aria-label="Close">✕</button>
+      </header>
+
+      <div class="st-dialog-body">
+        <p class="st-product">
+          <strong>{{ adjusting.row.name }}</strong>
+          <span class="mono">{{ adjusting.row.code }}</span>
+        </p>
+
+        <div class="form-group">
+          <label>System says</label>
+          <input type="text" [value]="adjusting.row.balance.quantityOnHand" disabled />
+        </div>
+
+        <div class="form-group">
+          <label>Counted quantity <span class="req">*</span></label>
+          <input type="number" min="0" step="0.001" [(ngModel)]="adjusting.newQuantity" />
+        </div>
+
+        @if (adjustDelta !== null && adjustDelta !== 0) {
+          <div class="st-delta" [class.st-delta-down]="adjustDelta < 0">
+            This posts an adjustment of
+            <strong>{{ adjustDelta > 0 ? '+' : '' }}{{ adjustDelta | number:'1.0-3' }}</strong>.
+          </div>
+        }
+
+        <div class="form-group">
+          <label>Reason <span class="req">*</span></label>
+          <input type="text" [(ngModel)]="adjusting.reason" placeholder="e.g. Cycle count, damage, shrinkage" />
+          <span class="hint">Recorded on the inventory document so the correction can be traced.</span>
+        </div>
+      </div>
+
+      <footer class="st-dialog-foot">
+        <button class="btn btn-secondary" type="button" (click)="cancelAdjust()">Cancel</button>
+        <button class="btn btn-primary" type="button" [disabled]="saving" (click)="saveAdjust()">
+          {{ saving ? 'Posting…' : 'Post adjustment' }}
+        </button>
+      </footer>
+    </aside>
+  }
+</div>

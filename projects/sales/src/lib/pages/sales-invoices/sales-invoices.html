@@ -52,7 +52,7 @@
             <button class="btn btn-primary btn-sm" (click)="confirmInvoice(selectedInvoice.id)">Confirm</button>
           }
           @if (normStatus(selectedInvoice.status) === 'Confirmed' || normStatus(selectedInvoice.status) === 'PartiallyPaid' || normStatus(selectedInvoice.status) === 'Overdue') {
-            <button class="btn btn-primary btn-sm" style="background:#16a34a;border-color:#16a34a" (click)="openRegisterPayment(selectedInvoice)">Register Payment</button>
+            <button class="btn btn-primary btn-sm" style="background:var(--success,#16a34a);border-color:var(--success,#16a34a)" (click)="openRegisterPayment(selectedInvoice)">Register Payment</button>
           }
           @if (normStatus(selectedInvoice.status) !== 'Cancelled' && normStatus(selectedInvoice.status) !== 'Paid' && normStatus(selectedInvoice.status) !== 'Void') {
             <button class="btn btn-danger btn-sm" (click)="showCancelForm = !showCancelForm; showPaymentForm = false">Cancel Invoice</button>
@@ -184,7 +184,7 @@
           </div>
           <div class="form-actions" style="margin-top:8px">
             <button class="btn btn-secondary btn-sm" (click)="cancelPaymentForm()">Back</button>
-            <button class="btn btn-primary btn-sm" style="background:#16a34a;border-color:#16a34a" (click)="submitRegisterPayment()">Confirm Payment</button>
+            <button class="btn btn-primary btn-sm" style="background:var(--success,#16a34a);border-color:var(--success,#16a34a)" (click)="submitRegisterPayment()">Confirm Payment</button>
           </div>
         </div>
       }

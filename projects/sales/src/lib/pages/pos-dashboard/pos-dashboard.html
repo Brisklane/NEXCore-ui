@@ -49,6 +49,24 @@
       <div class="dsh-stat-foot">Configured outlets</div>
     </div>
 
+    <!-- Back office: the POS app runs a store end to end, not just the till. -->
+    <div class="dsh-tile span-12 pos-bo-tile">
+      <div class="dsh-th">
+        <div class="dsh-th-title"><span class="dsh-th-ico"><span class="material-symbols-outlined">apps</span></span> Back Office</div>
+      </div>
+      <div class="pos-bo">
+        @for (b of backOffice; track b.route) {
+          <button class="pos-bo-card" type="button" (click)="go(b.route)">
+            <span class="pos-bo-ico"><span class="material-symbols-outlined">{{ b.icon }}</span></span>
+            <span class="pos-bo-text">
+              <span class="pos-bo-label">{{ b.label }}</span>
+              <span class="pos-bo-hint">{{ b.hint }}</span>
+            </span>
+          </button>
+        }
+      </div>
+    </div>
+
     <!-- Live monitor tile -->
     <div class="dsh-tile span-12">
       <div class="dsh-th">

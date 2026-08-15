@@ -40,10 +40,10 @@ export class CrmHomeComponent {
   ];
 
   sources = [
-    { label: 'Website',   count: 62, pct: 42, color: '#2b7fff', dash: '105.6 251.3', off: '0' },
-    { label: 'Referral',  count: 38, pct: 26, color: '#7c3aed', dash: '65.3 251.3',  off: '-105.6' },
-    { label: 'Campaign',  count: 28, pct: 19, color: '#22c7e6', dash: '47.7 251.3',  off: '-170.9' },
-    { label: 'Cold Call', count: 20, pct: 13, color: '#f59e0b', dash: '32.7 251.3',  off: '-218.6' },
+    { label: 'Website',   count: 62, pct: 42, color: 'var(--kpi-1, #2b7fff)', dash: '105.6 251.3', off: '0' },
+    { label: 'Referral',  count: 38, pct: 26, color: 'var(--kpi-3, #7c3aed)', dash: '65.3 251.3',  off: '-105.6' },
+    { label: 'Campaign',  count: 28, pct: 19, color: 'var(--kpi-2, #22c7e6)', dash: '47.7 251.3',  off: '-170.9' },
+    { label: 'Cold Call', count: 20, pct: 13, color: 'var(--kpi-4, #f59e0b)', dash: '32.7 251.3',  off: '-218.6' },
   ];
 
   activity = [

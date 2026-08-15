@@ -32,6 +32,11 @@ export class Login implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    // Come back the way they left it: the checkbox reflects the last choice on this
+    // device, and the username is prefilled when they asked to stay signed in.
+    this.remember = this.auth.isRemembered();
+    this.username = this.auth.rememberedUsername();
+
     this.route.queryParams.subscribe(params => {
       if (params['reason'] === 'session-expired') {
         this.sessionExpired = true;

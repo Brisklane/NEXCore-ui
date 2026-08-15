@@ -117,10 +117,10 @@
             <button class="btn btn-primary btn-sm" (click)="confirmOrder(selectedOrder.id)">Confirm Order</button>
           }
           @if (canShip(selectedOrder)) {
-            <button class="btn btn-primary btn-sm" style="background:#7c3aed;border-color:#7c3aed" (click)="openCreateShipment()">📦 Create Shipment</button>
+            <button class="btn btn-primary btn-sm" style="background:var(--violet,#7c3aed);border-color:var(--violet,#7c3aed)" (click)="openCreateShipment()">📦 Create Shipment</button>
           }
           @if (canInvoice(selectedOrder)) {
-            <button class="btn btn-primary btn-sm" style="background:#16a34a;border-color:#16a34a" (click)="generateInvoice(selectedOrder.id)">Generate Invoice</button>
+            <button class="btn btn-primary btn-sm" style="background:var(--success,#16a34a);border-color:var(--success,#16a34a)" (click)="generateInvoice(selectedOrder.id)">Generate Invoice</button>
           }
           <button class="btn btn-secondary btn-sm" (click)="closeDetail()">✕ Close</button>
         </div>
@@ -157,7 +157,7 @@
             @if (selectedOrder.shipToCountry) { <div class="detail-row"><span>Country</span><span>{{ selectedOrder.shipToCountry }}</span></div> }
             @if (selectedOrder.requestedDeliveryDate) { <div class="detail-row"><span>Requested Delivery</span><span>{{ selectedOrder.requestedDeliveryDate | date:'mediumDate' }}</span></div> }
             @if (!selectedOrder.shipToName && !selectedOrder.shipToStreet) {
-              <div style="color:#94a3b8;font-size:12px">No shipping address</div>
+              <div style="color:var(--text-muted,#94a3b8);font-size:12px">No shipping address</div>
             }
           </div>
         </div>
@@ -189,7 +189,7 @@
         @if (selectedOrder.notes) {
           <div class="detail-section" style="margin-top:16px">
             <div class="detail-section-title">Notes</div>
-            <p style="font-size:13px;color:#475569;margin:0">{{ selectedOrder.notes }}</p>
+            <p style="font-size:13px;color:var(--text-primary,#475569);margin:0">{{ selectedOrder.notes }}</p>
           </div>
         }
       }
@@ -607,8 +607,8 @@
                 <tr>
                   <td>{{ l.productCode ? l.productCode + ' — ' : '' }}{{ l.productName }}</td>
                   <td style="text-align:right">
-                    @if (!shipWarehouseId) { <span style="color:#94a3b8">—</span> }
-                    @else if (shipAvailableFor(l.productId) === null) { <span style="color:#94a3b8">…</span> }
+                    @if (!shipWarehouseId) { <span style="color:var(--text-muted,#94a3b8)">—</span> }
+                    @else if (shipAvailableFor(l.productId) === null) { <span style="color:var(--text-muted,#94a3b8)">…</span> }
                     @else {
                       <span [style.color]="(shipAvailableFor(l.productId) ?? 0) < l.shipQty ? '#ef4444' : '#16a34a'">{{ shipAvailableFor(l.productId) }}</span>
                     }
@@ -620,7 +620,7 @@
                   <td style="text-align:right">{{ l.remaining - (l.shipQty || 0) }}</td>
                 </tr>
               } @empty {
-                <tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:12px">Nothing left to ship on this order.</td></tr>
+                <tr><td colspan="4" style="text-align:center;color:var(--text-muted,#94a3b8);padding:12px">Nothing left to ship on this order.</td></tr>
               }
             </tbody>
           </table>

@@ -1,0 +1,316 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>POS Reports</h2>
+      <p class="subtitle">How the shop traded, and whether the drawer balances.</p>
+    </div>
+    <button class="btn btn-secondary" type="button" (click)="print()">Print</button>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="rp-tabs">
+    <button type="button" [class.active]="tab === 'period'" (click)="setTab('period')">Trading</button>
+    <button type="button" [class.active]="tab === 'shift'" (click)="setTab('shift')">Shift read (X / Z)</button>
+  </div>
+
+  <!-- ── Trading ────────────────────────────────────────────────────── -->
+  @if (tab === 'period') {
+    <div class="filters-bar rp-filters">
+      <div class="rp-field">
+        <label>Store</label>
+        <nx-searchable-select
+          [(ngModel)]="storeId" (ngModelChange)="runPeriod()"
+          [options]="storeOptions" placeholder="All stores"
+        ></nx-searchable-select>
+      </div>
+      <div class="rp-field">
+        <label>From</label>
+        <input type="date" [(ngModel)]="from" (change)="runPeriod()" />
+      </div>
+      <div class="rp-field">
+        <label>To</label>
+        <input type="date" [(ngModel)]="to" (change)="runPeriod()" />
+      </div>
+      <div class="rp-presets">
+        <button class="btn btn-secondary btn-sm" type="button" (click)="preset('today')">Today</button>
+        <button class="btn btn-secondary btn-sm" type="button" (click)="preset('week')">7 days</button>
+        <button class="btn btn-secondary btn-sm" type="button" (click)="preset('month')">This month</button>
+      </div>
+    </div>
+
+    @if (loading) {
+      <div class="rp-empty">Loading…</div>
+    } @else if (summary) {
+      <div class="rp-stats">
+        <div class="rp-stat">
+          <span class="rp-stat-label">Net sales</span>
+          <span class="rp-stat-value">{{ summary.netSales | number:'1.2-2' }}</span>
+          <span class="rp-stat-foot">gross {{ summary.grossSales | number:'1.0-0' }} · refunds {{ summary.refunds | number:'1.0-0' }}</span>
+        </div>
+        <div class="rp-stat">
+          <span class="rp-stat-label">Transactions</span>
+          <span class="rp-stat-value">{{ summary.saleCount }}</span>
+          <span class="rp-stat-foot">{{ summary.refundCount }} refund{{ summary.refundCount === 1 ? '' : 's' }}</span>
+        </div>
+        <div class="rp-stat">
+          <span class="rp-stat-label">Average basket</span>
+          <span class="rp-stat-value">{{ summary.averageBasket | number:'1.2-2' }}</span>
+          <span class="rp-stat-foot">{{ summary.itemsSold | number:'1.0-2' }} items sold</span>
+        </div>
+        <div class="rp-stat">
+          <span class="rp-stat-label">Tax</span>
+          <span class="rp-stat-value">{{ summary.tax | number:'1.2-2' }}</span>
+          <span class="rp-stat-foot">discounts {{ summary.discounts | number:'1.0-0' }}</span>
+        </div>
+        <div class="rp-stat">
+          <span class="rp-stat-label">Shifts</span>
+          <span class="rp-stat-value">{{ summary.sessionCount }}</span>
+          <span class="rp-stat-foot">sessions that traded</span>
+        </div>
+      </div>
+
+      <!-- Hourly -->
+      <h3 class="rp-section">By hour</h3>
+      @if (peakHourSales <= 0) {
+        <div class="rp-empty">No sales in this range.</div>
+      } @else {
+        <div class="rp-chart">
+          @for (h of hours; track trackByHour($index, h)) {
+            <div class="rp-bar-col" [title]="hourLabel(h.hour) + ' · ' + (h.netSales | number:'1.2-2') + ' · ' + h.transactionCount + ' txn'">
+              <div class="rp-bar-track">
+                <div class="rp-bar" [style.height]="barHeight(h)" [class.rp-bar-peak]="h.netSales === peakHourSales"></div>
+              </div>
+              <span class="rp-bar-label">{{ h.hour % 3 === 0 ? hourLabel(h.hour) : '' }}</span>
+            </div>
+          }
+        </div>
+      }
+
+      <div class="rp-cols">
+        <!-- Tender mix -->
+        <section>
+          <h3 class="rp-section">Tender mix</h3>
+          <div class="table-container">
+            <table>
+              <thead><tr><th>Tender</th><th class="num">Amount</th><th class="num">Count</th><th class="num">Share</th></tr></thead>
+              <tbody>
+                @if (!tenders.length) {
+                  <tr><td colspan="4" class="empty-row">Nothing taken in this range.</td></tr>
+                } @else {
+                  @for (t of tenders; track trackByTender($index, t)) {
+                    <tr>
+                      <td>{{ t.tenderName }}</td>
+                      <td class="num">{{ t.amount | number:'1.2-2' }}</td>
+                      <td class="num">{{ t.count }}</td>
+                      <td class="num">
+                        <span class="rp-share"><span class="rp-share-fill" [style.width.%]="t.sharePercent"></span></span>
+                        {{ t.sharePercent | number:'1.0-1' }}%
+                      </td>
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Cashiers -->
+        <section>
+          <h3 class="rp-section">By cashier</h3>
+          <div class="table-container">
+            <table>
+              <thead><tr><th>Cashier</th><th class="num">Net</th><th class="num">Txns</th><th class="num">Avg basket</th></tr></thead>
+              <tbody>
+                @if (!cashierRows.length) {
+                  <tr><td colspan="4" class="empty-row">No cashier sold in this range.</td></tr>
+                } @else {
+                  @for (c of cashierRows; track trackByCashier($index, c)) {
+                    <tr>
+                      <td>{{ c.cashierName ?? '—' }}</td>
+                      <td class="num">{{ c.netSales | number:'1.2-2' }}</td>
+                      <td class="num">{{ c.transactionCount }}</td>
+                      <td class="num">{{ c.averageBasket | number:'1.2-2' }}</td>
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <!-- Products -->
+      <h3 class="rp-section">Top products</h3>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr><th>Product</th><th class="num">Qty</th><th class="num">Net sales</th><th class="num">Discounts</th></tr>
+          </thead>
+          <tbody>
+            @if (!products.length) {
+              <tr><td colspan="4" class="empty-row">Nothing sold in this range.</td></tr>
+            } @else {
+              @for (p of products; track trackByProduct($index, p)) {
+                <tr>
+                  <td>
+                    {{ p.productName }}
+                    @if (p.variantName) { <span class="rp-variant">{{ p.variantName }}</span> }
+                    <span class="mono rp-code">{{ p.productCode }}</span>
+                  </td>
+                  <td class="num">{{ p.quantity | number:'1.0-3' }}</td>
+                  <td class="num">{{ p.netSales | number:'1.2-2' }}</td>
+                  <td class="num">{{ p.discounts | number:'1.2-2' }}</td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <!-- ── Shift read ─────────────────────────────────────────────────── -->
+  @if (tab === 'shift') {
+    <div class="filters-bar rp-filters">
+      <div class="rp-field rp-field-wide">
+        <label>Session</label>
+        <nx-searchable-select
+          [(ngModel)]="sessionId" (ngModelChange)="onSessionChange()"
+          [options]="sessionOptions" [loading]="sessionsLoading"
+          placeholder="Pick a session" emptyText="No sessions for this store"
+        ></nx-searchable-select>
+      </div>
+      <div class="rp-presets">
+        <button class="btn btn-secondary btn-sm" type="button" [class.active]="shiftKind === 'X'" (click)="runShift('X')">X read</button>
+        <button class="btn btn-primary btn-sm" type="button" (click)="runShift('Z')">Z read</button>
+      </div>
+    </div>
+
+    @if (loading) {
+      <div class="rp-empty">Loading…</div>
+    } @else if (!shift) {
+      <div class="rp-empty">Pick a session to take a read.</div>
+    } @else {
+      <div class="rp-read">
+        <header class="rp-read-head">
+          <div>
+            <h3>{{ shiftKind }} read · {{ shift.sessionNumber }}</h3>
+            <p class="rp-read-sub">
+              {{ shift.cashierName ?? 'Unknown cashier' }} · {{ shift.terminalName ?? 'Terminal' }}
+              @if (shift.storeName) { <span> · {{ shift.storeName }}</span> }
+            </p>
+            <p class="rp-read-sub">
+              Opened {{ shift.openedAt | date:'medium' }}
+              @if (shift.closedAt) { <span> · closed {{ shift.closedAt | date:'medium' }}</span> }
+              · taken {{ shift.generatedAt | date:'medium' }}
+            </p>
+          </div>
+          @if (shift.isProvisional) {
+            <span class="rp-flag rp-flag-info">Provisional — session still open</span>
+          }
+        </header>
+
+        @if (shift.countersDisagree) {
+          <div class="rp-flag rp-flag-warn rp-flag-block">
+            The session's running counters disagree with its transactions. The figures below are
+            computed from the transactions themselves; the recorded counters are shown at the
+            bottom for comparison.
+          </div>
+        }
+
+        <div class="rp-read-cols">
+          <!-- Trading -->
+          <section class="rp-panel">
+            <h4>Trading</h4>
+            <dl class="rp-dl">
+              <dt>Gross sales</dt><dd>{{ shift.grossSales | number:'1.2-2' }}</dd>
+              <dt>Refunds</dt><dd>−{{ shift.refunds | number:'1.2-2' }}</dd>
+              <dt>Discounts</dt><dd>{{ shift.discounts | number:'1.2-2' }}</dd>
+              <dt>Tax</dt><dd>{{ shift.tax | number:'1.2-2' }}</dd>
+              <dt class="rp-dt-total">Net sales</dt><dd class="rp-dd-total">{{ shift.netSales | number:'1.2-2' }}</dd>
+            </dl>
+            <dl class="rp-dl rp-dl-sub">
+              <dt>Sales</dt><dd>{{ shift.saleCount }}</dd>
+              <dt>Refunds</dt><dd>{{ shift.refundCount }}</dd>
+              <dt>Voids</dt><dd>{{ shift.voidCount }}</dd>
+              <dt>Items sold</dt><dd>{{ shift.itemsSold | number:'1.0-3' }}</dd>
+              <dt>Average basket</dt><dd>{{ shift.averageBasket | number:'1.2-2' }}</dd>
+            </dl>
+          </section>
+
+          <!-- Drawer -->
+          <section class="rp-panel">
+            <h4>Cash drawer</h4>
+            <dl class="rp-dl">
+              <dt>Opening float</dt><dd>{{ shift.openingFloat | number:'1.2-2' }}</dd>
+              <dt>Cash taken</dt><dd>{{ shift.cashSales | number:'1.2-2' }}</dd>
+              <dt>Cash refunded</dt><dd>−{{ shift.cashRefunds | number:'1.2-2' }}</dd>
+              <dt>Cash in</dt><dd>{{ shift.cashIn | number:'1.2-2' }}</dd>
+              <dt>Cash out / drops</dt><dd>−{{ shift.cashOut | number:'1.2-2' }}</dd>
+              <dt class="rp-dt-total">Expected in drawer</dt><dd class="rp-dd-total">{{ shift.expectedCash | number:'1.2-2' }}</dd>
+            </dl>
+
+            @if (shift.countedCash == null) {
+              <p class="hint">Counted at close. Nothing to compare while the session is open.</p>
+            } @else {
+              <dl class="rp-dl">
+                <dt>Counted</dt><dd>{{ shift.countedCash | number:'1.2-2' }}</dd>
+                <dt class="rp-dt-total">Variance</dt>
+                <dd class="rp-dd-total" [class]="varianceClass(shift.cashVariance)">
+                  {{ shift.cashVariance | number:'1.2-2' }}
+                </dd>
+              </dl>
+            }
+
+            @if (shift.cashMovements.length) {
+              <h5 class="rp-sub">Movements</h5>
+              <table class="rp-mini">
+                <tbody>
+                  @for (m of shift.cashMovements; track $index) {
+                    <tr>
+                      <td>{{ m.movementName }}</td>
+                      <td>{{ m.reason ?? '—' }}</td>
+                      <td class="num">{{ m.amount | number:'1.2-2' }}</td>
+                      <td class="rp-mini-when">{{ m.movementDate | date:'shortTime' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </section>
+
+          <!-- Tenders -->
+          <section class="rp-panel">
+            <h4>Tenders</h4>
+            @if (!shift.tenders.length) {
+              <p class="hint">Nothing taken on this shift.</p>
+            } @else {
+              <table class="rp-mini">
+                <tbody>
+                  @for (t of shift.tenders; track trackByTender($index, t)) {
+                    <tr>
+                      <td>{{ t.tenderName }}</td>
+                      <td class="num">{{ t.count }}</td>
+                      <td class="num">{{ t.amount | number:'1.2-2' }}</td>
+                      <td class="num rp-mini-when">{{ t.sharePercent | number:'1.0-1' }}%</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+
+            @if (shift.countersDisagree) {
+              <h5 class="rp-sub">Session counters</h5>
+              <dl class="rp-dl rp-dl-sub">
+                <dt>Recorded sales</dt><dd>{{ shift.recordedSalesTotal | number:'1.2-2' }}</dd>
+                <dt>Recorded cash</dt><dd>{{ shift.recordedCashCollected | number:'1.2-2' }}</dd>
+                <dt>Recorded txns</dt><dd>{{ shift.recordedTransactionCount }}</dd>
+              </dl>
+            }
+          </section>
+        </div>
+      </div>
+    }
+  }
+</div>

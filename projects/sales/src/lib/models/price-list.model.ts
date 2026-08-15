@@ -1,11 +1,3 @@
-export interface PriceListItemDto {
-  id: string;
-  inventoryItemId: string;
-  itemName: string | null;
-  price: number;
-  minQuantity: number;
-}
-
 export interface PriceListDto {
   id: string;
   code: string | null;
@@ -14,15 +6,10 @@ export interface PriceListDto {
   isActive: boolean;
   validFrom: string | null;
   validTo: string | null;
-  items: PriceListItemDto[];
+  /** Populated only by endpoints that expand lines; the list endpoint sends a count. */
+  items?: PriceListItemDto[];
   createdAt: string;
   modifiedAt: string | null;
-}
-
-export interface CreatePriceListItemDto {
-  inventoryItemId: string;
-  price: number;
-  minQuantity?: number;
 }
 
 export interface CreatePriceListDto {
@@ -40,4 +27,44 @@ export interface UpdatePriceListDto {
   isActive?: boolean | null;
   validFrom?: string | null;
   validTo?: string | null;
+}
+
+/**
+ * One priced line. Quantity breaks are separate rows for the same product with
+ * different bands; the API rejects bands that overlap, since the pricing engine
+ * would otherwise have to choose between them arbitrarily.
+ */
+export interface PriceListItemDto {
+  id: string;
+  priceListId: string;
+  productId: string;
+  productCode?: string | null;
+  productName?: string | null;
+  unitOfMeasure?: string | null;
+  unitPrice: number;
+  minQuantity?: number | null;
+  maxQuantity?: number | null;
+  validFrom: string;
+  validTo?: string | null;
+  isActive: boolean;
+}
+
+export interface CreatePriceListItemDto {
+  productId: string;
+  unitOfMeasure?: string | null;
+  unitPrice: number;
+  minQuantity?: number | null;
+  maxQuantity?: number | null;
+  validFrom?: string | null;
+  validTo?: string | null;
+}
+
+export interface UpdatePriceListItemDto {
+  unitPrice?: number | null;
+  unitOfMeasure?: string | null;
+  minQuantity?: number | null;
+  maxQuantity?: number | null;
+  validFrom?: string | null;
+  validTo?: string | null;
+  isActive?: boolean | null;
 }

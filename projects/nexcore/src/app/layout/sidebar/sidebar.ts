@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { Observable, of, Subscription } from 'rxjs';
 
-import { SidebarChild, SidebarItem, SIDEBAR_MENU } from './sidebar-menu';
+import { SidebarChild, SidebarItem, SIDEBAR_MENU, expandToRoute } from './sidebar-menu';
 
 @Component({
   selector: 'app-sidebar',
@@ -115,9 +115,7 @@ export class Sidebar implements OnInit, OnChanges, OnDestroy {
     this.routeModuleLabel = owner?.label ?? '';
     if (owner?.children?.length) {
       this.activeModuleLabel = owner.label;
-      for (const c of owner.children) {
-        if (c.children?.length) c.expanded = this.containsRoute(c.children, url);
-      }
+      expandToRoute(owner.children, url);
     } else if (!this.activeModuleLabel) {
       this.activeModuleLabel = this.railModules[0]?.label ?? '';
     }

@@ -37,8 +37,8 @@
 }
 .btn-primary { background: var(--accent, #2b7fff); color: #fff; }
 .btn-primary:hover { background: var(--accent-hover, #1f6ae6); }
-.btn-secondary { background: #e2e8f0; color: var(--text-primary, #334155); }
-.btn-secondary:hover { background: #cbd5e1; }
+.btn-secondary { background: var(--bg-muted, #e2e8f0); color: var(--text-primary, #334155); }
+.btn-secondary:hover { background: var(--bg-inset, #cbd5e1); }
 .btn-icon {
   background: none;
   border: 1px solid transparent;
@@ -49,8 +49,8 @@
   line-height: 1;
   transition: background 0.15s, border-color 0.15s;
 }
-.btn-icon:hover { background: var(--bg-muted, #f1f5f9); border-color: #e2e8f0; }
-.btn-icon.btn-icon-danger:hover { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+.btn-icon:hover { background: var(--bg-muted, #f1f5f9); border-color: var(--border-default, #e2e8f0); }
+.btn-icon.btn-icon-danger:hover { background: var(--danger-soft, #fef2f2); border-color: var(--danger-border, #fecaca); color: var(--danger-text, #b91c1c); }
 
 /* Alerts */
 .alert {
@@ -59,8 +59,8 @@
   margin-bottom: 16px;
   font-size: 13px;
 }
-.alert-error { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
-.alert-success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+.alert-error { background: var(--danger-soft, #fef2f2); color: var(--danger-text, #b91c1c); border: 1px solid var(--danger-border, #fecaca); }
+.alert-success { background: var(--success-soft, #f0fdf4); color: var(--success-text, #15803d); border: 1px solid var(--success-border, #bbf7d0); }
 
 /* Filters bar */
 .filters-bar {
@@ -209,9 +209,9 @@ td.actions-cell {
   background: var(--bg-muted, #f1f5f9);
   color: var(--text-secondary, #475569);
 }
-.badge-active  { background: #dcfce7; color: #15803d; }
-.badge-inactive { background: #fef2f2; color: #b91c1c; }
-.badge-yes     { background: #dbeafe; color: #1d4ed8; }
+.badge-active  { background: var(--success-soft, #dcfce7); color: var(--success-text, #15803d); }
+.badge-inactive { background: var(--danger-soft, #fef2f2); color: var(--danger-text, #b91c1c); }
+.badge-yes     { background: var(--info-soft, #dbeafe); color: var(--info-text, #1d4ed8); }
 
 /* Loading */
 .loading-spinner {

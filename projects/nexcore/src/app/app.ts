@@ -1,5 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { ThemeService } from '@nexcore/core';
 
 @Component({
   standalone: true,
@@ -9,12 +10,11 @@ import { RouterOutlet } from '@angular/router';
   styleUrl: './app.css',
 })
 export class App implements OnInit {
+  private readonly themeService = inject(ThemeService);
+
   /** Apply the saved theme at startup so EVERY page (incl. login/register, before the
    *  header loads) gets the correct theme class on <body>. */
   ngOnInit(): void {
-    const saved = localStorage.getItem('ui_theme');
-    document.body.classList.remove('theme-dark', 'theme-midnight');
-    if (saved === 'Dark') document.body.classList.add('theme-dark');
-    else if (saved === 'Midnight') document.body.classList.add('theme-midnight');
+    this.themeService.init();
   }
 }

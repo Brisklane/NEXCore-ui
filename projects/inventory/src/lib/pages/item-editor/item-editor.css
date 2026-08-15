@@ -69,14 +69,14 @@
 .seg-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 
 /* ── Reused collection / control styles (kept local to the editor) ─────────── */
-.input-required { border-color: #fb923c !important; box-shadow: 0 0 0 2px rgba(251,146,60,0.15); }
+.input-required { border-color: var(--warning, #fb923c) !important; box-shadow: 0 0 0 2px rgba(251,146,60,0.15); }
 
 .color-dropdown-wrapper { position: relative; }
 .color-dropdown-trigger { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 12px; border: 1px solid var(--border-default, #e2e8f0); border-radius: var(--radius-sm, 8px); background: var(--bg-surface, #fff); font-size: 14px; color: var(--text-heading, #1e293b); cursor: pointer; text-align: left; }
 .color-dropdown-trigger:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .color-chevron { margin-left: auto; font-size: 10px; color: var(--text-muted, #94a3b8); }
 .color-swatch { display: inline-block; width: 16px; height: 16px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.12); flex-shrink: 0; }
-.color-swatch-empty { background: repeating-linear-gradient(45deg, #e2e8f0, #e2e8f0 3px, #fff 3px, #fff 6px); }
+.color-swatch-empty { background: repeating-linear-gradient(45deg, var(--bg-muted, #e2e8f0), var(--bg-muted, #e2e8f0) 3px, var(--bg-surface, #fff) 3px, var(--bg-surface, #fff) 6px); }
 .color-placeholder { color: var(--text-muted, #94a3b8); }
 .color-dropdown-panel { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--bg-surface, #fff); border: 1px solid var(--border-default, #e2e8f0); border-radius: 10px; box-shadow: var(--shadow-lg); max-height: 220px; overflow-y: auto; z-index: 100; }
 .color-option { display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; font-size: 14px; color: var(--text-heading, #1e293b); }

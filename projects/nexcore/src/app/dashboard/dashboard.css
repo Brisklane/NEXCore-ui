@@ -419,7 +419,7 @@
   border-radius: 13px;
   display: grid; place-items: center;
   color: #fff;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--c) 80%, #fff), var(--c));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--c) 80%, var(--bg-surface, #fff)), var(--c));
   margin-bottom: 6px;
 }
 .ind-ico svg { width: 23px; height: 23px; }

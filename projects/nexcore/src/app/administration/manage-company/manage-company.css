@@ -85,7 +85,7 @@
 }
 
 .field label span {
-  color: #ef4444;
+  color: var(--danger, #ef4444);
 }
 
 .field input,
@@ -111,7 +111,7 @@
 .field-error {
   margin-top: 3px;
   font-size: 11px;
-  color: #ef4444;
+  color: var(--danger, #ef4444);
   min-height: 10px;
   line-height: 13px;
 }
@@ -149,7 +149,7 @@
 .remove-btn {
   background: none;
   border: none;
-  color: #ef4444;
+  color: var(--danger, #ef4444);
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
@@ -319,7 +319,7 @@
 
 .remove-btn-action {
   background: rgba(239, 68, 68, 0.1);
-  color: #dc2626;
+  color: var(--danger, #dc2626);
   border: 0;
   padding: 6px 11px;
   border-radius: var(--radius-sm, 6px);

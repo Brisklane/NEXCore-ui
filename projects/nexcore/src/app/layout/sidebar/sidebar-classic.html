@@ -1,4 +1,4 @@
-<aside class="sbc">
+<aside class="sbc" [style.width.px]="width" [style.min-width.px]="width" [class.resizing]="resizing">
 
   <!-- Brand -->
   <a class="sbc-brand" routerLink="/dashboard" title="NexCore">
@@ -29,7 +29,7 @@
     <div class="sbc-mod">
       <button class="sbc-mod-head" [class.active]="isModuleActive(item)" [class.open]="item.expanded" (click)="onModuleClick(item)">
         <span class="sbc-mod-ico">
-          <img *ngIf="item.moduleImage" [src]="item.moduleImage" [alt]="item.label" class="sbc-mod-img" />
+          <span *ngIf="item.moduleImage" class="sbc-mod-img" role="img" [attr.aria-label]="item.label" [style.--mod-img]="'url(' + item.moduleImage + ')'"></span>
           <span *ngIf="!item.moduleImage" class="material-symbols-outlined">{{ item.icon || 'category' }}</span>
         </span>
         <span class="sbc-mod-text">
@@ -105,4 +105,15 @@
     </ng-container>
 
   </div>
+
+  <!-- Drag to resize; double-click to reset. -->
+  <div
+    class="sbc-resize"
+    role="separator"
+    aria-orientation="vertical"
+    aria-label="Resize sidebar"
+    title="Drag to resize · double-click to reset"
+    (pointerdown)="beginResize($event)"
+    (dblclick)="resetWidth()"
+  ></div>
 </aside>

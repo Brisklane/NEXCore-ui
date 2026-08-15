@@ -61,7 +61,11 @@
                 }
               ]
             },
-            "development": {}
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            }
           },
           "defaultConfiguration": "development"
         },

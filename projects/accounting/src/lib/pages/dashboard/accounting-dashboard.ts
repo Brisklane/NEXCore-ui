@@ -24,11 +24,11 @@ export class AccountingDashboardPage {
   flowX = ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
 
   expenses = [
-    { label: 'Payroll',    count: '$314K', color: '#2b7fff', dash: '105.5 251.3', off: '0' },
-    { label: 'COGS',       count: '$195K', color: '#22c7e6', dash: '65.3 251.3',  off: '-105.5' },
-    { label: 'Operations', count: '$135K', color: '#7c3aed', dash: '45.2 251.3',  off: '-170.8' },
-    { label: 'Tax',        count: '$67K',  color: '#f59e0b', dash: '22.6 251.3',  off: '-216.0' },
-    { label: 'Other',      count: '$37K',  color: '#94a3b8', dash: '12.6 251.3',  off: '-238.6' },
+    { label: 'Payroll',    count: '$314K', color: 'var(--kpi-1, #2b7fff)', dash: '105.5 251.3', off: '0' },
+    { label: 'COGS',       count: '$195K', color: 'var(--kpi-2, #22c7e6)', dash: '65.3 251.3',  off: '-105.5' },
+    { label: 'Operations', count: '$135K', color: 'var(--kpi-3, #7c3aed)', dash: '45.2 251.3',  off: '-170.8' },
+    { label: 'Tax',        count: '$67K',  color: 'var(--kpi-4, #f59e0b)', dash: '22.6 251.3',  off: '-216.0' },
+    { label: 'Other',      count: '$37K',  color: 'var(--text-muted, #94a3b8)', dash: '12.6 251.3',  off: '-238.6' },
   ];
 
   cash = [

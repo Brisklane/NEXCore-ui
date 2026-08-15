@@ -76,7 +76,15 @@
 .rail-btn:hover .rail-ico { background: var(--rail-hover-bg, rgba(255,255,255,0.08)); color: var(--rail-fg-hover, #fff); }
 .rail-btn:active .rail-ico { transform: scale(0.94); }
 .rail-ico .material-symbols-outlined { font-size: 23px; }
-.rail-img { width: 24px !important; height: 24px !important; object-fit: contain; display: block; }
+/* Module glyphs ship as SVGs painted with a fixed brand gradient, so they are
+   drawn as a mask instead of an <img> — the shape comes from the asset, the
+   colour from the active theme. */
+.rail-img {
+  width: 24px !important; height: 24px !important; display: block;
+  background: var(--brand-grad, linear-gradient(135deg, #22c7e6, #2b7fff));
+  -webkit-mask: var(--mod-img) center / contain no-repeat;
+  mask: var(--mod-img) center / contain no-repeat;
+}
 /* Belt-and-braces: bound ANY image inside the rail so it can never overflow the strip. */
 .rail img { max-width: 28px; max-height: 28px; }
 
@@ -97,7 +105,8 @@
   box-shadow: 0 6px 16px rgba(43, 127, 255, 0.45);
 }
 .rail-btn.active .rail-label { color: var(--rail-fg-active, #fff); font-weight: 700; }
-.rail-btn.active .rail-img { filter: brightness(0) invert(1); }
+/* On the active chip the glyph sits on the gradient, so it flips to solid white. */
+.rail-btn.active .rail-img { background: var(--rail-fg-active, #fff); }
 /* left indicator notch, aligned to the icon */
 .rail-btn.active .rail-ico::before {
   content: "";
@@ -288,7 +297,11 @@
 }
 
 /* ── Dark / midnight theme: panel adopts themed surface (rail stays dark) ──── */
-body.theme-dark .panel,
-body.theme-midnight .panel { background: var(--sidebar-bg); border-right-color: var(--sidebar-border); }
+/* On the dark themes the group hover needs the muted step, not the subtle one —
+   --bg-subtle sits *below* the surface there, so it would read as a dent. */
+body.theme-graphite .p-group-head:hover,
+body.theme-slate .p-group-head:hover,
+body.theme-carbon .p-group-head:hover,
+body.theme-obsidian .p-group-head:hover,
 body.theme-dark .p-group-head:hover,
 body.theme-midnight .p-group-head:hover { background: var(--bg-muted); }

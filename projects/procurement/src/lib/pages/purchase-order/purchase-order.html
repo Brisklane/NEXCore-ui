@@ -150,11 +150,11 @@
     <div class="modal-box">
       <h4>Cancel Purchase Order</h4>
       <div class="form-group">
-        <label>Cancellation Reason <span style="color:#ef4444">*</span></label>
+        <label>Cancellation Reason <span style="color:var(--danger,#ef4444)">*</span></label>
         <textarea [(ngModel)]="cancellationReason" rows="3" placeholder="Reason for cancellation"
                   [style.border-color]="cancelSubmitted && !cancellationReason.trim() ? '#ef4444' : null"></textarea>
         @if (cancelSubmitted && !cancellationReason.trim()) {
-          <span style="color:#ef4444;font-size:12px;margin-top:3px;display:block">A cancellation reason is required.</span>
+          <span style="color:var(--danger,#ef4444);font-size:12px;margin-top:3px;display:block">A cancellation reason is required.</span>
         }
       </div>
       <div class="modal-actions">

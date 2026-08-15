@@ -27,10 +27,17 @@ export class InventoryDocumentService {
     return params;
   }
 
-  getAll(pagination?: PaginationParams, documentType?: string, status?: string): Observable<PaginatedResponse<InventoryDocumentDto>> {
+  getAll(
+    pagination?: PaginationParams,
+    documentType?: string,
+    status?: string,
+    warehouseId?: string,
+  ): Observable<PaginatedResponse<InventoryDocumentDto>> {
     let params = this.buildParams(pagination);
     if (documentType) params = params.set('documentType', documentType);
     if (status) params = params.set('status', status);
+    // Matches either side of the movement, so a store sees what came in and what left.
+    if (warehouseId) params = params.set('warehouseId', warehouseId);
     return this.http.get<PaginatedResponse<InventoryDocumentDto>>(INVENTORY_API.inventoryDocument.getAll, {
       headers: this.auth.getAuthHeaders(), params
     });

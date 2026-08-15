@@ -99,10 +99,10 @@
             <tr [class.row-new]="t.id === highlighter.id">
               <td>
                 <div style="font-weight:500;">{{ t.terminalName ?? '—' }}</div>
-                <span style="font-family:monospace;font-size:11px;background:#f1f5f9;padding:2px 6px;border-radius:4px;color:#64748b;">{{ t.terminalCode }}</span>
+                <span style="font-family:monospace;font-size:11px;background:var(--bg-muted,#f1f5f9);padding:2px 6px;border-radius:4px;color:var(--text-secondary,#64748b);">{{ t.terminalCode }}</span>
               </td>
-              <td style="font-size:12px;color:#64748b;">{{ storeName(t.posStoreId) }}</td>
-              <td style="font-size:12px;color:#64748b;">
+              <td style="font-size:12px;color:var(--text-secondary,#64748b);">{{ storeName(t.posStoreId) }}</td>
+              <td style="font-size:12px;color:var(--text-secondary,#64748b);">
                 <div>{{ t.deviceIdentifier ?? '—' }}</div>
                 @if (t.ipAddress) { <div>{{ t.ipAddress }}</div> }
               </td>
@@ -120,14 +120,14 @@
                 <button class="btn btn-secondary btn-sm" (click)="openEditForm(t)" title="Edit">✎</button>
                 @if (t.isOnline) {
                   <button class="btn btn-secondary btn-sm" (click)="goOffline(t.id)" title="Go Offline"
-                    style="background:#fee2e2;color:#b91c1c;">Offline</button>
+                    style="background:var(--danger-soft,#fee2e2);color:var(--danger-text,#b91c1c);">Offline</button>
                 }
                 <button class="btn btn-danger btn-sm" (click)="deleteTerminal(t.id)" title="Delete">✕</button>
               </td>
             </tr>
           }
           @empty {
-            <tr><td colspan="6" style="text-align:center;padding:32px;color:#94a3b8;">No terminals found.</td></tr>
+            <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted,#94a3b8);">No terminals found.</td></tr>
           }
         </tbody>
       </table>

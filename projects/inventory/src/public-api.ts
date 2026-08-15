@@ -37,6 +37,8 @@ export * from './lib/services/inventory-document.service';
 export * from './lib/services/inventory-lookup.service';
 export * from './lib/services/inventory-report.service';
 export * from './lib/services/item.service';
+export * from './lib/services/catalog.service';
+export * from './lib/models/catalog-resolution.model';
 export * from './lib/services/barcode-label.service';
 export * from './lib/services/item-category.service';
 export * from './lib/services/size.service';

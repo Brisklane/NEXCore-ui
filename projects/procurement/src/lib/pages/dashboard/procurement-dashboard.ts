@@ -24,11 +24,11 @@ export class ProcurementDashboardPage {
   spendX = ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
 
   categories = [
-    { label: 'Raw Materials', count: '$3.8M', color: '#2b7fff', dash: '113.1 251.3', off: '0' },
-    { label: 'Packaging',     count: '$1.7M', color: '#22c7e6', dash: '50.3 251.3',  off: '-113.1' },
-    { label: 'Services',      count: '$1.3M', color: '#7c3aed', dash: '37.7 251.3',  off: '-163.4' },
-    { label: 'Logistics',     count: '$1.0M', color: '#16a34a', dash: '30.2 251.3',  off: '-201.1' },
-    { label: 'Other',         count: '$0.6M', color: '#f59e0b', dash: '20.1 251.3',  off: '-231.3' },
+    { label: 'Raw Materials', count: '$3.8M', color: 'var(--kpi-1, #2b7fff)', dash: '113.1 251.3', off: '0' },
+    { label: 'Packaging',     count: '$1.7M', color: 'var(--kpi-2, #22c7e6)', dash: '50.3 251.3',  off: '-113.1' },
+    { label: 'Services',      count: '$1.3M', color: 'var(--kpi-3, #7c3aed)', dash: '37.7 251.3',  off: '-163.4' },
+    { label: 'Logistics',     count: '$1.0M', color: 'var(--kpi-5, #16a34a)', dash: '30.2 251.3',  off: '-201.1' },
+    { label: 'Other',         count: '$0.6M', color: 'var(--kpi-4, #f59e0b)', dash: '20.1 251.3',  off: '-231.3' },
   ];
 
   vendors = [

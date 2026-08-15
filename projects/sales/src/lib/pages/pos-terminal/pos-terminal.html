@@ -154,7 +154,7 @@
         @if (terminalsLoading) {
           <div class="pin-terminal-loading">Loading terminals…</div>
         } @else if (terminals.length === 0) {
-          <div class="pin-terminal-loading" style="color:#ef4444;">No active terminals for this store.</div>
+          <div class="pin-terminal-loading" style="color:var(--danger,#ef4444);">No active terminals for this store.</div>
         } @else {
           <select class="pin-terminal-select" [(ngModel)]="selectedTerminalId">
             <option value="">— Select terminal —</option>
@@ -289,6 +289,16 @@
     <button class="ptx-cmd-menu" title="Menu" (click)="showSideMenu = true">
       <span class="material-symbols-outlined">menu</span>
     </button>
+    <button
+      class="ptx-cmd-exit"
+      type="button"
+      title="Back to the POS dashboard"
+      (click)="goToDashboard()"
+    >
+      <span class="material-symbols-outlined">arrow_back</span>
+      <span class="ptx-cmd-exit-label">Dashboard</span>
+    </button>
+
     <div class="ptx-cmd-brand">
       <span class="ptx-brand-mark"><span class="material-symbols-outlined">point_of_sale</span></span>
       <span class="ptx-brand-name">NexCore <b>POS</b></span>
@@ -310,7 +320,7 @@
       <span class="material-symbols-outlined ptx-search-ico">search</span>
       <input id="posSearchInput" type="text" [(ngModel)]="searchQuery"
              [placeholder]="menuLoading ? 'Loading products…' : 'Search or scan a product   (F3)'"
-             (ngModelChange)="showSearch = !!searchQuery; searchHighlightIndex = -1"
+             (ngModelChange)="showSearch = !!searchQuery; onSearchInput()"
              (focus)="showSearch = !!searchQuery"
              (keydown.enter)="addFirstSearchResult()"
              (keydown.arrowdown)="searchArrowDown($event)"
@@ -318,17 +328,23 @@
              (blur)="showSearch = false" />
       @if (showSearch) {
         <div class="ptx-search-drop">
-          @if (searchResults.length === 0) {
+          @if (searchBusy) {
+            <div class="ptx-search-empty">Searching…</div>
+          } @else if (searchResults.length === 0) {
             <div class="ptx-search-empty">No products found</div>
           } @else {
-            @for (r of searchResults; track r.id; let i = $index) {
+            @for (r of searchResults; track r.itemId + (r.variantId ?? '') + r.unitId; let i = $index) {
               <div class="ptx-search-row" [class.highlighted]="searchHighlightIndex === i"
-                   (mousedown)="$event.preventDefault(); addItem(r); searchQuery=''; searchHighlightIndex=-1; showSearch=false">
+                   (mousedown)="$event.preventDefault(); addResolved(r); searchQuery=''; searchResults=[]; searchHighlightIndex=-1; showSearch=false">
                 <div class="ptx-sr-info">
-                  <span class="ptx-sr-name">{{ r.name }}</span>
-                  @if (r.code) { <span class="ptx-sr-code">{{ r.code }}</span> }
+                  <span class="ptx-sr-name">
+                    {{ r.itemName }}@if (r.variantName) { <span> &middot; {{ r.variantName }}</span> }
+                  </span>
+                  <span class="ptx-sr-code">
+                    {{ r.variantCode ?? r.itemCode }}@if (r.quantityInBaseUnits > 1) { <span> &middot; {{ r.unitName }} x{{ r.quantityInBaseUnits }}</span> }
+                  </span>
                 </div>
-                <span class="ptx-sr-price">{{ (r.prices?.[0]?.salePrice ?? 0) | number:'1.2-2' }}</span>
+                <span class="ptx-sr-price">{{ (r.listPrice ?? 0) | number:'1.2-2' }}</span>
               </div>
             }
           }
@@ -576,12 +592,12 @@
           <div style="font-size:17px;font-weight:600;margin-bottom:10px;">{{ contactInfoOrder.contactName || 'Walk-in' }}</div>
           @if (contactPhone(contactInfoOrder)) {
             <div style="margin-bottom:8px;">
-              📞 <a [href]="'tel:' + contactPhone(contactInfoOrder)" style="color:#27a9e3;font-size:15px;">{{ contactPhone(contactInfoOrder) }}</a>
+              📞 <a [href]="'tel:' + contactPhone(contactInfoOrder)" style="color:var(--accent,#27a9e3);font-size:15px;">{{ contactPhone(contactInfoOrder) }}</a>
             </div>
           }
           @if (contactEmail(contactInfoOrder)) {
             <div style="margin-bottom:8px;">
-              ✉ <a [href]="'mailto:' + contactEmail(contactInfoOrder)" style="color:#27a9e3;font-size:14px;">{{ contactEmail(contactInfoOrder) }}</a>
+              ✉ <a [href]="'mailto:' + contactEmail(contactInfoOrder)" style="color:var(--accent,#27a9e3);font-size:14px;">{{ contactEmail(contactInfoOrder) }}</a>
             </div>
           }
           @if (contactInfoOrder.notes) {
@@ -598,102 +614,120 @@
     </div>
   }
 
-  <!-- ── SIDE MENU ──────────────────────────────────── -->
+  <!-- ── COMMAND SHEET ─────────────────────────────────
+       Centred sheet, not a drawer: session identity on top, actions as touch
+       tiles, destructive action isolated in its own footer zone. Uses .pcs-*
+       names so nothing collides with the split-payment modal's .sp-* classes. -->
   @if (showSideMenu) {
-    <div class="side-overlay" (click)="showSideMenu = false"></div>
-    <div class="side-panel">
+    <div class="pcs-overlay" (click)="showSideMenu = false"></div>
+    <div class="pcs-sheet" role="dialog" aria-label="Till menu">
 
-      <div class="sp-header">
-        <div class="sp-title">{{ terminalName(selectedTerminalId) }} - {{ loggedCashier?.displayName ?? 'Admin' }}</div>
-        <div class="sp-close" (click)="showSideMenu = false">
-          <i class="fa-solid fa-arrow-right"></i>
-        </div>
-      </div>
-
-      <div class="sp-body">
-
-        <div class="sp-group">
-          <div class="sp-item" (click)="showSideMenu = false; goToDashboard()">
-            <i class="fa-solid fa-screwdriver-wrench"></i>
-            <span>Management</span>
-          </div>
-        </div>
-
-        <div class="sp-group">
-          <div class="sp-item" (click)="openSalesHistory()">
-            <i class="fa-solid fa-check-double"></i>
-            <span>View sales history</span>
-          </div>
-          <div class="sp-item" (click)="openOpenSales()">
-            <i class="fa-solid fa-layer-group"></i>
-            <span>View open sales</span>
-            @if (openSales.length) { <span class="sp-fkey">{{ openSales.length }}</span> }
-          </div>
-          <div class="sp-item" (click)="openCashDrawerFromMenu()">
-            <i class="fa-solid fa-box-open"></i>
-            <span>Cash In / Out</span>
-          </div>
-          <div class="sp-item" (click)="openSessionReport()">
-            <i class="fa-solid fa-receipt"></i>
-            <span>Session sales (X-Report)</span>
-          </div>
-          <div class="sp-item">
-            <i class="fa-solid fa-file-pen"></i>
-            <span>Credit payments</span>
-          </div>
-          <div class="sp-item" (click)="endOfDay()">
-            <i class="fa-solid fa-person-running"></i>
-            <span>End of day</span>
-          </div>
-
-          <div class="sp-section-title">User</div>
-
-          <div class="sp-item">
-            <i class="fa-regular fa-user"></i>
-            <span>{{ loggedCashier?.displayName ?? loggedUser?.fullName ?? 'User' }}</span>
-          </div>
-          <div class="sp-item" (click)="lockPOS()">
-            <i class="fa-solid fa-lock"></i>
-            <span>Lock / Switch Cashier</span>
-            <span class="sp-fkey">F1</span>
-          </div>
-          <div class="sp-item" (click)="endSession()">
-            <i class="fa-solid fa-right-from-bracket"></i>
-            <span>End Session &amp; Sign out</span>
-            <span class="sp-fkey">F11</span>
+      <!-- Identity / session strip -->
+      <div class="pcs-id">
+        <div class="pcs-avatar">{{ cashierInitials }}</div>
+        <div class="pcs-id-text">
+          <div class="pcs-id-name">{{ loggedCashier?.displayName ?? loggedUser?.fullName ?? 'Cashier' }}</div>
+          <div class="pcs-id-meta">
+            <span>{{ selectedStore?.tradingName }}</span>
+            <span class="pcs-dot">&middot;</span>
+            <span>{{ terminalName(selectedTerminalId) }}</span>
+            @if (activeSession?.openedAt) {
+              <span class="pcs-dot">&middot;</span>
+              <span>Since {{ activeSession?.openedAt | date:'shortTime' }}</span>
+            }
           </div>
         </div>
 
-        <div class="sp-group">
-          <div class="sp-item">
-            <i class="fa-solid fa-bullhorn"></i>
-            <span>Feedback</span>
-          </div>
-          @if (pwaInstallPrompt) {
-            <div class="sp-item sp-item-install" (click)="installPwa()">
-              <i class="fa-solid fa-circle-down"></i>
-              <span>Install app</span>
-              <span class="sp-install-badge">PWA</span>
-            </div>
+        <div class="pcs-id-chips">
+          @if (isOffline) {
+            <span class="pcs-chip pcs-chip-warn"><i class="fa-solid fa-cloud-arrow-up"></i> Offline</span>
+          } @else {
+            <span class="pcs-chip pcs-chip-ok"><i class="fa-solid fa-circle-check"></i> Online</span>
           }
         </div>
 
+        <button class="pcs-close" type="button" (click)="showSideMenu = false" aria-label="Close menu">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
       </div>
 
-      <div class="sp-footer">
-        <div class="sp-footer-btn" title="Offline sync status" (click)="showSideMenu = false; openSyncPanel()">
-          <i class="fa-solid fa-cloud-arrow-up"></i>
-          @if (unsyncedCount > 0) { <span class="sp-sync-badge">{{ unsyncedCount }}</span> }
+      <!-- Actions -->
+      <div class="pcs-body">
+        <div class="pcs-grid">
+          <button class="pcs-tile" type="button" (click)="openSalesHistory()">
+            <span class="pcs-tile-ico"><i class="fa-solid fa-check-double"></i></span>
+            <span class="pcs-tile-label">Sales history</span>
+          </button>
+
+          <button class="pcs-tile" type="button" (click)="openOpenSales()">
+            <span class="pcs-tile-ico"><i class="fa-solid fa-layer-group"></i></span>
+            <span class="pcs-tile-label">Open sales</span>
+            @if (openSales.length) { <span class="pcs-tile-count">{{ openSales.length }}</span> }
+          </button>
+
+          <button class="pcs-tile" type="button" (click)="openCashDrawerFromMenu()">
+            <span class="pcs-tile-ico"><i class="fa-solid fa-box-open"></i></span>
+            <span class="pcs-tile-label">Cash in / out</span>
+          </button>
+
+          <button class="pcs-tile" type="button" (click)="openSessionReport()">
+            <span class="pcs-tile-ico"><i class="fa-solid fa-receipt"></i></span>
+            <span class="pcs-tile-label">X-Report</span>
+          </button>
+
+          <button class="pcs-tile" type="button">
+            <span class="pcs-tile-ico"><i class="fa-solid fa-file-pen"></i></span>
+            <span class="pcs-tile-label">Credit payments</span>
+          </button>
+
+          <button class="pcs-tile" type="button" (click)="endOfDay()">
+            <span class="pcs-tile-ico"><i class="fa-solid fa-person-running"></i></span>
+            <span class="pcs-tile-label">End of day</span>
+          </button>
+
+          <button class="pcs-tile" type="button" (click)="showSideMenu = false; goToBackOffice()">
+            <span class="pcs-tile-ico"><i class="fa-solid fa-screwdriver-wrench"></i></span>
+            <span class="pcs-tile-label">Back office</span>
+          </button>
+
+          <button class="pcs-tile" type="button" (click)="lockPOS()">
+            <span class="pcs-tile-ico"><i class="fa-solid fa-lock"></i></span>
+            <span class="pcs-tile-label">Lock / switch</span>
+            <span class="pcs-tile-key">F1</span>
+          </button>
         </div>
-        <div class="sp-footer-btn" title="POS settings (online / offline mode, receipt)" (click)="openSettings()">
-          <i class="fa-solid fa-gear"></i>
+      </div>
+
+      <!-- Utilities left, the one destructive action right -->
+      <div class="pcs-foot">
+        <div class="pcs-utils">
+          <button class="pcs-util" type="button" title="Offline sync status"
+                  (click)="showSideMenu = false; openSyncPanel()">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+            @if (unsyncedCount > 0) { <span class="pcs-util-badge">{{ unsyncedCount }}</span> }
+          </button>
+          <button class="pcs-util" type="button" title="POS settings" (click)="openSettings()">
+            <i class="fa-solid fa-gear"></i>
+          </button>
+          <button class="pcs-util" type="button" title="Fullscreen" (click)="toggleFullscreen()">
+            <i class="fa-solid fa-expand"></i>
+          </button>
+          <button class="pcs-util" type="button" title="Feedback">
+            <i class="fa-solid fa-bullhorn"></i>
+          </button>
+          @if (pwaInstallPrompt) {
+            <button class="pcs-util pcs-util-install" type="button" title="Install app" (click)="installPwa()">
+              <i class="fa-solid fa-circle-down"></i>
+              <span class="pcs-util-badge pcs-util-badge-ok">PWA</span>
+            </button>
+          }
         </div>
-        <div class="sp-footer-btn" title="Fullscreen" (click)="toggleFullscreen()">
-          <i class="fa-solid fa-expand"></i>
-        </div>
-        <div class="sp-footer-btn" title="End session &amp; sign out (F11)" (click)="showSideMenu = false; endSession()">
-          <i class="fa-solid fa-power-off"></i>
-        </div>
+
+        <button class="pcs-endsession" type="button" (click)="showSideMenu = false; endSession()">
+          <i class="fa-solid fa-right-from-bracket"></i>
+          End session &amp; sign out
+          <span class="pcs-tile-key">F11</span>
+        </button>
       </div>
 
     </div>
@@ -1069,10 +1103,38 @@
 <div class="side-overlay" (click)="showSessionReport = false"></div>
 <div class="xr-modal">
   <div class="xr-head">
-    <h3>Session sales</h3>
+    <h3>X read</h3>
     @if (activeSession) { <span class="xr-session">Session {{ activeSession.sessionNumber }}</span> }
     <button class="xr-close" (click)="showSessionReport = false">✕</button>
   </div>
+
+  <!-- What should be in the drawer right now. Shown before the receipt list, because
+       this is the number a cashier opened the panel for. -->
+  @if (xRead) {
+    <div class="xr-drawer">
+      <div class="xr-drawer-row"><span>Opening float</span><strong>{{ xRead.openingFloat | number:'1.2-2' }}</strong></div>
+      <div class="xr-drawer-row"><span>Cash taken</span><strong>{{ xRead.cashSales | number:'1.2-2' }}</strong></div>
+      @if (xRead.cashRefunds) {
+        <div class="xr-drawer-row"><span>Cash refunded</span><strong>−{{ xRead.cashRefunds | number:'1.2-2' }}</strong></div>
+      }
+      @if (xRead.cashIn) {
+        <div class="xr-drawer-row"><span>Cash in</span><strong>{{ xRead.cashIn | number:'1.2-2' }}</strong></div>
+      }
+      @if (xRead.cashOut) {
+        <div class="xr-drawer-row"><span>Cash out / drops</span><strong>−{{ xRead.cashOut | number:'1.2-2' }}</strong></div>
+      }
+      <div class="xr-drawer-row xr-drawer-total"><span>Expected in drawer</span><strong>{{ xRead.expectedCash | number:'1.2-2' }}</strong></div>
+    </div>
+
+    @if (xRead.tenders.length) {
+      <div class="xr-tenders">
+        @for (t of xRead.tenders; track t.tenderType) {
+          <div class="xr-tender"><span>{{ t.tenderName }}</span><strong>{{ t.amount | number:'1.2-2' }}</strong></div>
+        }
+      </div>
+    }
+  }
+
   @if (sessionReportLoading) {
     <div class="xr-empty">Loading…</div>
   } @else if (sessionTransactions.length === 0) {
@@ -1495,25 +1557,53 @@
       @if (showCustomerPanel) {
         <div class="dlg-head">👤 Customer <button class="dlg-close" (click)="showCustomerPanel=false">✕</button></div>
         <div class="dlg-body">
-          <label>Search customer</label>
-          <input type="text" [(ngModel)]="customerSearch" placeholder="Name, phone, email…" autocomplete="off" style="margin-bottom:6px;" />
-          @if (contactsLoading) {
-            <div style="font-size:12px;color:#94a3b8;margin-bottom:6px;">Loading customers…</div>
-          }
-          <select [ngModel]="contactId" (ngModelChange)="onContactSelect($event)" size="6" style="height:auto;">
-            @for (c of filteredContacts; track c.id) {
-              <option [value]="c.id">{{ contactLabel(c) }}</option>
+          @if (!showNewCustomer) {
+            <label>Search customer</label>
+            <input type="text" [ngModel]="customerSearch" (ngModelChange)="onCustomerSearchInput($event)"
+                   placeholder="Name, phone, email…" autocomplete="off" style="margin-bottom:6px;" />
+            @if (contactsLoading) {
+              <div style="font-size:12px;color:var(--text-muted,#94a3b8);margin-bottom:6px;">Searching…</div>
             }
-          </select>
-          @if (!contactsLoading && filteredContacts.length === 0 && customerSearch) {
-            <div style="font-size:12px;color:#94a3b8;margin-top:4px;">No customers match "{{ customerSearch }}"</div>
+            <select [ngModel]="contactId" (ngModelChange)="onContactSelect($event)" size="6" style="height:auto;">
+              @for (c of filteredContacts; track c.id) {
+                <option [value]="c.id">{{ contactLabel(c) }}</option>
+              }
+            </select>
+            @if (!contactsLoading && filteredContacts.length === 0 && customerSearch) {
+              <div style="font-size:12px;color:var(--text-muted,#94a3b8);margin-top:4px;">
+                No customers match "{{ customerSearch }}"@if (!isOnline) { <span> in the offline list</span> }
+              </div>
+            }
+            <button class="ptx-newcust" type="button" (click)="openNewCustomer()" [disabled]="!isOnline">
+              ＋ New customer
+            </button>
+
+            <label style="margin-top:10px;">Order notes</label>
+            <textarea [(ngModel)]="orderNotes" rows="2" placeholder="Optional"></textarea>
+          } @else {
+            <label>First name</label>
+            <input type="text" [(ngModel)]="newCustomer.firstName" autocomplete="off" />
+            <label style="margin-top:8px;">Last name</label>
+            <input type="text" [(ngModel)]="newCustomer.lastName" autocomplete="off" />
+            <label style="margin-top:8px;">Phone</label>
+            <input type="tel" [(ngModel)]="newCustomer.phone" autocomplete="off" />
+            <label style="margin-top:8px;">Email</label>
+            <input type="email" [(ngModel)]="newCustomer.email" autocomplete="off" />
+            @if (customerError) {
+              <div style="font-size:12px;color:var(--danger,#ef4444);margin-top:8px;">{{ customerError }}</div>
+            }
           }
-          <label style="margin-top:10px;">Order notes</label>
-          <textarea [(ngModel)]="orderNotes" rows="2" placeholder="Optional"></textarea>
         </div>
         <div class="dlg-footer">
-          <button class="dlg-cancel" (click)="showCustomerPanel=false;customerSearch=''">Cancel</button>
-          <button class="dlg-ok" (click)="showCustomerPanel=false;customerSearch=''">Done</button>
+          @if (!showNewCustomer) {
+            <button class="dlg-cancel" (click)="showCustomerPanel=false;customerSearch='';contactSearchResults=null">Cancel</button>
+            <button class="dlg-ok" (click)="showCustomerPanel=false;customerSearch='';contactSearchResults=null">Done</button>
+          } @else {
+            <button class="dlg-cancel" (click)="cancelNewCustomer()">Back</button>
+            <button class="dlg-ok" [disabled]="savingCustomer" (click)="saveNewCustomer()">
+              {{ savingCustomer ? 'Saving…' : 'Save & select' }}
+            </button>
+          }
         </div>
       }
 
@@ -1521,7 +1611,7 @@
         <div class="dlg-head">▤ Cash Drawer <button class="dlg-close" (click)="showCashDrawer=false">✕</button></div>
         <div class="dlg-body">
           @if (!activeSession) {
-            <p style="color:#f59e0b;font-size:13px;margin:0 0 12px;">No active session — cash movements won't be recorded to a session.</p>
+            <p style="color:var(--warning,#f59e0b);font-size:13px;margin:0 0 12px;">No active session — cash movements won't be recorded to a session.</p>
           }
           <label>Type</label>
           <select [(ngModel)]="cashMoveType">

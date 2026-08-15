@@ -12,13 +12,18 @@ import { PosStoresComponent } from './pages/pos-stores/pos-stores';
 import { PosCashiersComponent } from './pages/pos-cashiers/pos-cashiers';
 import { PosTerminalComponent } from './pages/pos-terminal/pos-terminal';
 import { PosTerminalsMgmtComponent } from './pages/pos-terminals-mgmt/pos-terminals-mgmt';
-import { CustomerPortalComponent } from './pages/customer-portal/customer-portal';
 import { PromotionsComponent } from './pages/promotions/promotions';
 import { StoreOffersComponent } from './pages/store-offers/store-offers';
 import { PosDashboardComponent } from './pages/pos-dashboard/pos-dashboard';
 import { PosReceiptTemplatesComponent } from './pages/pos-receipt-templates/pos-receipt-templates';
 import { DocumentSequencesComponent } from './pages/document-sequences/document-sequences';
 import { PosSettingsComponent } from './pages/pos-settings/pos-settings';
+import { PosCatalogueComponent } from './pages/pos-catalogue/pos-catalogue';
+import { PosStockComponent } from './pages/pos-stock/pos-stock';
+import { PosReceiptsComponent } from './pages/pos-receipts/pos-receipts';
+import { PosCustomersComponent } from './pages/pos-customers/pos-customers';
+import { PosReportsComponent } from './pages/pos-reports/pos-reports';
+import { PosBackOfficeComponent } from './pages/pos-backoffice/pos-backoffice';
 
 export const salesRoutes: Routes = [
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
@@ -36,10 +41,15 @@ export const salesRoutes: Routes = [
   { path: 'pos-cashiers', component: PosCashiersComponent },
   { path: 'pos-terminals', component: PosTerminalsMgmtComponent },
   { path: 'pos', component: PosTerminalComponent },
-  { path: 'customer-portal', component: CustomerPortalComponent },
   { path: 'store-offers', component: StoreOffersComponent },
   { path: 'pos-dashboard', component: PosDashboardComponent },
   { path: 'pos-settings', component: PosSettingsComponent },
+  { path: 'pos-catalogue', component: PosCatalogueComponent },
+  { path: 'pos-stock', component: PosStockComponent },
+  { path: 'pos-receipts', component: PosReceiptsComponent },
+  { path: 'pos-customers', component: PosCustomersComponent },
+  { path: 'pos-reports', component: PosReportsComponent },
+  { path: 'pos-backoffice', component: PosBackOfficeComponent },
   // Kept routable for deep links; surfaced as tabs inside POS Settings.
   { path: 'receipt-templates', component: PosReceiptTemplatesComponent },
   { path: 'document-sequences', component: DocumentSequencesComponent },

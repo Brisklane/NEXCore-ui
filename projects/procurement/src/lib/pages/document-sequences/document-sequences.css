@@ -1,6 +1,6 @@
 @import '../shared-styles.css';
 
-.editing-row { background: #eff6ff; }
+.editing-row { background: var(--accent-soft, #eff6ff); }
 .editing-row td { padding: 8px 12px; }
 .editing-row input[type="text"],
 .editing-row input[type="number"],
@@ -10,4 +10,4 @@
   border-radius: 4px;
   font-size: 13px;
 }
-code { font-family: monospace; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 12px; color: #1e293b; }
+code { font-family: monospace; background: var(--bg-muted, #f1f5f9); padding: 2px 6px; border-radius: 4px; font-size: 12px; color: var(--text-heading, #1e293b); }

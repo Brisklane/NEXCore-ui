@@ -173,11 +173,11 @@
             <tr [class.row-new]="s.id === highlighter.id">
               <td style="font-weight:500;">
                 {{ documentTypeLabel(s.documentType) }}
-                @if (s.description) { <div style="font-size:11px;color:#94a3b8;">{{ s.description }}</div> }
+                @if (s.description) { <div style="font-size:11px;color:var(--text-muted,#94a3b8);">{{ s.description }}</div> }
               </td>
-              <td style="font-size:12px;color:#64748b;"><code>{{ formatMask(s) }}</code></td>
+              <td style="font-size:12px;color:var(--text-secondary,#64748b);"><code>{{ formatMask(s) }}</code></td>
               <td><code class="ds-next">{{ s.nextNumberPreview || s.nextSequenceNumber }}</code></td>
-              <td style="font-size:12px;color:#64748b;">{{ resetLabel(s.resetOn) }}</td>
+              <td style="font-size:12px;color:var(--text-secondary,#64748b);">{{ resetLabel(s.resetOn) }}</td>
               <td>
                 <span [class]="s.isActive ? 'badge badge-active' : 'badge badge-inactive'">{{ s.isActive ? 'Active' : 'Inactive' }}</span>
               </td>
@@ -187,7 +187,7 @@
             </tr>
           }
           @empty {
-            <tr><td colspan="6" style="text-align:center;padding:32px;color:#94a3b8;">No document sequences configured yet.</td></tr>
+            <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted,#94a3b8);">No document sequences configured yet.</td></tr>
           }
         </tbody>
       </table>

@@ -58,7 +58,7 @@
         <div class="dsh-ring" *ngFor="let r of rings">
           <svg width="90" height="90" viewBox="0 0 90 90">
             <circle cx="45" cy="45" r="34" fill="none" stroke="var(--bg-muted,#f1f5f9)" stroke-width="8"/>
-            <circle cx="45" cy="45" r="34" fill="none" [attr.stroke]="r.color" stroke-width="8" stroke-linecap="round"
+            <circle cx="45" cy="45" r="34" fill="none" [style.stroke]="r.color" stroke-width="8" stroke-linecap="round"
                     [attr.stroke-dasharray]="r.dash" transform="rotate(-90 45 45)"/>
             <text x="45" y="50" text-anchor="middle" font-size="18" font-weight="750" fill="var(--text-heading,#0f172a)">{{ r.pct }}</text>
           </svg>
@@ -91,7 +91,7 @@
         <div class="dsh-donut">
           <svg width="138" height="138" viewBox="0 0 138 138">
             <circle cx="69" cy="69" r="40" fill="none" stroke="var(--bg-muted,#f1f5f9)" stroke-width="16"/>
-            <circle *ngFor="let q of quality" cx="69" cy="69" r="40" fill="none" [attr.stroke]="q.color" stroke-width="16"
+            <circle *ngFor="let q of quality" cx="69" cy="69" r="40" fill="none" [style.stroke]="q.color" stroke-width="16"
                     [attr.stroke-dasharray]="q.dash" [attr.stroke-dashoffset]="q.off" transform="rotate(-90 69 69)"/>
           </svg>
           <div class="dsh-donut-center">

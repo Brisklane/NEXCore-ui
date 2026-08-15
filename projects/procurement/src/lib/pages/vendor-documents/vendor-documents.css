@@ -1,9 +1,9 @@
 @import '../shared-styles.css';
-.badge-warning { background: #fef3c7; color: #92400e; }
+.badge-warning { background: var(--warning-soft, #fef3c7); color: var(--warning-text, #92400e); }
 
 .filter-input {
   padding: 8px 12px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-strong, #d1d5db);
   border-radius: 6px;
   font-size: 14px;
   min-width: 280px;
@@ -11,15 +11,15 @@
 
 .filter-input:focus {
   outline: none;
-  border-color: #2563eb;
+  border-color: var(--accent, #2563eb);
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 
 .mode-pill {
   align-self: center;
   font-size: 13px;
-  color: #92400e;
-  background: #fef3c7;
+  color: var(--warning-text, #92400e);
+  background: var(--warning-soft, #fef3c7);
   padding: 6px 12px;
   border-radius: 6px;
 }
