@@ -12,7 +12,13 @@ export interface SidebarChild {
 
 export interface SidebarItem {
   label: string;
+  /**
+   * 'module' is retained only so older saved layouts keep parsing; every business area
+   * is an 'app' now — Accounting and CRM install and uninstall exactly like Point of Sale.
+   */
   iconType: 'dashboard' | 'module' | 'app' | 'admin';
+  /** Key in APP_REGISTRY. Absent means always shown (Dashboard, Apps, Administration). */
+  appKey?: string;
   moduleImage?: string;
   icon?: string;
   route?: string;
@@ -62,7 +68,8 @@ export function expandToRoute(nodes: SidebarChild[] | undefined, url: string): v
       },
       {
         label: 'Human Resource',
-        iconType: 'module',
+        iconType: 'app',
+        appKey: 'hr',
         moduleImage: 'images/hr.svg',
         expanded: false,
         children: [
@@ -184,7 +191,8 @@ export function expandToRoute(nodes: SidebarChild[] | undefined, url: string): v
       },
       {
         label: 'CRM',
-        iconType: 'module',
+        iconType: 'app',
+        appKey: 'crm',
         moduleImage: 'images/crm.svg',
         expanded: false,
         children: [
@@ -233,7 +241,8 @@ export function expandToRoute(nodes: SidebarChild[] | undefined, url: string): v
       },
       {
         label: 'Sales',
-        iconType: 'module',
+        iconType: 'app',
+        appKey: 'sales',
         moduleImage: 'images/sales.svg',
         expanded: false,
         children: [
@@ -272,7 +281,8 @@ export function expandToRoute(nodes: SidebarChild[] | undefined, url: string): v
       },
       {
         label: 'Inventory',
-        iconType: 'module',
+        iconType: 'app',
+        appKey: 'inventory',
         moduleImage: 'images/inventory.svg',
         expanded: false,
         children: [
@@ -319,7 +329,8 @@ export function expandToRoute(nodes: SidebarChild[] | undefined, url: string): v
       },
       {
         label: 'Accounting',
-        iconType: 'module',
+        iconType: 'app',
+        appKey: 'accounting',
         moduleImage: 'images/accounts.svg',
         expanded: false,
         children: [
@@ -353,7 +364,8 @@ export function expandToRoute(nodes: SidebarChild[] | undefined, url: string): v
 
       {
         label: 'Procurement',
-        iconType: 'module',
+        iconType: 'app',
+        appKey: 'procurement',
         moduleImage: 'images/procurement.svg',
         expanded: false,
         children: [
@@ -448,7 +460,8 @@ export function expandToRoute(nodes: SidebarChild[] | undefined, url: string): v
       },
       {
         label: 'Manufacturing',
-        iconType: 'module',
+        iconType: 'app',
+        appKey: 'manufacturing',
         moduleImage: 'images/manufacturing.svg',
         expanded: false,
         children: [
@@ -590,6 +603,7 @@ export function expandToRoute(nodes: SidebarChild[] | undefined, url: string): v
       {
         label: 'Point Of Sale',
         iconType: 'app',
+        appKey: 'pos',
         moduleImage: 'images/pos.svg',
         expanded: false,
         /**
@@ -692,6 +706,79 @@ export function expandToRoute(nodes: SidebarChild[] | undefined, url: string): v
                   { label: 'Document Sequences', route: '/sales/document-sequences', icon: 'format_list_numbered' },
                 ],
               },
+            ],
+          },
+        ],
+      },
+      {
+        label: 'Restaurant',
+        iconType: 'app',
+        appKey: 'restaurant',
+        moduleImage: 'images/pos.svg',
+        expanded: false,
+        /**
+         * Grouped the way a restaurant is staffed, not alphabetically. **Service** is the three
+         * screens that run a shift — floor, order pad, kitchen — and everything else is what you
+         * do when you are not on the floor. That split is also how roles land later: a waiter
+         * sees Service, a manager sees all of it.
+         */
+        children: [
+          { label: 'Dashboard', route: '/restaurant/dashboard', icon: 'dashboard' },
+          {
+            label: 'Service',
+            icon: 'room_service',
+            expanded: false,
+            children: [
+              { label: 'Floor Plan', route: '/restaurant/floor', icon: 'table_restaurant' },
+              { label: 'Order Terminal', route: '/restaurant/order', icon: 'point_of_sale' },
+              { label: 'Kitchen Display', route: '/restaurant/kitchen', icon: 'skillet' },
+              { label: 'Orders', route: '/restaurant/orders', icon: 'receipt_long' },
+            ],
+          },
+          {
+            label: 'Front of House',
+            icon: 'event_seat',
+            expanded: false,
+            children: [
+              { label: 'Reservations & Waitlist', route: '/restaurant/reservations', icon: 'event_seat' },
+            ],
+          },
+          {
+            label: 'Menu',
+            icon: 'menu_book',
+            expanded: false,
+            children: [
+              { label: 'Menus & Dishes', route: '/restaurant/menu', icon: 'restaurant_menu' },
+              { label: '86 List', route: '/restaurant/availability', icon: 'no_meals' },
+            ],
+          },
+          {
+            label: 'Kitchen & Cost',
+            icon: 'soup_kitchen',
+            expanded: false,
+            children: [
+              { label: 'Recipes & Wastage', route: '/restaurant/recipes', icon: 'menu_book' },
+              { label: 'Stations & Routing', route: '/restaurant/stations', icon: 'alt_route' },
+              { label: 'Food Safety', route: '/restaurant/compliance', icon: 'health_and_safety' },
+            ],
+          },
+          {
+            label: 'Money & Day-end',
+            icon: 'summarize',
+            expanded: false,
+            children: [
+              { label: 'Cash Sessions', route: '/restaurant/sessions', icon: 'point_of_sale' },
+              { label: 'Reports', route: '/restaurant/reports', icon: 'insights' },
+            ],
+          },
+          {
+            label: 'Setup',
+            icon: 'settings',
+            expanded: false,
+            children: [
+              { label: 'Floors & Tables', route: '/restaurant/layout', icon: 'architecture' },
+              { label: 'Staff & Shifts', route: '/restaurant/staff', icon: 'badge' },
+              { label: 'Settings', route: '/restaurant/settings', icon: 'tune' },
             ],
           },
         ],

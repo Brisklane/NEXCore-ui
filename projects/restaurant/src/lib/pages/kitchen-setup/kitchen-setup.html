@@ -1,0 +1,396 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Kitchen setup</h2>
+      <p class="subtitle">Stations, the rules that route dishes to them, and the printers behind them.</p>
+    </div>
+    <rst-outlet-picker (outletChange)="onOutlet($event)"></rst-outlet-picker>
+  </div>
+
+  <rst-help key="stations"></rst-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <!-- ══ Stations ═════════════════════════════════════════════════════ -->
+  <section class="ks-block">
+    <div class="ks-block-head">
+      <h3>Stations</h3>
+      <button type="button" class="rst-touch-btn is-primary" (click)="newStation()">
+        <span class="material-symbols-outlined">add</span>New station
+      </button>
+    </div>
+
+    @if (loading) {
+      <div class="rst-skeleton" style="height: 180px"></div>
+    } @else if (!stations.length) {
+      <div class="rst-empty">
+        <div class="rst-empty-icon"><span class="material-symbols-outlined">skillet</span></div>
+        <div class="rst-empty-title">No stations yet</div>
+        <div class="rst-empty-text">
+          Without a station nothing can be fired. Add a grill, a fryer and a pass to start.
+        </div>
+      </div>
+    } @else {
+      <div class="ks-grid">
+        @for (s of stations; track trackStation($index, s)) {
+          <article class="ks-card" [class.is-off]="!s.isActive">
+            <header class="ks-card-head">
+              <span class="ks-dot" [style.background]="s.colorHex || '#94a3b8'"></span>
+              <span class="ks-name">
+                {{ s.name }}
+                @if (s.isExpo) { <span class="rst-pill tone-info">Pass</span> }
+              </span>
+              <div class="ks-card-actions">
+                <button type="button" class="rst-icon-btn" (click)="editStation(s)" aria-label="Edit">
+                  <span class="material-symbols-outlined">edit</span>
+                </button>
+                <button type="button" class="rst-icon-btn is-danger" (click)="deleteStation(s)" aria-label="Remove">
+                  <span class="material-symbols-outlined">delete</span>
+                </button>
+              </div>
+            </header>
+
+            <div class="ks-card-body">
+              <span class="ks-type">{{ stationTypeLabels[s.stationType] }}</span>
+
+              <div class="ks-stats">
+                <div><span>SLA</span><b>{{ s.slaMinutes }} min</b></div>
+                <div><span>Open</span><b>{{ s.openTicketCount }}</b></div>
+                <div [class.is-late]="s.overdueTicketCount > 0"><span>Late</span><b>{{ s.overdueTicketCount }}</b></div>
+                <div><span>Avg</span><b>{{ (s.averagePrepSeconds / 60) | number:'1.0-1' }} min</b></div>
+              </div>
+
+              @if (s.printsTickets) {
+                <span class="rst-pill tone-neutral">
+                  <span class="material-symbols-outlined">print</span>Prints tickets
+                </span>
+              }
+            </div>
+          </article>
+        }
+      </div>
+    }
+  </section>
+
+  <!-- ══ Routing ══════════════════════════════════════════════════════ -->
+  <section class="ks-block">
+    <div class="ks-block-head">
+      <h3>Routing rules</h3>
+      <button type="button" class="rst-touch-btn is-primary" (click)="newRule()" [disabled]="!stations.length">
+        <span class="material-symbols-outlined">add</span>New rule
+      </button>
+    </div>
+
+    <p class="ks-explain">
+      Shown in the order the router evaluates them. A rule naming a dish beats one naming its
+      category, which beats one naming an order type, which beats the catch-all — so a broad
+      default and a handful of precise overrides can live together without fighting.
+    </p>
+
+    @if (!allRules.length) {
+      <div class="rst-empty">
+        <div class="rst-empty-icon"><span class="material-symbols-outlined">alt_route</span></div>
+        <div class="rst-empty-title">No routing rules</div>
+        <div class="rst-empty-text">
+          Without a rule, dishes fall back to the first non-pass station — nothing is lost, but
+          nothing is sorted either.
+        </div>
+      </div>
+    } @else {
+      <div class="rst-table-wrap">
+        <table class="rst-table">
+          <thead>
+            <tr>
+              <th class="num">#</th>
+              <th>Matches</th>
+              <th>Goes to</th>
+              <th class="num">Priority</th>
+              <th>Also copies to</th>
+              <th class="actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of allRules; track trackRule($index, r); let i = $index) {
+              <tr [class.is-off]="!r.isActive">
+                <td class="num muted">{{ i + 1 }}</td>
+                <td>
+                  <span class="strong">{{ matchLabels[r.matchType] }}</span>
+                  @if (r.matchType === RoutingMatchType.Category && r.categoryId) {
+                    <span class="muted"> — {{ r.categoryName || categoryName(r.categoryId) }}</span>
+                  }
+                  @if (r.matchType === RoutingMatchType.Item && r.menuItemName) {
+                    <span class="muted"> — {{ r.menuItemName }}</span>
+                  }
+                  @if (r.matchType === RoutingMatchType.OrderType && r.orderType) {
+                    <span class="muted"> — {{ orderTypeLabels[r.orderType] }}</span>
+                  }
+                </td>
+                <td class="strong">{{ r.stationName }}</td>
+                <td class="num muted">{{ r.priority }}</td>
+                <td>
+                  @if (r.isAdditional) { <span class="rst-pill tone-info">Copy, not primary</span> }
+                  @else { <span class="muted">—</span> }
+                </td>
+                <td class="actions">
+                  <button type="button" class="rst-icon-btn" (click)="editingRule = r" aria-label="Edit">
+                    <span class="material-symbols-outlined">edit</span>
+                  </button>
+                  <button type="button" class="rst-icon-btn is-danger" (click)="deleteRule(r)" aria-label="Remove">
+                    <span class="material-symbols-outlined">delete</span>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+
+  <!-- ══ Printers ═════════════════════════════════════════════════════ -->
+  <section class="ks-block">
+    <div class="ks-block-head">
+      <h3>Printers</h3>
+      <button type="button" class="rst-touch-btn is-primary" (click)="newPrinter()">
+        <span class="material-symbols-outlined">add</span>New printer
+      </button>
+    </div>
+
+    @if (!printers.length) {
+      <p class="ks-explain">No printer profiles. Kitchens running on screens alone do not need any.</p>
+    } @else {
+      <div class="rst-table-wrap">
+        <table class="rst-table">
+          <thead>
+            <tr>
+              <th>Name</th><th>Target</th><th class="num">Paper</th><th>Role</th><th class="num">Copies</th><th class="actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of printers; track trackPrinter($index, p)) {
+              <tr>
+                <td class="strong">{{ p.name }}</td>
+                <td class="muted">{{ p.target || 'Not set' }}</td>
+                <td class="num">{{ p.paperWidthMm }}mm</td>
+                <td>
+                  @if (p.isReceiptPrinter) { <span class="rst-pill tone-info">Receipt</span> }
+                  @if (p.isKitchenPrinter) { <span class="rst-pill tone-warning">Kitchen</span> }
+                  @if (p.isLabelPrinter) { <span class="rst-pill tone-neutral">Label</span> }
+                  @if (p.opensCashDrawer) { <span class="rst-pill tone-success">Drawer</span> }
+                </td>
+                <td class="num">{{ p.copiesPerTicket }}</td>
+                <td class="actions">
+                  <button type="button" class="rst-icon-btn" (click)="editingPrinter = p" aria-label="Edit">
+                    <span class="material-symbols-outlined">edit</span>
+                  </button>
+                  <button type="button" class="rst-icon-btn is-danger" (click)="deletePrinter(p)" aria-label="Remove">
+                    <span class="material-symbols-outlined">delete</span>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</div>
+
+<!-- ══ Station editor ═══════════════════════════════════════════════ -->
+@if (editing) {
+  <div class="rst-modal-backdrop" (click)="editing = null">
+    <div class="rst-modal is-narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div class="rst-modal-title">{{ editingId ? 'Edit station' : 'New station' }}</div>
+        <button type="button" class="rst-close" (click)="editing = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        <div class="rst-form-grid">
+          <div class="rst-field is-full">
+            <label for="ks-name">Name</label>
+            <input id="ks-name" type="text" [(ngModel)]="editing.name" placeholder="Grill"  [class.is-invalid]="!!fieldErrors['name']" [attr.aria-invalid]="!!fieldErrors['name'] || null" [attr.aria-describedby]="fieldErrors['name'] ? 'ks-name-error' : null" />
+            <rst-field-error [message]="fieldErrors['name']" for="ks-name"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="ks-type">Type</label>
+            <select id="ks-type" [(ngModel)]="editing.stationType">
+              @for (o of stationTypeOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+            </select>
+          </div>
+          <div class="rst-field">
+            <label for="ks-colour">Colour</label>
+            <input id="ks-colour" type="color" [(ngModel)]="editing.colorHex" />
+          </div>
+          <div class="rst-field">
+            <label for="ks-sla">SLA (min)</label>
+            <input id="ks-sla" type="number" min="1" [(ngModel)]="editing.slaMinutes"  [class.is-invalid]="!!fieldErrors['slaMinutes']" [attr.aria-invalid]="!!fieldErrors['slaMinutes'] || null" [attr.aria-describedby]="fieldErrors['slaMinutes'] ? 'ks-sla-error' : null" />
+            <rst-field-error [message]="fieldErrors['slaMinutes']" for="ks-sla"></rst-field-error>
+            <span class="rst-hint">Tickets past this turn red on the kitchen screen.</span>
+          </div>
+          <div class="rst-field">
+            <label for="ks-max">Max concurrent</label>
+            <input id="ks-max" type="number" min="1" [(ngModel)]="editing.maxConcurrentTickets"  [class.is-invalid]="!!fieldErrors['maxConcurrentTickets']" [attr.aria-invalid]="!!fieldErrors['maxConcurrentTickets'] || null" [attr.aria-describedby]="fieldErrors['maxConcurrentTickets'] ? 'ks-max-error' : null" />
+            <rst-field-error [message]="fieldErrors['maxConcurrentTickets']" for="ks-max"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="ks-printer">Printer</label>
+            <select id="ks-printer" [(ngModel)]="editing.printerProfileId">
+              <option [ngValue]="null">None</option>
+              @for (p of printers; track p.id) { <option [ngValue]="p.id">{{ p.name }}</option> }
+            </select>
+          </div>
+          <div class="rst-field is-full">
+            <label class="rst-check">
+              <input type="checkbox" [(ngModel)]="editing.isExpo" />
+              This is the pass — sees every station's work for a table
+            </label>
+            <label class="rst-check">
+              <input type="checkbox" [(ngModel)]="editing.printsTickets" /> Print paper tickets as well
+            </label>
+            <label class="rst-check"><input type="checkbox" [(ngModel)]="editing.isActive" /> Active</label>
+          </div>
+        </div>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="editing = null">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-primary" (click)="saveStation()" [disabled]="busy">Save</button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- ══ Rule editor ══════════════════════════════════════════════════ -->
+@if (editingRule) {
+  <div class="rst-modal-backdrop" (click)="editingRule = null">
+    <div class="rst-modal is-narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div class="rst-modal-title">{{ editingRule.id ? 'Edit rule' : 'New routing rule' }}</div>
+        <button type="button" class="rst-close" (click)="editingRule = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        <div class="rst-form-grid">
+          <div class="rst-field is-full">
+            <label for="kr-station">Goes to</label>
+            <select id="kr-station" [(ngModel)]="editingRule.stationId">
+              @for (s of stations; track s.id) { <option [value]="s.id">{{ s.name }}</option> }
+            </select>
+          </div>
+          <div class="rst-field is-full">
+            <label for="kr-match">Matches</label>
+            <select id="kr-match" [(ngModel)]="editingRule.matchType">
+              @for (o of matchOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+            </select>
+          </div>
+
+          @if (editingRule.matchType === RoutingMatchType.Category) {
+            <div class="rst-field is-full">
+              <label for="kr-cat">Category</label>
+              <select id="kr-cat" [(ngModel)]="editingRule.categoryId">
+                @for (c of categories; track c.id) { <option [ngValue]="c.id">{{ c.name }}</option> }
+              </select>
+            </div>
+          }
+
+          @if (editingRule.matchType === RoutingMatchType.OrderType) {
+            <div class="rst-field is-full">
+              <label for="kr-otype">Order type</label>
+              <select id="kr-otype" [(ngModel)]="editingRule.orderType">
+                @for (o of orderTypeOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+              </select>
+            </div>
+          }
+
+          <div class="rst-field">
+            <label for="kr-priority">Priority</label>
+            <input id="kr-priority" type="number" [(ngModel)]="editingRule.priority"  [class.is-invalid]="!!fieldErrors['priority']" [attr.aria-invalid]="!!fieldErrors['priority'] || null" [attr.aria-describedby]="fieldErrors['priority'] ? 'kr-priority-error' : null" />
+            <rst-field-error [message]="fieldErrors['priority']" for="kr-priority"></rst-field-error>
+            <span class="rst-hint">Lower runs first among rules of equal specificity.</span>
+          </div>
+
+          <div class="rst-field is-full">
+            <label class="rst-check">
+              <input type="checkbox" [(ngModel)]="editingRule.isAdditional" />
+              Send a copy here as well, rather than instead
+            </label>
+            <label class="rst-check"><input type="checkbox" [(ngModel)]="editingRule.isActive" /> Active</label>
+          </div>
+        </div>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="editingRule = null">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-primary" (click)="saveRule()" [disabled]="busy">Save</button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- ══ Printer editor ═══════════════════════════════════════════════ -->
+@if (editingPrinter) {
+  <div class="rst-modal-backdrop" (click)="editingPrinter = null">
+    <div class="rst-modal is-narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div class="rst-modal-title">{{ editingPrinter.id ? 'Edit printer' : 'New printer' }}</div>
+        <button type="button" class="rst-close" (click)="editingPrinter = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        <div class="rst-form-grid">
+          <div class="rst-field is-full">
+            <label for="kp-name">Name</label>
+            <input id="kp-name" type="text" [(ngModel)]="editingPrinter.name"  [class.is-invalid]="!!fieldErrors['name']" [attr.aria-invalid]="!!fieldErrors['name'] || null" [attr.aria-describedby]="fieldErrors['name'] ? 'kp-name-error' : null" />
+            <rst-field-error [message]="fieldErrors['name']" for="kp-name"></rst-field-error>
+          </div>
+          <div class="rst-field is-full">
+            <label for="kp-target">Target</label>
+            <input id="kp-target" type="text" [(ngModel)]="editingPrinter.target" placeholder="192.168.1.50 or a printer name"  [class.is-invalid]="!!fieldErrors['target']" [attr.aria-invalid]="!!fieldErrors['target'] || null" [attr.aria-describedby]="fieldErrors['target'] ? 'kp-target-error' : null" />
+            <rst-field-error [message]="fieldErrors['target']" for="kp-target"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="kp-paper">Paper width</label>
+            <select id="kp-paper" [(ngModel)]="editingPrinter.paperWidthMm">
+              <option [ngValue]="58">58 mm</option>
+              <option [ngValue]="80">80 mm</option>
+            </select>
+          </div>
+          <div class="rst-field">
+            <label for="kp-copies">Copies</label>
+            <input id="kp-copies" type="number" min="1" [(ngModel)]="editingPrinter.copiesPerTicket"  [class.is-invalid]="!!fieldErrors['copiesPerTicket']" [attr.aria-invalid]="!!fieldErrors['copiesPerTicket'] || null" [attr.aria-describedby]="fieldErrors['copiesPerTicket'] ? 'kp-copies-error' : null" />
+            <rst-field-error [message]="fieldErrors['copiesPerTicket']" for="kp-copies"></rst-field-error>
+          </div>
+          <div class="rst-field is-full">
+            <label class="rst-check"><input type="checkbox" [(ngModel)]="editingPrinter.isReceiptPrinter" /> Receipts</label>
+            <label class="rst-check"><input type="checkbox" [(ngModel)]="editingPrinter.isKitchenPrinter" /> Kitchen tickets</label>
+            <label class="rst-check"><input type="checkbox" [(ngModel)]="editingPrinter.isLabelPrinter" /> Labels</label>
+            <label class="rst-check"><input type="checkbox" [(ngModel)]="editingPrinter.opensCashDrawer" /> Opens the cash drawer</label>
+            <label class="rst-check"><input type="checkbox" [(ngModel)]="editingPrinter.isActive" /> Active</label>
+          </div>
+        </div>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="editingPrinter = null">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-primary" (click)="savePrinter()" [disabled]="busy">Save</button>
+      </footer>
+    </div>
+  </div>
+}

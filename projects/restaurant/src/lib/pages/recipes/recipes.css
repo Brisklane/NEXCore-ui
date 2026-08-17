@@ -1,0 +1,82 @@
+.rc-tabs { margin-bottom: 16px; }
+
+.rst-toolbar input[type='date'] {
+  min-height: 40px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--input-border, #cbd5e1);
+  background: var(--input-bg, #fff);
+  color: var(--input-text, #1e293b);
+  font-size: 13.5px;
+}
+
+.rc-note { font-size: 12.5px; color: var(--text-muted, #94a3b8); }
+
+.rc-section {
+  margin: 18px 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-light, #eef1f5);
+}
+
+.rc-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.rc-section-head h4 { margin: 0; font-size: 13.5px; font-weight: 750; color: var(--text-heading, #0f172a); }
+.rc-empty-inline { margin: 0; font-size: 12.5px; color: var(--text-muted, #94a3b8); }
+
+/* Ingredient grid — the column widths mirror the header row exactly. */
+.rc-ing-head,
+.rc-ing-row {
+  display: grid;
+  grid-template-columns: 2.2fr 0.8fr 0.7fr 0.8fr 0.8fr 1fr 1fr 40px;
+  gap: 7px;
+  align-items: center;
+}
+
+.rc-ing-head {
+  margin-bottom: 6px;
+  font-size: 10.5px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted, #94a3b8);
+}
+
+.rc-ing-row { margin-bottom: 6px; }
+
+.rc-ing-row input {
+  min-height: 38px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--input-border, #cbd5e1);
+  background: var(--input-bg, #fff);
+  color: var(--input-text, #1e293b);
+  font-size: 12.5px;
+  min-width: 0;
+}
+
+.rc-ing-row input:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.rc-line-cost {
+  font-size: 12.5px;
+  font-weight: 750;
+  color: var(--accent, #2b7fff);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+@media (max-width: 860px) {
+  .rc-ing-head { display: none; }
+  .rc-ing-row {
+    grid-template-columns: 1fr 1fr;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 10px;
+    background: var(--bg-subtle, #f8fafc);
+  }
+}

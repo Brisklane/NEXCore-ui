@@ -1,0 +1,917 @@
+<div class="ot-shell">
+  <!-- ══ Header ═══════════════════════════════════════════════════════ -->
+  <header class="ot-header">
+    <div class="ot-header-main">
+      <h2>Order terminal</h2>
+      @if (order) {
+        <span class="ot-order-chip">
+          <span class="material-symbols-outlined">{{ orderTypeIcons[order.orderType] }}</span>
+          {{ order.orderNumber }}
+          @if (order.tableNumber) { · Table {{ order.tableNumber }} }
+          @if (order.tokenNumber) { · {{ order.tokenNumber }} }
+          · {{ order.guestCount }} guests
+        </span>
+      }
+    </div>
+
+    <div class="ot-header-actions">
+      <rst-outlet-picker (outletChange)="onOutlet($event)"></rst-outlet-picker>
+      @if (order) {
+        <button type="button" class="rst-touch-btn" (click)="closeOrderView()">
+          <span class="material-symbols-outlined">close</span>
+          Close order
+        </button>
+      }
+    </div>
+  </header>
+
+  <rst-help key="order"></rst-help>
+
+  @if (error) { <div class="alert alert-error ot-alert">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success ot-alert">{{ notice }}</div> }
+
+  <div class="ot-body">
+    <!-- ══ Left: the pad ══════════════════════════════════════════════ -->
+    <section class="ot-pad" aria-label="Menu">
+      <div class="ot-pad-top">
+        <div class="rst-segment ot-type-picker" role="tablist" aria-label="Order type">
+          @for (t of orderTypeOptions; track t) {
+            <button
+              type="button"
+              role="tab"
+              [attr.aria-selected]="orderType === t"
+              [class.is-active]="orderType === t"
+              (click)="changeOrderType(t)"
+            >
+              <span class="material-symbols-outlined">{{ orderTypeIcons[t] }}</span>
+              {{ orderTypeLabels[t] }}
+            </button>
+          }
+        </div>
+
+        <div class="rst-search ot-search">
+          <span class="material-symbols-outlined">search</span>
+          <input type="text" [(ngModel)]="search" placeholder="Search the menu…" aria-label="Search the menu" />
+        </div>
+      </div>
+
+      @if (!search) {
+        <nav class="ot-categories" aria-label="Menu categories">
+          @for (c of categories; track c.id) {
+            <button
+              type="button"
+              class="ot-cat"
+              [class.is-active]="activeCategoryId === c.id"
+              [style.borderBottomColor]="activeCategoryId === c.id ? (c.colorHex || null) : null"
+              (click)="activeCategoryId = c.id"
+            >
+              @if (c.iconName) { <span class="material-symbols-outlined">{{ c.iconName }}</span> }
+              {{ c.name }}
+            </button>
+          }
+        </nav>
+      }
+
+      <div class="ot-grid">
+        @if (loading) {
+          @for (i of [1,2,3,4,5,6,7,8]; track i) {
+            <div class="rst-skeleton ot-tile-skeleton"></div>
+          }
+        }
+
+        @for (combo of visibleCombos; track combo.id) {
+          <button
+            type="button"
+            class="ot-tile is-combo"
+            [class.is-off]="!combo.isAvailable"
+            [disabled]="!combo.isAvailable"
+            (click)="pickCombo(combo)"
+          >
+            <span class="ot-tile-badge">Meal deal</span>
+            <span class="ot-tile-name">{{ combo.name }}</span>
+            <span class="ot-tile-price">{{ combo.price | number:'1.2-2' }}</span>
+            @if (combo.savingAmount > 0) {
+              <span class="ot-tile-save">Saves {{ combo.savingAmount | number:'1.2-2' }}</span>
+            }
+          </button>
+        }
+
+        @for (item of visibleItems; track trackItem($index, item)) {
+          <button
+            type="button"
+            class="ot-tile"
+            [class.is-off]="!item.isAvailable"
+            [disabled]="!item.isAvailable"
+            (click)="pick(item)"
+            [attr.aria-label]="item.name + ', ' + (item.basePrice | number:'1.2-2')"
+          >
+            @if (!item.isAvailable) {
+              <span class="ot-tile-86">
+                <span class="material-symbols-outlined">block</span>
+                86'd
+              </span>
+            }
+
+            <span class="ot-tile-name">{{ item.shortName || item.name }}</span>
+            <span class="ot-tile-price">{{ item.basePrice | number:'1.2-2' }}</span>
+
+            <span class="ot-tile-tags">
+              @if (item.isVegetarian) { <span class="rst-diet">V</span> }
+              @if (item.isVegan) { <span class="rst-diet">VG</span> }
+              @if (item.isGlutenFree) { <span class="rst-diet">GF</span> }
+              @if (item.spiceLevel > 1) { <span class="rst-diet is-spice">🌶 {{ item.spiceLevel }}</span> }
+              @if (item.isAlcohol) { <span class="rst-diet is-alcohol">ALC</span> }
+            </span>
+
+            @if (item.containsNuts || item.containsShellfish) {
+              <span class="ot-tile-allergen" title="Allergen">
+                <span class="material-symbols-outlined">warning</span>
+              </span>
+            }
+
+            @if (item.variants.length > 1 || item.modifierGroups.length) {
+              <span class="ot-tile-more" aria-hidden="true">
+                <span class="material-symbols-outlined">tune</span>
+              </span>
+            }
+          </button>
+        }
+
+        @if (!loading && !visibleItems.length && !visibleCombos.length) {
+          <div class="rst-empty ot-empty">
+            <div class="rst-empty-icon"><span class="material-symbols-outlined">restaurant_menu</span></div>
+            <div class="rst-empty-title">
+              @if (search) { Nothing matches "{{ search }}" } @else { Nothing on this tab }
+            </div>
+            <div class="rst-empty-text">
+              @if (search) { Try a different word, or clear the search. }
+              @else { Add dishes to this category in Menu &amp; items. }
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+
+    <!-- ══ Right: the check ═══════════════════════════════════════════ -->
+    <aside class="ot-check" aria-label="Current order">
+      @if (!order) {
+        <div class="ot-check-empty">
+          <div class="rst-empty-icon"><span class="material-symbols-outlined">receipt_long</span></div>
+          <div class="rst-empty-title">No order open</div>
+          <div class="rst-empty-text">
+            Tap a dish to start one, seat a table on the floor plan, or pick up a running order below.
+          </div>
+
+          <div class="ot-quick-start">
+            @for (t of orderTypeOptions; track t) {
+              <button type="button" class="rst-touch-btn" (click)="startOrder(t)" [disabled]="busy">
+                <span class="material-symbols-outlined">{{ orderTypeIcons[t] }}</span>
+                {{ orderTypeLabels[t] }}
+              </button>
+            }
+          </div>
+
+          @if (activeOrders.length) {
+            <div class="ot-running">
+              <div class="ot-running-title">Running orders</div>
+              @for (o of activeOrders; track o.id) {
+                <button type="button" class="ot-running-row" (click)="openOrder(o.id)">
+                  <span class="ot-running-main">
+                    <span class="ot-running-no">{{ o.tableNumber || o.tokenNumber || o.orderNumber }}</span>
+                    <span class="ot-running-sub">
+                      {{ orderTypeLabels[o.orderType] }} · {{ o.lineCount }} items · {{ o.minutesOpen }}m
+                    </span>
+                  </span>
+                  <span class="ot-running-total">{{ o.totalAmount | number:'1.2-2' }}</span>
+                  @if (o.heldLineCount > 0) {
+                    <span class="rst-pill tone-warning">{{ o.heldLineCount }} held</span>
+                  }
+                </button>
+              }
+            </div>
+          }
+        </div>
+      } @else {
+        <!-- Seat bar -->
+        @if (order.orderType === OrderType.DineIn) {
+          <div class="ot-seatbar" role="group" aria-label="Seat">
+            <button type="button" [class.is-active]="activeSeat === 0" (click)="activeSeat = 0">Shared</button>
+            @for (s of seatNumbers; track s) {
+              <button type="button" [class.is-active]="activeSeat === s" (click)="activeSeat = s">{{ s }}</button>
+            }
+          </div>
+        }
+
+        <!-- Course bar -->
+        <div class="ot-coursebar" role="group" aria-label="Course">
+          <button type="button" [class.is-active]="activeCourse === null" (click)="activeCourse = null">Auto</button>
+          @for (c of courseOrder; track c) {
+            <button type="button" [class.is-active]="activeCourse === c" (click)="activeCourse = c">
+              {{ courseLabels[c] }}
+            </button>
+          }
+        </div>
+
+        <!-- Lines -->
+        <div class="ot-lines">
+          @if (!liveLines.length) {
+            <div class="ot-lines-empty">Tap a dish to add it.</div>
+          }
+
+          @for (group of coursedLines; track group.course) {
+            <div class="ot-course-group">
+              <div class="ot-course-head">
+                <span>{{ courseLabels[group.course] }}</span>
+                @if (heldInCourse(group.course) > 0) {
+                  <button type="button" class="ot-fire-course" (click)="fire(group.course)" [disabled]="busy">
+                    <span class="material-symbols-outlined">local_fire_department</span>
+                    Fire {{ heldInCourse(group.course) }}
+                  </button>
+                }
+              </div>
+
+              @for (line of group.lines; track trackLine($index, line)) {
+                <div class="ot-line" [class]="lineTone(line)">
+                  <div class="ot-line-qty">
+                    <button type="button" (click)="changeQuantity(line, -1)" [disabled]="busy" aria-label="Fewer">−</button>
+                    <span>{{ line.quantity }}</span>
+                    <button type="button" (click)="changeQuantity(line, 1)" [disabled]="busy" aria-label="More">+</button>
+                  </div>
+
+                  <div class="ot-line-main">
+                    <div class="ot-line-name">
+                      {{ line.itemName }}
+                      @if (line.variantName) { <span class="ot-line-variant">{{ line.variantName }}</span> }
+                      @if (line.seatNumber) { <span class="ot-line-seat">S{{ line.seatNumber }}</span> }
+                    </div>
+
+                    @if (line.modifiers.length) {
+                      <div class="ot-line-mods">
+                        @for (m of line.modifiers; track m.id) {
+                          <span [class.is-removal]="m.isRemoval">
+                            {{ m.isRemoval ? 'no ' + m.modifierName : m.modifierName }}
+                          </span>
+                        }
+                      </div>
+                    }
+
+                    @for (child of childrenOf(line); track child.id) {
+                      <div class="ot-line-child">↳ {{ child.itemName }}</div>
+                    }
+
+                    @if (line.specialInstructions) {
+                      <div class="ot-line-note">“{{ line.specialInstructions }}”</div>
+                    }
+
+                    @if (line.allergenWarning) {
+                      <span class="rst-allergen">
+                        <span class="material-symbols-outlined">warning</span>{{ line.allergenWarning }}
+                      </span>
+                    }
+
+                    <div class="ot-line-status">
+                      @if (line.isHeld) { <span class="rst-pill tone-warning">Held</span> }
+                      @else { <span class="rst-pill tone-neutral">{{ lineStatusLabels[line.status] }}</span> }
+                      @if (line.stationName) { <span class="ot-line-station">{{ line.stationName }}</span> }
+                    </div>
+                  </div>
+
+                  <div class="ot-line-right">
+                    <span class="ot-line-total">{{ line.lineTotal | number:'1.2-2' }}</span>
+                    <div class="ot-line-actions">
+                      @if (line.status === OrderLineStatus.New || line.isHeld) {
+                        <button
+                          type="button"
+                          class="rst-icon-btn"
+                          (click)="toggleHold(line)"
+                          [disabled]="busy"
+                          [attr.aria-label]="line.isHeld ? 'Release hold' : 'Hold'"
+                          [title]="line.isHeld ? 'Release hold' : 'Hold back from the kitchen'"
+                        >
+                          <span class="material-symbols-outlined">{{ line.isHeld ? 'play_arrow' : 'pause' }}</span>
+                        </button>
+                      }
+                      <button
+                        type="button"
+                        class="rst-icon-btn is-danger"
+                        (click)="startVoid(line)"
+                        [disabled]="busy"
+                        aria-label="Void line"
+                        title="Void"
+                      >
+                        <span class="material-symbols-outlined">delete</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Totals -->
+        <div class="ot-totals">
+          <div class="ot-total-row">
+            <span>Subtotal</span><span>{{ order.subTotal | number:'1.2-2' }}</span>
+          </div>
+          @if (order.discountAmount > 0) {
+            <div class="ot-total-row is-credit">
+              <span>Discount</span><span>−{{ order.discountAmount | number:'1.2-2' }}</span>
+            </div>
+          }
+          @if (order.serviceChargeAmount > 0) {
+            <div class="ot-total-row">
+              <span>Service</span><span>{{ order.serviceChargeAmount | number:'1.2-2' }}</span>
+            </div>
+          }
+          @if (order.packagingChargeAmount > 0) {
+            <div class="ot-total-row">
+              <span>Packaging</span><span>{{ order.packagingChargeAmount | number:'1.2-2' }}</span>
+            </div>
+          }
+          @if (order.deliveryFeeAmount > 0) {
+            <div class="ot-total-row">
+              <span>Delivery</span><span>{{ order.deliveryFeeAmount | number:'1.2-2' }}</span>
+            </div>
+          }
+          @if (order.taxAmount > 0) {
+            <div class="ot-total-row">
+              <span>Tax</span><span>{{ order.taxAmount | number:'1.2-2' }}</span>
+            </div>
+          }
+          <div class="ot-total-row is-grand">
+            <span>Total</span><span>{{ order.totalAmount | number:'1.2-2' }} {{ order.currencyCode }}</span>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="ot-actions">
+          @if (heldLines.length) {
+            <button type="button" class="rst-touch-btn is-primary ot-fire-all" (click)="fire(null)" [disabled]="busy">
+              <span class="material-symbols-outlined">local_fire_department</span>
+              Send {{ heldLines.length }} to kitchen
+            </button>
+          } @else {
+            <button type="button" class="rst-touch-btn" (click)="markServed()" [disabled]="busy || !liveLines.length">
+              <span class="material-symbols-outlined">room_service</span>
+              All served
+            </button>
+          }
+
+          <button type="button" class="rst-touch-btn is-success" (click)="openBill()" [disabled]="busy || !liveLines.length">
+            <span class="material-symbols-outlined">payments</span>
+            Bill
+          </button>
+        </div>
+      }
+    </aside>
+  </div>
+</div>
+
+<!-- ══ Configure a dish ═════════════════════════════════════════════ -->
+@if (panel === 'configure' && pending) {
+  <div class="rst-modal-backdrop" (click)="cancelPending()">
+    <div class="rst-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div>
+          <div class="rst-modal-title">{{ pending.item.name }}</div>
+          <div class="rst-modal-sub">
+            {{ pendingPrice | number:'1.2-2' }}
+            @if (pending.item.prepTimeMinutes) { · about {{ pending.item.prepTimeMinutes }} min }
+            @if (pending.item.calories) { · {{ pending.item.calories }} kcal }
+          </div>
+        </div>
+        <button type="button" class="rst-close" (click)="cancelPending()" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        @if (pending.item.allergens || pending.item.containsNuts || pending.item.containsShellfish) {
+          <div class="ot-allergen-banner">
+            <span class="material-symbols-outlined">warning</span>
+            <div>
+              <strong>Allergens</strong>
+              <span>
+                @if (pending.item.containsNuts) { nuts }
+                @if (pending.item.containsShellfish) { · shellfish }
+                @if (pending.item.containsDairy) { · dairy }
+                @if (pending.item.allergens) { · {{ pending.item.allergens }} }
+              </span>
+            </div>
+          </div>
+        }
+
+        <!-- Quantity + seat -->
+        <div class="ot-cfg-row">
+          <div class="rst-field">
+            <label>Quantity</label>
+            <div class="ot-stepper">
+              <button type="button" (click)="pending.quantity = pending.quantity > 1 ? pending.quantity - 1 : 1">−</button>
+              <input type="number" min="1" [(ngModel)]="pending.quantity" aria-label="Quantity"  [class.is-invalid]="!!fieldErrors['quantity']" [attr.aria-invalid]="!!fieldErrors['quantity'] || null" />
+            <rst-field-error [message]="fieldErrors['quantity']"></rst-field-error>
+              <button type="button" (click)="pending.quantity = pending.quantity + 1">+</button>
+            </div>
+          </div>
+
+          <div class="rst-field">
+            <label for="ot-course">Course</label>
+            <select id="ot-course" [(ngModel)]="pending.course">
+              @for (c of courseOrder; track c) {
+                <option [ngValue]="c">{{ courseLabels[c] }}</option>
+              }
+            </select>
+          </div>
+
+          @if (order && order.orderType === OrderType.DineIn) {
+            <div class="rst-field">
+              <label for="ot-seat">Seat</label>
+              <select id="ot-seat" [(ngModel)]="pending.seatNumber">
+                <option [ngValue]="null">Shared</option>
+                @for (s of seatNumbers; track s) {
+                  <option [ngValue]="s">Seat {{ s }}</option>
+                }
+              </select>
+            </div>
+          }
+        </div>
+
+        <!-- Variants -->
+        @if (pending.item.variants && pending.item.variants.length > 1) {
+          <div class="ot-cfg-group">
+            <div class="ot-cfg-title">Size</div>
+            <div class="ot-choice-grid">
+              @for (v of pending.item.variants; track v.id) {
+                <button
+                  type="button"
+                  class="ot-choice"
+                  [class.is-on]="pending.variant?.id === v.id"
+                  [disabled]="!v.isAvailable"
+                  (click)="pending.variant = v"
+                >
+                  <span class="ot-choice-name">{{ v.name }}</span>
+                  <span class="ot-choice-price">{{ v.price | number:'1.2-2' }}</span>
+                </button>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Combo slots -->
+        @if (pending.combo) {
+          @for (component of pending.combo.components; track component.id) {
+            <div class="ot-cfg-group">
+              <div class="ot-cfg-title">
+                {{ component.name }}
+                <span class="ot-cfg-rule">choose {{ component.minChoices }}</span>
+              </div>
+              <div class="ot-choice-grid">
+                @for (opt of component.options; track opt.id) {
+                  <button
+                    type="button"
+                    class="ot-choice"
+                    [class.is-on]="pending.comboChoices.get(component.id) === opt.menuItemId"
+                    (click)="chooseComboOption(component.id, opt.menuItemId)"
+                  >
+                    <span class="ot-choice-name">{{ opt.menuItemName }}</span>
+                    @if (opt.upchargeAmount > 0) {
+                      <span class="ot-choice-price">+{{ opt.upchargeAmount | number:'1.2-2' }}</span>
+                    }
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        }
+
+        <!-- Modifier groups -->
+        @for (group of pending.item.modifierGroups; track group.id) {
+          <div class="ot-cfg-group">
+            <div class="ot-cfg-title">
+              {{ group.promptText || group.name }}
+              @if (group.isRequired) { <span class="ot-cfg-required">required</span> }
+              @if (group.maxSelections > 1) {
+                <span class="ot-cfg-rule">up to {{ group.maxSelections }}</span>
+              }
+            </div>
+            <div class="ot-choice-grid">
+              @for (m of group.modifiers; track m.id) {
+                <button
+                  type="button"
+                  class="ot-choice"
+                  [class.is-on]="isChosen(group.modifierGroupId, m.id)"
+                  [class.is-removal]="m.isRemoval"
+                  [disabled]="!m.isAvailable"
+                  (click)="toggleModifier(group, m)"
+                >
+                  <span class="ot-choice-name">{{ m.isRemoval ? 'No ' + m.name : m.name }}</span>
+                  @if (m.priceDelta > 0) {
+                    <span class="ot-choice-price">+{{ m.priceDelta | number:'1.2-2' }}</span>
+                  }
+                </button>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Note + hold -->
+        <div class="rst-field is-full">
+          <label for="ot-note">Note for the kitchen</label>
+          <input id="ot-note" type="text" [(ngModel)]="pending.note" placeholder="Well done, sauce on the side…"  [class.is-invalid]="!!fieldErrors['note']" [attr.aria-invalid]="!!fieldErrors['note'] || null" [attr.aria-describedby]="fieldErrors['note'] ? 'ot-note-error' : null" />
+            <rst-field-error [message]="fieldErrors['note']" for="ot-note"></rst-field-error>
+        </div>
+
+        <label class="rst-check">
+          <input type="checkbox" [(ngModel)]="pending.isHeld" />
+          Hold — do not send to the kitchen yet
+        </label>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="cancelPending()" [disabled]="busy">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-primary" (click)="commitPending()" [disabled]="busy">
+          Add · {{ pendingPrice | number:'1.2-2' }}
+        </button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- ══ Void ═════════════════════════════════════════════════════════ -->
+@if (panel === 'void' && voidLine) {
+  <div class="rst-modal-backdrop" (click)="panel = 'none'">
+    <div class="rst-modal is-narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div>
+          <div class="rst-modal-title">Void {{ voidLine.itemName }}</div>
+          <div class="rst-modal-sub">
+            @if (voidLine.status !== OrderLineStatus.New && !voidLine.isHeld) {
+              This has already gone to the kitchen — it will be recorded as waste.
+            } @else {
+              Not sent to the kitchen yet.
+            }
+          </div>
+        </div>
+        <button type="button" class="rst-close" (click)="panel = 'none'" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        <div class="rst-field is-full">
+          <label for="ot-void-reason">Reason</label>
+          <select id="ot-void-reason" [(ngModel)]="voidReasonId" [class.is-invalid]="!!fieldErrors['voidReasonId']" [attr.aria-invalid]="!!fieldErrors['voidReasonId'] || null" [attr.aria-describedby]="fieldErrors['voidReasonId'] ? 'ot-void-reason-error' : null">
+            @for (r of voidReasons; track r.id) {
+              <option [value]="r.id">{{ r.name }}</option>
+            }
+          </select>
+          <rst-field-error [message]="fieldErrors['voidReasonId']" for="ot-void-reason"></rst-field-error>
+        </div>
+
+        <div class="rst-field is-full">
+          <label for="ot-void-note">Note</label>
+          <input id="ot-void-note" type="text" [(ngModel)]="voidNote" placeholder="Optional detail" [class.is-invalid]="!!fieldErrors['voidNote']" [attr.aria-invalid]="!!fieldErrors['voidNote'] || null" [attr.aria-describedby]="fieldErrors['voidNote'] ? 'ot-void-note-error' : null" />
+          <rst-field-error [message]="fieldErrors['voidNote']" for="ot-void-note"></rst-field-error>
+        </div>
+
+        @if (voidNeedsApproval) {
+          <div class="rst-field is-full">
+            <label for="ot-void-pin">Supervisor PIN</label>
+            <input id="ot-void-pin" type="password" inputmode="numeric" [(ngModel)]="voidPin" placeholder="••••" [class.is-invalid]="!!fieldErrors['voidPin']" [attr.aria-invalid]="!!fieldErrors['voidPin'] || null" [attr.aria-describedby]="fieldErrors['voidPin'] ? 'ot-void-pin-error' : null" />
+            <rst-field-error [message]="fieldErrors['voidPin']" for="ot-void-pin"></rst-field-error>
+            <span class="rst-hint">This reason needs a supervisor to approve it.</span>
+          </div>
+        }
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="panel = 'none'" [disabled]="busy">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-danger" (click)="confirmVoid()" [disabled]="busy">
+          Void line
+        </button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- ══ Split ════════════════════════════════════════════════════════ -->
+@if (panel === 'split') {
+  <div class="rst-modal-backdrop" (click)="panel = 'bill'">
+    <div class="rst-modal is-narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div class="rst-modal-title">Split the bill</div>
+        <button type="button" class="rst-close" (click)="panel = 'bill'" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        <div class="ot-split-options">
+          @for (m of [SplitMethod.None, SplitMethod.Evenly, SplitMethod.BySeat, SplitMethod.ByItem]; track m) {
+            <button
+              type="button"
+              class="ot-split-option"
+              [class.is-on]="splitMethod === m"
+              (click)="splitMethod = m"
+            >
+              <span class="ot-split-name">{{ splitLabels[m] }}</span>
+              <span class="ot-split-hint">
+                @switch (m) {
+                  @case (SplitMethod.None) { One bill for the whole table }
+                  @case (SplitMethod.Evenly) { Divide the total equally }
+                  @case (SplitMethod.BySeat) { A bill per seat that ordered }
+                  @case (SplitMethod.ByItem) { A bill per group of dishes }
+                }
+              </span>
+            </button>
+          }
+        </div>
+
+        @if (splitMethod === SplitMethod.Evenly) {
+          <div class="rst-field is-full">
+            <label for="ot-split-ways">How many ways?</label>
+            <input id="ot-split-ways" type="number" min="2" max="20" [(ngModel)]="splitWays" />
+            <span class="rst-hint">
+              Any rounding remainder lands on the first bill, so the parts always add up to the order.
+            </span>
+          </div>
+        }
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="panel = 'bill'" [disabled]="busy">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-primary" (click)="createChecks(splitMethod, splitWays)" [disabled]="busy">
+          Produce bills
+        </button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- ══ Bill ═════════════════════════════════════════════════════════ -->
+@if (panel === 'bill' && order) {
+  <div class="rst-modal-backdrop" (click)="panel = 'none'">
+    <div class="rst-modal is-wide" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div>
+          <div class="rst-modal-title">Bill — {{ order.orderNumber }}</div>
+          <div class="rst-modal-sub">
+            @if (order.tableNumber) { Table {{ order.tableNumber }} · }
+            {{ checks.length }} {{ checks.length === 1 ? 'bill' : 'bills' }}
+          </div>
+        </div>
+        <button type="button" class="rst-close" (click)="panel = 'none'" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        <div class="ot-checks">
+          @for (check of checks; track trackCheck($index, check)) {
+            <div class="ot-check-card" [class.is-paid]="check.balanceDue <= 0.01">
+              <div class="ot-check-head">
+                <span class="ot-check-no">
+                  {{ check.checkNumber }}
+                  @if (check.splitCount > 1) {
+                    <span class="rst-pill tone-info">{{ check.splitIndex }} of {{ check.splitCount }}</span>
+                  }
+                  @if (check.seatNumbers) { <span class="ot-check-seats">Seats {{ check.seatNumbers }}</span> }
+                </span>
+                @if (check.balanceDue <= 0.01) { <span class="rst-pill tone-success">Paid</span> }
+              </div>
+
+              <ul class="ot-check-lines">
+                @for (l of check.lines; track l.id) {
+                  <li>
+                    <span class="ot-check-qty">{{ l.quantity | number:'1.0-2' }}×</span>
+                    <span class="ot-check-name">
+                      {{ l.itemName }}
+                      @if (l.variantName) { ({{ l.variantName }}) }
+                      @if (l.modifierSummary) { <em>{{ l.modifierSummary }}</em> }
+                    </span>
+                    <span class="ot-check-amt">{{ l.lineTotal | number:'1.2-2' }}</span>
+                  </li>
+                }
+              </ul>
+
+              <div class="ot-check-totals">
+                <div><span>Subtotal</span><span>{{ check.subTotal | number:'1.2-2' }}</span></div>
+                @if (check.discountAmount > 0) {
+                  <div class="is-credit"><span>Discount</span><span>−{{ check.discountAmount | number:'1.2-2' }}</span></div>
+                }
+                @if (check.serviceChargeAmount > 0) {
+                  <div><span>Service</span><span>{{ check.serviceChargeAmount | number:'1.2-2' }}</span></div>
+                }
+                @if (check.taxAmount > 0) {
+                  <div><span>Tax</span><span>{{ check.taxAmount | number:'1.2-2' }}</span></div>
+                }
+                @if (check.tipAmount > 0) {
+                  <div><span>Tip</span><span>{{ check.tipAmount | number:'1.2-2' }}</span></div>
+                }
+                @if (check.roundingAmount !== 0) {
+                  <div><span>Rounding</span><span>{{ check.roundingAmount | number:'1.2-2' }}</span></div>
+                }
+                <div class="is-grand"><span>Total</span><span>{{ check.totalAmount | number:'1.2-2' }}</span></div>
+                @if (check.paidAmount > 0 && check.balanceDue > 0.01) {
+                  <div class="is-due"><span>Still owed</span><span>{{ check.balanceDue | number:'1.2-2' }}</span></div>
+                }
+              </div>
+
+              <div class="ot-check-actions">
+                <button type="button" class="rst-touch-btn" (click)="printCheck(check)" [disabled]="busy">
+                  <span class="material-symbols-outlined">print</span>
+                  Print
+                </button>
+                @if (check.balanceDue > 0.01) {
+                  <button type="button" class="rst-touch-btn" (click)="startDiscount(check)" [disabled]="busy">
+                    <span class="material-symbols-outlined">sell</span>
+                    Discount
+                  </button>
+                  <button type="button" class="rst-touch-btn is-success" (click)="startPayment(check)" [disabled]="busy">
+                    <span class="material-symbols-outlined">payments</span>
+                    Take {{ check.balanceDue | number:'1.2-2' }}
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="rst-touch-btn" (click)="openSplit()" [disabled]="busy">
+          <span class="material-symbols-outlined">call_split</span>
+          Split differently
+        </button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="btn btn-secondary" (click)="panel = 'none'">Back to the order</button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- ══ Payment ══════════════════════════════════════════════════════ -->
+@if (panel === 'payment' && activeCheck) {
+  <div class="rst-modal-backdrop" (click)="panel = 'bill'">
+    <div class="rst-modal is-narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div>
+          <div class="rst-modal-title">Take payment</div>
+          <div class="rst-modal-sub">
+            {{ activeCheck.checkNumber }} · {{ activeCheck.balanceDue | number:'1.2-2' }} {{ activeCheck.currencyCode }} owed
+          </div>
+        </div>
+        <button type="button" class="rst-close" (click)="panel = 'bill'" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        <div class="ot-tender-grid">
+          @for (t of tenderOptions; track t) {
+            <button type="button" class="ot-tender" [class.is-on]="tender === t" (click)="tender = t">
+              <span class="material-symbols-outlined">{{ tenderIcons[t] }}</span>
+              {{ tenderLabels[t] }}
+            </button>
+          }
+        </div>
+
+        <div class="ot-cfg-row">
+          <div class="rst-field">
+            <label for="ot-pay-amount">Amount</label>
+            <input id="ot-pay-amount" type="number" step="0.01" min="0" [(ngModel)]="payAmount" [class.is-invalid]="!!fieldErrors['payAmount']" [attr.aria-invalid]="!!fieldErrors['payAmount'] || null" [attr.aria-describedby]="fieldErrors['payAmount'] ? 'ot-pay-amount-error' : null" />
+            <rst-field-error [message]="fieldErrors['payAmount']" for="ot-pay-amount"></rst-field-error>
+          </div>
+
+          @if (tender === TenderType.Cash) {
+            <div class="rst-field">
+              <label for="ot-tendered">Cash given</label>
+              <input id="ot-tendered" type="number" step="0.01" min="0" [(ngModel)]="tenderedAmount" [class.is-invalid]="!!fieldErrors['tenderedAmount']" [attr.aria-invalid]="!!fieldErrors['tenderedAmount'] || null" [attr.aria-describedby]="fieldErrors['tenderedAmount'] ? 'ot-tendered-error' : null" />
+              <rst-field-error [message]="fieldErrors['tenderedAmount']" for="ot-tendered"></rst-field-error>
+            </div>
+          }
+
+          @if (tender === TenderType.Card) {
+            <div class="rst-field">
+              <label for="ot-last4">Card last 4</label>
+              <input id="ot-last4" type="text" maxlength="4" inputmode="numeric" [(ngModel)]="cardLast4" placeholder="1234" />
+            </div>
+          }
+        </div>
+
+        @if (tender === TenderType.Cash) {
+          <div class="ot-quick-cash">
+            @for (n of [5, 10, 20, 50, 100]; track n) {
+              <button type="button" (click)="tenderedAmount = n">{{ n }}</button>
+            }
+            <button type="button" (click)="tenderedAmount = payAmount">Exact</button>
+          </div>
+
+          @if (changeDue > 0) {
+            <div class="ot-change">
+              <span>Change due</span>
+              <strong>{{ changeDue | number:'1.2-2' }}</strong>
+            </div>
+          }
+        }
+
+        <div class="rst-field is-full">
+          <label for="ot-tip">Tip</label>
+          <div class="ot-tip-row">
+            <input id="ot-tip" type="number" step="0.01" min="0" [(ngModel)]="tipAmount" [class.is-invalid]="!!fieldErrors['tipAmount']" [attr.aria-invalid]="!!fieldErrors['tipAmount'] || null" [attr.aria-describedby]="fieldErrors['tipAmount'] ? 'ot-tip-error' : null" />
+            <rst-field-error [message]="fieldErrors['tipAmount']" for="ot-tip"></rst-field-error>
+            @for (p of [10, 15, 20]; track p) {
+              <button type="button" class="ot-tip-preset" (click)="setTipPercent(p)">{{ p }}%</button>
+            }
+            <button type="button" class="ot-tip-preset" (click)="tipAmount = 0">None</button>
+          </div>
+        </div>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="panel = 'bill'" [disabled]="busy">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-success" (click)="takePayment()" [disabled]="busy || payAmount <= 0">
+          Take {{ payAmount + tipAmount | number:'1.2-2' }}
+        </button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- ══ Discount ═════════════════════════════════════════════════════ -->
+@if (panel === 'discount' && activeCheck) {
+  <div class="rst-modal-backdrop" (click)="panel = 'bill'">
+    <div class="rst-modal is-narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div class="rst-modal-title">Discount {{ activeCheck.checkNumber }}</div>
+        <button type="button" class="rst-close" (click)="panel = 'bill'" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        <div class="rst-form-grid">
+          <div class="rst-field is-full">
+            <label for="ot-disc-reason">Reason</label>
+            <select id="ot-disc-reason" [(ngModel)]="discountReasonId" [class.is-invalid]="!!fieldErrors['discountReasonId']" [attr.aria-invalid]="!!fieldErrors['discountReasonId'] || null" [attr.aria-describedby]="fieldErrors['discountReasonId'] ? 'ot-disc-reason-error' : null">
+              @for (r of discountReasons; track r.id) {
+                <option [value]="r.id">{{ r.name }}</option>
+              }
+            </select>
+            <rst-field-error [message]="fieldErrors['discountReasonId']" for="ot-disc-reason"></rst-field-error>
+          </div>
+
+          <div class="rst-field">
+            <label for="ot-disc-kind">Type</label>
+            <select id="ot-disc-kind" [(ngModel)]="discountKind">
+              @for (k of [DiscountKind.Percentage, DiscountKind.Amount, DiscountKind.Comp]; track k) {
+                <option [ngValue]="k">{{ discountKindLabels[k] }}</option>
+              }
+            </select>
+          </div>
+
+          @if (discountKind !== DiscountKind.Comp) {
+            <div class="rst-field">
+              <label for="ot-disc-value">
+                {{ discountKind === DiscountKind.Percentage ? 'Percent' : 'Amount' }}
+              </label>
+              <input id="ot-disc-value" type="number" step="0.01" min="0" [(ngModel)]="discountValue" [class.is-invalid]="!!fieldErrors['discountValue']" [attr.aria-invalid]="!!fieldErrors['discountValue'] || null" [attr.aria-describedby]="fieldErrors['discountValue'] ? 'ot-disc-value-error' : null" />
+              <rst-field-error [message]="fieldErrors['discountValue']" for="ot-disc-value"></rst-field-error>
+            </div>
+          }
+
+          <div class="rst-field is-full">
+            <label for="ot-disc-pin">Supervisor PIN</label>
+            <input id="ot-disc-pin" type="password" inputmode="numeric" [(ngModel)]="discountPin" placeholder="••••" [class.is-invalid]="!!fieldErrors['discountPin']" [attr.aria-invalid]="!!fieldErrors['discountPin'] || null" [attr.aria-describedby]="fieldErrors['discountPin'] ? 'ot-disc-pin-error' : null" />
+            <rst-field-error [message]="fieldErrors['discountPin']" for="ot-disc-pin"></rst-field-error>
+            <span class="rst-hint">Needed above the approval threshold, or for a comp.</span>
+          </div>
+        </div>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="panel = 'bill'" [disabled]="busy">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-primary" (click)="applyDiscount()" [disabled]="busy">
+          Apply
+        </button>
+      </footer>
+    </div>
+  </div>
+}

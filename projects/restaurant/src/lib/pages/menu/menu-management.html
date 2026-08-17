@@ -1,0 +1,745 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Menu</h2>
+      <p class="subtitle">Dishes, categories, modifiers, combos and what is off the menu today.</p>
+    </div>
+    <rst-outlet-picker (outletChange)="onOutlet($event)"></rst-outlet-picker>
+  </div>
+
+  <rst-help key="menu"></rst-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <div class="rst-segment mm-tabs" role="tablist" aria-label="Menu sections">
+    @for (t of [
+      { k: 'items', l: 'Dishes', i: 'restaurant_menu' },
+      { k: 'menus', l: 'Menus & categories', i: 'menu_book' },
+      { k: 'modifiers', l: 'Modifier groups', i: 'tune' },
+      { k: 'combos', l: 'Combos', i: 'lunch_dining' },
+      { k: 'availability', l: '86 list', i: 'no_meals' }
+    ]; track t.k) {
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="tab === t.k"
+        [class.is-active]="tab === t.k"
+        (click)="tab = $any(t.k)"
+      >
+        <span class="material-symbols-outlined">{{ t.i }}</span>
+        {{ t.l }}
+        @if (t.k === 'availability' && unavailable.length) {
+          <span class="rst-pill tone-danger">{{ unavailable.length }}</span>
+        }
+      </button>
+    }
+  </div>
+
+  <!-- ══ Dishes ═══════════════════════════════════════════════════════ -->
+  @if (tab === 'items') {
+    <div class="rst-toolbar">
+      <div class="rst-search">
+        <span class="material-symbols-outlined">search</span>
+        <input
+          type="text"
+          [(ngModel)]="search"
+          (ngModelChange)="loadItems()"
+          placeholder="Search dishes…"
+          aria-label="Search dishes"
+        />
+      </div>
+
+      <select [(ngModel)]="filterMenuId" (ngModelChange)="filterCategoryId = ''; loadItems()" aria-label="Menu">
+        <option value="">All menus</option>
+        @for (m of menus; track m.id) { <option [value]="m.id">{{ m.name }}</option> }
+      </select>
+
+      <select [(ngModel)]="filterCategoryId" (ngModelChange)="loadItems()" aria-label="Category">
+        <option value="">All categories</option>
+        @for (c of categories; track c.id) {
+          @if (!filterMenuId || c.menuId === filterMenuId) {
+            <option [value]="c.id">{{ c.name }}</option>
+          }
+        }
+      </select>
+
+      <div class="rst-spacer"></div>
+
+      <button type="button" class="rst-touch-btn is-primary" (click)="newItem()">
+        <span class="material-symbols-outlined">add</span>
+        New dish
+      </button>
+    </div>
+
+    @if (loading) {
+      <div class="rst-skeleton" style="height: 300px"></div>
+    } @else if (!items.length) {
+      <div class="rst-empty">
+        <div class="rst-empty-icon"><span class="material-symbols-outlined">restaurant_menu</span></div>
+        <div class="rst-empty-title">No dishes yet</div>
+        <div class="rst-empty-text">Add your first dish, or clear the filters above.</div>
+      </div>
+    } @else {
+      <div class="rst-table-wrap">
+        <table class="rst-table">
+          <thead>
+            <tr>
+              <th>Dish</th>
+              <th>Category</th>
+              <th>Station</th>
+              <th class="num">Price</th>
+              <th class="num">Cost</th>
+              <th class="num">Cost %</th>
+              <th>Diet</th>
+              <th>State</th>
+              <th class="actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (i of items; track trackItem($index, i)) {
+              <tr [class.mm-off]="!i.isAvailable">
+                <td>
+                  <div class="mm-item-cell">
+                    <span class="strong">{{ i.name }}</span>
+                    @if (i.code) { <span class="muted mm-code">{{ i.code }}</span> }
+                    @if (i.variants.length > 1) {
+                      <span class="rst-pill tone-neutral">{{ i.variants.length }} sizes</span>
+                    }
+                  </div>
+                </td>
+                <td class="muted">{{ i.categoryName || categoryName(i.categoryId) }}</td>
+                <td class="muted">{{ i.stationName || '—' }}</td>
+                <td class="num strong">{{ i.basePrice | number:'1.2-2' }}</td>
+                <td class="num muted">{{ i.standardCost | number:'1.2-2' }}</td>
+                <td class="num">
+                  <span
+                    class="rst-pill"
+                    [class.tone-success]="i.foodCostPercent > 0 && i.foodCostPercent <= 33"
+                    [class.tone-warning]="i.foodCostPercent > 33 && i.foodCostPercent <= 45"
+                    [class.tone-danger]="i.foodCostPercent > 45"
+                    [class.tone-neutral]="i.foodCostPercent === 0"
+                  >
+                    @if (i.foodCostPercent > 0) { {{ i.foodCostPercent }}% } @else { — }
+                  </span>
+                </td>
+                <td>
+                  <div class="mm-tags">
+                    @if (i.isVegetarian) { <span class="rst-diet">V</span> }
+                    @if (i.isVegan) { <span class="rst-diet">VG</span> }
+                    @if (i.isGlutenFree) { <span class="rst-diet">GF</span> }
+                    @if (i.containsNuts) { <span class="rst-allergen">Nuts</span> }
+                    @if (i.isAlcohol) { <span class="rst-diet is-alcohol">ALC</span> }
+                  </div>
+                </td>
+                <td>
+                  @if (!i.isActive) { <span class="rst-pill tone-neutral">Hidden</span> }
+                  @else if (!i.isAvailable) { <span class="rst-pill tone-danger">86'd</span> }
+                  @else { <span class="rst-pill tone-success">On</span> }
+                </td>
+                <td class="actions">
+                  <button
+                    type="button"
+                    class="rst-icon-btn"
+                    (click)="start86(i)"
+                    [attr.aria-label]="i.isAvailable ? 'Take off the menu' : 'Put back on'"
+                    [title]="i.isAvailable ? 'Take off the menu' : 'Put back on'"
+                  >
+                    <span class="material-symbols-outlined">{{ i.isAvailable ? 'no_meals' : 'restaurant' }}</span>
+                  </button>
+                  <button type="button" class="rst-icon-btn" (click)="editItem(i)" aria-label="Edit">
+                    <span class="material-symbols-outlined">edit</span>
+                  </button>
+                  <button type="button" class="rst-icon-btn is-danger" (click)="deleteItem(i)" aria-label="Remove">
+                    <span class="material-symbols-outlined">delete</span>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <!-- ══ Menus & categories ═══════════════════════════════════════════ -->
+  @if (tab === 'menus') {
+    <div class="rst-toolbar">
+      <div class="rst-spacer"></div>
+      <button type="button" class="rst-touch-btn" (click)="newCategory()">
+        <span class="material-symbols-outlined">create_new_folder</span>
+        New category
+      </button>
+      <button type="button" class="rst-touch-btn is-primary" (click)="newMenu()">
+        <span class="material-symbols-outlined">add</span>
+        New menu
+      </button>
+    </div>
+
+    <div class="mm-menu-grid">
+      @for (m of menus; track m.id) {
+        <section class="rst-card">
+          <header class="rst-card-head">
+            <span class="rst-card-title">
+              <span class="material-symbols-outlined">menu_book</span>
+              {{ m.name }}
+              @if (m.isDefault) { <span class="rst-pill tone-info">Default</span> }
+              @if (m.isCurrentlyActive) { <span class="rst-pill tone-success">Live now</span> }
+              @else if (!m.isActive) { <span class="rst-pill tone-neutral">Off</span> }
+            </span>
+            <div class="mm-card-actions">
+              <button type="button" class="rst-icon-btn" (click)="editingMenu = m" aria-label="Edit menu">
+                <span class="material-symbols-outlined">edit</span>
+              </button>
+              <button type="button" class="rst-icon-btn is-danger" (click)="deleteMenu(m)" aria-label="Remove menu">
+                <span class="material-symbols-outlined">delete</span>
+              </button>
+            </div>
+          </header>
+
+          <div class="rst-card-body">
+            <p class="mm-menu-meta">
+              {{ m.itemCount }} dishes across {{ m.categoryCount }} categories
+              @if (m.availableFrom && m.availableTo) {
+                · {{ m.availableFrom }}–{{ m.availableTo }}
+              }
+            </p>
+
+            <div class="mm-cat-list">
+              @for (c of categoriesForMenu(m.id); track trackCat($index, c)) {
+                <div class="mm-cat">
+                  <span class="mm-cat-swatch" [style.background]="c.colorHex || '#94a3b8'"></span>
+                  <span class="mm-cat-name">{{ c.name }}</span>
+                  <span class="mm-cat-count">{{ c.itemCount }}</span>
+                  <button type="button" class="rst-icon-btn" (click)="editingCategory = c" aria-label="Edit category">
+                    <span class="material-symbols-outlined">edit</span>
+                  </button>
+                  <button type="button" class="rst-icon-btn is-danger" (click)="deleteCategory(c)" aria-label="Remove category">
+                    <span class="material-symbols-outlined">delete</span>
+                  </button>
+                </div>
+              }
+              @if (!categoriesForMenu(m.id).length) {
+                <p class="mm-empty-inline">No categories yet.</p>
+              }
+            </div>
+          </div>
+        </section>
+      }
+    </div>
+  }
+
+  <!-- ══ Modifier groups ══════════════════════════════════════════════ -->
+  @if (tab === 'modifiers') {
+    <div class="mm-menu-grid">
+      @for (g of groups; track trackGroup($index, g)) {
+        <section class="rst-card">
+          <header class="rst-card-head">
+            <span class="rst-card-title">
+              <span class="material-symbols-outlined">tune</span>
+              {{ g.name }}
+              @if (g.isRequired) { <span class="rst-pill tone-danger">Required</span> }
+            </span>
+            <span class="rst-pill tone-neutral">{{ g.usedByItemCount }} dishes</span>
+          </header>
+
+          <div class="rst-card-body">
+            @if (g.promptText) { <p class="mm-prompt">“{{ g.promptText }}”</p> }
+            <p class="mm-menu-meta">
+              {{ g.selectionMode === ModifierSelectionMode.Single ? 'Choose one' : 'Choose up to ' + g.maxSelections }}
+              @if (g.freeSelections > 0) { · first {{ g.freeSelections }} free }
+            </p>
+
+            <div class="mm-mod-list">
+              @for (m of g.modifiers; track m.id) {
+                <span class="mm-mod" [class.is-removal]="m.isRemoval" [class.is-off]="!m.isAvailable">
+                  {{ m.isRemoval ? 'No ' + m.name : m.name }}
+                  @if (m.priceDelta > 0) { <b>+{{ m.priceDelta | number:'1.2-2' }}</b> }
+                </span>
+              }
+            </div>
+          </div>
+        </section>
+      }
+
+      @if (!groups.length) {
+        <div class="rst-empty">
+          <div class="rst-empty-icon"><span class="material-symbols-outlined">tune</span></div>
+          <div class="rst-empty-title">No modifier groups</div>
+          <div class="rst-empty-text">
+            Groups like “Cooking preference” or “Add toppings” are shared across dishes, so a change
+            to the list reaches every dish that uses it.
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ══ Combos ═══════════════════════════════════════════════════════ -->
+  @if (tab === 'combos') {
+    <div class="mm-menu-grid">
+      @for (c of combos; track c.id) {
+        <section class="rst-card">
+          <header class="rst-card-head">
+            <span class="rst-card-title">
+              <span class="material-symbols-outlined">lunch_dining</span>{{ c.name }}
+            </span>
+            <span class="mm-combo-price">
+              {{ c.price | number:'1.2-2' }}
+              @if (c.savingAmount > 0) {
+                <small>saves {{ c.savingAmount | number:'1.2-2' }}</small>
+              }
+            </span>
+          </header>
+
+          <div class="rst-card-body">
+            @for (component of c.components; track component.id) {
+              <div class="mm-combo-slot">
+                <div class="mm-combo-slot-name">{{ component.name }}</div>
+                <div class="mm-mod-list">
+                  @for (o of component.options; track o.id) {
+                    <span class="mm-mod" [class.is-default]="o.isDefault">
+                      {{ o.menuItemName }}
+                      @if (o.upchargeAmount > 0) { <b>+{{ o.upchargeAmount | number:'1.2-2' }}</b> }
+                    </span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+      }
+
+      @if (!combos.length) {
+        <div class="rst-empty">
+          <div class="rst-empty-icon"><span class="material-symbols-outlined">lunch_dining</span></div>
+          <div class="rst-empty-title">No combos</div>
+          <div class="rst-empty-text">A combo bundles a main, a side and a drink at one price.</div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ══ 86 list ══════════════════════════════════════════════════════ -->
+  @if (tab === 'availability') {
+    @if (!unavailable.length) {
+      <div class="rst-empty">
+        <div class="rst-empty-icon"><span class="material-symbols-outlined">check_circle</span></div>
+        <div class="rst-empty-title">Everything is on</div>
+        <div class="rst-empty-text">
+          Nothing is 86'd right now. Take a dish off from the Dishes tab when the kitchen runs out.
+        </div>
+      </div>
+    } @else {
+      <div class="rst-table-wrap">
+        <table class="rst-table">
+          <thead>
+            <tr>
+              <th>Dish</th>
+              <th>Category</th>
+              <th>Reason</th>
+              <th>Taken off</th>
+              <th>By</th>
+              <th class="actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of unavailable; track row.id) {
+              <tr>
+                <td class="strong">
+                  {{ row.menuItemName }}
+                  @if (row.variantName) { <span class="muted">({{ row.variantName }})</span> }
+                </td>
+                <td class="muted">{{ row.categoryName }}</td>
+                <td>
+                  {{ row.reason || '—' }}
+                  @if (row.isAutomatic) { <span class="rst-pill tone-info">Auto — out of stock</span> }
+                </td>
+                <td class="muted">{{ row.markedAt | date:'d MMM HH:mm' }}</td>
+                <td class="muted">{{ row.markedByStaffName || '—' }}</td>
+                <td class="actions">
+                  <button type="button" class="rst-touch-btn" (click)="putBack(row)" [disabled]="busy">
+                    <span class="material-symbols-outlined">restaurant</span>
+                    Put back on
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</div>
+
+<!-- ══ Dish editor ══════════════════════════════════════════════════ -->
+@if (editing) {
+  <div class="rst-modal-backdrop" (click)="editing = null">
+    <div class="rst-modal is-wide" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div>
+          <div class="rst-modal-title">{{ editingId ? 'Edit dish' : 'New dish' }}</div>
+          <div class="rst-modal-sub">
+            @if (editing.basePrice > 0 && editing.standardCost > 0) {
+              Food cost {{ editingCostPercent }}% ·
+              margin {{ editing.basePrice - editing.standardCost | number:'1.2-2' }}
+            } @else {
+              Price and cost drive every margin report — worth filling both in.
+            }
+          </div>
+        </div>
+        <button type="button" class="rst-close" (click)="editing = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        <div class="rst-form-grid">
+          <div class="rst-field is-full">
+            <label for="mm-name">Name</label>
+            <input id="mm-name" type="text" [(ngModel)]="editing.name" placeholder="Classic Cheeseburger"  [class.is-invalid]="!!fieldErrors['name']" [attr.aria-invalid]="!!fieldErrors['name'] || null" [attr.aria-describedby]="fieldErrors['name'] ? 'mm-name-error' : null" />
+            <rst-field-error [message]="fieldErrors['name']" for="mm-name"></rst-field-error>
+          </div>
+
+          <div class="rst-field">
+            <label for="mm-short">Short name</label>
+            <input id="mm-short" type="text" [(ngModel)]="editing.shortName" placeholder="Cheeseburger"  [class.is-invalid]="!!fieldErrors['shortName']" [attr.aria-invalid]="!!fieldErrors['shortName'] || null" [attr.aria-describedby]="fieldErrors['shortName'] ? 'mm-short-error' : null" />
+            <rst-field-error [message]="fieldErrors['shortName']" for="mm-short"></rst-field-error>
+            <span class="rst-hint">Used on the order pad tile, where space is tight.</span>
+          </div>
+
+          <div class="rst-field">
+            <label for="mm-code">Code</label>
+            <input id="mm-code" type="text" [(ngModel)]="editing.code"  [class.is-invalid]="!!fieldErrors['code']" [attr.aria-invalid]="!!fieldErrors['code'] || null" [attr.aria-describedby]="fieldErrors['code'] ? 'mm-code-error' : null" />
+            <rst-field-error [message]="fieldErrors['code']" for="mm-code"></rst-field-error>
+          </div>
+
+          <div class="rst-field">
+            <label for="mm-cat">Category</label>
+            <select id="mm-cat" [(ngModel)]="editing.categoryId">
+              @for (c of categories; track c.id) { <option [value]="c.id">{{ c.name }}</option> }
+            </select>
+          </div>
+
+          <div class="rst-field">
+            <label for="mm-station">Kitchen station</label>
+            <select id="mm-station" [(ngModel)]="editing.stationId">
+              <option [ngValue]="null">Use the routing rules</option>
+              @for (s of stations; track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }
+            </select>
+          </div>
+
+          <div class="rst-field">
+            <label for="mm-course">Course</label>
+            <select id="mm-course" [(ngModel)]="editing.defaultCourse">
+              @for (o of courseOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+            </select>
+          </div>
+
+          <div class="rst-field">
+            <label for="mm-price">Price</label>
+            <input id="mm-price" type="number" step="0.01" min="0" [(ngModel)]="editing.basePrice"  [class.is-invalid]="!!fieldErrors['basePrice']" [attr.aria-invalid]="!!fieldErrors['basePrice'] || null" [attr.aria-describedby]="fieldErrors['basePrice'] ? 'mm-price-error' : null" />
+            <rst-field-error [message]="fieldErrors['basePrice']" for="mm-price"></rst-field-error>
+          </div>
+
+          <div class="rst-field">
+            <label for="mm-cost">Standard cost</label>
+            <input id="mm-cost" type="number" step="0.01" min="0" [(ngModel)]="editing.standardCost"  [class.is-invalid]="!!fieldErrors['standardCost']" [attr.aria-invalid]="!!fieldErrors['standardCost'] || null" [attr.aria-describedby]="fieldErrors['standardCost'] ? 'mm-cost-error' : null" />
+            <rst-field-error [message]="fieldErrors['standardCost']" for="mm-cost"></rst-field-error>
+            <span class="rst-hint">Set from a recipe automatically once one exists.</span>
+          </div>
+
+          <div class="rst-field">
+            <label for="mm-tax">Tax %</label>
+            <input id="mm-tax" type="number" step="0.01" min="0" [(ngModel)]="editing.taxPercent"  [class.is-invalid]="!!fieldErrors['taxPercent']" [attr.aria-invalid]="!!fieldErrors['taxPercent'] || null" [attr.aria-describedby]="fieldErrors['taxPercent'] ? 'mm-tax-error' : null" />
+            <rst-field-error [message]="fieldErrors['taxPercent']" for="mm-tax"></rst-field-error>
+            <span class="rst-hint">Zero uses the outlet's default rate.</span>
+          </div>
+
+          <div class="rst-field">
+            <label for="mm-prep">Prep time (min)</label>
+            <input id="mm-prep" type="number" min="0" [(ngModel)]="editing.prepTimeMinutes"  [class.is-invalid]="!!fieldErrors['prepTimeMinutes']" [attr.aria-invalid]="!!fieldErrors['prepTimeMinutes'] || null" [attr.aria-describedby]="fieldErrors['prepTimeMinutes'] ? 'mm-prep-error' : null" />
+            <rst-field-error [message]="fieldErrors['prepTimeMinutes']" for="mm-prep"></rst-field-error>
+            <span class="rst-hint">Drives the kitchen SLA colour and the quoted wait.</span>
+          </div>
+
+          <div class="rst-field">
+            <label for="mm-spice">Spice</label>
+            <select id="mm-spice" [(ngModel)]="editing.spiceLevel">
+              @for (o of spiceOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+            </select>
+          </div>
+
+          <div class="rst-field">
+            <label for="mm-cal">Calories</label>
+            <input id="mm-cal" type="number" min="0" [(ngModel)]="editing.calories"  [class.is-invalid]="!!fieldErrors['calories']" [attr.aria-invalid]="!!fieldErrors['calories'] || null" [attr.aria-describedby]="fieldErrors['calories'] ? 'mm-cal-error' : null" />
+            <rst-field-error [message]="fieldErrors['calories']" for="mm-cal"></rst-field-error>
+          </div>
+
+          <div class="rst-field is-full">
+            <label for="mm-desc">Description</label>
+            <textarea id="mm-desc" [(ngModel)]="editing.description"></textarea>
+          </div>
+
+          <div class="rst-field is-full">
+            <label for="mm-allergens">Allergens</label>
+            <input id="mm-allergens" type="text" [(ngModel)]="editing.allergens" placeholder="celery, mustard, sesame"  [class.is-invalid]="!!fieldErrors['allergens']" [attr.aria-invalid]="!!fieldErrors['allergens'] || null" [attr.aria-describedby]="fieldErrors['allergens'] ? 'mm-allergens-error' : null" />
+            <rst-field-error [message]="fieldErrors['allergens']" for="mm-allergens"></rst-field-error>
+            <span class="rst-hint">Shown on the order pad and printed in capitals on the kitchen ticket.</span>
+          </div>
+
+          <div class="rst-field is-full">
+            <label for="mm-kitchen-note">Standing note for the kitchen</label>
+            <input id="mm-kitchen-note" type="text" [(ngModel)]="editing.kitchenNote"  [class.is-invalid]="!!fieldErrors['kitchenNote']" [attr.aria-invalid]="!!fieldErrors['kitchenNote'] || null" [attr.aria-describedby]="fieldErrors['kitchenNote'] ? 'mm-kitchen-note-error' : null" />
+            <rst-field-error [message]="fieldErrors['kitchenNote']" for="mm-kitchen-note"></rst-field-error>
+          </div>
+        </div>
+
+        <div class="mm-checks">
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editing.isVegetarian" /> Vegetarian</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editing.isVegan" /> Vegan</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editing.isHalal" /> Halal</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editing.isGlutenFree" /> Gluten free</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editing.containsNuts" /> Contains nuts</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editing.containsDairy" /> Contains dairy</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editing.containsShellfish" /> Contains shellfish</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editing.isAlcohol" /> Alcohol</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editing.isOpenPrice" /> Open price</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editing.isSoldByWeight" /> Sold by weight</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editing.isFeatured" /> Featured</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editing.isActive" /> On the menu</label>
+        </div>
+
+        <!-- Sizes -->
+        <div class="mm-section">
+          <div class="mm-section-head">
+            <h4>Sizes</h4>
+            <button type="button" class="rst-touch-btn" (click)="addVariant()">
+              <span class="material-symbols-outlined">add</span>Add size
+            </button>
+          </div>
+
+          @if (!editing.variants.length) {
+            <p class="mm-empty-inline">No sizes — the dish is sold at one price.</p>
+          }
+
+          @for (v of editing.variants; track $index) {
+            <div class="mm-variant-row">
+              <input type="text" [(ngModel)]="v.name" placeholder="Large" aria-label="Size name"  [class.is-invalid]="!!fieldErrors['name']" [attr.aria-invalid]="!!fieldErrors['name'] || null" />
+            <rst-field-error [message]="fieldErrors['name']"></rst-field-error>
+              <input type="number" step="0.01" [(ngModel)]="v.price" placeholder="Price" aria-label="Price"  [class.is-invalid]="!!fieldErrors['price']" [attr.aria-invalid]="!!fieldErrors['price'] || null" />
+            <rst-field-error [message]="fieldErrors['price']"></rst-field-error>
+              <input type="number" step="0.01" [(ngModel)]="v.standardCost" placeholder="Cost" aria-label="Cost"  [class.is-invalid]="!!fieldErrors['standardCost']" [attr.aria-invalid]="!!fieldErrors['standardCost'] || null" />
+            <rst-field-error [message]="fieldErrors['standardCost']"></rst-field-error>
+              <label class="rst-check"><input type="checkbox" [(ngModel)]="v.isDefault" /> Default</label>
+              <button type="button" class="rst-icon-btn is-danger" (click)="removeVariant($index)" aria-label="Remove size">
+                <span class="material-symbols-outlined">delete</span>
+              </button>
+            </div>
+          }
+        </div>
+
+        <!-- Modifier groups -->
+        <div class="mm-section">
+          <div class="mm-section-head"><h4>Modifier groups</h4></div>
+          <div class="mm-group-picker">
+            @for (g of groups; track trackGroup($index, g)) {
+              <button
+                type="button"
+                class="mm-group-chip"
+                [class.is-on]="editing.modifierGroupIds.includes(g.id)"
+                (click)="toggleGroupOnItem(g.id)"
+              >
+                {{ g.name }}
+                @if (g.isRequired) { <span class="mm-req">required</span> }
+              </button>
+            }
+            @if (!groups.length) {
+              <p class="mm-empty-inline">No modifier groups defined yet.</p>
+            }
+          </div>
+        </div>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="editing = null" [disabled]="busy">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-primary" (click)="saveItem()" [disabled]="busy">
+          Save dish
+        </button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- ══ Category editor ══════════════════════════════════════════════ -->
+@if (editingCategory) {
+  <div class="rst-modal-backdrop" (click)="editingCategory = null">
+    <div class="rst-modal is-narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div class="rst-modal-title">{{ editingCategory.id ? 'Edit category' : 'New category' }}</div>
+        <button type="button" class="rst-close" (click)="editingCategory = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        <div class="rst-form-grid">
+          <div class="rst-field is-full">
+            <label for="mc-name">Name</label>
+            <input id="mc-name" type="text" [(ngModel)]="editingCategory.name"  [class.is-invalid]="!!fieldErrors['name']" [attr.aria-invalid]="!!fieldErrors['name'] || null" [attr.aria-describedby]="fieldErrors['name'] ? 'mc-name-error' : null" />
+            <rst-field-error [message]="fieldErrors['name']" for="mc-name"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="mc-menu">Menu</label>
+            <select id="mc-menu" [(ngModel)]="editingCategory.menuId">
+              @for (m of menus; track m.id) { <option [value]="m.id">{{ m.name }}</option> }
+            </select>
+          </div>
+          <div class="rst-field">
+            <label for="mc-station">Default station</label>
+            <select id="mc-station" [(ngModel)]="editingCategory.defaultStationId">
+              <option [ngValue]="null">None</option>
+              @for (s of stations; track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }
+            </select>
+          </div>
+          <div class="rst-field">
+            <label for="mc-colour">Colour</label>
+            <input id="mc-colour" type="color" [(ngModel)]="editingCategory.colorHex" />
+          </div>
+          <div class="rst-field">
+            <label for="mc-icon">Icon</label>
+            <input id="mc-icon" type="text" [(ngModel)]="editingCategory.iconName" placeholder="lunch_dining"  [class.is-invalid]="!!fieldErrors['iconName']" [attr.aria-invalid]="!!fieldErrors['iconName'] || null" [attr.aria-describedby]="fieldErrors['iconName'] ? 'mc-icon-error' : null" />
+            <rst-field-error [message]="fieldErrors['iconName']" for="mc-icon"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="mc-order">Order</label>
+            <input id="mc-order" type="number" [(ngModel)]="editingCategory.displayOrder"  [class.is-invalid]="!!fieldErrors['displayOrder']" [attr.aria-invalid]="!!fieldErrors['displayOrder'] || null" [attr.aria-describedby]="fieldErrors['displayOrder'] ? 'mc-order-error' : null" />
+            <rst-field-error [message]="fieldErrors['displayOrder']" for="mc-order"></rst-field-error>
+          </div>
+          <div class="rst-field is-full">
+            <label class="rst-check">
+              <input type="checkbox" [(ngModel)]="editingCategory.isActive" /> Show on the order pad
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="editingCategory = null">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-primary" (click)="saveCategory()" [disabled]="busy">Save</button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- ══ Menu editor ══════════════════════════════════════════════════ -->
+@if (editingMenu) {
+  <div class="rst-modal-backdrop" (click)="editingMenu = null">
+    <div class="rst-modal is-narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div>
+          <div class="rst-modal-title">{{ editingMenu.id ? 'Edit menu' : 'New menu' }}</div>
+          <div class="rst-modal-sub">A menu with a time window only appears on the pad inside it.</div>
+        </div>
+        <button type="button" class="rst-close" (click)="editingMenu = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        <div class="rst-form-grid">
+          <div class="rst-field is-full">
+            <label for="mn-name">Name</label>
+            <input id="mn-name" type="text" [(ngModel)]="editingMenu.name" placeholder="Lunch"  [class.is-invalid]="!!fieldErrors['name']" [attr.aria-invalid]="!!fieldErrors['name'] || null" [attr.aria-describedby]="fieldErrors['name'] ? 'mn-name-error' : null" />
+            <rst-field-error [message]="fieldErrors['name']" for="mn-name"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="mn-daypart">Daypart</label>
+            <select id="mn-daypart" [(ngModel)]="editingMenu.daypart">
+              @for (o of daypartOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+            </select>
+          </div>
+          <div class="rst-field">
+            <label for="mn-order">Order</label>
+            <input id="mn-order" type="number" [(ngModel)]="editingMenu.displayOrder"  [class.is-invalid]="!!fieldErrors['displayOrder']" [attr.aria-invalid]="!!fieldErrors['displayOrder'] || null" [attr.aria-describedby]="fieldErrors['displayOrder'] ? 'mn-order-error' : null" />
+            <rst-field-error [message]="fieldErrors['displayOrder']" for="mn-order"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="mn-from">Available from</label>
+            <input id="mn-from" type="time" [(ngModel)]="editingMenu.availableFrom"  [class.is-invalid]="!!fieldErrors['availableFrom']" [attr.aria-invalid]="!!fieldErrors['availableFrom'] || null" [attr.aria-describedby]="fieldErrors['availableFrom'] ? 'mn-from-error' : null" />
+            <rst-field-error [message]="fieldErrors['availableFrom']" for="mn-from"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="mn-to">Available to</label>
+            <input id="mn-to" type="time" [(ngModel)]="editingMenu.availableTo"  [class.is-invalid]="!!fieldErrors['availableTo']" [attr.aria-invalid]="!!fieldErrors['availableTo'] || null" [attr.aria-describedby]="fieldErrors['availableTo'] ? 'mn-to-error' : null" />
+            <rst-field-error [message]="fieldErrors['availableTo']" for="mn-to"></rst-field-error>
+            <span class="rst-hint">A window that crosses midnight is handled correctly.</span>
+          </div>
+          <div class="rst-field is-full">
+            <label class="rst-check"><input type="checkbox" [(ngModel)]="editingMenu.isDefault" /> Default menu</label>
+            <label class="rst-check"><input type="checkbox" [(ngModel)]="editingMenu.isActive" /> Active</label>
+          </div>
+        </div>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="editingMenu = null">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-primary" (click)="saveMenu()" [disabled]="busy">Save</button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- ══ 86 dialog ════════════════════════════════════════════════════ -->
+@if (eightySixItem) {
+  <div class="rst-modal-backdrop" (click)="eightySixItem = null">
+    <div class="rst-modal is-narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div>
+          <div class="rst-modal-title">{{ eightySixItem.name }}</div>
+          <div class="rst-modal-sub">
+            @if (eightySixItem.isAvailable) { Taking it off greys it out on every order pad at once. }
+            @else { It is currently off the menu. }
+          </div>
+        </div>
+        <button type="button" class="rst-close" (click)="eightySixItem = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        @if (eightySixItem.isAvailable) {
+          <div class="rst-field is-full">
+            <label for="mm-86-reason">Why? Waiters will see this.</label>
+            <input id="mm-86-reason" type="text" [(ngModel)]="eightySixReason" placeholder="Out of salmon until tomorrow" />
+          </div>
+        }
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="eightySixItem = null">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        @if (eightySixItem.isAvailable) {
+          <button type="button" class="rst-touch-btn is-danger" (click)="confirm86(false)" [disabled]="busy">
+            Take off the menu
+          </button>
+        } @else {
+          <button type="button" class="rst-touch-btn is-success" (click)="confirm86(true)" [disabled]="busy">
+            Put back on
+          </button>
+        }
+      </footer>
+    </div>
+  </div>
+}

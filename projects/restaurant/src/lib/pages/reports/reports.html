@@ -1,0 +1,421 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Reports</h2>
+      <p class="subtitle">Sales, menu engineering, servers, tables, kitchen and leakage.</p>
+    </div>
+    <rst-outlet-picker (outletChange)="onOutlet($event)"></rst-outlet-picker>
+  </div>
+
+  <rst-help key="reports"></rst-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="rst-toolbar">
+    <input type="date" [(ngModel)]="from" (ngModelChange)="run()" aria-label="From" />
+    <input type="date" [(ngModel)]="to" (ngModelChange)="run()" aria-label="To" />
+    <div class="rst-spacer"></div>
+  </div>
+
+  <div class="rst-segment rp-tabs" role="tablist" aria-label="Reports">
+    @for (t of tabs; track t.key) {
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="active === t.key"
+        [class.is-active]="active === t.key"
+        (click)="select(t.key)"
+      >
+        <span class="material-symbols-outlined">{{ t.icon }}</span>{{ t.label }}
+      </button>
+    }
+  </div>
+
+  @if (loading) {
+    <div class="rst-skeleton" style="height: 360px"></div>
+  }
+
+  <!-- ══ Sales ════════════════════════════════════════════════════════ -->
+  @if (!loading && active === 'sales' && sales; as s) {
+    <div class="rst-stats">
+      <div class="rst-stat tone-brand">
+        <span class="rst-stat-label">Net sales</span>
+        <span class="rst-stat-value">{{ s.netSales | number:'1.2-2' }}</span>
+        <span class="rst-stat-foot">{{ s.grossSales | number:'1.2-2' }} gross</span>
+      </div>
+      <div class="rst-stat tone-cyan">
+        <span class="rst-stat-label">Covers</span>
+        <span class="rst-stat-value">{{ s.coverCount }}</span>
+        <span class="rst-stat-foot">{{ s.orderCount }} orders</span>
+      </div>
+      <div class="rst-stat tone-violet">
+        <span class="rst-stat-label">Average check</span>
+        <span class="rst-stat-value">{{ s.averageCheck | number:'1.2-2' }}</span>
+        <span class="rst-stat-foot">{{ s.averagePerCover | number:'1.2-2' }} per cover</span>
+      </div>
+      <div class="rst-stat" [class.tone-success]="s.grossMarginPercent >= 65" [class.tone-warning]="s.grossMarginPercent < 65">
+        <span class="rst-stat-label">Gross margin</span>
+        <span class="rst-stat-value">{{ s.grossMarginPercent }}%</span>
+        <span class="rst-stat-foot">food cost {{ s.foodCost | number:'1.2-2' }}</span>
+      </div>
+      <div class="rst-stat tone-success">
+        <span class="rst-stat-label">Tips</span>
+        <span class="rst-stat-value">{{ s.tips | number:'1.2-2' }}</span>
+      </div>
+      <div class="rst-stat tone-danger">
+        <span class="rst-stat-label">Leakage</span>
+        <span class="rst-stat-value">{{ s.discounts + s.voids + s.refunds | number:'1.2-2' }}</span>
+        <span class="rst-stat-foot">discounts, voids &amp; refunds</span>
+      </div>
+    </div>
+
+    @if (s.byDay.length > 1) {
+      <section class="rst-card rp-card">
+        <header class="rst-card-head"><span class="rst-card-title">Day by day</span></header>
+        <div class="rst-card-body">
+          <div class="rp-bars">
+            @for (d of s.byDay; track d.date) {
+              <div class="rp-bar-col" [title]="(d.date | date:'d MMM') + ' — ' + (d.amount | number:'1.2-2')">
+                <div class="rp-bar-track">
+                  <div class="rp-bar" [style.height.%]="(d.amount / peakDay) * 100"></div>
+                </div>
+                <span class="rp-bar-label">{{ d.date | date:'d/M' }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      </section>
+    }
+
+    <div class="rp-grid">
+      <section class="rst-card">
+        <header class="rst-card-head"><span class="rst-card-title">By category</span></header>
+        <div class="rst-card-body is-flush">
+          <div class="rst-table-wrap">
+            <table class="rst-table">
+              <thead><tr><th>Category</th><th class="num">Qty</th><th class="num">Sales</th><th class="num">Margin</th><th class="num">Share</th></tr></thead>
+              <tbody>
+                @for (c of s.byCategory; track c.categoryId) {
+                  <tr>
+                    <td class="strong">{{ c.categoryName }}</td>
+                    <td class="num">{{ c.quantity | number:'1.0-0' }}</td>
+                    <td class="num strong">{{ c.amount | number:'1.2-2' }}</td>
+                    <td class="num">{{ c.marginAmount | number:'1.2-2' }}</td>
+                    <td class="num muted">{{ c.sharePercent }}%</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="rst-card">
+        <header class="rst-card-head"><span class="rst-card-title">By order type &amp; tender</span></header>
+        <div class="rst-card-body is-flush">
+          <div class="rst-table-wrap">
+            <table class="rst-table">
+              <thead><tr><th>Channel</th><th class="num">Orders</th><th class="num">Sales</th><th class="num">Avg</th></tr></thead>
+              <tbody>
+                @for (o of s.byOrderType; track o.orderType) {
+                  <tr>
+                    <td class="strong">{{ o.orderTypeName }}</td>
+                    <td class="num">{{ o.orderCount }}</td>
+                    <td class="num strong">{{ o.amount | number:'1.2-2' }}</td>
+                    <td class="num muted">{{ o.averageCheck | number:'1.2-2' }}</td>
+                  </tr>
+                }
+                @for (t of s.byTender; track t.tenderType) {
+                  <tr>
+                    <td class="muted">{{ tenderLabels[t.tenderType] }}</td>
+                    <td class="num muted">{{ t.count }}</td>
+                    <td class="num">{{ t.amount | number:'1.2-2' }}</td>
+                    <td class="num muted">{{ t.sharePercent }}%</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  }
+
+  <!-- ══ Menu engineering ═════════════════════════════════════════════ -->
+  @if (!loading && active === 'menu' && menu; as m) {
+    @if (!m.rows.length) {
+      <div class="rst-empty">
+        <div class="rst-empty-icon"><span class="material-symbols-outlined">insights</span></div>
+        <div class="rst-empty-title">Not enough sales yet</div>
+        <div class="rst-empty-text">The matrix needs settled checks in the chosen period.</div>
+      </div>
+    } @else {
+      <div class="rp-quadrant-summary">
+        @for (c of [MenuClass.Star, MenuClass.Plowhorse, MenuClass.Puzzle, MenuClass.Dog]; track c) {
+          <div class="rp-quad-card" [class]="'quad-' + c">
+            <span class="rp-quad-name">{{ classLabels[c] }}</span>
+            <span class="rp-quad-count">{{ rowsIn(c).length }}</span>
+            <span class="rp-quad-hint">{{ classHint(c) }}</span>
+          </div>
+        }
+      </div>
+
+      <section class="rst-card rp-card">
+        <header class="rst-card-head">
+          <span class="rst-card-title">Popularity against margin</span>
+          <span class="rp-legend">
+            Average margin {{ m.averageMargin | number:'1.2-2' }} ·
+            popularity line {{ m.popularityThreshold }}%
+          </span>
+        </header>
+        <div class="rst-card-body">
+          <div class="rp-plot" role="img" aria-label="Menu engineering scatter plot">
+            <div class="rp-plot-vline" [style.left.%]="popularityLinePercent"></div>
+            <div class="rp-plot-hline" [style.top.%]="marginLinePercent"></div>
+
+            <span class="rp-quad-label rp-tl">Puzzle</span>
+            <span class="rp-quad-label rp-tr">Star</span>
+            <span class="rp-quad-label rp-bl">Dog</span>
+            <span class="rp-quad-label rp-br">Plowhorse</span>
+
+            @for (r of m.rows; track trackRow($index, r)) {
+              <span
+                class="rp-dot"
+                [class]="'quad-' + r.classification"
+                [style.left.%]="plotX(r)"
+                [style.top.%]="plotY(r)"
+                [title]="r.itemName + ' — ' + r.quantitySold + ' sold, margin ' + (r.contributionMargin | number:'1.2-2')"
+              ></span>
+            }
+
+            <span class="rp-axis rp-axis-x">Popularity →</span>
+            <span class="rp-axis rp-axis-y">Margin →</span>
+          </div>
+        </div>
+      </section>
+
+      <div class="rst-table-wrap">
+        <table class="rst-table">
+          <thead>
+            <tr>
+              <th>Dish</th><th>Category</th><th class="num">Sold</th><th class="num">Revenue</th>
+              <th class="num">Margin</th><th class="num">Food cost</th><th class="num">Share</th>
+              <th>Class</th><th>What to do</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of m.rows; track trackRow($index, r)) {
+              <tr>
+                <td class="strong">{{ r.itemName }}</td>
+                <td class="muted">{{ r.categoryName }}</td>
+                <td class="num">{{ r.quantitySold | number:'1.0-0' }}</td>
+                <td class="num">{{ r.revenue | number:'1.2-2' }}</td>
+                <td class="num strong">{{ r.contributionMargin | number:'1.2-2' }}</td>
+                <td class="num">{{ r.foodCostPercent }}%</td>
+                <td class="num muted">{{ r.popularityPercent }}%</td>
+                <td><span class="rst-pill" [class]="classTone(r.classification)">{{ r.classificationName }}</span></td>
+                <td class="muted rp-advice">{{ r.recommendation }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <!-- ══ Servers ══════════════════════════════════════════════════════ -->
+  @if (!loading && active === 'waiters') {
+    @if (!waiters.length) {
+      <div class="rst-empty">
+        <div class="rst-empty-icon"><span class="material-symbols-outlined">badge</span></div>
+        <div class="rst-empty-title">No closed orders in this range</div>
+      </div>
+    } @else {
+      <div class="rst-table-wrap">
+        <table class="rst-table">
+          <thead>
+            <tr>
+              <th>Server</th><th class="num">Orders</th><th class="num">Covers</th><th class="num">Sales</th>
+              <th class="num">Avg check</th><th class="num">Per cover</th><th class="num">Tips</th>
+              <th class="num">Tip %</th><th class="num">Turn</th><th class="num">Sales/hr</th>
+              <th class="num">Upsell</th><th class="num">Voids</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (w of waiters; track trackRow($index, w)) {
+              <tr>
+                <td class="strong">{{ w.staffName }}</td>
+                <td class="num">{{ w.orderCount }}</td>
+                <td class="num">{{ w.coverCount }}</td>
+                <td class="num strong">{{ w.salesAmount | number:'1.2-2' }}</td>
+                <td class="num">{{ w.averageCheck | number:'1.2-2' }}</td>
+                <td class="num">{{ w.averagePerCover | number:'1.2-2' }}</td>
+                <td class="num">{{ w.tipsEarned | number:'1.2-2' }}</td>
+                <td class="num muted">{{ w.tipPercent }}%</td>
+                <td class="num muted">{{ w.averageTurnMinutes }}m</td>
+                <td class="num">{{ w.salesPerHour | number:'1.2-2' }}</td>
+                <td class="num muted">{{ w.upsellRate }}%</td>
+                <td class="num">
+                  <span class="rst-pill" [class.tone-danger]="w.voidCount > 3" [class.tone-neutral]="w.voidCount <= 3">
+                    {{ w.voidCount }}
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <!-- ══ Tables ═══════════════════════════════════════════════════════ -->
+  @if (!loading && active === 'tables') {
+    @if (!tables.length) {
+      <div class="rst-empty">
+        <div class="rst-empty-icon"><span class="material-symbols-outlined">table_restaurant</span></div>
+        <div class="rst-empty-title">No completed turns in this range</div>
+      </div>
+    } @else {
+      <div class="rst-table-wrap">
+        <table class="rst-table">
+          <thead>
+            <tr>
+              <th>Table</th><th>Section</th><th class="num">Seats</th><th class="num">Turns</th>
+              <th class="num">Covers</th><th class="num">Revenue</th><th class="num">Per seat</th>
+              <th class="num">Avg turn</th><th class="num">Occupancy</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (t of tables; track trackRow($index, t)) {
+              <tr>
+                <td class="strong">{{ t.tableNumber }}</td>
+                <td class="muted">{{ t.sectionName || '—' }}</td>
+                <td class="num">{{ t.seats }}</td>
+                <td class="num">{{ t.turnCount }}</td>
+                <td class="num">{{ t.coverCount }}</td>
+                <td class="num strong">{{ t.revenue | number:'1.2-2' }}</td>
+                <td class="num">{{ t.revenuePerSeat | number:'1.2-2' }}</td>
+                <td class="num muted">{{ t.averageTurnMinutes }}m</td>
+                <td class="num muted">{{ t.occupancyPercent }}%</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <!-- ══ Kitchen ══════════════════════════════════════════════════════ -->
+  @if (!loading && active === 'kitchen') {
+    @if (!kitchen.length) {
+      <div class="rst-empty">
+        <div class="rst-empty-icon"><span class="material-symbols-outlined">skillet</span></div>
+        <div class="rst-empty-title">No tickets in this range</div>
+      </div>
+    } @else {
+      <div class="rst-table-wrap">
+        <table class="rst-table">
+          <thead>
+            <tr>
+              <th>Station</th><th class="num">Tickets</th><th class="num">Items</th>
+              <th class="num">Avg</th><th class="num">Median</th><th class="num">Slowest</th>
+              <th class="num">Over SLA</th><th class="num">Recalls</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (k of kitchen; track trackRow($index, k)) {
+              <tr>
+                <td class="strong">{{ k.stationName }}</td>
+                <td class="num">{{ k.ticketCount }}</td>
+                <td class="num">{{ k.itemCount }}</td>
+                <td class="num strong">{{ k.averagePrepMinutes }}m</td>
+                <td class="num">{{ k.medianPrepMinutes }}m</td>
+                <td class="num muted">{{ k.longestPrepMinutes }}m</td>
+                <td class="num">
+                  <span class="rst-pill" [class.tone-danger]="k.slaBreachPercent > 15" [class.tone-success]="k.slaBreachPercent <= 15">
+                    {{ k.slaBreachPercent }}%
+                  </span>
+                </td>
+                <td class="num muted">{{ k.recallCount }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <!-- ══ Audit ════════════════════════════════════════════════════════ -->
+  @if (!loading && active === 'audit') {
+    @if (!audit.length) {
+      <div class="rst-empty">
+        <div class="rst-empty-icon"><span class="material-symbols-outlined">verified</span></div>
+        <div class="rst-empty-title">Nothing voided or discounted</div>
+        <div class="rst-empty-text">A clean period. Voids, comps and discounts would all appear here together.</div>
+      </div>
+    } @else {
+      <div class="rst-table-wrap">
+        <table class="rst-table">
+          <thead>
+            <tr>
+              <th>When</th><th>Kind</th><th>Order</th><th>Table</th><th>Item</th>
+              <th class="num">Amount</th><th>Reason</th><th>By</th><th>Approved by</th><th>Cooked?</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of audit; track $index) {
+              <tr>
+                <td class="muted">{{ a.occurredAt | date:'d MMM HH:mm' }}</td>
+                <td>
+                  <span class="rst-pill" [class.tone-danger]="a.kind === 'Void'" [class.tone-warning]="a.kind !== 'Void'">
+                    {{ a.kind }}
+                  </span>
+                </td>
+                <td class="strong">{{ a.orderNumber }}</td>
+                <td>{{ a.tableNumber || '—' }}</td>
+                <td>{{ a.itemName }}</td>
+                <td class="num strong">{{ a.amount | number:'1.2-2' }}</td>
+                <td class="muted">{{ a.reasonName || '—' }}</td>
+                <td class="muted">{{ a.staffName || '—' }}</td>
+                <td class="muted">{{ a.approvedByName || '—' }}</td>
+                <td>
+                  @if (a.wasFired) { <span class="rst-pill tone-danger">Yes — wasted</span> }
+                  @else { <span class="muted">No</span> }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <!-- ══ Wastage ══════════════════════════════════════════════════════ -->
+  @if (!loading && active === 'wastage') {
+    @if (!wastage.length) {
+      <div class="rst-empty">
+        <div class="rst-empty-icon"><span class="material-symbols-outlined">recycling</span></div>
+        <div class="rst-empty-title">No wastage recorded</div>
+      </div>
+    } @else {
+      <div class="rst-table-wrap">
+        <table class="rst-table">
+          <thead>
+            <tr><th>Reason</th><th class="num">Entries</th><th class="num">Quantity</th><th class="num">Cost</th><th class="num">Share</th></tr>
+          </thead>
+          <tbody>
+            @for (w of wastage; track w.reason) {
+              <tr>
+                <td class="strong">{{ w.reasonName }}</td>
+                <td class="num">{{ w.entryCount }}</td>
+                <td class="num">{{ w.quantity | number:'1.0-3' }}</td>
+                <td class="num strong">{{ w.totalCost | number:'1.2-2' }}</td>
+                <td class="num muted">{{ w.sharePercent }}%</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</div>

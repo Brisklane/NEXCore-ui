@@ -1,0 +1,326 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Restaurant</h2>
+      <p class="subtitle">
+        @if (data) { {{ data.outletName }} — today at a glance, and what needs you now. }
+        @else { Today at a glance, and what needs you now. }
+      </p>
+    </div>
+    <rst-outlet-picker (outletChange)="onOutlet($event)"></rst-outlet-picker>
+  </div>
+
+  <rst-help key="dashboard"></rst-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  @if (loading && !data) {
+    <div class="rst-stats">
+      @for (i of [1,2,3,4,5,6]; track i) { <div class="rst-stat rst-skeleton" style="height: 92px"></div> }
+    </div>
+  }
+
+  @if (data; as d) {
+    <!-- ── Right now ─────────────────────────────────────────────────── -->
+    <section class="dash-live" aria-label="Right now">
+      <header class="dash-live-head">
+        <span class="dash-live-dot" aria-hidden="true"></span>
+        <h3>Right now</h3>
+        <span class="dash-live-time">Updated {{ d.generatedAt | date:'HH:mm:ss' }}</span>
+      </header>
+
+      <div class="dash-live-grid">
+        <button type="button" class="dash-live-tile" (click)="go('/restaurant/floor')">
+          <span class="material-symbols-outlined">table_restaurant</span>
+          <span class="dash-live-value">{{ d.occupiedTables }}<small>/{{ d.totalTables }}</small></span>
+          <span class="dash-live-label">Tables in service</span>
+          <span class="dash-live-meta">{{ d.occupancyPercent }}% full · {{ d.seatedGuests }} guests</span>
+        </button>
+
+        <button type="button" class="dash-live-tile" (click)="go('/restaurant/order')">
+          <span class="material-symbols-outlined">receipt_long</span>
+          <span class="dash-live-value">{{ d.openOrders }}</span>
+          <span class="dash-live-label">Open orders</span>
+          <span class="dash-live-meta">{{ d.openOrderValue | number:'1.2-2' }} {{ d.currencyCode }} on the floor</span>
+        </button>
+
+        <button
+          type="button"
+          class="dash-live-tile"
+          [class.is-alert]="d.kitchenTicketsOverdue > 0"
+          (click)="go('/restaurant/kitchen')"
+        >
+          <span class="material-symbols-outlined">skillet</span>
+          <span class="dash-live-value">{{ d.kitchenTicketsOpen }}</span>
+          <span class="dash-live-label">Kitchen tickets</span>
+          <span class="dash-live-meta">
+            @if (d.kitchenTicketsOverdue > 0) { {{ d.kitchenTicketsOverdue }} over SLA }
+            @else { all within time }
+          </span>
+        </button>
+
+        <button
+          type="button"
+          class="dash-live-tile"
+          [class.is-alert]="d.tablesNeedingAttention > 0"
+          (click)="go('/restaurant/floor')"
+        >
+          <span class="material-symbols-outlined">pan_tool</span>
+          <span class="dash-live-value">{{ d.tablesNeedingAttention }}</span>
+          <span class="dash-live-label">Need attention</span>
+          <span class="dash-live-meta">waiting too long in one state</span>
+        </button>
+
+        <button type="button" class="dash-live-tile" (click)="go('/restaurant/reservations')">
+          <span class="material-symbols-outlined">event_seat</span>
+          <span class="dash-live-value">{{ d.upcomingReservations }}</span>
+          <span class="dash-live-label">Bookings due</span>
+          <span class="dash-live-meta">
+            next 4 hours
+            @if (d.waitlistLength > 0) { · {{ d.waitlistLength }} waiting }
+          </span>
+        </button>
+
+        <button
+          type="button"
+          class="dash-live-tile"
+          [class.is-alert]="d.items86 > 0"
+          (click)="go('/restaurant/availability')"
+        >
+          <span class="material-symbols-outlined">no_meals</span>
+          <span class="dash-live-value">{{ d.items86 }}</span>
+          <span class="dash-live-label">Off the menu</span>
+          <span class="dash-live-meta">86'd right now</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ── Today ─────────────────────────────────────────────────────── -->
+    <div class="rst-stats">
+      <div class="rst-stat tone-brand">
+        <span class="rst-stat-label">Sales today</span>
+        <span class="rst-stat-value">{{ d.salesToday | number:'1.2-2' }}</span>
+        <span class="rst-stat-foot" [class]="changeTone">
+          @if (d.salesChangePercent > 0) { <strong>▲ {{ d.salesChangePercent }}%</strong> vs yesterday }
+          @else if (d.salesChangePercent < 0) { <strong>▼ {{ -d.salesChangePercent }}%</strong> vs yesterday }
+          @else { level with yesterday }
+        </span>
+      </div>
+
+      <div class="rst-stat tone-cyan">
+        <span class="rst-stat-label">Covers</span>
+        <span class="rst-stat-value">{{ d.coversToday }}</span>
+        <span class="rst-stat-foot">{{ d.ordersToday }} orders</span>
+      </div>
+
+      <div class="rst-stat tone-violet">
+        <span class="rst-stat-label">Average check</span>
+        <span class="rst-stat-value">{{ d.averageCheck | number:'1.2-2' }}</span>
+        <span class="rst-stat-foot">{{ d.averagePerCover | number:'1.2-2' }} per cover</span>
+      </div>
+
+      <div class="rst-stat" [class.tone-success]="d.foodCostPercent <= 33" [class.tone-warning]="d.foodCostPercent > 33">
+        <span class="rst-stat-label">Food cost</span>
+        <span class="rst-stat-value">{{ d.foodCostPercent }}%</span>
+        <span class="rst-stat-foot">{{ d.foodCostToday | number:'1.2-2' }} of sales</span>
+      </div>
+
+      <div class="rst-stat tone-success">
+        <span class="rst-stat-label">Tips</span>
+        <span class="rst-stat-value">{{ d.tipsToday | number:'1.2-2' }}</span>
+        <span class="rst-stat-foot">{{ d.staffOnShift }} on shift</span>
+      </div>
+
+      <div class="rst-stat" [class.tone-danger]="d.voidsToday > 0 || d.wastageToday > 0" [class.tone-brand]="d.voidsToday === 0 && d.wastageToday === 0">
+        <span class="rst-stat-label">Leakage</span>
+        <span class="rst-stat-value">{{ d.voidsToday + d.discountsToday + d.wastageToday | number:'1.2-2' }}</span>
+        <span class="rst-stat-foot">voids, discounts &amp; waste</span>
+      </div>
+    </div>
+
+    <div class="dash-grid">
+      <!-- ── Sales through the day ───────────────────────────────────── -->
+      <section class="rst-card dash-chart">
+        <header class="rst-card-head">
+          <span class="rst-card-title"><span class="material-symbols-outlined">bar_chart</span>Through the day</span>
+          <span class="dash-chart-legend">
+            Turn {{ d.averageTableTurnMinutes }} min · Kitchen {{ d.averagePrepMinutes }} min
+          </span>
+        </header>
+        <div class="rst-card-body">
+          @if (peakHourAmount <= 1) {
+            <div class="rst-empty">
+              <div class="rst-empty-icon"><span class="material-symbols-outlined">schedule</span></div>
+              <div class="rst-empty-title">Nothing settled yet today</div>
+              <div class="rst-empty-text">The chart fills in as checks are paid.</div>
+            </div>
+          } @else {
+            <div class="dash-bars" role="img" aria-label="Sales by hour">
+              @for (h of tradingHours; track trackHour($index, h)) {
+                <div class="dash-bar-col" [title]="h.label + ' — ' + (h.amount | number:'1.2-2') + ' from ' + h.orderCount + ' order(s)'">
+                  <div class="dash-bar-track">
+                    <div class="dash-bar" [style.height.%]="barHeight(h)" [class.is-peak]="h.amount === peakHourAmount"></div>
+                  </div>
+                  <span class="dash-bar-label">{{ h.hour }}</span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </section>
+
+      <!-- ── Next bookings ───────────────────────────────────────────── -->
+      <section class="rst-card">
+        <header class="rst-card-head">
+          <span class="rst-card-title"><span class="material-symbols-outlined">event_seat</span>Next in</span>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="go('/restaurant/reservations')">All bookings</button>
+        </header>
+        <div class="rst-card-body is-flush">
+          @if (!d.nextReservations.length) {
+            <div class="rst-empty">
+              <div class="rst-empty-icon"><span class="material-symbols-outlined">event_available</span></div>
+              <div class="rst-empty-title">Nothing booked</div>
+              <div class="rst-empty-text">Walk-ins only for now.</div>
+            </div>
+          } @else {
+            <ul class="dash-list">
+              @for (r of d.nextReservations; track r.id) {
+                <li class="dash-list-row">
+                  <span class="dash-list-time">{{ r.reservedFor | date:'HH:mm' }}</span>
+                  <span class="dash-list-main">
+                    <span class="dash-list-title">
+                      {{ r.guestName }}
+                      @if (r.isVipGuest) { <span class="rst-pill tone-violet">VIP</span> }
+                    </span>
+                    <span class="dash-list-sub">
+                      {{ r.partySize }} guests
+                      @if (r.tableNumber) { · table {{ r.tableNumber }} }
+                      @if (r.occasion) { · {{ r.occasion }} }
+                    </span>
+                  </span>
+                  @if (r.isLate) { <span class="rst-pill tone-danger">Late</span> }
+                  @else { <span class="dash-list-meta">in {{ r.minutesUntil }} min</span> }
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </section>
+
+      <!-- ── Top items ───────────────────────────────────────────────── -->
+      <section class="rst-card">
+        <header class="rst-card-head">
+          <span class="rst-card-title"><span class="material-symbols-outlined">local_fire_department</span>Selling today</span>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="go('/restaurant/reports')">Reports</button>
+        </header>
+        <div class="rst-card-body is-flush">
+          @if (!d.topItems.length) {
+            <div class="rst-empty">
+              <div class="rst-empty-icon"><span class="material-symbols-outlined">restaurant_menu</span></div>
+              <div class="rst-empty-title">No sales yet</div>
+              <div class="rst-empty-text">Top dishes appear once checks are settled.</div>
+            </div>
+          } @else {
+            <ul class="dash-list">
+              @for (i of d.topItems; track trackId($index, i)) {
+                <li class="dash-list-row">
+                  <span class="dash-list-qty">{{ i.quantity | number:'1.0-0' }}×</span>
+                  <span class="dash-list-main">
+                    <span class="dash-list-title">{{ i.itemName }}</span>
+                    <span class="dash-list-sub">{{ i.categoryName }} · {{ i.marginPercent }}% margin</span>
+                  </span>
+                  <span class="dash-list-amount">{{ i.amount | number:'1.2-2' }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </section>
+
+      <!-- ── Servers ─────────────────────────────────────────────────── -->
+      <section class="rst-card">
+        <header class="rst-card-head">
+          <span class="rst-card-title"><span class="material-symbols-outlined">badge</span>Servers today</span>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="go('/restaurant/staff')">Staff</button>
+        </header>
+        <div class="rst-card-body is-flush">
+          @if (!d.topWaiters.length) {
+            <div class="rst-empty">
+              <div class="rst-empty-icon"><span class="material-symbols-outlined">groups</span></div>
+              <div class="rst-empty-title">No closed orders yet</div>
+              <div class="rst-empty-text">Server figures appear as tables settle.</div>
+            </div>
+          } @else {
+            <ul class="dash-list">
+              @for (w of d.topWaiters; track trackId($index, w)) {
+                <li class="dash-list-row">
+                  <span class="dash-avatar">{{ w.staffName.charAt(0) }}</span>
+                  <span class="dash-list-main">
+                    <span class="dash-list-title">{{ w.staffName }}</span>
+                    <span class="dash-list-sub">
+                      {{ w.coverCount }} covers · {{ w.averageCheck | number:'1.2-2' }} avg
+                    </span>
+                  </span>
+                  <span class="dash-list-amount">{{ w.salesAmount | number:'1.2-2' }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </section>
+
+      <!-- ── Recent orders ───────────────────────────────────────────── -->
+      <section class="rst-card dash-wide">
+        <header class="rst-card-head">
+          <span class="rst-card-title"><span class="material-symbols-outlined">history</span>Latest orders</span>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="go('/restaurant/orders')">All orders</button>
+        </header>
+        <div class="rst-card-body is-flush">
+          @if (!d.recentOrders.length) {
+            <div class="rst-empty">
+              <div class="rst-empty-icon"><span class="material-symbols-outlined">receipt_long</span></div>
+              <div class="rst-empty-title">Nothing yet today</div>
+              <div class="rst-empty-text">Seat a table on the floor plan to open the first order.</div>
+            </div>
+          } @else {
+            <div class="rst-table-wrap">
+              <table class="rst-table">
+                <thead>
+                  <tr>
+                    <th>Order</th>
+                    <th>Type</th>
+                    <th>Table</th>
+                    <th>Server</th>
+                    <th class="num">Covers</th>
+                    <th class="num">Total</th>
+                    <th>Status</th>
+                    <th class="num">Open</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (o of d.recentOrders; track o.id) {
+                    <tr>
+                      <td class="strong">{{ o.orderNumber }}</td>
+                      <td>
+                        <span class="dash-type">
+                          <span class="material-symbols-outlined">{{ orderTypeIcons[o.orderType] }}</span>
+                          {{ orderTypeLabels[o.orderType] }}
+                        </span>
+                      </td>
+                      <td>{{ o.tableNumber || o.tokenNumber || '—' }}</td>
+                      <td class="muted">{{ o.waiterName || '—' }}</td>
+                      <td class="num">{{ o.guestCount }}</td>
+                      <td class="num strong">{{ o.totalAmount | number:'1.2-2' }}</td>
+                      <td><span class="rst-pill tone-info">{{ statusLabels[o.status] }}</span></td>
+                      <td class="num muted">{{ o.minutesOpen }}m</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      </section>
+    </div>
+  }
+</div>

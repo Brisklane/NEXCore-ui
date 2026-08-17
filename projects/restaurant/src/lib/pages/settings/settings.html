@@ -1,0 +1,683 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Restaurant settings</h2>
+      <p class="subtitle">How service, money, the kitchen and delivery behave.</p>
+    </div>
+    <rst-outlet-picker (outletChange)="onOutlet($event)"></rst-outlet-picker>
+  </div>
+
+  <rst-help key="settings"></rst-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <div class="rst-segment sg-tabs" role="tablist" aria-label="Settings sections">
+    @for (t of [
+      { k: 'service', l: 'Service', i: 'room_service' },
+      { k: 'money', l: 'Money', i: 'payments' },
+      { k: 'kitchen', l: 'Kitchen', i: 'skillet' },
+      { k: 'outlets', l: 'Outlets', i: 'storefront' },
+      { k: 'reasons', l: 'Reason codes', i: 'gavel' },
+      { k: 'delivery', l: 'Delivery zones', i: 'delivery_dining' }
+    ]; track t.k) {
+      <button type="button" role="tab" [attr.aria-selected]="tab === t.k" [class.is-active]="tab === t.k" (click)="tab = $any(t.k)">
+        <span class="material-symbols-outlined">{{ t.i }}</span>{{ t.l }}
+      </button>
+    }
+  </div>
+
+  @if (loading) {
+    <div class="rst-skeleton" style="height: 320px"></div>
+  }
+
+  <!-- ══ Service ══════════════════════════════════════════════════════ -->
+  @if (!loading && tab === 'service' && settings; as s) {
+    <section class="rst-card sg-card">
+      <div class="rst-card-body">
+        <div class="rst-form-grid">
+          <div class="rst-field">
+            <label for="sg-seated">Flag a seated table after (min)</label>
+            <input id="sg-seated" type="number" min="1" [(ngModel)]="s.seatedAttentionMinutes"  [class.is-invalid]="!!fieldErrors['seatedAttentionMinutes']" [attr.aria-invalid]="!!fieldErrors['seatedAttentionMinutes'] || null" [attr.aria-describedby]="fieldErrors['seatedAttentionMinutes'] ? 'sg-seated-error' : null" />
+            <rst-field-error [message]="fieldErrors['seatedAttentionMinutes']" for="sg-seated"></rst-field-error>
+            <span class="rst-hint">Seated with no order for this long turns the tile red on the floor plan.</span>
+          </div>
+          <div class="rst-field">
+            <label for="sg-served">Flag a served table after (min)</label>
+            <input id="sg-served" type="number" min="1" [(ngModel)]="s.servedAttentionMinutes"  [class.is-invalid]="!!fieldErrors['servedAttentionMinutes']" [attr.aria-invalid]="!!fieldErrors['servedAttentionMinutes'] || null" [attr.aria-describedby]="fieldErrors['servedAttentionMinutes'] ? 'sg-served-error' : null" />
+            <rst-field-error [message]="fieldErrors['servedAttentionMinutes']" for="sg-served"></rst-field-error>
+            <span class="rst-hint">Time to drop the bill.</span>
+          </div>
+          <div class="rst-field">
+            <label for="sg-res-duration">Default booking length (min)</label>
+            <input id="sg-res-duration" type="number" min="30" step="15" [(ngModel)]="s.defaultReservationDuration"  [class.is-invalid]="!!fieldErrors['defaultReservationDuration']" [attr.aria-invalid]="!!fieldErrors['defaultReservationDuration'] || null" [attr.aria-describedby]="fieldErrors['defaultReservationDuration'] ? 'sg-res-duration-error' : null" />
+            <rst-field-error [message]="fieldErrors['defaultReservationDuration']" for="sg-res-duration"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="sg-large">Large party is</label>
+            <input id="sg-large" type="number" min="2" [(ngModel)]="s.largePartyThreshold"  [class.is-invalid]="!!fieldErrors['largePartyThreshold']" [attr.aria-invalid]="!!fieldErrors['largePartyThreshold'] || null" [attr.aria-describedby]="fieldErrors['largePartyThreshold'] ? 'sg-large-error' : null" />
+            <rst-field-error [message]="fieldErrors['largePartyThreshold']" for="sg-large"></rst-field-error>
+          </div>
+        </div>
+
+        <div class="sg-checks">
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="s.requireWaiterPin" /> Require a PIN on the till</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="s.requireGuestCountOnSeat" /> Ask for guest count on seating</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="s.requireSeatNumbers" /> Require seat numbers</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="s.autoFireOnSend" /> Send to the kitchen as soon as a line is added</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="s.allowTableMerge" /> Allow joining tables</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="s.allowTableTransfer" /> Allow moving a party</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="s.allowSplitBill" /> Allow split bills</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="s.reservationsEnabled" /> Take bookings</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="s.waitlistEnabled" /> Run a waitlist</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="s.requireDepositForLargeParty" /> Require a deposit for large parties</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="s.feedbackPromptEnabled" /> Ask guests for feedback</label>
+        </div>
+      </div>
+      <footer class="sg-foot">
+        <button type="button" class="rst-touch-btn is-primary" (click)="saveSettings()" [disabled]="busy">Save</button>
+      </footer>
+    </section>
+  }
+
+  <!-- ══ Money ════════════════════════════════════════════════════════ -->
+  @if (!loading && tab === 'money' && settings; as s) {
+    <section class="rst-card sg-card">
+      <div class="rst-card-body">
+        <div class="rst-form-grid">
+          <div class="rst-field">
+            <label for="sg-tips">Tip presets (%)</label>
+            <input id="sg-tips" type="text" [(ngModel)]="s.tipPresetPercents" placeholder="10,15,20"  [class.is-invalid]="!!fieldErrors['tipPresetPercents']" [attr.aria-invalid]="!!fieldErrors['tipPresetPercents'] || null" [attr.aria-describedby]="fieldErrors['tipPresetPercents'] ? 'sg-tips-error' : null" />
+            <rst-field-error [message]="fieldErrors['tipPresetPercents']" for="sg-tips"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="sg-tip-basis">Split pooled tips by</label>
+            <select id="sg-tip-basis" [(ngModel)]="s.tipDistributionBasis">
+              @for (o of tipBasisOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+            </select>
+          </div>
+          <div class="rst-field">
+            <label for="sg-kitchen-share">Kitchen share of tips (%)</label>
+            <input id="sg-kitchen-share" type="number" step="0.5" min="0" max="100" [(ngModel)]="s.kitchenTipSharePercent"  [class.is-invalid]="!!fieldErrors['kitchenTipSharePercent']" [attr.aria-invalid]="!!fieldErrors['kitchenTipSharePercent'] || null" [attr.aria-describedby]="fieldErrors['kitchenTipSharePercent'] ? 'sg-kitchen-share-error' : null" />
+            <rst-field-error [message]="fieldErrors['kitchenTipSharePercent']" for="sg-kitchen-share"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="sg-round">Cash rounding</label>
+            <input id="sg-round" type="number" step="0.01" min="0" [(ngModel)]="s.cashRoundingIncrement"  [class.is-invalid]="!!fieldErrors['cashRoundingIncrement']" [attr.aria-invalid]="!!fieldErrors['cashRoundingIncrement'] || null" [attr.aria-describedby]="fieldErrors['cashRoundingIncrement'] ? 'sg-round-error' : null" />
+            <rst-field-error [message]="fieldErrors['cashRoundingIncrement']" for="sg-round"></rst-field-error>
+            <span class="rst-hint">Nearest unit cash totals round to. Zero disables it.</span>
+          </div>
+          <div class="rst-field">
+            <label for="sg-packaging">Packaging charge</label>
+            <input id="sg-packaging" type="number" step="0.01" min="0" [(ngModel)]="s.packagingChargePerOrder"  [class.is-invalid]="!!fieldErrors['packagingChargePerOrder']" [attr.aria-invalid]="!!fieldErrors['packagingChargePerOrder'] || null" [attr.aria-describedby]="fieldErrors['packagingChargePerOrder'] ? 'sg-packaging-error' : null" />
+            <rst-field-error [message]="fieldErrors['packagingChargePerOrder']" for="sg-packaging"></rst-field-error>
+            <span class="rst-hint">Added to takeaway and delivery orders.</span>
+          </div>
+          <div class="rst-field">
+            <label for="sg-threshold">Discount approval above</label>
+            <input id="sg-threshold" type="number" step="0.01" min="0" [(ngModel)]="s.discountApprovalThreshold"  [class.is-invalid]="!!fieldErrors['discountApprovalThreshold']" [attr.aria-invalid]="!!fieldErrors['discountApprovalThreshold'] || null" [attr.aria-describedby]="fieldErrors['discountApprovalThreshold'] ? 'sg-threshold-error' : null" />
+            <rst-field-error [message]="fieldErrors['discountApprovalThreshold']" for="sg-threshold"></rst-field-error>
+            <span class="rst-hint">A discount over this needs a supervisor PIN.</span>
+          </div>
+        </div>
+
+        <div class="sg-checks">
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="s.pricesIncludeTax" /> Menu prices include tax</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="s.tipsEnabled" /> Accept tips</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="s.tipPoolingEnabled" /> Pool tips</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="s.voidRequiresReason" /> Voids need a reason</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="s.discountRequiresReason" /> Discounts need a reason</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="s.printReceiptAutomatically" /> Print the receipt automatically</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="s.emailReceiptEnabled" /> Offer an emailed receipt</label>
+        </div>
+
+        <div class="rst-form-grid sg-receipt">
+          <div class="rst-field is-full">
+            <label for="sg-header">Receipt header</label>
+            <input id="sg-header" type="text" [(ngModel)]="s.receiptHeader"  [class.is-invalid]="!!fieldErrors['receiptHeader']" [attr.aria-invalid]="!!fieldErrors['receiptHeader'] || null" [attr.aria-describedby]="fieldErrors['receiptHeader'] ? 'sg-header-error' : null" />
+            <rst-field-error [message]="fieldErrors['receiptHeader']" for="sg-header"></rst-field-error>
+          </div>
+          <div class="rst-field is-full">
+            <label for="sg-footer">Receipt footer</label>
+            <input id="sg-footer" type="text" [(ngModel)]="s.receiptFooter"  [class.is-invalid]="!!fieldErrors['receiptFooter']" [attr.aria-invalid]="!!fieldErrors['receiptFooter'] || null" [attr.aria-describedby]="fieldErrors['receiptFooter'] ? 'sg-footer-error' : null" />
+            <rst-field-error [message]="fieldErrors['receiptFooter']" for="sg-footer"></rst-field-error>
+          </div>
+        </div>
+      </div>
+      <footer class="sg-foot">
+        <button type="button" class="rst-touch-btn is-primary" (click)="saveSettings()" [disabled]="busy">Save</button>
+      </footer>
+    </section>
+
+    <section class="rst-card sg-card">
+      <header class="rst-card-head">
+        <span class="rst-card-title">Service charge rules</span>
+        <button type="button" class="rst-touch-btn" (click)="newCharge()">
+          <span class="material-symbols-outlined">add</span>New rule
+        </button>
+      </header>
+      <div class="rst-card-body is-flush">
+        @if (!serviceCharges.length) {
+          <p class="sg-empty">No service charge is applied.</p>
+        } @else {
+          <div class="rst-table-wrap">
+            <table class="rst-table">
+              <thead>
+                <tr><th>Name</th><th>Basis</th><th class="num">Value</th><th class="num">From party</th><th>Waivable</th><th class="actions"></th></tr>
+              </thead>
+              <tbody>
+                @for (c of serviceCharges; track c.id) {
+                  <tr>
+                    <td class="strong">{{ c.name }}</td>
+                    <td>{{ basisLabels[c.basis] }}</td>
+                    <td class="num strong">{{ c.value | number:'1.0-2' }}</td>
+                    <td class="num">{{ c.minPartySize || '—' }}</td>
+                    <td>{{ c.isWaivable ? 'Yes' : 'No' }}</td>
+                    <td class="actions">
+                      <button type="button" class="rst-icon-btn" (click)="editingCharge = c" aria-label="Edit">
+                        <span class="material-symbols-outlined">edit</span>
+                      </button>
+                      <button type="button" class="rst-icon-btn is-danger" (click)="deleteCharge(c)" aria-label="Remove">
+                        <span class="material-symbols-outlined">delete</span>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- ══ Kitchen ══════════════════════════════════════════════════════ -->
+  @if (!loading && tab === 'kitchen' && settings; as s) {
+    <section class="rst-card sg-card">
+      <div class="rst-card-body">
+        <div class="rst-form-grid">
+          <div class="rst-field">
+            <label for="sg-warn">Warn on a ticket after (min)</label>
+            <input id="sg-warn" type="number" min="1" [(ngModel)]="s.kdsWarningMinutes"  [class.is-invalid]="!!fieldErrors['kdsWarningMinutes']" [attr.aria-invalid]="!!fieldErrors['kdsWarningMinutes'] || null" [attr.aria-describedby]="fieldErrors['kdsWarningMinutes'] ? 'sg-warn-error' : null" />
+            <rst-field-error [message]="fieldErrors['kdsWarningMinutes']" for="sg-warn"></rst-field-error>
+            <span class="rst-hint">Cards turn amber here and red at the station's own SLA.</span>
+          </div>
+        </div>
+
+        <div class="sg-checks">
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="s.kitchenDisplayEnabled" /> Kitchen display</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="s.expoScreenEnabled" /> Route a copy to the pass</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="s.printKitchenTickets" /> Print paper tickets too</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="s.autoBumpOnServe" /> Bump a ticket when the waiter marks it served</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="s.showAllergenWarnings" /> Show allergen warnings</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="s.depleteStockOnCheckClose" /> Deplete ingredients when a check closes</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="s.auto86OnZeroStock" /> Take a dish off automatically at zero stock</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="s.trackWastage" /> Track wastage</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="s.showCalories" /> Show calories</label>
+        </div>
+      </div>
+      <footer class="sg-foot">
+        <button type="button" class="rst-touch-btn is-primary" (click)="saveSettings()" [disabled]="busy">Save</button>
+      </footer>
+    </section>
+  }
+
+  <!-- ══ Outlets ══════════════════════════════════════════════════════ -->
+  @if (!loading && tab === 'outlets') {
+    <section class="rst-card sg-sample">
+      <div class="rst-card-body">
+        <div class="sg-sample-row">
+          <span class="material-symbols-outlined">auto_awesome</span>
+          <div>
+            <strong>Sample venue</strong>
+            <span>
+              A laid-out floor with 19 tables, a full menu with modifiers and combos, staff with
+              PINs, recipes and prep labels — so you can try every screen with real-looking data.
+              Refused once your menu has anything in it, so it can never overwrite your own work.
+            </span>
+          </div>
+          <button type="button" class="rst-touch-btn" (click)="loadSampleData()" [disabled]="busy">
+            <span class="material-symbols-outlined">download</span>Load sample data
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <div class="rst-toolbar">
+      <div class="rst-spacer"></div>
+      <button type="button" class="rst-touch-btn is-primary" (click)="newOutlet()">
+        <span class="material-symbols-outlined">add</span>New outlet
+      </button>
+    </div>
+
+    <div class="rst-table-wrap">
+      <table class="rst-table">
+        <thead>
+          <tr>
+            <th>Outlet</th><th>Style</th><th>Currency</th><th class="num">Tax %</th>
+            <th class="num">Tables</th><th class="num">Seats</th><th>Channels</th><th>State</th><th class="actions"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (o of outletList; track trackOutlet($index, o)) {
+            <tr [class.sg-off]="!o.isActive">
+              <td>
+                <span class="strong">{{ o.name }}</span>
+                @if (o.code) { <span class="muted"> · {{ o.code }}</span> }
+              </td>
+              <td>{{ styleLabels[o.serviceStyle] }}</td>
+              <td>{{ o.currencyCode }}</td>
+              <td class="num">{{ o.defaultTaxPercent | number:'1.0-2' }}</td>
+              <td class="num">{{ o.tableCount }}</td>
+              <td class="num">{{ o.seatingCapacity }}</td>
+              <td>
+                @if (o.acceptsTakeaway) { <span class="rst-pill tone-neutral">Takeaway</span> }
+                @if (o.acceptsDelivery) { <span class="rst-pill tone-info">Delivery</span> }
+                @if (o.hasDriveThru) { <span class="rst-pill tone-neutral">Drive-thru</span> }
+                @if (o.qrOrderingEnabled) { <span class="rst-pill tone-violet">QR</span> }
+              </td>
+              <td>
+                @if (o.isTemporarilyClosed) { <span class="rst-pill tone-warning">Closed</span> }
+                @else if (o.isActive) { <span class="rst-pill tone-success">Open</span> }
+                @else { <span class="rst-pill tone-neutral">Inactive</span> }
+              </td>
+              <td class="actions">
+                <button type="button" class="rst-icon-btn" (click)="editOutlet(o)" aria-label="Edit">
+                  <span class="material-symbols-outlined">edit</span>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- ══ Reason codes ═════════════════════════════════════════════════ -->
+  @if (!loading && tab === 'reasons') {
+    <div class="sg-grid">
+      <section class="rst-card">
+        <header class="rst-card-head">
+          <span class="rst-card-title">Void reasons</span>
+          <button type="button" class="rst-touch-btn" (click)="newVoidReason()">
+            <span class="material-symbols-outlined">add</span>Add
+          </button>
+        </header>
+        <div class="rst-card-body is-flush">
+          @for (r of voidReasons; track r.id) {
+            <div class="sg-reason">
+              <span class="sg-reason-name">{{ r.name }}</span>
+              @if (r.requiresApproval) { <span class="rst-pill tone-warning">Approval</span> }
+              @if (r.countsAsWastage) { <span class="rst-pill tone-danger">Wastage</span> }
+              <div class="sg-reason-actions">
+                <button type="button" class="rst-icon-btn" (click)="editingVoid = r" aria-label="Edit">
+                  <span class="material-symbols-outlined">edit</span>
+                </button>
+                <button type="button" class="rst-icon-btn is-danger" (click)="deleteVoidReason(r)" aria-label="Remove">
+                  <span class="material-symbols-outlined">delete</span>
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="rst-card">
+        <header class="rst-card-head">
+          <span class="rst-card-title">Discount reasons</span>
+          <button type="button" class="rst-touch-btn" (click)="newDiscountReason()">
+            <span class="material-symbols-outlined">add</span>Add
+          </button>
+        </header>
+        <div class="rst-card-body is-flush">
+          @for (r of discountReasons; track r.id) {
+            <div class="sg-reason">
+              <span class="sg-reason-name">{{ r.name }}</span>
+              @if (r.isComp) { <span class="rst-pill tone-violet">Comp</span> }
+              @if (r.requiresApproval) { <span class="rst-pill tone-warning">Approval</span> }
+              @if (r.maxAmountWithoutApproval > 0) {
+                <span class="muted">up to {{ r.maxAmountWithoutApproval | number:'1.0-2' }}</span>
+              }
+              <div class="sg-reason-actions">
+                <button type="button" class="rst-icon-btn" (click)="editingDiscount = r" aria-label="Edit">
+                  <span class="material-symbols-outlined">edit</span>
+                </button>
+                <button type="button" class="rst-icon-btn is-danger" (click)="deleteDiscountReason(r)" aria-label="Remove">
+                  <span class="material-symbols-outlined">delete</span>
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+    </div>
+  }
+
+  <!-- ══ Delivery zones ═══════════════════════════════════════════════ -->
+  @if (!loading && tab === 'delivery') {
+    <div class="rst-toolbar">
+      <span class="sg-note">
+        An address outside every zone is refused when the order is taken, rather than discovered
+        by a rider twenty minutes later.
+      </span>
+      <div class="rst-spacer"></div>
+      <button type="button" class="rst-touch-btn is-primary" (click)="newZone()" [disabled]="!outletId">
+        <span class="material-symbols-outlined">add</span>New zone
+      </button>
+    </div>
+
+    @if (!zones.length) {
+      <div class="rst-empty">
+        <div class="rst-empty-icon"><span class="material-symbols-outlined">delivery_dining</span></div>
+        <div class="rst-empty-title">No delivery zones</div>
+        <div class="rst-empty-text">Without a zone, delivery orders cannot be quoted or accepted.</div>
+      </div>
+    } @else {
+      <div class="rst-table-wrap">
+        <table class="rst-table">
+          <thead>
+            <tr>
+              <th>Zone</th><th class="num">Radius</th><th class="num">Fee</th><th class="num">Minimum</th>
+              <th class="num">Free over</th><th class="num">ETA</th><th>Areas</th><th class="actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (z of zones; track z.id) {
+              <tr [class.sg-off]="!z.isActive">
+                <td>
+                  <span class="sg-zone-dot" [style.background]="z.colorHex || '#94a3b8'"></span>
+                  <span class="strong">{{ z.name }}</span>
+                </td>
+                <td class="num">{{ z.radiusKm | number:'1.0-1' }} km</td>
+                <td class="num strong">{{ z.deliveryFee | number:'1.2-2' }}</td>
+                <td class="num">{{ z.minimumOrderValue | number:'1.2-2' }}</td>
+                <td class="num muted">{{ z.freeDeliveryThreshold > 0 ? (z.freeDeliveryThreshold | number:'1.2-2') : '—' }}</td>
+                <td class="num">{{ z.estimatedMinutes }}m</td>
+                <td class="muted">{{ z.coveredAreas || '—' }}</td>
+                <td class="actions">
+                  <button type="button" class="rst-icon-btn" (click)="editingZone = z" aria-label="Edit">
+                    <span class="material-symbols-outlined">edit</span>
+                  </button>
+                  <button type="button" class="rst-icon-btn is-danger" (click)="deleteZone(z)" aria-label="Remove">
+                    <span class="material-symbols-outlined">delete</span>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</div>
+
+<!-- ══ Outlet editor ════════════════════════════════════════════════ -->
+@if (editingOutlet) {
+  <div class="rst-modal-backdrop" (click)="editingOutlet = null">
+    <div class="rst-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div class="rst-modal-title">{{ editingOutletId ? 'Edit outlet' : 'New outlet' }}</div>
+        <button type="button" class="rst-close" (click)="editingOutlet = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        <div class="rst-form-grid">
+          <div class="rst-field is-full">
+            <label for="so-name">Name</label>
+            <input id="so-name" type="text" [(ngModel)]="editingOutlet.name"  [class.is-invalid]="!!fieldErrors['name']" [attr.aria-invalid]="!!fieldErrors['name'] || null" [attr.aria-describedby]="fieldErrors['name'] ? 'so-name-error' : null" />
+            <rst-field-error [message]="fieldErrors['name']" for="so-name"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="so-code">Code</label>
+            <input id="so-code" type="text" [(ngModel)]="editingOutlet.code"  [class.is-invalid]="!!fieldErrors['code']" [attr.aria-invalid]="!!fieldErrors['code'] || null" [attr.aria-describedby]="fieldErrors['code'] ? 'so-code-error' : null" />
+            <rst-field-error [message]="fieldErrors['code']" for="so-code"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="so-style">Service style</label>
+            <select id="so-style" [(ngModel)]="editingOutlet.serviceStyle">
+              @for (o of styleOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+            </select>
+          </div>
+          <div class="rst-field">
+            <label for="so-currency">Currency</label>
+            <input id="so-currency" type="text" maxlength="3" [(ngModel)]="editingOutlet.currencyCode"  [class.is-invalid]="!!fieldErrors['currencyCode']" [attr.aria-invalid]="!!fieldErrors['currencyCode'] || null" [attr.aria-describedby]="fieldErrors['currencyCode'] ? 'so-currency-error' : null" />
+            <rst-field-error [message]="fieldErrors['currencyCode']" for="so-currency"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="so-tax">Default tax %</label>
+            <input id="so-tax" type="number" step="0.01" min="0" [(ngModel)]="editingOutlet.defaultTaxPercent"  [class.is-invalid]="!!fieldErrors['defaultTaxPercent']" [attr.aria-invalid]="!!fieldErrors['defaultTaxPercent'] || null" [attr.aria-describedby]="fieldErrors['defaultTaxPercent'] ? 'so-tax-error' : null" />
+            <rst-field-error [message]="fieldErrors['defaultTaxPercent']" for="so-tax"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="so-tax-away">Takeaway tax %</label>
+            <input id="so-tax-away" type="number" step="0.01" min="0" [(ngModel)]="editingOutlet.takeawayTaxPercent"  [class.is-invalid]="!!fieldErrors['takeawayTaxPercent']" [attr.aria-invalid]="!!fieldErrors['takeawayTaxPercent'] || null" [attr.aria-describedby]="fieldErrors['takeawayTaxPercent'] ? 'so-tax-away-error' : null" />
+            <rst-field-error [message]="fieldErrors['takeawayTaxPercent']" for="so-tax-away"></rst-field-error>
+            <span class="rst-hint">Zero uses the default. Eat-in and take-out are often taxed differently.</span>
+          </div>
+          <div class="rst-field">
+            <label for="so-dining">Average dining (min)</label>
+            <input id="so-dining" type="number" min="15" [(ngModel)]="editingOutlet.averageDiningMinutes"  [class.is-invalid]="!!fieldErrors['averageDiningMinutes']" [attr.aria-invalid]="!!fieldErrors['averageDiningMinutes'] || null" [attr.aria-describedby]="fieldErrors['averageDiningMinutes'] ? 'so-dining-error' : null" />
+            <rst-field-error [message]="fieldErrors['averageDiningMinutes']" for="so-dining"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="so-phone">Phone</label>
+            <input id="so-phone" type="tel" [(ngModel)]="editingOutlet.phone"  [class.is-invalid]="!!fieldErrors['phone']" [attr.aria-invalid]="!!fieldErrors['phone'] || null" [attr.aria-describedby]="fieldErrors['phone'] ? 'so-phone-error' : null" />
+            <rst-field-error [message]="fieldErrors['phone']" for="so-phone"></rst-field-error>
+          </div>
+          <div class="rst-field is-full">
+            <label for="so-address">Address</label>
+            <input id="so-address" type="text" [(ngModel)]="editingOutlet.addressLine"  [class.is-invalid]="!!fieldErrors['addressLine']" [attr.aria-invalid]="!!fieldErrors['addressLine'] || null" [attr.aria-describedby]="fieldErrors['addressLine'] ? 'so-address-error' : null" />
+            <rst-field-error [message]="fieldErrors['addressLine']" for="so-address"></rst-field-error>
+          </div>
+          <div class="rst-field is-full">
+            <label for="so-warehouse">Stock warehouse ID</label>
+            <input id="so-warehouse" type="text" [(ngModel)]="editingOutlet.warehouseId"  [class.is-invalid]="!!fieldErrors['warehouseId']" [attr.aria-invalid]="!!fieldErrors['warehouseId'] || null" [attr.aria-describedby]="fieldErrors['warehouseId'] ? 'so-warehouse-error' : null" />
+            <rst-field-error [message]="fieldErrors['warehouseId']" for="so-warehouse"></rst-field-error>
+            <span class="rst-hint">Ingredients are depleted from this warehouse. Leave blank to disable depletion.</span>
+          </div>
+          <div class="rst-field is-full">
+            <label for="so-footer">Receipt footer</label>
+            <input id="so-footer" type="text" [(ngModel)]="editingOutlet.receiptFooter"  [class.is-invalid]="!!fieldErrors['receiptFooter']" [attr.aria-invalid]="!!fieldErrors['receiptFooter'] || null" [attr.aria-describedby]="fieldErrors['receiptFooter'] ? 'so-footer-error' : null" />
+            <rst-field-error [message]="fieldErrors['receiptFooter']" for="so-footer"></rst-field-error>
+          </div>
+        </div>
+
+        <div class="sg-checks">
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editingOutlet.acceptsReservations" /> Takes bookings</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editingOutlet.acceptsTakeaway" /> Takeaway</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editingOutlet.acceptsDelivery" /> Delivery</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editingOutlet.hasDriveThru" /> Drive-thru</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editingOutlet.qrOrderingEnabled" /> QR self-order</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editingOutlet.isTemporarilyClosed" /> Temporarily closed</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editingOutlet.isActive" /> Active</label>
+        </div>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="editingOutlet = null">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-primary" (click)="saveOutlet()" [disabled]="busy">Save</button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- ══ Small editors ════════════════════════════════════════════════ -->
+@if (editingVoid) {
+  <div class="rst-modal-backdrop" (click)="editingVoid = null">
+    <div class="rst-modal is-narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div class="rst-modal-title">Void reason</div>
+        <button type="button" class="rst-close" (click)="editingVoid = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+      <div class="rst-modal-body">
+        <div class="rst-field is-full">
+          <label for="sv-name">Name</label>
+          <input id="sv-name" type="text" [(ngModel)]="editingVoid.name"  [class.is-invalid]="!!fieldErrors['name']" [attr.aria-invalid]="!!fieldErrors['name'] || null" [attr.aria-describedby]="fieldErrors['name'] ? 'sv-name-error' : null" />
+            <rst-field-error [message]="fieldErrors['name']" for="sv-name"></rst-field-error>
+        </div>
+        <label class="rst-check"><input type="checkbox" [(ngModel)]="editingVoid.requiresApproval" /> Needs a supervisor</label>
+        <label class="rst-check">
+          <input type="checkbox" [(ngModel)]="editingVoid.countsAsWastage" />
+          Counts as wastage when the food was already cooked
+        </label>
+        <label class="rst-check"><input type="checkbox" [(ngModel)]="editingVoid.isActive" /> Active</label>
+      </div>
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="editingVoid = null">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-primary" (click)="saveVoidReason()" [disabled]="busy">Save</button>
+      </footer>
+    </div>
+  </div>
+}
+
+@if (editingDiscount) {
+  <div class="rst-modal-backdrop" (click)="editingDiscount = null">
+    <div class="rst-modal is-narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div class="rst-modal-title">Discount reason</div>
+        <button type="button" class="rst-close" (click)="editingDiscount = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+      <div class="rst-modal-body">
+        <div class="rst-field is-full">
+          <label for="sd-name">Name</label>
+          <input id="sd-name" type="text" [(ngModel)]="editingDiscount.name"  [class.is-invalid]="!!fieldErrors['name']" [attr.aria-invalid]="!!fieldErrors['name'] || null" [attr.aria-describedby]="fieldErrors['name'] ? 'sd-name-error' : null" />
+            <rst-field-error [message]="fieldErrors['name']" for="sd-name"></rst-field-error>
+        </div>
+        <div class="rst-field is-full">
+          <label for="sd-max">Allowed without approval up to</label>
+          <input id="sd-max" type="number" step="0.01" min="0" [(ngModel)]="editingDiscount.maxAmountWithoutApproval"  [class.is-invalid]="!!fieldErrors['maxAmountWithoutApproval']" [attr.aria-invalid]="!!fieldErrors['maxAmountWithoutApproval'] || null" [attr.aria-describedby]="fieldErrors['maxAmountWithoutApproval'] ? 'sd-max-error' : null" />
+            <rst-field-error [message]="fieldErrors['maxAmountWithoutApproval']" for="sd-max"></rst-field-error>
+        </div>
+        <label class="rst-check"><input type="checkbox" [(ngModel)]="editingDiscount.isComp" /> This is a comp (given away)</label>
+        <label class="rst-check"><input type="checkbox" [(ngModel)]="editingDiscount.requiresApproval" /> Always needs a supervisor</label>
+        <label class="rst-check"><input type="checkbox" [(ngModel)]="editingDiscount.isActive" /> Active</label>
+      </div>
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="editingDiscount = null">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-primary" (click)="saveDiscountReason()" [disabled]="busy">Save</button>
+      </footer>
+    </div>
+  </div>
+}
+
+@if (editingCharge) {
+  <div class="rst-modal-backdrop" (click)="editingCharge = null">
+    <div class="rst-modal is-narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div class="rst-modal-title">Service charge</div>
+        <button type="button" class="rst-close" (click)="editingCharge = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+      <div class="rst-modal-body">
+        <div class="rst-form-grid">
+          <div class="rst-field is-full">
+            <label for="sc-name">Name</label>
+            <input id="sc-name" type="text" [(ngModel)]="editingCharge.name"  [class.is-invalid]="!!fieldErrors['name']" [attr.aria-invalid]="!!fieldErrors['name'] || null" [attr.aria-describedby]="fieldErrors['name'] ? 'sc-name-error' : null" />
+            <rst-field-error [message]="fieldErrors['name']" for="sc-name"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="sc-basis">Basis</label>
+            <select id="sc-basis" [(ngModel)]="editingCharge.basis">
+              @for (o of basisOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+            </select>
+          </div>
+          <div class="rst-field">
+            <label for="sc-value">Value</label>
+            <input id="sc-value" type="number" step="0.01" min="0" [(ngModel)]="editingCharge.value"  [class.is-invalid]="!!fieldErrors['value']" [attr.aria-invalid]="!!fieldErrors['value'] || null" [attr.aria-describedby]="fieldErrors['value'] ? 'sc-value-error' : null" />
+            <rst-field-error [message]="fieldErrors['value']" for="sc-value"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="sc-min">From party size</label>
+            <input id="sc-min" type="number" min="0" [(ngModel)]="editingCharge.minPartySize"  [class.is-invalid]="!!fieldErrors['minPartySize']" [attr.aria-invalid]="!!fieldErrors['minPartySize'] || null" [attr.aria-describedby]="fieldErrors['minPartySize'] ? 'sc-min-error' : null" />
+            <rst-field-error [message]="fieldErrors['minPartySize']" for="sc-min"></rst-field-error>
+          </div>
+        </div>
+        <label class="rst-check"><input type="checkbox" [(ngModel)]="editingCharge.isTaxable" /> Taxable</label>
+        <label class="rst-check"><input type="checkbox" [(ngModel)]="editingCharge.isWaivable" /> Can be waived</label>
+        <label class="rst-check"><input type="checkbox" [(ngModel)]="editingCharge.requiresApprovalToWaive" /> Waiving needs a supervisor</label>
+        <label class="rst-check"><input type="checkbox" [(ngModel)]="editingCharge.isActive" /> Active</label>
+      </div>
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="editingCharge = null">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-primary" (click)="saveCharge()" [disabled]="busy">Save</button>
+      </footer>
+    </div>
+  </div>
+}
+
+@if (editingZone) {
+  <div class="rst-modal-backdrop" (click)="editingZone = null">
+    <div class="rst-modal is-narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div class="rst-modal-title">Delivery zone</div>
+        <button type="button" class="rst-close" (click)="editingZone = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+        <div class="rst-form-grid">
+          <div class="rst-field is-full">
+            <label for="sz-name">Name</label>
+            <input id="sz-name" type="text" [(ngModel)]="editingZone.name" placeholder="Local (0–3 km)"  [class.is-invalid]="!!fieldErrors['name']" [attr.aria-invalid]="!!fieldErrors['name'] || null" [attr.aria-describedby]="fieldErrors['name'] ? 'sz-name-error' : null" />
+            <rst-field-error [message]="fieldErrors['name']" for="sz-name"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="sz-radius">Radius (km)</label>
+            <input id="sz-radius" type="number" step="0.1" min="0" [(ngModel)]="editingZone.radiusKm"  [class.is-invalid]="!!fieldErrors['radiusKm']" [attr.aria-invalid]="!!fieldErrors['radiusKm'] || null" [attr.aria-describedby]="fieldErrors['radiusKm'] ? 'sz-radius-error' : null" />
+            <rst-field-error [message]="fieldErrors['radiusKm']" for="sz-radius"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="sz-fee">Delivery fee</label>
+            <input id="sz-fee" type="number" step="0.01" min="0" [(ngModel)]="editingZone.deliveryFee"  [class.is-invalid]="!!fieldErrors['deliveryFee']" [attr.aria-invalid]="!!fieldErrors['deliveryFee'] || null" [attr.aria-describedby]="fieldErrors['deliveryFee'] ? 'sz-fee-error' : null" />
+            <rst-field-error [message]="fieldErrors['deliveryFee']" for="sz-fee"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="sz-min">Minimum order</label>
+            <input id="sz-min" type="number" step="0.01" min="0" [(ngModel)]="editingZone.minimumOrderValue"  [class.is-invalid]="!!fieldErrors['minimumOrderValue']" [attr.aria-invalid]="!!fieldErrors['minimumOrderValue'] || null" [attr.aria-describedby]="fieldErrors['minimumOrderValue'] ? 'sz-min-error' : null" />
+            <rst-field-error [message]="fieldErrors['minimumOrderValue']" for="sz-min"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="sz-free">Free delivery over</label>
+            <input id="sz-free" type="number" step="0.01" min="0" [(ngModel)]="editingZone.freeDeliveryThreshold"  [class.is-invalid]="!!fieldErrors['freeDeliveryThreshold']" [attr.aria-invalid]="!!fieldErrors['freeDeliveryThreshold'] || null" [attr.aria-describedby]="fieldErrors['freeDeliveryThreshold'] ? 'sz-free-error' : null" />
+            <rst-field-error [message]="fieldErrors['freeDeliveryThreshold']" for="sz-free"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="sz-eta">Expected minutes</label>
+            <input id="sz-eta" type="number" min="5" [(ngModel)]="editingZone.estimatedMinutes"  [class.is-invalid]="!!fieldErrors['estimatedMinutes']" [attr.aria-invalid]="!!fieldErrors['estimatedMinutes'] || null" [attr.aria-describedby]="fieldErrors['estimatedMinutes'] ? 'sz-eta-error' : null" />
+            <rst-field-error [message]="fieldErrors['estimatedMinutes']" for="sz-eta"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="sz-colour">Colour</label>
+            <input id="sz-colour" type="color" [(ngModel)]="editingZone.colorHex" />
+          </div>
+          <div class="rst-field is-full">
+            <label for="sz-areas">Covered areas</label>
+            <input id="sz-areas" type="text" [(ngModel)]="editingZone.coveredAreas" placeholder="SW1A, SW1E, SW1H"  [class.is-invalid]="!!fieldErrors['coveredAreas']" [attr.aria-invalid]="!!fieldErrors['coveredAreas'] || null" [attr.aria-describedby]="fieldErrors['coveredAreas'] ? 'sz-areas-error' : null" />
+            <rst-field-error [message]="fieldErrors['coveredAreas']" for="sz-areas"></rst-field-error>
+            <span class="rst-hint">Comma-separated postcodes or area names. Matched before the radius.</span>
+          </div>
+        </div>
+        <label class="rst-check"><input type="checkbox" [(ngModel)]="editingZone.isActive" /> Active</label>
+      </div>
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="editingZone = null">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-primary" (click)="saveZone()" [disabled]="busy">Save</button>
+      </footer>
+    </div>
+  </div>
+}

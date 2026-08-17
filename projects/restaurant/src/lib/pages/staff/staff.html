@@ -1,0 +1,447 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Staff</h2>
+      <p class="subtitle">People, PINs, the roster and tip pooling.</p>
+    </div>
+    <rst-outlet-picker (outletChange)="onOutlet($event)"></rst-outlet-picker>
+  </div>
+
+  <rst-help key="staff"></rst-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <div class="rst-segment st-tabs" role="tablist" aria-label="Sections">
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'people'" [class.is-active]="tab === 'people'" (click)="switchTab('people')">
+      <span class="material-symbols-outlined">badge</span>People
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'roster'" [class.is-active]="tab === 'roster'" (click)="switchTab('roster')">
+      <span class="material-symbols-outlined">calendar_month</span>Roster
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'tips'" [class.is-active]="tab === 'tips'" (click)="switchTab('tips')">
+      <span class="material-symbols-outlined">volunteer_activism</span>Tips
+    </button>
+  </div>
+
+  <!-- ══ People ═══════════════════════════════════════════════════════ -->
+  @if (tab === 'people') {
+    <div class="rst-toolbar">
+      <div class="rst-spacer"></div>
+      <button type="button" class="rst-touch-btn is-primary" (click)="newPerson()">
+        <span class="material-symbols-outlined">person_add</span>Add someone
+      </button>
+    </div>
+
+    @if (loading) {
+      <div class="rst-skeleton" style="height: 280px"></div>
+    } @else if (!people.length) {
+      <div class="rst-empty">
+        <div class="rst-empty-icon"><span class="material-symbols-outlined">groups</span></div>
+        <div class="rst-empty-title">No staff yet</div>
+        <div class="rst-empty-text">Add your servers, chefs and cashiers, then give each a PIN.</div>
+      </div>
+    } @else {
+      <div class="rst-table-wrap">
+        <table class="rst-table">
+          <thead>
+            <tr>
+              <th>Name</th><th>Role</th><th>Section</th><th>PIN</th><th>Can</th>
+              <th>On shift</th><th class="num">Tables</th><th class="actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of people; track trackPerson($index, p)) {
+              <tr [class.st-off]="!p.isActive">
+                <td>
+                  <span class="strong">{{ p.displayName || p.fullName }}</span>
+                  @if (p.displayName) { <span class="muted st-full">{{ p.fullName }}</span> }
+                </td>
+                <td>{{ roleLabels[p.role] }}</td>
+                <td class="muted">{{ p.defaultSectionName || '—' }}</td>
+                <td>
+                  @if (p.isLocked) { <span class="rst-pill tone-danger">Locked</span> }
+                  @else if (p.hasPin) { <span class="rst-pill tone-success">Set</span> }
+                  @else { <span class="rst-pill tone-warning">Not set</span> }
+                </td>
+                <td>
+                  <div class="st-perms">
+                    @if (p.canVoidLines) { <span class="rst-pill tone-neutral">Void</span> }
+                    @if (p.canApproveDiscounts) { <span class="rst-pill tone-violet">Approve</span> }
+                    @if (p.canCloseSession) { <span class="rst-pill tone-info">Close till</span> }
+                    @if (p.canRunReports) { <span class="rst-pill tone-neutral">Reports</span> }
+                    @if (p.canEditMenu) { <span class="rst-pill tone-neutral">Menu</span> }
+                  </div>
+                </td>
+                <td>
+                  @if (p.isOnShift) { <span class="rst-pill tone-success">Yes</span> }
+                  @else { <span class="muted">—</span> }
+                </td>
+                <td class="num">{{ p.openTableCount || '—' }}</td>
+                <td class="actions">
+                  <button type="button" class="rst-icon-btn" (click)="startPin(p)" aria-label="Set PIN" title="Set PIN">
+                    <span class="material-symbols-outlined">pin</span>
+                  </button>
+                  <button type="button" class="rst-icon-btn" (click)="edit(p)" aria-label="Edit">
+                    <span class="material-symbols-outlined">edit</span>
+                  </button>
+                  <button type="button" class="rst-icon-btn is-danger" (click)="remove(p)" aria-label="Remove">
+                    <span class="material-symbols-outlined">delete</span>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <!-- ══ Roster ═══════════════════════════════════════════════════════ -->
+  @if (tab === 'roster') {
+    <div class="rst-toolbar">
+      <button type="button" class="rst-touch-btn" (click)="shiftWeek(-1)">
+        <span class="material-symbols-outlined">chevron_left</span>
+      </button>
+      <span class="st-week">Week of {{ weekStart | date:'d MMM yyyy' }}</span>
+      <button type="button" class="rst-touch-btn" (click)="shiftWeek(1)">
+        <span class="material-symbols-outlined">chevron_right</span>
+      </button>
+      <div class="rst-spacer"></div>
+    </div>
+
+    <div class="rst-table-wrap">
+      <table class="rst-table st-roster">
+        <thead>
+          <tr>
+            <th>Person</th>
+            @for (d of weekDays; track d) {
+              <th class="st-day-head">{{ d | date:'EEE d' }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of people; track trackPerson($index, p)) {
+            @if (p.isActive) {
+              <tr>
+                <td class="strong">{{ p.displayName || p.fullName }}</td>
+                @for (d of weekDays; track d) {
+                  <td class="st-cell">
+                    @if (shiftFor(p.id, d); as s) {
+                      <div class="st-shift" [class.is-done]="s.status === 4">
+                        <span class="st-shift-time">{{ s.scheduledStart.slice(0,5) }}–{{ s.scheduledEnd.slice(0,5) }}</span>
+                        @if (s.sectionName) { <span class="st-shift-section">{{ s.sectionName }}</span> }
+                        <span class="st-shift-status">{{ shiftLabels[s.status] }}</span>
+                        <button type="button" class="st-shift-del" (click)="deleteShift(s)" aria-label="Remove shift">
+                          <span class="material-symbols-outlined">close</span>
+                        </button>
+                      </div>
+                    } @else {
+                      <button type="button" class="st-add" (click)="startShift(p.id, d)" [attr.aria-label]="'Add a shift for ' + p.fullName">
+                        <span class="material-symbols-outlined">add</span>
+                      </button>
+                    }
+                  </td>
+                }
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- ══ Tips ═════════════════════════════════════════════════════════ -->
+  @if (tab === 'tips') {
+    <div class="rst-toolbar">
+      <span class="st-note">
+        Tips are swept into a pool and split by the rule you choose. The kitchen share comes off
+        the top, because kitchens never receive tips directly.
+      </span>
+      <div class="rst-spacer"></div>
+      <button type="button" class="rst-touch-btn is-primary" (click)="newPool()">
+        <span class="material-symbols-outlined">add</span>New pool
+      </button>
+    </div>
+
+    @if (!pools.length) {
+      <div class="rst-empty">
+        <div class="rst-empty-icon"><span class="material-symbols-outlined">volunteer_activism</span></div>
+        <div class="rst-empty-title">No tip pools</div>
+        <div class="rst-empty-text">Create one for a period and the shares are worked out for you.</div>
+      </div>
+    } @else {
+      @for (pool of pools; track trackPool($index, pool)) {
+        <section class="rst-card st-pool">
+          <header class="rst-card-head">
+            <span class="rst-card-title">
+              {{ pool.name }}
+              @if (pool.isFinalised) { <span class="rst-pill tone-success">Finalised</span> }
+            </span>
+            <div class="st-pool-actions">
+              <span class="st-pool-total">{{ pool.totalAmount | number:'1.2-2' }}</span>
+              @if (!pool.isFinalised) {
+                <button type="button" class="rst-touch-btn" (click)="recalc(pool)" [disabled]="busy">Recalculate</button>
+                <button type="button" class="rst-touch-btn is-primary" (click)="finalise(pool)" [disabled]="busy">Finalise</button>
+              }
+            </div>
+          </header>
+
+          <div class="rst-card-body is-flush">
+            <div class="st-pool-meta">
+              {{ pool.periodStart | date:'d MMM' }} – {{ pool.periodEnd | date:'d MMM' }} ·
+              {{ basisLabels[pool.basis] }}
+              @if (pool.kitchenSharePercent > 0) { · kitchen takes {{ pool.kitchenSharePercent }}% }
+            </div>
+
+            <div class="rst-table-wrap">
+              <table class="rst-table">
+                <thead>
+                  <tr><th>Person</th><th>Role</th><th class="num">Hours</th><th class="num">Sales</th><th class="num">Share</th><th class="num">Amount</th></tr>
+                </thead>
+                <tbody>
+                  @for (d of pool.distributions; track d.id) {
+                    <tr>
+                      <td class="strong">{{ d.staffName }}</td>
+                      <td class="muted">{{ roleLabels[d.role] }}</td>
+                      <td class="num">{{ d.hoursWorked | number:'1.0-2' }}</td>
+                      <td class="num muted">{{ d.salesAmount | number:'1.2-2' }}</td>
+                      <td class="num muted">{{ d.sharePercent | number:'1.0-2' }}%</td>
+                      <td class="num strong">{{ d.amount | number:'1.2-2' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      }
+    }
+  }
+</div>
+
+<!-- ══ Person editor ════════════════════════════════════════════════ -->
+@if (editing) {
+  <div class="rst-modal-backdrop" (click)="editing = null">
+    <div class="rst-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div class="rst-modal-title">{{ editingId ? 'Edit person' : 'Add someone' }}</div>
+        <button type="button" class="rst-close" (click)="editing = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        <div class="rst-form-grid">
+          <div class="rst-field is-full">
+            <label for="sp-name">Full name</label>
+            <input id="sp-name" type="text" [(ngModel)]="editing.fullName"  [class.is-invalid]="!!fieldErrors['fullName']" [attr.aria-invalid]="!!fieldErrors['fullName'] || null" [attr.aria-describedby]="fieldErrors['fullName'] ? 'sp-name-error' : null" />
+            <rst-field-error [message]="fieldErrors['fullName']" for="sp-name"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="sp-display">Display name</label>
+            <input id="sp-display" type="text" [(ngModel)]="editing.displayName" placeholder="Alex"  [class.is-invalid]="!!fieldErrors['displayName']" [attr.aria-invalid]="!!fieldErrors['displayName'] || null" [attr.aria-describedby]="fieldErrors['displayName'] ? 'sp-display-error' : null" />
+            <rst-field-error [message]="fieldErrors['displayName']" for="sp-display"></rst-field-error>
+            <span class="rst-hint">Shown on tickets and the floor plan, where space is tight.</span>
+          </div>
+          <div class="rst-field">
+            <label for="sp-role">Role</label>
+            <select id="sp-role" [(ngModel)]="editing.role">
+              @for (o of roleOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+            </select>
+          </div>
+          <div class="rst-field">
+            <label for="sp-section">Default section</label>
+            <select id="sp-section" [(ngModel)]="editing.defaultSectionId">
+              <option [ngValue]="null">None</option>
+              @for (s of sections; track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }
+            </select>
+          </div>
+          <div class="rst-field">
+            <label for="sp-phone">Phone</label>
+            <input id="sp-phone" type="tel" [(ngModel)]="editing.phone"  [class.is-invalid]="!!fieldErrors['phone']" [attr.aria-invalid]="!!fieldErrors['phone'] || null" [attr.aria-describedby]="fieldErrors['phone'] ? 'sp-phone-error' : null" />
+            <rst-field-error [message]="fieldErrors['phone']" for="sp-phone"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="sp-rate">Hourly rate</label>
+            <input id="sp-rate" type="number" step="0.01" min="0" [(ngModel)]="editing.hourlyRate"  [class.is-invalid]="!!fieldErrors['hourlyRate']" [attr.aria-invalid]="!!fieldErrors['hourlyRate'] || null" [attr.aria-describedby]="fieldErrors['hourlyRate'] ? 'sp-rate-error' : null" />
+            <rst-field-error [message]="fieldErrors['hourlyRate']" for="sp-rate"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="sp-tip">Fixed tip share %</label>
+            <input id="sp-tip" type="number" step="0.1" min="0" [(ngModel)]="editing.tipSharePercent"  [class.is-invalid]="!!fieldErrors['tipSharePercent']" [attr.aria-invalid]="!!fieldErrors['tipSharePercent'] || null" [attr.aria-describedby]="fieldErrors['tipSharePercent'] ? 'sp-tip-error' : null" />
+            <rst-field-error [message]="fieldErrors['tipSharePercent']" for="sp-tip"></rst-field-error>
+          </div>
+        </div>
+
+        <h4 class="st-sub">What they may do on the till</h4>
+        <div class="st-perm-grid">
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editing.canTakeOrders" /> Take orders</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editing.canManageTables" /> Manage tables</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editing.canVoidLines" /> Void lines</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editing.canApplyDiscounts" /> Apply discounts</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editing.canApproveDiscounts" /> Approve discounts</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editing.canOpenCashDrawer" /> Open the drawer</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editing.canCloseSession" /> Close a session</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editing.canRunReports" /> Run reports</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editing.canEditMenu" /> Edit the menu</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editing.canServeAlcohol" /> Serve alcohol</label>
+          <label class="rst-check"><input type="checkbox" [(ngModel)]="editing.isActive" /> Active</label>
+        </div>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="editing = null">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-primary" (click)="save()" [disabled]="busy">Save</button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- ══ PIN ══════════════════════════════════════════════════════════ -->
+@if (pinFor) {
+  <div class="rst-modal-backdrop" (click)="pinFor = null">
+    <div class="rst-modal is-narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div>
+          <div class="rst-modal-title">PIN for {{ pinFor.displayName || pinFor.fullName }}</div>
+          <div class="rst-modal-sub">4 to 8 digits. Not all one digit, and not a simple sequence.</div>
+        </div>
+        <button type="button" class="rst-close" (click)="pinFor = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        <div class="rst-field is-full">
+          <label for="sp-pin">New PIN</label>
+          <input id="sp-pin" type="password" inputmode="numeric" maxlength="8" [(ngModel)]="pin" class="st-pin-input" />
+        </div>
+        <div class="rst-field is-full">
+          <label for="sp-pin2">Confirm</label>
+          <input id="sp-pin2" type="password" inputmode="numeric" maxlength="8" [(ngModel)]="pinConfirm" class="st-pin-input" />
+        </div>
+        <p class="st-note">
+          PINs are hashed and never shown again — not here, not in any report. If someone forgets
+          theirs, set a new one.
+        </p>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="pinFor = null">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-primary" (click)="savePin()" [disabled]="busy || pin.length < 4">
+          Set PIN
+        </button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- ══ Shift ════════════════════════════════════════════════════════ -->
+@if (shiftEditor) {
+  <div class="rst-modal-backdrop" (click)="shiftEditor = null">
+    <div class="rst-modal is-narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div class="rst-modal-title">Add a shift</div>
+        <button type="button" class="rst-close" (click)="shiftEditor = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        <div class="rst-form-grid">
+          <div class="rst-field">
+            <label for="ss-start">Start</label>
+            <input id="ss-start" type="time" [(ngModel)]="shiftEditor.start"  [class.is-invalid]="!!fieldErrors['start']" [attr.aria-invalid]="!!fieldErrors['start'] || null" [attr.aria-describedby]="fieldErrors['start'] ? 'ss-start-error' : null" />
+            <rst-field-error [message]="fieldErrors['start']" for="ss-start"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="ss-end">End</label>
+            <input id="ss-end" type="time" [(ngModel)]="shiftEditor.end"  [class.is-invalid]="!!fieldErrors['end']" [attr.aria-invalid]="!!fieldErrors['end'] || null" [attr.aria-describedby]="fieldErrors['end'] ? 'ss-end-error' : null" />
+            <rst-field-error [message]="fieldErrors['end']" for="ss-end"></rst-field-error>
+          </div>
+          <div class="rst-field is-full">
+            <label for="ss-section">Section</label>
+            <select id="ss-section" [(ngModel)]="shiftEditor.sectionId">
+              <option value="">Any</option>
+              @for (s of sections; track s.id) { <option [value]="s.id">{{ s.name }}</option> }
+            </select>
+          </div>
+          <div class="rst-field is-full">
+            <label for="ss-role">Role for this shift</label>
+            <select id="ss-role" [(ngModel)]="shiftEditor.role">
+              @for (o of roleOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="shiftEditor = null">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-primary" (click)="saveShift()" [disabled]="busy">Add</button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- ══ Tip pool ═════════════════════════════════════════════════════ -->
+@if (poolEditor) {
+  <div class="rst-modal-backdrop" (click)="poolEditor = null">
+    <div class="rst-modal is-narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div class="rst-modal-title">New tip pool</div>
+        <button type="button" class="rst-close" (click)="poolEditor = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        <div class="rst-form-grid">
+          <div class="rst-field is-full">
+            <label for="tp-name">Name</label>
+            <input id="tp-name" type="text" [(ngModel)]="poolEditor.name"  [class.is-invalid]="!!fieldErrors['name']" [attr.aria-invalid]="!!fieldErrors['name'] || null" [attr.aria-describedby]="fieldErrors['name'] ? 'tp-name-error' : null" />
+            <rst-field-error [message]="fieldErrors['name']" for="tp-name"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="tp-start">From</label>
+            <input id="tp-start" type="date" [(ngModel)]="poolEditor.start"  [class.is-invalid]="!!fieldErrors['start']" [attr.aria-invalid]="!!fieldErrors['start'] || null" [attr.aria-describedby]="fieldErrors['start'] ? 'tp-start-error' : null" />
+            <rst-field-error [message]="fieldErrors['start']" for="tp-start"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="tp-end">To</label>
+            <input id="tp-end" type="date" [(ngModel)]="poolEditor.end"  [class.is-invalid]="!!fieldErrors['end']" [attr.aria-invalid]="!!fieldErrors['end'] || null" [attr.aria-describedby]="fieldErrors['end'] ? 'tp-end-error' : null" />
+            <rst-field-error [message]="fieldErrors['end']" for="tp-end"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="tp-basis">Split by</label>
+            <select id="tp-basis" [(ngModel)]="poolEditor.basis">
+              @for (o of basisOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+            </select>
+          </div>
+          <div class="rst-field">
+            <label for="tp-kitchen">Kitchen share %</label>
+            <input id="tp-kitchen" type="number" step="0.5" min="0" max="100" [(ngModel)]="poolEditor.kitchenShare"  [class.is-invalid]="!!fieldErrors['kitchenShare']" [attr.aria-invalid]="!!fieldErrors['kitchenShare'] || null" [attr.aria-describedby]="fieldErrors['kitchenShare'] ? 'tp-kitchen-error' : null" />
+            <rst-field-error [message]="fieldErrors['kitchenShare']" for="tp-kitchen"></rst-field-error>
+          </div>
+        </div>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="poolEditor = null">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-primary" (click)="savePool()" [disabled]="busy">Create</button>
+      </footer>
+    </div>
+  </div>
+}

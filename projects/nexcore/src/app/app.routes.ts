@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard } from '@nexcore/core';
+import { authGuard, appInstalledGuard } from '@nexcore/core';
 
 export const routes: Routes = [
   // PUBLIC
@@ -34,31 +34,43 @@ export const routes: Routes = [
 
       {
         path: 'accounting',
+        canMatch: [appInstalledGuard],
         loadChildren: () => import('@nexcore/accounting').then(m => m.accountingRoutes),
       },
       {
         path: 'inventory',
+        canMatch: [appInstalledGuard],
         loadChildren: () => import('@nexcore/inventory').then(m => m.inventoryRoutes),
       },
       {
         path: 'sales',
+        canMatch: [appInstalledGuard],
         loadChildren: () => import('@nexcore/sales').then(m => m.salesRoutes),
       },
       {
         path: 'procurement',
+        canMatch: [appInstalledGuard],
         loadChildren: () => import('@nexcore/procurement').then(m => m.procurementRoutes),
       },
       {
         path: 'hr',
+        canMatch: [appInstalledGuard],
         loadChildren: () => import('@nexcore/hr').then(m => m.hrRoutes),
       },
       {
         path: 'crm',
+        canMatch: [appInstalledGuard],
         loadChildren: () => import('@nexcore/crm').then(m => m.crmRoutes),
       },
       {
         path: 'manufacturing',
+        canMatch: [appInstalledGuard],
         loadChildren: () => import('@nexcore/manufacturing').then(m => m.manufacturingRoutes),
+      },
+      {
+        path: 'restaurant',
+        canMatch: [appInstalledGuard],
+        loadChildren: () => import('@nexcore/restaurant').then(m => m.restaurantRoutes),
       },
 
       /**
@@ -76,6 +88,7 @@ export const routes: Routes = [
        */
       {
         path: 'pos-office',
+        canMatch: [appInstalledGuard],
         children: [
           // Sales screens the POS app also offers. They need their own URL for the same
           // reason as the Inventory ones: a route listed under two menus lights up in

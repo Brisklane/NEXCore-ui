@@ -186,6 +186,11 @@ export class Register implements OnInit {
     'Invoicing automatically triggers the accounts receivable workflow',
     'Sales dashboards give managers real-time visibility into team performance',
     'Price lists let you offer different rates to different customer groups',
+    // Restaurant
+    'Coursing lets a waiter hold the dessert back until the mains are cleared',
+    'Menu engineering plots every dish on popularity against margin',
+    'Recipes turn selling a burger into depleting a bun, automatically',
+    'A blind cash close hides the expected total until the drawer is counted',
   ];
 
   seedModules: { name: string; icon: string; done: boolean }[] = [
@@ -195,7 +200,8 @@ export class Register implements OnInit {
     { name: 'Inventory', icon: 'fa-solid fa-boxes-stacked', done: false },
     { name: 'Manufacturing', icon: 'fa-solid fa-industry', done: false },
     { name: 'Procurement', icon: 'fa-solid fa-cart-shopping', done: false },
-    { name: 'Sales', icon: 'fa-solid fa-chart-line', done: false }
+    { name: 'Sales', icon: 'fa-solid fa-chart-line', done: false },
+    { name: 'Restaurant', icon: 'fa-solid fa-utensils', done: false }
   ];
 
   get currentSeedModuleName(): string {

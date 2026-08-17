@@ -1,28 +1,131 @@
-<div class="apps-page">
-  <header class="apps-head">
-    <h1 class="apps-title">Apps</h1>
-    <p class="apps-subtitle">Industry-ready apps built on NexCore. Launch one to get started.</p>
+<div class="ap">
+  <header class="ap-head">
+    <div>
+      <h1>Apps</h1>
+      <p>
+        Install what this business runs on. Every app stands alone — run just the till if
+        that's all you need. Removing one never breaks another, and no data is deleted.
+      </p>
+    </div>
   </header>
 
-  <div class="apps-grid">
-    <div class="app-card" *ngFor="let app of apps">
-      <span class="app-icon" [style.background]="app.accent">
-        <span class="material-symbols-outlined">{{ app.icon }}</span>
-      </span>
-
-      <div class="app-name">{{ app.name }}</div>
-      <div class="app-brand">{{ app.brand }}</div>
-      <div class="app-desc">{{ app.description }}</div>
-
-      <button
-        type="button"
-        class="app-explore"
-        [class.soon]="!app.available"
-        [disabled]="!app.available"
-        (click)="onExplore(app)"
-      >
-        {{ app.available ? 'Explore' : 'Coming soon' }}
-      </button>
+  @if (blockedApp(); as blocked) {
+    <div class="ap-banner ap-banner-warn">
+      <span class="material-symbols-outlined">lock</span>
+      <div>
+        <strong>{{ blocked.name }} isn't installed.</strong>
+        That's why the page you opened isn't available. Add it below to switch it back on.
+      </div>
     </div>
-  </div>
+  }
+
+  @if (notice()) {
+    <div class="ap-banner ap-banner-ok">
+      <span class="material-symbols-outlined">check_circle</span>
+      <div>{{ notice() }}</div>
+    </div>
+  }
+
+  <!-- ── Installed ─────────────────────────────────────────────────── -->
+  <section class="ap-section">
+    <div class="ap-section-head">
+      <h2>Installed</h2>
+      <span class="ap-count">{{ installed().length }}</span>
+    </div>
+
+    @if (!installed().length) {
+      <p class="ap-empty">Nothing installed yet. Pick an app below to get started.</p>
+    } @else {
+      <div class="ap-grid">
+        @for (app of installed(); track app.key) {
+          <article class="ap-card">
+            <div class="ap-card-top">
+              <span class="ap-icon" [style.background]="app.accent">
+                <span class="material-symbols-outlined">{{ app.icon }}</span>
+              </span>
+              <span class="ap-badge ap-badge-on">Installed</span>
+            </div>
+            <h3>{{ app.name }}</h3>
+            <p>{{ app.tagline }}</p>
+            <div class="ap-actions">
+              <button class="ap-btn ap-btn-primary" type="button" (click)="open(app)">Open</button>
+              <button class="ap-btn ap-btn-ghost" type="button" [disabled]="busy()" (click)="askRemove(app)">Remove</button>
+            </div>
+          </article>
+        }
+      </div>
+    }
+  </section>
+
+  <!-- ── Available ─────────────────────────────────────────────────── -->
+  @if (available().length) {
+    <section class="ap-section">
+      <div class="ap-section-head">
+        <h2>Available to add</h2>
+        <span class="ap-count">{{ available().length }}</span>
+      </div>
+
+      <div class="ap-grid">
+        @for (app of available(); track app.key) {
+          <article class="ap-card">
+            <div class="ap-card-top">
+              <span class="ap-icon" [style.background]="app.accent">
+                <span class="material-symbols-outlined">{{ app.icon }}</span>
+              </span>
+            </div>
+            <h3>{{ app.name }}</h3>
+            <p>{{ app.tagline }}</p>
+            <div class="ap-actions">
+              <button class="ap-btn ap-btn-primary" type="button" [disabled]="busy()" (click)="add(app)">Add</button>
+            </div>
+          </article>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- ── Coming soon ───────────────────────────────────────────────── -->
+  <section class="ap-section ap-section-soon">
+    <div class="ap-section-head">
+      <h2>Coming soon</h2>
+      <span class="ap-count">{{ comingSoon.length }}</span>
+    </div>
+    <p class="ap-section-note">In development. Nothing to install yet.</p>
+
+    <div class="ap-grid">
+      @for (app of comingSoon; track app.key) {
+        <article class="ap-card ap-card-soon">
+          <div class="ap-card-top">
+            <span class="ap-icon" [style.background]="app.accent">
+              <span class="material-symbols-outlined">{{ app.icon }}</span>
+            </span>
+            <span class="ap-badge">Soon</span>
+          </div>
+          <h3>{{ app.name }}</h3>
+          <p>{{ app.tagline }}</p>
+        </article>
+      }
+    </div>
+  </section>
+
+  <!-- ── Remove confirmation ───────────────────────────────────────── -->
+  @if (pendingRemoval(); as app) {
+    <div class="ap-overlay" (click)="cancelRemove()"></div>
+    <aside class="ap-dialog" role="dialog" aria-modal="true">
+      <h3>Remove {{ app.name }}?</h3>
+
+      <p>
+        Its screens disappear from the sidebar and stop opening. <strong>No data is
+        deleted</strong>, and nothing else stops working — everything is still there if
+        you add it back later.
+      </p>
+
+      <div class="ap-dialog-actions">
+        <button class="ap-btn ap-btn-ghost" type="button" (click)="cancelRemove()">Cancel</button>
+        <button class="ap-btn ap-btn-danger" type="button" [disabled]="busy()" (click)="confirmRemove()">
+          {{ busy() ? 'Removing…' : 'Remove' }}
+        </button>
+      </div>
+    </aside>
+  }
 </div>

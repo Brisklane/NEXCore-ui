@@ -81,9 +81,12 @@
     </div>
     </ng-template>
 
-    <div class="sbc-section">Core Modules</div>
-    <ng-container *ngFor="let item of modules">
-      <ng-container *ngTemplateOutlet="modRow; context: { item: item }"></ng-container>
+    <!-- Legacy grouping: everything is an app now, so this is normally empty. -->
+    <ng-container *ngIf="modules.length">
+      <div class="sbc-section">Core Modules</div>
+      <ng-container *ngFor="let item of modules">
+        <ng-container *ngTemplateOutlet="modRow; context: { item: item }"></ng-container>
+      </ng-container>
     </ng-container>
 
     <ng-container *ngIf="apps.length">
