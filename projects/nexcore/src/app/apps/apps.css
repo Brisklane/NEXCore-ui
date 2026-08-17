@@ -1,110 +1,123 @@
-.apps-page {
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+/* All design tokens, so the page follows whichever theme is active. */
+
+.ap { padding: 24px 28px 48px; max-width: 1400px; }
+
+.ap-head h1 { margin: 0 0 4px; font-size: 24px; font-weight: 750; letter-spacing: -.02em; color: var(--text-heading, #0f172a); }
+.ap-head p { margin: 0 0 20px; font-size: 13.5px; color: var(--text-muted, #94a3b8); }
+
+/* ── Banners ── */
+.ap-banner {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 14px; margin-bottom: 18px; border-radius: 11px;
+  font-size: 13px; line-height: 1.5;
+}
+.ap-banner .material-symbols-outlined { font-size: 19px; flex: none; }
+.ap-banner-warn {
+  color: var(--warning-text, #92400e);
+  background: var(--warning-soft, #fef3c7);
+  border: 1px solid var(--warning-border, #fde68a);
+}
+.ap-banner-ok {
+  color: var(--success-text, #15803d);
+  background: var(--success-soft, #dcfce7);
+  border: 1px solid var(--success-border, #bbf7d0);
 }
 
-.apps-head {
-  margin-bottom: 22px;
+/* ── Sections ── */
+.ap-section { margin-bottom: 34px; }
+.ap-section-head { display: flex; align-items: center; gap: 9px; margin-bottom: 4px; }
+.ap-section-head h2 { margin: 0; font-size: 15px; font-weight: 700; color: var(--text-heading, #0f172a); }
+.ap-count {
+  min-width: 22px; padding: 1px 8px; border-radius: 999px; text-align: center;
+  font-size: 11.5px; font-weight: 700;
+  color: var(--text-secondary, #64748b); background: var(--bg-muted, #f1f5f9);
+}
+.ap-section-note { margin: 0 0 12px; font-size: 12px; color: var(--text-muted, #94a3b8); }
+.ap-empty {
+  margin: 10px 0 0; padding: 22px; border-radius: 12px;
+  border: 1px dashed var(--border-strong, #cbd5e1);
+  text-align: center; font-size: 13px; color: var(--text-muted, #94a3b8);
 }
 
-.apps-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--text-heading, #0f172a);
-  margin: 0 0 4px 0;
-}
+/* Coming soon is separated by a rule and sits quieter — it is not actionable. */
+.ap-section-soon { margin-top: 42px; padding-top: 26px; border-top: 1px solid var(--border-default, #e6eaf0); }
 
-.apps-subtitle {
-  font-size: 13.5px;
-  color: var(--text-muted, #64748b);
-  margin: 0;
-}
+/* ── Cards ── */
+.ap-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); margin-top: 12px; }
 
-.apps-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 18px;
+.ap-card {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 16px;
+  border: 1px solid var(--border-default, #e2e8f0); border-radius: 14px;
+  background: var(--bg-surface, #fff);
+  transition: border-color .14s, transform .14s, box-shadow .14s;
 }
+.ap-card:hover { border-color: var(--accent, #2b7fff); transform: translateY(-1px); box-shadow: var(--shadow-sm, 0 4px 14px rgba(15,23,42,.08)); }
 
-.app-card {
-  background: var(--bg-surface, #ffffff);
-  border: 1px solid var(--border-default, #e9edf3);
-  border-radius: 16px;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+.ap-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+.ap-icon {
+  display: grid; place-items: center; flex: none;
+  width: 44px; height: 44px; border-radius: 12px; color: #fff;
 }
+.ap-icon .material-symbols-outlined { font-size: 24px; }
 
-.app-card:hover {
-  transform: translateY(-3px);
-  border-color: transparent;
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.1);
-}
+.ap-card h3 { margin: 0; font-size: 15px; font-weight: 700; color: var(--text-heading, #0f172a); }
+.ap-card p { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--text-muted, #94a3b8); }
 
-.app-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 13px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  margin-bottom: 14px;
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.16);
-}
-.app-icon .material-symbols-outlined {
-  font-size: 24px;
-}
-
-.app-name {
-  font-size: 15.5px;
-  font-weight: 700;
-  color: var(--text-heading, #0f172a);
-  line-height: 1.2;
-}
-
-.app-brand {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--accent, #2b7fff);
-  margin-top: 3px;
-}
-
-.app-desc {
-  font-size: 12.5px;
-  color: var(--text-muted, #64748b);
-  margin-top: 6px;
-  margin-bottom: 16px;
-  flex: 1;
-}
-
-.app-explore {
-  align-self: flex-start;
-  padding: 7px 16px;
-  border-radius: 9px;
+.ap-badge {
+  padding: 2px 9px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--text-muted, #94a3b8); background: var(--bg-muted, #f1f5f9);
   border: 1px solid var(--border-default, #e2e8f0);
-  background: var(--bg-surface, #ffffff);
-  color: var(--text-heading, #0f172a);
-  font-size: 13px;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.ap-badge-on {
+  color: var(--success-text, #15803d);
+  background: var(--success-soft, #dcfce7);
+  border-color: var(--success-border, #bbf7d0);
 }
 
-.app-explore:hover {
-  background: var(--accent, #2b7fff);
-  border-color: var(--accent, #2b7fff);
-  color: #fff;
-}
+/* Not clickable, so it does not pretend to be. */
+.ap-card-soon { opacity: .62; }
+.ap-card-soon:hover { border-color: var(--border-default, #e2e8f0); transform: none; box-shadow: none; }
 
-.app-explore.soon {
-  cursor: not-allowed;
-  color: var(--text-muted, #94a3b8);
-  background: var(--bg-muted, #f1f5f9);
-  border-color: transparent;
+.ap-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+.ap-btn {
+  padding: 7px 15px; border-radius: 9px; cursor: pointer;
+  font-size: 12.5px; font-weight: 650; font-family: inherit;
+  border: 1px solid transparent; transition: background .14s, border-color .14s;
 }
-.app-explore.soon:hover {
-  background: var(--bg-muted, #f1f5f9);
-  color: var(--text-muted, #94a3b8);
+.ap-btn[disabled] { opacity: .55; cursor: not-allowed; }
+.ap-btn-primary { background: var(--accent, #2b7fff); color: #fff; }
+.ap-btn-primary:not([disabled]):hover { background: var(--accent-strong, #1d6ae5); }
+.ap-btn-ghost {
+  background: transparent; color: var(--text-secondary, #64748b);
+  border-color: var(--border-strong, #cbd5e1);
+}
+.ap-btn-ghost:not([disabled]):hover { background: var(--bg-muted, #f1f5f9); }
+.ap-btn-danger { background: var(--danger, #ef4444); color: #fff; }
+.ap-btn-danger:not([disabled]):hover { background: var(--danger-strong, #dc2626); }
+
+/* ── Remove dialog ── */
+.ap-overlay { position: fixed; inset: 0; background: var(--bg-overlay, rgba(15,23,42,.45)); z-index: 60; }
+.ap-dialog {
+  position: fixed; z-index: 61; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: min(440px, calc(100vw - 32px)); padding: 22px;
+  border: 1px solid var(--border-default, #e6eaf0); border-radius: 16px;
+  background: var(--bg-surface, #fff);
+  box-shadow: var(--shadow-lg, 0 24px 60px rgba(15,23,42,.25));
+}
+.ap-dialog h3 { margin: 0 0 10px; font-size: 16px; font-weight: 700; color: var(--text-heading, #0f172a); }
+.ap-dialog p { margin: 0 0 18px; font-size: 13px; line-height: 1.55; color: var(--text-secondary, #64748b); }
+.ap-dialog-warn {
+  padding: 11px 13px; border-radius: 9px;
+  color: var(--warning-text, #92400e) !important;
+  background: var(--warning-soft, #fef3c7);
+  border: 1px solid var(--warning-border, #fde68a);
+}
+.ap-dialog-actions { display: flex; justify-content: flex-end; gap: 9px; }
+
+@media (max-width: 640px) {
+  .ap { padding: 16px 14px 34px; }
+  .ap-grid { grid-template-columns: 1fr; }
 }

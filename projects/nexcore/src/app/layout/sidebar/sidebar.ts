@@ -1,9 +1,10 @@
-import { Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { Observable, of, Subscription } from 'rxjs';
 
 import { SidebarChild, SidebarItem, SIDEBAR_MENU, expandToRoute } from './sidebar-menu';
+import { InstalledAppsService } from '@nexcore/core';
 
 @Component({
   selector: 'app-sidebar',
@@ -31,9 +32,15 @@ export class Sidebar implements OnInit, OnChanges, OnDestroy {
 
   private routerSub?: Subscription;
 
+  private appsService = inject(InstalledAppsService);
+
   constructor(private router: Router) {}
 
+  /** Hides an app the company has removed. Untagged entries are always shown. */
+  private isVisible = (i: SidebarItem): boolean => !i.appKey || this.appsService.isInstalled(i.appKey);
+
   ngOnInit() {
+    void this.appsService.load();
     this.getSidebarFromApi().subscribe((data) => {
       this.menuItems = data;
       this.syncFromRoute();
@@ -66,13 +73,15 @@ export class Sidebar implements OnInit, OnChanges, OnDestroy {
 
   // ── Rail groups (far-left icon strip) ─────────────────────────────────────
   get railTop(): SidebarItem[] { return this.menuItems.filter((i) => i.iconType === 'dashboard'); }
-  /** Core business modules (Accounting, CRM, HR, Inventory, Manufacturing, Procurement, Sales). */
+  /** Retained for older menu data; nothing is tagged 'module' any more. */
   get railModules(): SidebarItem[] {
-    return this.menuItems.filter((i) => i.iconType === 'module').sort((a, b) => a.label.localeCompare(b.label));
+    return this.menuItems.filter((i) => i.iconType === 'module' && this.isVisible(i))
+      .sort((a, b) => a.label.localeCompare(b.label));
   }
-  /** Apps built on top of the core modules (POS today; Real Estate etc. later). */
+  /** Every business app the company has installed. */
   get railApps(): SidebarItem[] {
-    return this.menuItems.filter((i) => i.iconType === 'app').sort((a, b) => a.label.localeCompare(b.label));
+    return this.menuItems.filter((i) => i.iconType === 'app' && this.isVisible(i))
+      .sort((a, b) => a.label.localeCompare(b.label));
   }
   get railAdmin(): SidebarItem[] { return this.menuItems.filter((i) => i.iconType === 'admin'); }
 
@@ -117,7 +126,7 @@ export class Sidebar implements OnInit, OnChanges, OnDestroy {
       this.activeModuleLabel = owner.label;
       expandToRoute(owner.children, url);
     } else if (!this.activeModuleLabel) {
-      this.activeModuleLabel = this.railModules[0]?.label ?? '';
+      this.activeModuleLabel = (this.railModules[0] ?? this.railApps[0])?.label ?? '';
     }
   }
 

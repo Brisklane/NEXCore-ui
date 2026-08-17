@@ -1,0 +1,332 @@
+<div class="page-container ld-page">
+  <div class="page-header">
+    <div>
+      <h2>Floors &amp; tables</h2>
+      <p class="subtitle">
+        Drag the room into shape. {{ tables.length }} tables · {{ totalSeats }} seats
+        @if (dirty) { · <span class="ld-dirty">unsaved changes</span> }
+      </p>
+    </div>
+    <rst-outlet-picker (outletChange)="onOutlet($event)"></rst-outlet-picker>
+  </div>
+
+  <rst-help key="layout"></rst-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <div class="ld-toolbar">
+    @if (floorList.length) {
+      <div class="rst-segment" role="tablist" aria-label="Floors">
+        @for (f of floorList; track f.id) {
+          <button
+            type="button"
+            role="tab"
+            [attr.aria-selected]="activeFloorId === f.id"
+            [class.is-active]="activeFloorId === f.id"
+            (click)="switchFloor(f.id)"
+          >{{ f.name }}</button>
+        }
+      </div>
+    }
+
+    <button type="button" class="rst-touch-btn" (click)="newFloor()">
+      <span class="material-symbols-outlined">add</span>Floor
+    </button>
+    @if (activeFloorId) {
+      <button type="button" class="rst-touch-btn" (click)="editFloor()">
+        <span class="material-symbols-outlined">settings</span>Floor size
+      </button>
+      <button type="button" class="rst-touch-btn" (click)="newSection()">
+        <span class="material-symbols-outlined">dashboard</span>Section
+      </button>
+    }
+
+    <div class="rst-spacer"></div>
+
+    <button type="button" class="rst-touch-btn is-primary" (click)="save()" [disabled]="busy || !dirty">
+      <span class="material-symbols-outlined">save</span>Save layout
+    </button>
+  </div>
+
+  @if (!activeFloorId && !loading) {
+    <div class="rst-empty">
+      <div class="rst-empty-icon"><span class="material-symbols-outlined">architecture</span></div>
+      <div class="rst-empty-title">No floor yet</div>
+      <div class="rst-empty-text">Create a floor, then drop tables onto it.</div>
+      <button type="button" class="rst-touch-btn is-primary" (click)="newFloor()">Create a floor</button>
+    </div>
+  }
+
+  @if (activeFloorId) {
+    <div class="ld-workspace">
+      <!-- ── Palette ─────────────────────────────────────────────── -->
+      <aside class="ld-palette" aria-label="Add objects">
+        <h4 class="ld-palette-title">Add</h4>
+        <button type="button" class="ld-tool" (click)="addTable()">
+          <span class="material-symbols-outlined">table_restaurant</span>Table
+        </button>
+
+        <h4 class="ld-palette-title">Fixtures</h4>
+        @for (o of fixtureOptions; track o.value) {
+          <button type="button" class="ld-tool is-small" (click)="addFixture(o.value)">{{ o.label }}</button>
+        }
+
+        @if (selectedId) {
+          <h4 class="ld-palette-title">Selected</h4>
+          <button type="button" class="ld-tool is-small" (click)="rotateSelected()">
+            <span class="material-symbols-outlined">rotate_right</span>Rotate 15°
+          </button>
+          @if (!selectedIsFixture) {
+            <button type="button" class="ld-tool is-small" (click)="duplicateSelected()">
+              <span class="material-symbols-outlined">content_copy</span>Duplicate
+            </button>
+          }
+          <button type="button" class="ld-tool is-small is-danger" (click)="removeSelected()">
+            <span class="material-symbols-outlined">delete</span>Remove
+          </button>
+        }
+      </aside>
+
+      <!-- ── Canvas ──────────────────────────────────────────────── -->
+      <div class="ld-canvas-wrap">
+        <div
+          #canvas
+          class="ld-canvas"
+          [style.width.px]="canvasWidth"
+          [style.height.px]="canvasHeight"
+          (pointermove)="onDrag($event)"
+          (pointerup)="endDrag()"
+          (pointerleave)="endDrag()"
+        >
+          @for (f of fixtures; track trackFixture($index, f)) {
+            <div
+              class="ld-fixture"
+              [class.is-selected]="selectedId === f.id"
+              [style.left.px]="f.positionX"
+              [style.top.px]="f.positionY"
+              [style.width.px]="f.width"
+              [style.height.px]="f.height"
+              [style.transform]="'rotate(' + f.rotation + 'deg)'"
+              (pointerdown)="startDrag($event, f.id, true)"
+            >
+              <span>{{ f.label }}</span>
+            </div>
+          }
+
+          @for (t of tables; track trackTable($index, t)) {
+            <div
+              class="ld-table"
+              [class]="'shape-' + t.shape"
+              [class.is-selected]="selectedId === t.id"
+              [class.is-inactive]="!t.isActive"
+              [class.is-live]="isInService(t.id)"
+              [style.left.px]="t.positionX"
+              [style.top.px]="t.positionY"
+              [style.width.px]="t.width"
+              [style.height.px]="t.height"
+              [style.transform]="'rotate(' + t.rotation + 'deg)'"
+              (pointerdown)="startDrag($event, t.id, false)"
+            >
+              @if (sectionColour(t.sectionId); as colour) {
+                <span class="ld-section-bar" [style.background]="colour"></span>
+              }
+              <span class="ld-table-no">{{ t.tableNumber }}</span>
+              <span class="ld-table-seats">{{ t.seats }}</span>
+              @if (isInService(t.id)) {
+                <span class="ld-live-dot" title="In service — cannot be removed"></span>
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- ── Inspector ───────────────────────────────────────────── -->
+      <aside class="ld-inspector" aria-label="Properties">
+        @if (selectedTable; as t) {
+          <h4 class="ld-palette-title">Table {{ t.tableNumber }}</h4>
+
+          <div class="rst-field">
+            <label for="ld-no">Number</label>
+            <input id="ld-no" type="text" [(ngModel)]="t.tableNumber" (ngModelChange)="dirty = true" />
+          </div>
+          <div class="rst-field">
+            <label for="ld-seats">Seats</label>
+            <input id="ld-seats" type="number" min="1" [(ngModel)]="t.seats" (ngModelChange)="dirty = true" />
+          </div>
+          <div class="rst-field">
+            <label for="ld-shape">Shape</label>
+            <select id="ld-shape" [(ngModel)]="t.shape" (ngModelChange)="dirty = true">
+              @for (o of shapeOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+            </select>
+          </div>
+          <div class="rst-field">
+            <label for="ld-section">Section</label>
+            <select id="ld-section" [(ngModel)]="t.sectionId" (ngModelChange)="dirty = true">
+              <option [ngValue]="null">None</option>
+              @for (s of sections; track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }
+            </select>
+          </div>
+          <div class="ld-size-row">
+            <div class="rst-field">
+              <label for="ld-w">Width</label>
+              <input id="ld-w" type="number" min="30" step="10" [(ngModel)]="t.width" (ngModelChange)="dirty = true" />
+            </div>
+            <div class="rst-field">
+              <label for="ld-h">Height</label>
+              <input id="ld-h" type="number" min="30" step="10" [(ngModel)]="t.height" (ngModelChange)="dirty = true" />
+            </div>
+          </div>
+          <div class="ld-size-row">
+            <div class="rst-field">
+              <label for="ld-min">Min party</label>
+              <input id="ld-min" type="number" min="1" [(ngModel)]="t.minPartySize" (ngModelChange)="dirty = true" />
+            </div>
+            <div class="rst-field">
+              <label for="ld-max">Max party</label>
+              <input id="ld-max" type="number" min="1" [(ngModel)]="t.maxPartySize" (ngModelChange)="dirty = true" />
+            </div>
+          </div>
+          <label class="rst-check">
+            <input type="checkbox" [(ngModel)]="t.isActive" (ngModelChange)="dirty = true" /> In use
+          </label>
+
+          @if (isInService(t.id)) {
+            <p class="ld-hint is-warn">
+              This table currently has guests on it. You can move it, but it cannot be removed
+              until it is cleared.
+            </p>
+          }
+        } @else if (selectedFixture; as f) {
+          <h4 class="ld-palette-title">{{ fixtureLabels[f.kind] }}</h4>
+
+          <div class="rst-field">
+            <label for="ld-flabel">Label</label>
+            <input id="ld-flabel" type="text" [(ngModel)]="f.label" (ngModelChange)="dirty = true" />
+          </div>
+          <div class="ld-size-row">
+            <div class="rst-field">
+              <label for="ld-fw">Width</label>
+              <input id="ld-fw" type="number" min="10" step="10" [(ngModel)]="f.width" (ngModelChange)="dirty = true" />
+            </div>
+            <div class="rst-field">
+              <label for="ld-fh">Height</label>
+              <input id="ld-fh" type="number" min="10" step="10" [(ngModel)]="f.height" (ngModelChange)="dirty = true" />
+            </div>
+          </div>
+        } @else {
+          <p class="ld-hint">
+            Click a table or fixture to change it. Drag to move — everything snaps to a 10px grid,
+            so a hand-arranged room still lines up.
+          </p>
+        }
+
+        @if (sections.length) {
+          <h4 class="ld-palette-title">Sections</h4>
+          <div class="ld-section-list">
+            @for (s of sections; track s.id) {
+              <button type="button" class="ld-section-chip" (click)="sectionEditor = s">
+                <span class="ld-section-dot" [style.background]="s.colorHex || '#94a3b8'"></span>
+                {{ s.name }}
+                <span class="ld-section-count">{{ s.tableCount }}</span>
+              </button>
+            }
+          </div>
+        }
+      </aside>
+    </div>
+  }
+</div>
+
+<!-- ══ Floor editor ═════════════════════════════════════════════════ -->
+@if (floorEditor) {
+  <div class="rst-modal-backdrop" (click)="floorEditor = null">
+    <div class="rst-modal is-narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div class="rst-modal-title">{{ floorEditor.id ? 'Floor size' : 'New floor' }}</div>
+        <button type="button" class="rst-close" (click)="floorEditor = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        <div class="rst-form-grid">
+          <div class="rst-field is-full">
+            <label for="lf-name">Name</label>
+            <input id="lf-name" type="text" [(ngModel)]="floorEditor.name" placeholder="Ground floor"
+                   [class.is-invalid]="!!fieldErrors['name']" [attr.aria-invalid]="!!fieldErrors['name']"
+                   [attr.aria-describedby]="fieldErrors['name'] ? 'lf-name-error' : null" />
+            <rst-field-error [message]="fieldErrors['name']" for="lf-name"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="lf-w">Canvas width</label>
+            <input id="lf-w" type="number" min="400" step="50" [(ngModel)]="floorEditor.width"
+                   [class.is-invalid]="!!fieldErrors['width']" [attr.aria-invalid]="!!fieldErrors['width']" />
+            <rst-field-error [message]="fieldErrors['width']" for="lf-w"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="lf-h">Canvas height</label>
+            <input id="lf-h" type="number" min="300" step="50" [(ngModel)]="floorEditor.height"
+                   [class.is-invalid]="!!fieldErrors['height']" [attr.aria-invalid]="!!fieldErrors['height']" />
+            <rst-field-error [message]="fieldErrors['height']" for="lf-h"></rst-field-error>
+          </div>
+        </div>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="floorEditor = null">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-primary" (click)="saveFloor()" [disabled]="busy">Save</button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- ══ Section editor ═══════════════════════════════════════════════ -->
+@if (sectionEditor) {
+  <div class="rst-modal-backdrop" (click)="sectionEditor = null">
+    <div class="rst-modal is-narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div class="rst-modal-title">{{ sectionEditor.id ? 'Edit section' : 'New section' }}</div>
+        <button type="button" class="rst-close" (click)="sectionEditor = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        <div class="rst-form-grid">
+          <div class="rst-field is-full">
+            <label for="ls-name">Name</label>
+            <input id="ls-name" type="text" [(ngModel)]="sectionEditor.name" placeholder="Terrace"
+                   [class.is-invalid]="!!fieldErrors['name']" [attr.aria-invalid]="!!fieldErrors['name']" />
+            <rst-field-error [message]="fieldErrors['name']" for="ls-name"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="ls-colour">Colour</label>
+            <input id="ls-colour" type="color" [(ngModel)]="sectionEditor.colorHex" />
+          </div>
+          <div class="rst-field">
+            <label for="ls-min">Minimum spend</label>
+            <input id="ls-min" type="number" step="0.01" min="0" [(ngModel)]="sectionEditor.minimumSpend" />
+          </div>
+          <div class="rst-field is-full">
+            <label class="rst-check"><input type="checkbox" [(ngModel)]="sectionEditor.isOutdoor" /> Outdoor</label>
+            <label class="rst-check"><input type="checkbox" [(ngModel)]="sectionEditor.isSmoking" /> Smoking</label>
+            <label class="rst-check"><input type="checkbox" [(ngModel)]="sectionEditor.isPrivate" /> Private</label>
+            <label class="rst-check"><input type="checkbox" [(ngModel)]="sectionEditor.isActive" /> Active</label>
+          </div>
+        </div>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="sectionEditor = null">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-primary" (click)="saveSection()" [disabled]="busy">Save</button>
+      </footer>
+    </div>
+  </div>
+}

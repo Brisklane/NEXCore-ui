@@ -1,0 +1,239 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Orders</h2>
+      <p class="subtitle">Every order and the bills raised against it.</p>
+    </div>
+    <rst-outlet-picker (outletChange)="onOutlet($event)"></rst-outlet-picker>
+  </div>
+
+  <rst-help key="orders"></rst-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="rst-toolbar">
+    <div class="rst-search">
+      <span class="material-symbols-outlined">search</span>
+      <input
+        type="text"
+        [(ngModel)]="search"
+        (keyup.enter)="page = 1; load()"
+        placeholder="Order number, table or customer…"
+        aria-label="Search orders"
+      />
+    </div>
+
+    <select [(ngModel)]="statusFilter" (ngModelChange)="page = 1; load()" aria-label="Status">
+      <option value="">Any status</option>
+      @for (s of statusOptions; track s.value) { <option [ngValue]="s.value">{{ s.label }}</option> }
+    </select>
+
+    <input type="date" [(ngModel)]="from" (ngModelChange)="page = 1; load()" aria-label="From" />
+    <input type="date" [(ngModel)]="to" (ngModelChange)="page = 1; load()" aria-label="To" />
+
+    <div class="rst-spacer"></div>
+    <span class="or-count">{{ total }} orders</span>
+  </div>
+
+  @if (loading) {
+    <div class="rst-skeleton" style="height: 320px"></div>
+  } @else if (!rows.length) {
+    <div class="rst-empty">
+      <div class="rst-empty-icon"><span class="material-symbols-outlined">receipt_long</span></div>
+      <div class="rst-empty-title">No orders in this range</div>
+      <div class="rst-empty-text">Widen the dates, or clear the filters.</div>
+    </div>
+  } @else {
+    <div class="rst-table-wrap">
+      <table class="rst-table">
+        <thead>
+          <tr>
+            <th>Order</th>
+            <th>Type</th>
+            <th>Table</th>
+            <th>Server</th>
+            <th class="num">Covers</th>
+            <th class="num">Items</th>
+            <th class="num">Total</th>
+            <th class="num">Paid</th>
+            <th>Status</th>
+            <th>Opened</th>
+            <th class="actions"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of rows; track trackRow($index, r)) {
+            <tr>
+              <td class="strong">{{ r.orderNumber }}</td>
+              <td>
+                <span class="or-type">
+                  <span class="material-symbols-outlined">{{ typeIcons[r.orderType] }}</span>
+                  {{ typeLabels[r.orderType] }}
+                </span>
+              </td>
+              <td>{{ r.tableNumber || r.tokenNumber || '—' }}</td>
+              <td class="muted">{{ r.waiterName || '—' }}</td>
+              <td class="num">{{ r.guestCount }}</td>
+              <td class="num">{{ r.lineCount }}</td>
+              <td class="num strong">{{ r.totalAmount | number:'1.2-2' }}</td>
+              <td class="num muted">{{ r.paidAmount | number:'1.2-2' }}</td>
+              <td>
+                <span class="rst-pill" [class]="statusTone(r.status)">{{ statusLabels[r.status] }}</span>
+                @if (r.heldLineCount > 0) {
+                  <span class="rst-pill tone-warning">{{ r.heldLineCount }} held</span>
+                }
+              </td>
+              <td class="muted">{{ r.openedAt | date:'d MMM HH:mm' }}</td>
+              <td class="actions">
+                @if (isOpen(r)) {
+                  <button type="button" class="rst-icon-btn" (click)="resume(r)" aria-label="Open in the terminal" title="Open in the terminal">
+                    <span class="material-symbols-outlined">open_in_new</span>
+                  </button>
+                }
+                <button type="button" class="rst-icon-btn" (click)="open(r)" aria-label="View" title="View">
+                  <span class="material-symbols-outlined">visibility</span>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="or-pager">
+      <button type="button" class="rst-touch-btn" (click)="goPage(-1)" [disabled]="page <= 1">Previous</button>
+      <span>Page {{ page }} of {{ totalPages }}</span>
+      <button type="button" class="rst-touch-btn" (click)="goPage(1)" [disabled]="page >= totalPages">Next</button>
+    </div>
+  }
+</div>
+
+<!-- ══ Detail ═══════════════════════════════════════════════════════ -->
+@if (detail) {
+  <div class="rst-modal-backdrop" (click)="detail = null">
+    <div class="rst-modal is-wide" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div>
+          <div class="rst-modal-title">{{ detail.orderNumber }}</div>
+          <div class="rst-modal-sub">
+            {{ typeLabels[detail.orderType] }} · {{ channelLabels[detail.channel] }}
+            @if (detail.tableNumber) { · Table {{ detail.tableNumber }} }
+            @if (detail.waiterName) { · {{ detail.waiterName }} }
+            · {{ detail.guestCount }} covers · open {{ detail.minutesOpen }} min
+          </div>
+        </div>
+        <button type="button" class="rst-close" (click)="detail = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        <div class="or-detail-grid">
+          <section>
+            <h4 class="or-sub">What was ordered</h4>
+            <ul class="or-lines">
+              @for (l of detail.lines; track l.id) {
+                <li [class.is-void]="l.isVoided">
+                  <span class="or-line-qty">{{ l.quantity | number:'1.0-2' }}×</span>
+                  <span class="or-line-main">
+                    <span class="or-line-name">
+                      {{ l.itemName }}
+                      @if (l.variantName) { ({{ l.variantName }}) }
+                      @if (l.seatNumber) { <span class="muted">seat {{ l.seatNumber }}</span> }
+                    </span>
+                    @if (l.modifiers.length) {
+                      <span class="or-line-mods">
+                        @for (m of l.modifiers; track m.id) {
+                          {{ m.isRemoval ? 'no ' + m.modifierName : m.modifierName }}
+                        }
+                      </span>
+                    }
+                    @if (l.isVoided) {
+                      <span class="rst-pill tone-danger">Voided{{ l.voidReasonName ? ' — ' + l.voidReasonName : '' }}</span>
+                    }
+                  </span>
+                  <span class="or-line-amt">{{ l.lineTotal | number:'1.2-2' }}</span>
+                </li>
+              }
+            </ul>
+
+            <div class="or-totals">
+              <div><span>Subtotal</span><span>{{ detail.subTotal | number:'1.2-2' }}</span></div>
+              @if (detail.discountAmount > 0) {
+                <div><span>Discount</span><span>−{{ detail.discountAmount | number:'1.2-2' }}</span></div>
+              }
+              @if (detail.serviceChargeAmount > 0) {
+                <div><span>Service</span><span>{{ detail.serviceChargeAmount | number:'1.2-2' }}</span></div>
+              }
+              @if (detail.taxAmount > 0) {
+                <div><span>Tax</span><span>{{ detail.taxAmount | number:'1.2-2' }}</span></div>
+              }
+              @if (detail.tipAmount > 0) {
+                <div><span>Tip</span><span>{{ detail.tipAmount | number:'1.2-2' }}</span></div>
+              }
+              <div class="is-grand">
+                <span>Total</span><span>{{ detail.totalAmount | number:'1.2-2' }} {{ detail.currencyCode }}</span>
+              </div>
+              <div class="or-cost">
+                <span>Food cost</span>
+                <span>
+                  {{ detail.costAmount | number:'1.2-2' }}
+                  @if (detail.subTotal > 0) {
+                    ({{ (detail.costAmount / detail.subTotal) * 100 | number:'1.0-1' }}%)
+                  }
+                </span>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <h4 class="or-sub">Bills</h4>
+            @if (!detailChecks.length) {
+              <p class="muted">No bill was raised for this order.</p>
+            }
+            @for (c of detailChecks; track c.id) {
+              <div class="or-check">
+                <div class="or-check-head">
+                  <span class="strong">{{ c.checkNumber }}</span>
+                  <span class="rst-pill" [class.tone-success]="c.balanceDue <= 0.01" [class.tone-warning]="c.balanceDue > 0.01">
+                    {{ checkStatusLabels[c.status] }}
+                  </span>
+                </div>
+                <div class="or-check-total">{{ c.totalAmount | number:'1.2-2' }}</div>
+                @for (p of c.payments; track p.id) {
+                  <div class="or-payment" [class.is-refund]="p.isRefund">
+                    <span>{{ p.isRefund ? 'Refund' : tenderLabels[p.tenderType] }}</span>
+                    <span>{{ p.amount | number:'1.2-2' }}</span>
+                    @if (p.tipAmount > 0) { <span class="muted">+{{ p.tipAmount | number:'1.2-2' }} tip</span> }
+                  </div>
+                }
+                @for (d of c.discounts; track d.id) {
+                  <div class="or-discount">
+                    <span>{{ d.reasonName || 'Discount' }}</span>
+                    <span>−{{ d.amount | number:'1.2-2' }}</span>
+                  </div>
+                }
+              </div>
+            }
+
+            <h4 class="or-sub">Timeline</h4>
+            <ul class="or-timeline">
+              @for (h of detail.statusHistory; track h.id) {
+                <li>
+                  <span class="or-time">{{ h.occurredAt | date:'HH:mm' }}</span>
+                  <span>{{ statusLabels[h.toStatus] }}</span>
+                  @if (h.staffName) { <span class="muted">{{ h.staffName }}</span> }
+                </li>
+              }
+            </ul>
+          </section>
+        </div>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="btn btn-secondary" (click)="detail = null">Close</button>
+      </footer>
+    </div>
+  </div>
+}

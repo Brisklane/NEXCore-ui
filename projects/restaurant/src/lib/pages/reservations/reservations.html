@@ -1,0 +1,456 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Front of house</h2>
+      <p class="subtitle">Bookings, the walk-in queue and the guest book.</p>
+    </div>
+    <rst-outlet-picker (outletChange)="onOutlet($event)"></rst-outlet-picker>
+  </div>
+
+  <rst-help key="reservations"></rst-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <div class="rst-segment rv-tabs" role="tablist" aria-label="Front of house sections">
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'bookings'" [class.is-active]="tab === 'bookings'" (click)="switchTab('bookings')">
+      <span class="material-symbols-outlined">event_seat</span>
+      Bookings
+      @if (upcomingCount) { <span class="rst-pill tone-info">{{ upcomingCount }}</span> }
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'waitlist'" [class.is-active]="tab === 'waitlist'" (click)="switchTab('waitlist')">
+      <span class="material-symbols-outlined">hourglass_top</span>
+      Waitlist
+      @if (waitlist.length) { <span class="rst-pill tone-warning">{{ waitlist.length }}</span> }
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'guests'" [class.is-active]="tab === 'guests'" (click)="switchTab('guests')">
+      <span class="material-symbols-outlined">contacts</span>
+      Guests
+    </button>
+  </div>
+
+  <!-- ══ Bookings ═════════════════════════════════════════════════════ -->
+  @if (tab === 'bookings') {
+    <div class="rst-toolbar">
+      <input type="date" [(ngModel)]="day" (ngModelChange)="loadAll()" aria-label="Day" />
+      <span class="rv-summary">{{ bookings.length }} bookings · {{ coversBooked }} covers</span>
+      <div class="rst-spacer"></div>
+      <button type="button" class="rst-touch-btn is-primary" (click)="newBooking()">
+        <span class="material-symbols-outlined">add</span>
+        New booking
+      </button>
+    </div>
+
+    @if (loading) {
+      <div class="rst-skeleton" style="height: 300px"></div>
+    } @else if (!bookings.length) {
+      <div class="rst-empty">
+        <div class="rst-empty-icon"><span class="material-symbols-outlined">event_available</span></div>
+        <div class="rst-empty-title">Nothing booked for this day</div>
+        <div class="rst-empty-text">Take a booking, or pick another date.</div>
+      </div>
+    } @else {
+      <div class="rv-list">
+        @for (b of bookings; track trackBooking($index, b)) {
+          <article class="rv-card" [class.is-late]="b.isLate">
+            <div class="rv-time">
+              <span class="rv-time-main">{{ b.reservedFor | date:'HH:mm' }}</span>
+              <span class="rv-time-sub">{{ b.durationMinutes }} min</span>
+            </div>
+
+            <div class="rv-main">
+              <div class="rv-name">
+                {{ b.guestName }}
+                @if (b.isVipGuest) { <span class="rst-pill tone-violet">VIP</span> }
+                @if (b.isLate) { <span class="rst-pill tone-danger">Late</span> }
+              </div>
+              <div class="rv-meta">
+                {{ b.partySize }} guests
+                @if (b.tableNumber) { · table {{ b.tableNumber }} }
+                @if (b.phone) { · {{ b.phone }} }
+                @if (b.occasion) { · {{ b.occasion }} }
+              </div>
+              @if (b.allergyNotes) {
+                <span class="rst-allergen">
+                  <span class="material-symbols-outlined">warning</span>{{ b.allergyNotes }}
+                </span>
+              }
+              @if (b.specialRequests) { <div class="rv-request">“{{ b.specialRequests }}”</div> }
+            </div>
+
+            <div class="rv-right">
+              <span class="rst-pill" [class]="statusTone(b.status)">{{ statusLabels[b.status] }}</span>
+
+              <div class="rv-actions">
+                @if (b.status === ReservationStatus.Requested) {
+                  <button type="button" class="rst-touch-btn" (click)="setStatus(b, ReservationStatus.Confirmed)" [disabled]="busy">
+                    Confirm
+                  </button>
+                }
+                @if (b.status === ReservationStatus.Confirmed || b.status === ReservationStatus.Requested) {
+                  <button type="button" class="rst-touch-btn is-primary" (click)="startSeat(b, false)" [disabled]="busy">
+                    Seat
+                  </button>
+                  <button type="button" class="rst-icon-btn" (click)="editBooking(b)" aria-label="Edit">
+                    <span class="material-symbols-outlined">edit</span>
+                  </button>
+                  <button type="button" class="rst-icon-btn is-danger" (click)="setStatus(b, ReservationStatus.NoShow)" aria-label="No show" title="No show">
+                    <span class="material-symbols-outlined">person_off</span>
+                  </button>
+                }
+                @if (b.status === ReservationStatus.Seated) {
+                  <button type="button" class="rst-touch-btn" (click)="setStatus(b, ReservationStatus.Completed)" [disabled]="busy">
+                    Finish
+                  </button>
+                }
+              </div>
+            </div>
+          </article>
+        }
+      </div>
+    }
+  }
+
+  <!-- ══ Waitlist ═════════════════════════════════════════════════════ -->
+  @if (tab === 'waitlist') {
+    <div class="rst-toolbar">
+      <span class="rv-summary">{{ waitlist.length }} parties waiting</span>
+      <div class="rst-spacer"></div>
+      <button type="button" class="rst-touch-btn is-primary" (click)="newWaiting()">
+        <span class="material-symbols-outlined">add</span>
+        Add to the queue
+      </button>
+    </div>
+
+    @if (!waitlist.length) {
+      <div class="rst-empty">
+        <div class="rst-empty-icon"><span class="material-symbols-outlined">hourglass_empty</span></div>
+        <div class="rst-empty-title">Nobody waiting</div>
+        <div class="rst-empty-text">Walk-ins added here get a quoted wait based on the queue and how fast tables are turning.</div>
+      </div>
+    } @else {
+      <div class="rv-list">
+        @for (w of waitlist; track trackWaiting($index, w)) {
+          <article class="rv-card" [class.is-late]="w.isOverQuote">
+            <div class="rv-time">
+              <span class="rv-time-main">#{{ w.position }}</span>
+              <span class="rv-time-sub">{{ w.waitedMinutes }}m</span>
+            </div>
+
+            <div class="rv-main">
+              <div class="rv-name">
+                {{ w.guestName }}
+                @if (w.isOverQuote) { <span class="rst-pill tone-danger">Over quote</span> }
+                @if (w.status === WaitlistStatus.Notified) { <span class="rst-pill tone-info">Called</span> }
+              </div>
+              <div class="rv-meta">
+                {{ w.partySize }} guests
+                · quoted {{ w.quotedWaitMinutes }} min
+                @if (w.phone) { · {{ w.phone }} }
+                @if (w.preferredSectionName) { · prefers {{ w.preferredSectionName }} }
+              </div>
+              @if (w.note) { <div class="rv-request">“{{ w.note }}”</div> }
+            </div>
+
+            <div class="rv-right">
+              <div class="rv-actions">
+                @if (w.status === WaitlistStatus.Waiting) {
+                  <button type="button" class="rst-touch-btn" (click)="setWaitStatus(w, WaitlistStatus.Notified)" [disabled]="busy">
+                    <span class="material-symbols-outlined">campaign</span>
+                    Call
+                  </button>
+                }
+                <button type="button" class="rst-touch-btn is-primary" (click)="startSeat(w, true)" [disabled]="busy">
+                  Seat
+                </button>
+                <button type="button" class="rst-icon-btn is-danger" (click)="setWaitStatus(w, WaitlistStatus.Left)" aria-label="Left" title="Left">
+                  <span class="material-symbols-outlined">logout</span>
+                </button>
+              </div>
+            </div>
+          </article>
+        }
+      </div>
+    }
+  }
+
+  <!-- ══ Guests ═══════════════════════════════════════════════════════ -->
+  @if (tab === 'guests') {
+    <div class="rst-toolbar">
+      <div class="rst-search">
+        <span class="material-symbols-outlined">search</span>
+        <input type="text" [(ngModel)]="guestSearch" (keyup.enter)="loadGuests()" placeholder="Name or phone…" aria-label="Search guests" />
+      </div>
+      <div class="rst-spacer"></div>
+    </div>
+
+    @if (!guests.length) {
+      <div class="rst-empty">
+        <div class="rst-empty-icon"><span class="material-symbols-outlined">contacts</span></div>
+        <div class="rst-empty-title">No guests yet</div>
+        <div class="rst-empty-text">Guest records build up as bookings are taken and checks are closed.</div>
+      </div>
+    } @else {
+      <div class="rst-table-wrap">
+        <table class="rst-table">
+          <thead>
+            <tr>
+              <th>Guest</th>
+              <th>Phone</th>
+              <th class="num">Visits</th>
+              <th class="num">Lifetime</th>
+              <th class="num">Avg check</th>
+              <th>Last visit</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (g of guests; track trackGuest($index, g)) {
+              <tr>
+                <td>
+                  <span class="strong">{{ g.fullName }}</span>
+                  @if (g.isVip) { <span class="rst-pill tone-violet">VIP</span> }
+                  @if (g.noShowCount > 0) { <span class="rst-pill tone-danger">{{ g.noShowCount }} no-show</span> }
+                </td>
+                <td class="muted">{{ g.phone || '—' }}</td>
+                <td class="num">{{ g.visitCount }}</td>
+                <td class="num strong">{{ g.lifetimeSpend | number:'1.2-2' }}</td>
+                <td class="num muted">{{ g.averageCheck | number:'1.2-2' }}</td>
+                <td class="muted">{{ g.lastVisitAt ? (g.lastVisitAt | date:'d MMM yyyy') : '—' }}</td>
+                <td class="muted">
+                  @if (g.allergies) {
+                    <span class="rst-allergen"><span class="material-symbols-outlined">warning</span>{{ g.allergies }}</span>
+                  }
+                  {{ g.dietaryPreferences }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</div>
+
+<!-- ══ Booking editor ═══════════════════════════════════════════════ -->
+@if (editing) {
+  <div class="rst-modal-backdrop" (click)="editing = null">
+    <div class="rst-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div class="rst-modal-title">{{ editingId ? 'Edit booking' : 'New booking' }}</div>
+        <button type="button" class="rst-close" (click)="editing = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        <div class="rst-form-grid">
+          <div class="rst-field is-full">
+            <label for="rv-name">Guest name</label>
+            <input id="rv-name" type="text" [(ngModel)]="editing.guestName"  [class.is-invalid]="!!fieldErrors['guestName']" [attr.aria-invalid]="!!fieldErrors['guestName'] || null" [attr.aria-describedby]="fieldErrors['guestName'] ? 'rv-name-error' : null" />
+            <rst-field-error [message]="fieldErrors['guestName']" for="rv-name"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="rv-phone">Phone</label>
+            <input id="rv-phone" type="tel" [(ngModel)]="editing.phone"  [class.is-invalid]="!!fieldErrors['phone']" [attr.aria-invalid]="!!fieldErrors['phone'] || null" [attr.aria-describedby]="fieldErrors['phone'] ? 'rv-phone-error' : null" />
+            <rst-field-error [message]="fieldErrors['phone']" for="rv-phone"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="rv-email">Email</label>
+            <input id="rv-email" type="email" [(ngModel)]="editing.email"  [class.is-invalid]="!!fieldErrors['email']" [attr.aria-invalid]="!!fieldErrors['email'] || null" [attr.aria-describedby]="fieldErrors['email'] ? 'rv-email-error' : null" />
+            <rst-field-error [message]="fieldErrors['email']" for="rv-email"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="rv-when">When</label>
+            <input id="rv-when" type="datetime-local" [(ngModel)]="editing.reservedFor"  [class.is-invalid]="!!fieldErrors['reservedFor']" [attr.aria-invalid]="!!fieldErrors['reservedFor'] || null" [attr.aria-describedby]="fieldErrors['reservedFor'] ? 'rv-when-error' : null" />
+            <rst-field-error [message]="fieldErrors['reservedFor']" for="rv-when"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="rv-party">Party size</label>
+            <input id="rv-party" type="number" min="1" [(ngModel)]="editing.partySize"  [class.is-invalid]="!!fieldErrors['partySize']" [attr.aria-invalid]="!!fieldErrors['partySize'] || null" [attr.aria-describedby]="fieldErrors['partySize'] ? 'rv-party-error' : null" />
+            <rst-field-error [message]="fieldErrors['partySize']" for="rv-party"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="rv-duration">Duration (min)</label>
+            <input id="rv-duration" type="number" min="30" step="15" [(ngModel)]="editing.durationMinutes"  [class.is-invalid]="!!fieldErrors['durationMinutes']" [attr.aria-invalid]="!!fieldErrors['durationMinutes'] || null" [attr.aria-describedby]="fieldErrors['durationMinutes'] ? 'rv-duration-error' : null" />
+            <rst-field-error [message]="fieldErrors['durationMinutes']" for="rv-duration"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="rv-occasion">Occasion</label>
+            <input id="rv-occasion" type="text" [(ngModel)]="editing.occasion" placeholder="Birthday, anniversary…"  [class.is-invalid]="!!fieldErrors['occasion']" [attr.aria-invalid]="!!fieldErrors['occasion'] || null" [attr.aria-describedby]="fieldErrors['occasion'] ? 'rv-occasion-error' : null" />
+            <rst-field-error [message]="fieldErrors['occasion']" for="rv-occasion"></rst-field-error>
+          </div>
+          <div class="rst-field is-full">
+            <label for="rv-requests">Special requests</label>
+            <textarea id="rv-requests" [(ngModel)]="editing.specialRequests"></textarea>
+          </div>
+          <div class="rst-field is-full">
+            <label for="rv-allergy">Allergies</label>
+            <input id="rv-allergy" type="text" [(ngModel)]="editing.allergyNotes"  [class.is-invalid]="!!fieldErrors['allergyNotes']" [attr.aria-invalid]="!!fieldErrors['allergyNotes'] || null" [attr.aria-describedby]="fieldErrors['allergyNotes'] ? 'rv-allergy-error' : null" />
+            <rst-field-error [message]="fieldErrors['allergyNotes']" for="rv-allergy"></rst-field-error>
+            <span class="rst-hint">Shown to the host on seating and carried onto the kitchen ticket.</span>
+          </div>
+          <div class="rst-field">
+            <label for="rv-deposit">Deposit</label>
+            <input id="rv-deposit" type="number" step="0.01" min="0" [(ngModel)]="editing.depositAmount"  [class.is-invalid]="!!fieldErrors['depositAmount']" [attr.aria-invalid]="!!fieldErrors['depositAmount'] || null" [attr.aria-describedby]="fieldErrors['depositAmount'] ? 'rv-deposit-error' : null" />
+            <rst-field-error [message]="fieldErrors['depositAmount']" for="rv-deposit"></rst-field-error>
+          </div>
+          <div class="rst-field is-full">
+            <label class="rst-check"><input type="checkbox" [(ngModel)]="editing.isHighChairNeeded" /> High chair needed</label>
+            <label class="rst-check"><input type="checkbox" [(ngModel)]="editing.isWheelchairAccess" /> Wheelchair access</label>
+            <label class="rst-check"><input type="checkbox" [(ngModel)]="editing.isDepositPaid" /> Deposit paid</label>
+          </div>
+        </div>
+
+        <div class="rv-availability">
+          <button type="button" class="rst-touch-btn" (click)="checkAvailability()" [disabled]="busy">
+            <span class="material-symbols-outlined">table_restaurant</span>
+            Which tables are free?
+          </button>
+
+          @if (availability) {
+            @if (availability.availableTables.length) {
+              <div class="rv-table-grid">
+                @for (t of availability.availableTables; track t.tableId) {
+                  <button
+                    type="button"
+                    class="rv-table-chip"
+                    [class.is-on]="editing.tableId === t.tableId"
+                    (click)="chooseTable(t)"
+                  >
+                    <span class="rv-table-no">{{ t.tableNumber }}</span>
+                    <span class="rv-table-seats">{{ t.seats }} seats</span>
+                    @if (t.sectionName) { <span class="rv-table-section">{{ t.sectionName }}</span> }
+                  </button>
+                }
+              </div>
+            } @else {
+              <div class="alert alert-error">
+                Nothing free at that time.
+                @if (availability.alternativeTimes.length) {
+                  Try
+                  @for (alt of availability.alternativeTimes; track alt) {
+                    <button type="button" class="rv-alt" (click)="editing.reservedFor = alt.slice(0, 16); checkAvailability()">
+                      {{ alt | date:'HH:mm' }}
+                    </button>
+                  }
+                }
+              </div>
+            }
+          }
+        </div>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="editing = null" [disabled]="busy">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-primary" (click)="saveBooking()" [disabled]="busy">Save booking</button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- ══ Waitlist editor ══════════════════════════════════════════════ -->
+@if (waitingGuest) {
+  <div class="rst-modal-backdrop" (click)="waitingGuest = null">
+    <div class="rst-modal is-narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div>
+          <div class="rst-modal-title">Add to the queue</div>
+          <div class="rst-modal-sub">Leave the quote at zero and it is estimated from the queue.</div>
+        </div>
+        <button type="button" class="rst-close" (click)="waitingGuest = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        <div class="rst-form-grid">
+          <div class="rst-field is-full">
+            <label for="wl-name">Name</label>
+            <input id="wl-name" type="text" [(ngModel)]="waitingGuest.guestName"  [class.is-invalid]="!!fieldErrors['guestName']" [attr.aria-invalid]="!!fieldErrors['guestName'] || null" [attr.aria-describedby]="fieldErrors['guestName'] ? 'wl-name-error' : null" />
+            <rst-field-error [message]="fieldErrors['guestName']" for="wl-name"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="wl-phone">Phone</label>
+            <input id="wl-phone" type="tel" [(ngModel)]="waitingGuest.phone"  [class.is-invalid]="!!fieldErrors['phone']" [attr.aria-invalid]="!!fieldErrors['phone'] || null" [attr.aria-describedby]="fieldErrors['phone'] ? 'wl-phone-error' : null" />
+            <rst-field-error [message]="fieldErrors['phone']" for="wl-phone"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="wl-party">Party size</label>
+            <input id="wl-party" type="number" min="1" [(ngModel)]="waitingGuest.partySize"  [class.is-invalid]="!!fieldErrors['partySize']" [attr.aria-invalid]="!!fieldErrors['partySize'] || null" [attr.aria-describedby]="fieldErrors['partySize'] ? 'wl-party-error' : null" />
+            <rst-field-error [message]="fieldErrors['partySize']" for="wl-party"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="wl-quote">Quoted wait (min)</label>
+            <input id="wl-quote" type="number" min="0" [(ngModel)]="waitingGuest.quotedWaitMinutes"  [class.is-invalid]="!!fieldErrors['quotedWaitMinutes']" [attr.aria-invalid]="!!fieldErrors['quotedWaitMinutes'] || null" [attr.aria-describedby]="fieldErrors['quotedWaitMinutes'] ? 'wl-quote-error' : null" />
+            <rst-field-error [message]="fieldErrors['quotedWaitMinutes']" for="wl-quote"></rst-field-error>
+          </div>
+          <div class="rst-field is-full">
+            <label for="wl-note">Note</label>
+            <input id="wl-note" type="text" [(ngModel)]="waitingGuest.note"  [class.is-invalid]="!!fieldErrors['note']" [attr.aria-invalid]="!!fieldErrors['note'] || null" [attr.aria-describedby]="fieldErrors['note'] ? 'wl-note-error' : null" />
+            <rst-field-error [message]="fieldErrors['note']" for="wl-note"></rst-field-error>
+          </div>
+        </div>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="waitingGuest = null">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-primary" (click)="saveWaiting()" [disabled]="busy">Add</button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- ══ Seat picker ══════════════════════════════════════════════════ -->
+@if (seating) {
+  <div class="rst-modal-backdrop" (click)="seating = null">
+    <div class="rst-modal is-narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div>
+          <div class="rst-modal-title">Seat {{ seating.guestName }}</div>
+          <div class="rst-modal-sub">{{ seating.partySize }} guests — best fit first.</div>
+        </div>
+        <button type="button" class="rst-close" (click)="seating = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        @if (!seatCandidates.length) {
+          <div class="alert alert-error">No free table large enough. Clear one, or join tables on the floor plan.</div>
+        } @else {
+          <div class="rv-table-grid">
+            @for (t of seatCandidates; track t.id) {
+              <button
+                type="button"
+                class="rv-table-chip"
+                [class.is-on]="seatTableId === t.id"
+                (click)="seatTableId = t.id"
+              >
+                <span class="rv-table-no">{{ t.tableNumber }}</span>
+                <span class="rv-table-seats">{{ t.seats }} seats</span>
+                @if (t.sectionName) { <span class="rv-table-section">{{ t.sectionName }}</span> }
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="seating = null">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-primary" (click)="confirmSeat()" [disabled]="busy || !seatTableId">
+          Seat party
+        </button>
+      </footer>
+    </div>
+  </div>
+}

@@ -1,0 +1,75 @@
+.sg-tabs { margin-bottom: 16px; flex-wrap: wrap; }
+.sg-card { margin-bottom: 16px; }
+.sg-off { opacity: 0.55; }
+.sg-note { font-size: 12.5px; color: var(--text-muted, #94a3b8); max-width: 64ch; }
+.sg-empty { margin: 0; padding: 18px; font-size: 13px; color: var(--text-muted, #94a3b8); }
+
+.sg-checks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0 16px;
+  margin-top: 16px;
+  padding: 13px 15px;
+  border-radius: 12px;
+  background: var(--bg-subtle, #f8fafc);
+  border: 1px solid var(--border-light, #eef1f5);
+}
+
+.sg-receipt { margin-top: 16px; }
+
+.sg-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding: 13px 18px;
+  border-top: 1px solid var(--border-light, #eef1f5);
+  background: var(--bg-subtle, #f8fafc);
+}
+
+.sg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.sg-reason {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--border-light, #eef1f5);
+}
+
+.sg-reason:last-child { border-bottom: none; }
+.sg-reason-name { flex: 1; min-width: 120px; font-size: 13.5px; font-weight: 650; color: var(--text-heading, #0f172a); }
+.sg-reason-actions { display: flex; gap: 2px; margin-left: auto; }
+
+.sg-sample { margin-bottom: 16px; border-color: var(--accent-border, rgba(43, 127, 255, 0.3)); }
+
+.sg-sample-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.sg-sample-row > .material-symbols-outlined { font-size: 24px; color: var(--accent, #2b7fff); }
+.sg-sample-row > div { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 3px; }
+
+.sg-sample-row strong {
+  font-size: 13.5px;
+  font-weight: 750;
+  color: var(--text-heading, #0f172a);
+}
+
+.sg-sample-row span { font-size: 12.5px; line-height: 1.55; color: var(--text-secondary, #64748b); }
+
+.sg-zone-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin-right: 7px;
+  vertical-align: middle;
+}

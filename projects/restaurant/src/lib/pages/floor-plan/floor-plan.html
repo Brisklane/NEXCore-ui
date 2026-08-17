@@ -1,0 +1,505 @@
+<div class="page-container fp-page">
+  <div class="page-header">
+    <div>
+      <h2>Floor</h2>
+      <p class="subtitle">
+        @if (plan) {
+          {{ plan.occupiedTables }} of {{ plan.totalTables }} tables in service ·
+          {{ plan.seatedGuests }} guests ·
+          {{ plan.openOrderValue | number:'1.2-2' }} on the floor
+        } @else { The live room. }
+      </p>
+    </div>
+    <rst-outlet-picker (outletChange)="onOutlet($event)"></rst-outlet-picker>
+  </div>
+
+  <rst-help key="floor"></rst-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  @if (plan; as p) {
+    <!-- ── Summary ─────────────────────────────────────────────────── -->
+    <div class="fp-summary">
+      <span class="fp-sum-chip tone-free">
+        <b>{{ p.freeTables }}</b> free
+      </span>
+      <span class="fp-sum-chip tone-busy">
+        <b>{{ p.occupiedTables }}</b> in service
+      </span>
+      <span class="fp-sum-chip tone-reserved">
+        <b>{{ p.reservedTables }}</b> reserved
+      </span>
+      <span class="fp-sum-chip tone-cleaning">
+        <b>{{ p.needsCleaning }}</b> to clear
+      </span>
+      @if (p.attentionCount > 0) {
+        <span class="fp-sum-chip tone-alert">
+          <span class="material-symbols-outlined">priority_high</span>
+          <b>{{ p.attentionCount }}</b> need attention
+        </span>
+      }
+    </div>
+
+    <!-- ── Controls ────────────────────────────────────────────────── -->
+    <div class="fp-controls">
+      @if (floorList.length > 1) {
+        <div class="rst-segment" role="tablist" aria-label="Floors">
+          @for (f of floorList; track f.id) {
+            <button
+              type="button"
+              role="tab"
+              [attr.aria-selected]="activeFloorId === f.id"
+              [class.is-active]="activeFloorId === f.id"
+              (click)="activeFloorId = f.id"
+            >{{ f.name }}</button>
+          }
+        </div>
+      }
+
+      <div class="rst-spacer"></div>
+
+      @if (waiters.length) {
+        <div class="rst-context">
+          <label for="fp-waiter">Server</label>
+          <select id="fp-waiter" [(ngModel)]="filterWaiterId">
+            <option value="">Everyone</option>
+            @for (w of waiters; track w.id) {
+              <option [value]="w.id">{{ w.displayName || w.fullName }}</option>
+            }
+          </select>
+        </div>
+      }
+
+      <label class="rst-check fp-attention-toggle">
+        <input type="checkbox" [(ngModel)]="attentionOnly" />
+        Needs attention only
+      </label>
+
+      <button type="button" class="rst-touch-btn" (click)="load()" [disabled]="loading">
+        <span class="material-symbols-outlined">refresh</span>
+        Refresh
+      </button>
+    </div>
+
+    <!-- ── The plan ────────────────────────────────────────────────── -->
+    @if (activeFloor; as floor) {
+      <div class="fp-canvas-wrap">
+        <div
+          class="fp-canvas"
+          [style.width.px]="floor.canvasWidth"
+          [style.height.px]="floor.canvasHeight"
+          [style.background-image]="floor.backgroundImageUrl ? 'url(' + floor.backgroundImageUrl + ')' : null"
+        >
+          <!-- Fixtures sit behind the tables so the room reads first -->
+          @for (fx of floor.fixtures; track fx.id) {
+            <div
+              class="fp-fixture"
+              [class]="'kind-' + fx.kind"
+              [style.left.px]="fx.positionX"
+              [style.top.px]="fx.positionY"
+              [style.width.px]="fx.width"
+              [style.height.px]="fx.height"
+              [style.transform]="'rotate(' + fx.rotation + 'deg)'"
+              [style.background]="fx.colorHex || null"
+              aria-hidden="true"
+            >
+              @if (fx.label) { <span>{{ fx.label }}</span> }
+            </div>
+          }
+
+          @for (t of visibleTables; track trackTable($index, t)) {
+            <button
+              type="button"
+              class="fp-table"
+              [class]="'state-' + stateClass[t.state] + ' shape-' + t.shape"
+              [class.is-dimmed]="isDimmed(t)"
+              [class.is-attention]="t.needsAttention"
+              [class.is-merged-child]="isMergedChild(t)"
+              [style.left.px]="t.positionX"
+              [style.top.px]="t.positionY"
+              [style.width.px]="t.width"
+              [style.height.px]="t.height"
+              [style.transform]="'rotate(' + t.rotation + 'deg)'"
+              (click)="open(t)"
+              [attr.aria-label]="
+                'Table ' + t.tableNumber + ', ' + stateLabels[t.state] +
+                (t.currentGuestCount ? ', ' + t.currentGuestCount + ' guests' : '') +
+                (t.needsAttention ? ', needs attention' : '')
+              "
+            >
+              @if (t.sectionColorHex) {
+                <span class="fp-section-bar" [style.background]="t.sectionColorHex" aria-hidden="true"></span>
+              }
+
+              <span class="fp-table-inner">
+                <span class="fp-table-no">{{ t.tableNumber }}</span>
+
+                @if (t.currentGuestCount > 0) {
+                  <span class="fp-table-guests">
+                    <span class="material-symbols-outlined">person</span>{{ t.currentGuestCount }}
+                  </span>
+                } @else {
+                  <span class="fp-table-seats">{{ t.seats }} seats</span>
+                }
+
+                @if (t.currentOrderTotal > 0) {
+                  <span class="fp-table-total">{{ t.currentOrderTotal | number:'1.0-0' }}</span>
+                }
+
+                @if (t.assignedWaiterName) {
+                  <span class="fp-table-waiter">{{ t.assignedWaiterName }}</span>
+                }
+
+                @if (t.state !== TableState.Free && t.state !== TableState.Blocked) {
+                  <span class="fp-table-timer" [class]="timerTone(t)">{{ t.minutesInState }}m</span>
+                }
+              </span>
+
+              @if (t.needsAttention) {
+                <span class="fp-flag" aria-hidden="true">
+                  <span class="material-symbols-outlined">priority_high</span>
+                </span>
+              }
+
+              @if (t.nextReservationAt && t.state === TableState.Free) {
+                <span class="fp-booked" [title]="'Booked ' + (t.nextReservationAt | date:'HH:mm')">
+                  <span class="material-symbols-outlined">schedule</span>
+                </span>
+              }
+
+              @if (t.mergedIntoTableId) {
+                <span class="fp-link" aria-hidden="true">
+                  <span class="material-symbols-outlined">link</span>
+                </span>
+              }
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- ── Legend ────────────────────────────────────────────────── -->
+      <div class="fp-legend">
+        @for (s of [
+          { k: 'free', l: 'Free' },
+          { k: 'reserved', l: 'Reserved' },
+          { k: 'seated', l: 'Seated' },
+          { k: 'ordered', l: 'Ordered' },
+          { k: 'served', l: 'Served' },
+          { k: 'billed', l: 'Bill printed' },
+          { k: 'cleaning', l: 'Needs clearing' },
+          { k: 'blocked', l: 'Out of service' }
+        ]; track s.k) {
+          <span class="fp-legend-item">
+            <span class="fp-legend-swatch" [class]="'state-' + s.k"></span>{{ s.l }}
+          </span>
+        }
+      </div>
+    } @else if (!loading) {
+      <div class="rst-empty">
+        <div class="rst-empty-icon"><span class="material-symbols-outlined">table_restaurant</span></div>
+        <div class="rst-empty-title">No floor set up yet</div>
+        <div class="rst-empty-text">
+          Draw your room in Setup → Floors &amp; tables, and it will appear here.
+        </div>
+        <button type="button" class="rst-touch-btn is-primary" routerLink="/restaurant/layout">
+          <span class="material-symbols-outlined">design_services</span>
+          Design the floor
+        </button>
+      </div>
+    }
+  } @else if (loading) {
+    <div class="fp-canvas-wrap"><div class="rst-skeleton" style="height: 420px; width: 100%"></div></div>
+  }
+</div>
+
+<!-- ══ Action sheet ═════════════════════════════════════════════════ -->
+@if (selected; as t) {
+  <div class="rst-modal-backdrop" (click)="close()">
+    <div class="rst-modal is-narrow fp-sheet" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div>
+          <div class="rst-modal-title">Table {{ t.tableNumber }}</div>
+          <div class="rst-modal-sub">
+            <span class="rst-pill" [class]="'state-pill state-' + stateClass[t.state]">{{ stateLabels[t.state] }}</span>
+            @if (t.sectionName) { · {{ t.sectionName }} }
+            · {{ t.seats }} seats
+            @if (t.currentGuestCount > 0) { · {{ t.currentGuestCount }} seated {{ t.minutesInState }} min }
+          </div>
+        </div>
+        <button type="button" class="rst-close" (click)="close()" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        @if (t.currentOrderNumber) {
+          <div class="fp-order-strip">
+            <span class="material-symbols-outlined">receipt_long</span>
+            <div>
+              <div class="fp-order-no">{{ t.currentOrderNumber }}</div>
+              <div class="fp-order-total">{{ t.currentOrderTotal | number:'1.2-2' }} running</div>
+            </div>
+            <button type="button" class="rst-touch-btn is-primary" (click)="goToOrder()">
+              Open order
+            </button>
+          </div>
+        }
+
+        <!-- Action picker -->
+        @if (!action) {
+          <div class="fp-actions">
+            @if (!selectedInService && t.state !== TableState.Blocked) {
+              <button type="button" class="fp-action" (click)="choose('seat')">
+                <span class="material-symbols-outlined">group_add</span>
+                <span class="fp-action-label">Seat guests</span>
+                <span class="fp-action-hint">Open a table and start an order</span>
+              </button>
+            }
+
+            @if (selectedInService) {
+              <button type="button" class="fp-action" (click)="choose('transfer')">
+                <span class="material-symbols-outlined">swap_horiz</span>
+                <span class="fp-action-label">Move party</span>
+                <span class="fp-action-hint">Transfer the order to another table</span>
+              </button>
+            }
+
+            @if (!selectedHasMergedChildren) {
+              <button type="button" class="fp-action" (click)="choose('merge')">
+                <span class="material-symbols-outlined">join_full</span>
+                <span class="fp-action-label">Join tables</span>
+                <span class="fp-action-hint">One check across several tables</span>
+              </button>
+            } @else {
+              <button type="button" class="fp-action" (click)="choose('unmerge')">
+                <span class="material-symbols-outlined">call_split</span>
+                <span class="fp-action-label">Separate tables</span>
+                <span class="fp-action-hint">Break the joined group apart</span>
+              </button>
+            }
+
+            <button type="button" class="fp-action" (click)="choose('waiter')">
+              <span class="material-symbols-outlined">badge</span>
+              <span class="fp-action-label">Assign server</span>
+              <span class="fp-action-hint">
+                @if (t.assignedWaiterName) { Currently {{ t.assignedWaiterName }} }
+                @else { Nobody assigned }
+              </span>
+            </button>
+
+            @if (t.state !== TableState.NeedsCleaning && t.state !== TableState.Free) {
+              <button type="button" class="fp-action" (click)="setState(TableState.NeedsCleaning, 'Marked for clearing.')">
+                <span class="material-symbols-outlined">cleaning_services</span>
+                <span class="fp-action-label">Mark for clearing</span>
+                <span class="fp-action-hint">Party has left</span>
+              </button>
+            }
+
+            @if (t.state === TableState.NeedsCleaning) {
+              <button type="button" class="fp-action is-good" (click)="clear()">
+                <span class="material-symbols-outlined">check_circle</span>
+                <span class="fp-action-label">Cleared and ready</span>
+                <span class="fp-action-hint">Put the table back in service</span>
+              </button>
+            }
+
+            @if (t.state === TableState.Free) {
+              <button type="button" class="fp-action" (click)="setState(TableState.Reserved, 'Held for a booking.')">
+                <span class="material-symbols-outlined">event_seat</span>
+                <span class="fp-action-label">Hold for booking</span>
+                <span class="fp-action-hint">Stop it being walked into</span>
+              </button>
+            }
+
+            @if (t.state === TableState.Blocked) {
+              <button type="button" class="fp-action is-good" (click)="setState(TableState.Free, 'Back in service.')">
+                <span class="material-symbols-outlined">restart_alt</span>
+                <span class="fp-action-label">Back in service</span>
+                <span class="fp-action-hint">Table is usable again</span>
+              </button>
+            } @else if (!selectedInService) {
+              <button type="button" class="fp-action is-bad" (click)="choose('block')">
+                <span class="material-symbols-outlined">block</span>
+                <span class="fp-action-label">Take out of service</span>
+                <span class="fp-action-hint">Broken, reserved for staff, being repaired</span>
+              </button>
+            }
+          </div>
+        }
+
+        <!-- Seat -->
+        @if (action === 'seat') {
+          <div class="rst-form-grid">
+            <div class="rst-field">
+              <label for="fp-guests">How many guests?</label>
+              <div class="fp-stepper">
+                <button type="button" (click)="guestCount = guestCount > 1 ? guestCount - 1 : 1" aria-label="Fewer">−</button>
+                <input id="fp-guests" type="number" min="1" [(ngModel)]="guestCount" [class.is-invalid]="!!fieldErrors['guestCount']" [attr.aria-invalid]="!!fieldErrors['guestCount'] || null" [attr.aria-describedby]="fieldErrors['guestCount'] ? 'fp-guests-error' : null" />
+                <rst-field-error [message]="fieldErrors['guestCount']" for="fp-guests"></rst-field-error>
+                <button type="button" (click)="guestCount = guestCount + 1" aria-label="More">+</button>
+              </div>
+              @if (guestCount > t.seats) {
+                <span class="rst-hint fp-warn">More guests than seats — join another table if they will not fit.</span>
+              }
+            </div>
+
+            <div class="rst-field">
+              <label for="fp-seat-waiter">Server</label>
+              <select id="fp-seat-waiter" [(ngModel)]="chosenWaiterId" [class.is-invalid]="!!fieldErrors['chosenWaiterId']" [attr.aria-invalid]="!!fieldErrors['chosenWaiterId'] || null" [attr.aria-describedby]="fieldErrors['chosenWaiterId'] ? 'fp-seat-waiter-error' : null">
+                <option value="">Assign later</option>
+                @for (w of waiters; track w.id) {
+                  <option [value]="w.id">{{ w.displayName || w.fullName }}</option>
+                }
+              </select>
+              <rst-field-error [message]="fieldErrors['chosenWaiterId']" for="fp-seat-waiter"></rst-field-error>
+            </div>
+
+            @if (waitlist.length) {
+              <div class="rst-field is-full">
+                <label for="fp-waitlist">Seating someone from the waitlist?</label>
+                <select id="fp-waitlist" [(ngModel)]="waitlistEntryId">
+                  <option value="">No — walk-in</option>
+                  @for (w of waitlist; track w.id) {
+                    <option [value]="w.id">
+                      {{ w.guestName }} — {{ w.partySize }} guests, waiting {{ w.waitedMinutes }} min
+                    </option>
+                  }
+                </select>
+                <span class="rst-hint">Picking someone here takes them off the waitlist automatically.</span>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Transfer -->
+        @if (action === 'transfer') {
+          <div class="rst-field is-full">
+            <label for="fp-transfer">Move to</label>
+            <select id="fp-transfer" [(ngModel)]="transferTargetId" [class.is-invalid]="!!fieldErrors['transferTargetId']" [attr.aria-invalid]="!!fieldErrors['transferTargetId'] || null" [attr.aria-describedby]="fieldErrors['transferTargetId'] ? 'fp-transfer-error' : null">
+              <option value="">Choose a table…</option>
+              @for (o of freeTables; track o.id) {
+                <option [value]="o.id">Table {{ o.tableNumber }} — {{ o.seats }} seats</option>
+              }
+            </select>
+            <rst-field-error [message]="fieldErrors['transferTargetId']" for="fp-transfer"></rst-field-error>
+            <span class="rst-hint">
+              The order, the server and any kitchen tickets follow the party. This table is marked
+              for clearing.
+            </span>
+          </div>
+          @if (!freeTables.length) {
+            <div class="alert alert-error">No free table on this floor to move to.</div>
+          }
+        }
+
+        <!-- Merge -->
+        @if (action === 'merge') {
+          <div class="rst-field is-full">
+            <label>Join table {{ t.tableNumber }} with</label>
+            <div class="fp-merge-list">
+              @for (o of freeTables; track o.id) {
+                <label class="fp-merge-item" [class.is-on]="mergeTargetIds.includes(o.id)">
+                  <input
+                    type="checkbox"
+                    [checked]="mergeTargetIds.includes(o.id)"
+                    (change)="toggleMergeTarget(o.id)"
+                  />
+                  <span class="fp-merge-no">{{ o.tableNumber }}</span>
+                  <span class="fp-merge-seats">{{ o.seats }} seats</span>
+                </label>
+              }
+            </div>
+            @if (!freeTables.length) {
+              <span class="rst-hint">No free tables to join. Clear one first.</span>
+            }
+          </div>
+
+          @if (mergeTargetIds.length) {
+            <div class="rst-field is-full">
+              <label for="fp-merge-guests">Party size</label>
+              <input id="fp-merge-guests" type="number" min="1" [(ngModel)]="guestCount" />
+              <span class="rst-hint">{{ mergeSeatTotal }} seats across the joined tables.</span>
+            </div>
+          }
+        }
+
+        <!-- Unmerge -->
+        @if (action === 'unmerge') {
+          <p class="fp-confirm-text">
+            The joined tables go back to being separate and are marked for clearing.
+            The check on table {{ t.tableNumber }} is not affected.
+          </p>
+        }
+
+        <!-- Assign waiter -->
+        @if (action === 'waiter') {
+          <div class="rst-field is-full">
+            <label for="fp-assign">Server</label>
+            <select id="fp-assign" [(ngModel)]="chosenWaiterId">
+              <option value="">Choose…</option>
+              @for (w of waiters; track w.id) {
+                <option [value]="w.id">
+                  {{ w.displayName || w.fullName }}
+                  @if (w.openTableCount) { ({{ w.openTableCount }} tables) }
+                </option>
+              }
+            </select>
+            <span class="rst-hint">The open order moves with the table, so sales credit follows the change.</span>
+          </div>
+        }
+
+        <!-- Block -->
+        @if (action === 'block') {
+          <div class="rst-field is-full">
+            <label for="fp-block-note">Why is it out of service?</label>
+            <input id="fp-block-note" type="text" [(ngModel)]="actionNote" placeholder="Broken chair, reserved for staff…" />
+          </div>
+        }
+      </div>
+
+      @if (action) {
+        <footer class="rst-modal-foot">
+          <button type="button" class="btn btn-secondary" (click)="action = null" [disabled]="busy">Back</button>
+          <div class="rst-foot-spacer"></div>
+
+          @switch (action) {
+            @case ('seat') {
+              <button type="button" class="rst-touch-btn is-primary" (click)="seat()" [disabled]="busy">
+                <span class="material-symbols-outlined">group_add</span>
+                Seat {{ guestCount }} and open order
+              </button>
+            }
+            @case ('transfer') {
+              <button type="button" class="rst-touch-btn is-primary" (click)="transfer()" [disabled]="busy || !transferTargetId">
+                Move party
+              </button>
+            }
+            @case ('merge') {
+              <button type="button" class="rst-touch-btn is-primary" (click)="merge()" [disabled]="busy || !mergeTargetIds.length">
+                Join {{ mergeTargetIds.length + 1 }} tables
+              </button>
+            }
+            @case ('unmerge') {
+              <button type="button" class="rst-touch-btn is-primary" (click)="unmerge()" [disabled]="busy">
+                Separate
+              </button>
+            }
+            @case ('waiter') {
+              <button type="button" class="rst-touch-btn is-primary" (click)="assignWaiter()" [disabled]="busy || !chosenWaiterId">
+                Assign
+              </button>
+            }
+            @case ('block') {
+              <button type="button" class="rst-touch-btn is-danger" (click)="setState(TableState.Blocked, 'Table taken out of service.')" [disabled]="busy">
+                Take out of service
+              </button>
+            }
+          }
+        </footer>
+      }
+    </div>
+  </div>
+}

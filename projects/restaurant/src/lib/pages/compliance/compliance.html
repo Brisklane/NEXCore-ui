@@ -1,0 +1,486 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Food safety</h2>
+      <p class="subtitle">Temperature logs, checklists and prep labels — the record an inspector asks for.</p>
+    </div>
+    <rst-outlet-picker (outletChange)="onOutlet($event)"></rst-outlet-picker>
+  </div>
+
+  <rst-help key="compliance"></rst-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <div class="rst-segment cp-tabs" role="tablist" aria-label="Sections">
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'board'" [class.is-active]="tab === 'board'" (click)="switchTab('board')">
+      <span class="material-symbols-outlined">checklist</span>Today
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'temperature'" [class.is-active]="tab === 'temperature'" (click)="switchTab('temperature')">
+      <span class="material-symbols-outlined">thermostat</span>Temperature log
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'batches'" [class.is-active]="tab === 'batches'" (click)="switchTab('batches')">
+      <span class="material-symbols-outlined">label</span>Prep labels
+    </button>
+  </div>
+
+  <!-- ══ Today ════════════════════════════════════════════════════════ -->
+  @if (tab === 'board') {
+    @if (loading) {
+      <div class="rst-skeleton" style="height: 300px"></div>
+    } @else if (board; as b) {
+      <div class="rst-stats">
+        <div class="rst-stat" [class.tone-success]="b.compliancePercent >= 100" [class.tone-warning]="b.compliancePercent < 100">
+          <span class="rst-stat-label">Today's checks</span>
+          <span class="rst-stat-value">{{ b.compliancePercent }}%</span>
+          <span class="rst-stat-foot">{{ b.checksDue }} still due</span>
+        </div>
+        <div class="rst-stat" [class.tone-danger]="b.checksOverdue > 0" [class.tone-brand]="b.checksOverdue === 0">
+          <span class="rst-stat-label">Overdue</span>
+          <span class="rst-stat-value">{{ b.checksOverdue }}</span>
+          <span class="rst-stat-foot">past their due time</span>
+        </div>
+        <div class="rst-stat" [class.tone-danger]="b.openBreaches > 0" [class.tone-success]="b.openBreaches === 0">
+          <span class="rst-stat-label">Open breaches</span>
+          <span class="rst-stat-value">{{ b.openBreaches }}</span>
+          <span class="rst-stat-foot">out of range, unresolved</span>
+        </div>
+        <div class="rst-stat tone-warning">
+          <span class="rst-stat-label">Temperature checks</span>
+          <span class="rst-stat-value">{{ b.temperatureChecksDue }}</span>
+          <span class="rst-stat-foot">due now</span>
+        </div>
+        <div class="rst-stat" [class.tone-danger]="b.batchesExpired > 0" [class.tone-cyan]="b.batchesExpired === 0">
+          <span class="rst-stat-label">Prep expiring</span>
+          <span class="rst-stat-value">{{ b.batchesExpiringSoon }}</span>
+          <span class="rst-stat-foot">{{ b.batchesExpired }} past use-by</span>
+        </div>
+      </div>
+
+      @if (b.openBreachLogs.length) {
+        <section class="rst-card cp-breaches">
+          <header class="rst-card-head">
+            <span class="rst-card-title">
+              <span class="material-symbols-outlined">warning</span>
+              Unresolved breaches
+            </span>
+          </header>
+          <div class="rst-card-body is-flush">
+            @for (log of b.openBreachLogs; track trackLog($index, log)) {
+              <div class="cp-breach">
+                <div class="cp-breach-main">
+                  <span class="cp-breach-name">{{ log.checkpointName }}</span>
+                  <span class="cp-breach-meta">
+                    {{ log.readingCelsius | number:'1.0-1' }}°C —
+                    safe range {{ log.minSafeCelsius | number:'1.0-1' }} to {{ log.maxSafeCelsius | number:'1.0-1' }}°C ·
+                    {{ log.recordedAt | date:'d MMM HH:mm' }}
+                    @if (log.staffName) { · {{ log.staffName }} }
+                  </span>
+                </div>
+                <button type="button" class="rst-touch-btn is-danger" (click)="startResolve(log)">
+                  Record action
+                </button>
+              </div>
+            }
+          </div>
+        </section>
+      }
+
+      <div class="cp-grid">
+        <section class="rst-card">
+          <header class="rst-card-head">
+            <span class="rst-card-title"><span class="material-symbols-outlined">thermostat</span>Temperature checkpoints</span>
+          </header>
+          <div class="rst-card-body is-flush">
+            @for (c of b.checkpoints; track trackCheckpoint($index, c)) {
+              <div class="cp-row" [class.is-due]="c.isDue" [class.is-breach]="c.lastReadingOutOfRange">
+                <div class="cp-row-main">
+                  <span class="cp-row-name">
+                    {{ c.name }}
+                    <span class="cp-kind">{{ kindLabels[c.kind] }}</span>
+                  </span>
+                  <span class="cp-row-meta">
+                    Safe {{ c.minSafeCelsius | number:'1.0-1' }} to {{ c.maxSafeCelsius | number:'1.0-1' }}°C
+                    @if (c.lastReadingAt) {
+                      · last {{ c.lastReadingCelsius | number:'1.0-1' }}°C at {{ c.lastReadingAt | date:'HH:mm' }}
+                    } @else {
+                      · never logged
+                    }
+                  </span>
+                </div>
+
+                <div class="cp-row-right">
+                  @if (c.isDue) { <span class="rst-pill tone-warning">Due</span> }
+                  @if (c.lastReadingOutOfRange) { <span class="rst-pill tone-danger">Out of range</span> }
+                  <button type="button" class="rst-touch-btn is-primary" (click)="startReading(c)">
+                    <span class="material-symbols-outlined">add</span>Log
+                  </button>
+                </div>
+              </div>
+            }
+
+            @if (!b.checkpoints.length) {
+              <div class="rst-empty">
+                <div class="rst-empty-icon"><span class="material-symbols-outlined">thermostat</span></div>
+                <div class="rst-empty-title">No checkpoints</div>
+                <div class="rst-empty-text">Add your fridges, freezers and hot-hold units to start logging.</div>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="rst-card">
+          <header class="rst-card-head">
+            <span class="rst-card-title"><span class="material-symbols-outlined">checklist</span>Checklists</span>
+          </header>
+          <div class="rst-card-body is-flush">
+            @for (c of b.checklists; track trackChecklist($index, c)) {
+              <div class="cp-row" [class.is-due]="c.isDueToday && !c.isCompletedToday">
+                <div class="cp-row-main">
+                  <span class="cp-row-name">
+                    {{ c.name }}
+                    <span class="cp-kind">{{ frequencyLabels[c.frequency] }}</span>
+                  </span>
+                  <span class="cp-row-meta">
+                    {{ c.items.length }} checks
+                    @if (c.dueAt) { · due by {{ c.dueAt }} }
+                  </span>
+                </div>
+
+                <div class="cp-row-right">
+                  @if (c.hasOpenCriticalFailure) { <span class="rst-pill tone-danger">Critical fail</span> }
+                  @if (c.isCompletedToday) { <span class="rst-pill tone-success">Done</span> }
+                  @else if (c.isDueToday) { <span class="rst-pill tone-warning">Due</span> }
+                  @else { <span class="rst-pill tone-neutral">Not today</span> }
+
+                  @if (c.isDueToday) {
+                    <button type="button" class="rst-touch-btn is-primary" (click)="startRun(c)">
+                      {{ c.isCompletedToday ? 'Redo' : 'Run' }}
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+
+            @if (!b.checklists.length) {
+              <div class="rst-empty">
+                <div class="rst-empty-icon"><span class="material-symbols-outlined">checklist</span></div>
+                <div class="rst-empty-title">No checklists</div>
+                <div class="rst-empty-text">Opening, closing and cleaning checks live here.</div>
+              </div>
+            }
+          </div>
+        </section>
+      </div>
+    }
+  }
+
+  <!-- ══ Temperature log ══════════════════════════════════════════════ -->
+  @if (tab === 'temperature') {
+    @if (!logs.length) {
+      <div class="rst-empty">
+        <div class="rst-empty-icon"><span class="material-symbols-outlined">thermostat</span></div>
+        <div class="rst-empty-title">No readings recorded</div>
+        <div class="rst-empty-text">Log a reading from the Today tab.</div>
+      </div>
+    } @else {
+      <div class="rst-table-wrap">
+        <table class="rst-table">
+          <thead>
+            <tr>
+              <th>When</th><th>Checkpoint</th><th class="num">Reading</th><th>Safe range</th>
+              <th>Status</th><th>Action taken</th><th>By</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (l of logs; track trackLog($index, l)) {
+              <tr [class.cp-breach-row]="l.isOutOfRange">
+                <td class="muted">{{ l.recordedAt | date:'d MMM HH:mm' }}</td>
+                <td class="strong">{{ l.checkpointName }}</td>
+                <td class="num strong">{{ l.readingCelsius | number:'1.0-1' }}°C</td>
+                <td class="muted">{{ l.minSafeCelsius | number:'1.0-1' }} to {{ l.maxSafeCelsius | number:'1.0-1' }}</td>
+                <td>
+                  @if (!l.isOutOfRange) { <span class="rst-pill tone-success">In range</span> }
+                  @else if (l.isResolved) { <span class="rst-pill tone-warning">Breach — closed</span> }
+                  @else { <span class="rst-pill tone-danger">Breach — open</span> }
+                </td>
+                <td class="muted">{{ l.correctiveAction || '—' }}</td>
+                <td class="muted">{{ l.staffName || '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <!-- ══ Prep labels ══════════════════════════════════════════════════ -->
+  @if (tab === 'batches') {
+    <div class="rst-toolbar">
+      <span class="cp-note">Every prepped item gets a batch code, a use-by and a traceable link back to its supplier lot.</span>
+      <div class="rst-spacer"></div>
+      <button type="button" class="rst-touch-btn is-primary" (click)="newBatch()">
+        <span class="material-symbols-outlined">add</span>Label a batch
+      </button>
+    </div>
+
+    @if (!batches.length) {
+      <div class="rst-empty">
+        <div class="rst-empty-icon"><span class="material-symbols-outlined">label</span></div>
+        <div class="rst-empty-title">Nothing labelled</div>
+        <div class="rst-empty-text">Label prepped items so the kitchen can see at a glance what is still good.</div>
+      </div>
+    } @else {
+      <div class="cp-batch-grid">
+        @for (b of batches; track trackBatch($index, b)) {
+          <article class="cp-batch" [class.is-expired]="b.isExpired">
+            <div class="cp-batch-code">{{ b.batchCode }}</div>
+            <div class="cp-batch-name">{{ b.itemName }}</div>
+            <div class="cp-batch-meta">{{ b.quantity | number:'1.0-2' }} {{ b.uom }}</div>
+            <div class="cp-batch-meta">Prepped {{ b.preparedAt | date:'d MMM HH:mm' }}</div>
+            <div class="cp-batch-use">
+              Use by {{ b.useByAt | date:'d MMM HH:mm' }}
+              <span class="rst-pill" [class]="batchTone(b)">
+                @if (b.isExpired) { Expired }
+                @else { {{ b.hoursRemaining }}h left }
+              </span>
+            </div>
+            @if (b.storageLocation) { <div class="cp-batch-meta">{{ b.storageLocation }}</div> }
+            <button type="button" class="rst-touch-btn is-danger" (click)="discard(b)" [disabled]="busy">
+              <span class="material-symbols-outlined">delete</span>Discard
+            </button>
+          </article>
+        }
+      </div>
+    }
+  }
+</div>
+
+<!-- ══ Reading dialog ═══════════════════════════════════════════════ -->
+@if (reading) {
+  <div class="rst-modal-backdrop" (click)="reading = null">
+    <div class="rst-modal is-narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div>
+          <div class="rst-modal-title">{{ reading.checkpoint.name }}</div>
+          <div class="rst-modal-sub">
+            Safe range {{ reading.checkpoint.minSafeCelsius | number:'1.0-1' }} to
+            {{ reading.checkpoint.maxSafeCelsius | number:'1.0-1' }}°C
+          </div>
+        </div>
+        <button type="button" class="rst-close" (click)="reading = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        <div class="rst-field is-full">
+          <label for="cp-reading">Reading (°C)</label>
+          <input id="cp-reading" type="number" step="0.1" [(ngModel)]="reading.value" class="cp-big-input"  [class.is-invalid]="!!fieldErrors['value']" [attr.aria-invalid]="!!fieldErrors['value'] || null" [attr.aria-describedby]="fieldErrors['value'] ? 'cp-reading-error' : null" />
+            <rst-field-error [message]="fieldErrors['value']" for="cp-reading"></rst-field-error>
+        </div>
+
+        @if (readingOutOfRange) {
+          <div class="alert alert-error cp-breach-alert">
+            <strong>That is outside the safe range.</strong>
+            An out-of-range reading with no action recorded is exactly what an inspection looks for,
+            so tell us what you did before saving.
+          </div>
+
+          <div class="rst-field is-full">
+            <label for="cp-action">Corrective action</label>
+            <textarea
+              id="cp-action"
+              [(ngModel)]="reading.action"
+              placeholder="Moved stock to the walk-in, called the engineer, discarded affected product…"
+            ></textarea>
+          </div>
+        }
+
+        <div class="rst-field is-full">
+          <label for="cp-note">Note</label>
+          <input id="cp-note" type="text" [(ngModel)]="reading.note"  [class.is-invalid]="!!fieldErrors['note']" [attr.aria-invalid]="!!fieldErrors['note'] || null" [attr.aria-describedby]="fieldErrors['note'] ? 'cp-note-error' : null" />
+            <rst-field-error [message]="fieldErrors['note']" for="cp-note"></rst-field-error>
+        </div>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="reading = null">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button
+          type="button"
+          class="rst-touch-btn is-primary"
+          (click)="saveReading()"
+          [disabled]="busy || reading.value === null || (readingOutOfRange && !reading.action.trim())"
+        >
+          Record
+        </button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- ══ Resolve breach ═══════════════════════════════════════════════ -->
+@if (resolving) {
+  <div class="rst-modal-backdrop" (click)="resolving = null">
+    <div class="rst-modal is-narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div>
+          <div class="rst-modal-title">Close the breach</div>
+          <div class="rst-modal-sub">
+            {{ resolving.checkpointName }} — {{ resolving.readingCelsius | number:'1.0-1' }}°C on
+            {{ resolving.recordedAt | date:'d MMM HH:mm' }}
+          </div>
+        </div>
+        <button type="button" class="rst-close" (click)="resolving = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+        <div class="rst-field is-full">
+          <label for="cp-resolve">What was done about it?</label>
+          <textarea id="cp-resolve" [(ngModel)]="resolveAction" [class.is-invalid]="!!fieldErrors['resolveAction']" [attr.aria-invalid]="!!fieldErrors['resolveAction'] || null" [attr.aria-describedby]="fieldErrors['resolveAction'] ? 'cp-resolve-error' : null"></textarea>
+          <rst-field-error [message]="fieldErrors['resolveAction']" for="cp-resolve"></rst-field-error>
+        </div>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="resolving = null">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-primary" (click)="saveResolve()" [disabled]="busy">
+          Close breach
+        </button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- ══ Checklist run ════════════════════════════════════════════════ -->
+@if (running) {
+  <div class="rst-modal-backdrop" (click)="running = null">
+    <div class="rst-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div>
+          <div class="rst-modal-title">{{ running.name }}</div>
+          <div class="rst-modal-sub">{{ answeredCount }} of {{ answers.length }} answered</div>
+        </div>
+        <button type="button" class="rst-close" (click)="running = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        @for (a of answers; track a.checklistItemId; let i = $index) {
+          <div class="cp-check" [class.is-blocked]="isBlocked(a)">
+            <div class="cp-check-text">
+              {{ a.itemText }}
+              @if (a.isCritical) { <span class="rst-pill tone-danger">Critical</span> }
+              @if (itemFor(a)?.guidance) { <span class="cp-guidance">{{ itemFor(a)?.guidance }}</span> }
+            </div>
+
+            @if (a.answerType === AnswerType.YesNo) {
+              <div class="cp-yesno">
+                <button type="button" [class.is-yes]="a.yesNoValue === true" (click)="setAnswer(i, true)">Yes</button>
+                <button type="button" [class.is-no]="a.yesNoValue === false" (click)="setAnswer(i, false)">No</button>
+              </div>
+            } @else if (a.answerType === AnswerType.Numeric) {
+              <input
+                type="number"
+                step="0.1"
+                [(ngModel)]="a.numericValue"
+                class="cp-num-input"
+                [attr.aria-label]="a.itemText"
+               [class.is-invalid]="!!fieldErrors['numericValue']" [attr.aria-invalid]="!!fieldErrors['numericValue'] || null" />
+            <rst-field-error [message]="fieldErrors['numericValue']"></rst-field-error>
+            } @else {
+              <input type="text" [(ngModel)]="a.textValue" [attr.aria-label]="a.itemText"  [class.is-invalid]="!!fieldErrors['textValue']" [attr.aria-invalid]="!!fieldErrors['textValue'] || null" />
+            <rst-field-error [message]="fieldErrors['textValue']"></rst-field-error>
+            }
+
+            @if (isBlocked(a)) {
+              <div class="rst-field is-full cp-fix">
+                <label>This failed and is critical — what was done?</label>
+                <input type="text" [(ngModel)]="a.correctiveAction" placeholder="Corrective action"  [class.is-invalid]="!!fieldErrors['correctiveAction']" [attr.aria-invalid]="!!fieldErrors['correctiveAction'] || null" />
+            <rst-field-error [message]="fieldErrors['correctiveAction']"></rst-field-error>
+              </div>
+            }
+          </div>
+        }
+
+        <div class="rst-field is-full">
+          <label for="cp-run-note">Note</label>
+          <input id="cp-run-note" type="text" [(ngModel)]="runNote" />
+        </div>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="running = null">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        @if (blockedCount > 0) {
+          <span class="cp-blocked-note">{{ blockedCount }} critical failure(s) need an action first</span>
+        }
+        <button type="button" class="rst-touch-btn is-primary" (click)="submitRun()" [disabled]="busy || blockedCount > 0">
+          Sign off
+        </button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- ══ New batch ════════════════════════════════════════════════════ -->
+@if (batch) {
+  <div class="rst-modal-backdrop" (click)="batch = null">
+    <div class="rst-modal is-narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div class="rst-modal-title">Label a prep batch</div>
+        <button type="button" class="rst-close" (click)="batch = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        <div class="rst-form-grid">
+          <div class="rst-field is-full">
+            <label for="cb-name">What was prepped?</label>
+            <input id="cb-name" type="text" [(ngModel)]="batch.itemName" placeholder="Tomato sauce"  [class.is-invalid]="!!fieldErrors['itemName']" [attr.aria-invalid]="!!fieldErrors['itemName'] || null" [attr.aria-describedby]="fieldErrors['itemName'] ? 'cb-name-error' : null" />
+            <rst-field-error [message]="fieldErrors['itemName']" for="cb-name"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="cb-qty">Quantity</label>
+            <input id="cb-qty" type="number" step="0.01" min="0" [(ngModel)]="batch.quantity"  [class.is-invalid]="!!fieldErrors['quantity']" [attr.aria-invalid]="!!fieldErrors['quantity'] || null" [attr.aria-describedby]="fieldErrors['quantity'] ? 'cb-qty-error' : null" />
+            <rst-field-error [message]="fieldErrors['quantity']" for="cb-qty"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="cb-uom">Unit</label>
+            <input id="cb-uom" type="text" [(ngModel)]="batch.uom"  [class.is-invalid]="!!fieldErrors['uom']" [attr.aria-invalid]="!!fieldErrors['uom'] || null" [attr.aria-describedby]="fieldErrors['uom'] ? 'cb-uom-error' : null" />
+            <rst-field-error [message]="fieldErrors['uom']" for="cb-uom"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="cb-shelf">Shelf life (hours)</label>
+            <input id="cb-shelf" type="number" min="1" [(ngModel)]="batch.shelfLifeHours"  [class.is-invalid]="!!fieldErrors['shelfLifeHours']" [attr.aria-invalid]="!!fieldErrors['shelfLifeHours'] || null" [attr.aria-describedby]="fieldErrors['shelfLifeHours'] ? 'cb-shelf-error' : null" />
+            <rst-field-error [message]="fieldErrors['shelfLifeHours']" for="cb-shelf"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="cb-loc">Stored in</label>
+            <input id="cb-loc" type="text" [(ngModel)]="batch.storageLocation" placeholder="Walk-in, shelf 2"  [class.is-invalid]="!!fieldErrors['storageLocation']" [attr.aria-invalid]="!!fieldErrors['storageLocation'] || null" [attr.aria-describedby]="fieldErrors['storageLocation'] ? 'cb-loc-error' : null" />
+            <rst-field-error [message]="fieldErrors['storageLocation']" for="cb-loc"></rst-field-error>
+          </div>
+        </div>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="batch = null">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-primary" (click)="saveBatch()" [disabled]="busy">Label</button>
+      </footer>
+    </div>
+  </div>
+}

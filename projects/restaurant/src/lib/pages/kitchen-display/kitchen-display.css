@@ -1,0 +1,522 @@
+/* =====================================================================
+   Kitchen display
+   ---------------------------------------------------------------------
+   Read from two metres by someone holding a pan. Deliberately denser in
+   type and looser in spacing than the rest of the product.
+
+   Urgency is carried by THREE independent channels — a written word
+   (OK / PUSH / LATE), a colour band, and a border weight — because a
+   kitchen is exactly where colour alone fails: steam on the panel, a
+   cheap screen, and a line cook who may be colour-blind.
+   ===================================================================== */
+
+.kds-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 64px);
+  padding: 14px 18px 20px;
+  gap: 12px;
+  background: var(--bg-page, #f6f8fb);
+}
+
+/* ── Header ──────────────────────────────────────────────────────────── */
+.kds-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.kds-header-left { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; }
+
+.kds-header h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-heading, #0f172a);
+}
+
+.kds-counters { display: flex; gap: 14px; flex-wrap: wrap; }
+
+.kds-counter {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+}
+
+.kds-counter b {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+  margin-right: 3px;
+}
+
+.kds-counter.is-ready b { color: var(--success, #16a34a); }
+.kds-counter.is-late b { color: var(--danger, #ef4444); }
+
+.kds-header-right { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+
+.kds-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 9px 15px;
+  border-radius: 11px;
+  border: 1px solid var(--border-strong, #cbd5e1);
+  background: var(--bg-surface, #fff);
+  color: var(--text-heading, #0f172a);
+  font-size: 13.5px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.kds-tool:hover:not(:disabled) { border-color: var(--accent, #2b7fff); }
+.kds-tool:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.kds-tool.is-on { background: var(--accent, #2b7fff); border-color: transparent; color: #fff; }
+.kds-tool .material-symbols-outlined { font-size: 20px; }
+
+.kds-alert { margin: 0; }
+
+/* ── Station tabs ────────────────────────────────────────────────────── */
+.kds-stations {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 3px;
+  scrollbar-width: thin;
+}
+
+.kds-station {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  border: 2px solid var(--border-default, #e6eaf0);
+  background: var(--bg-surface, #fff);
+  color: var(--text-secondary, #64748b);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.13s ease, background 0.13s ease;
+}
+
+.kds-station:hover { border-color: var(--accent, #2b7fff); }
+.kds-station:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.kds-station.is-active {
+  border-color: var(--accent, #2b7fff);
+  background: var(--accent-soft, rgba(43, 127, 255, 0.1));
+  color: var(--accent, #2b7fff);
+}
+
+.kds-station.is-expo .kds-station-name::after {
+  content: ' · pass';
+  font-weight: 600;
+  opacity: 0.65;
+}
+
+.kds-station-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+
+.kds-station-count {
+  min-width: 26px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--bg-muted, #f1f5f9);
+  color: var(--text-heading, #0f172a);
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.kds-station-count.is-late { background: var(--danger, #ef4444); color: #fff; }
+
+/* ── All-day ─────────────────────────────────────────────────────────── */
+.kds-allday {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 16px;
+  border-radius: 13px;
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-default, #e6eaf0);
+}
+
+.kds-allday-label {
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted, #94a3b8);
+  flex-shrink: 0;
+}
+
+.kds-allday-list { display: flex; gap: 9px; flex-wrap: wrap; }
+
+.kds-allday-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 5px 13px;
+  border-radius: 9px;
+  background: var(--bg-muted, #f1f5f9);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #1e293b);
+}
+
+.kds-allday-chip b { font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.kds-allday-chip em { font-style: normal; font-size: 12px; opacity: 0.7; }
+
+.kds-allday-chip.is-hot {
+  background: var(--warning-soft, #fef3c7);
+  color: var(--warning-text, #92400e);
+}
+
+/* ── Board ───────────────────────────────────────────────────────────── */
+.kds-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+  align-content: start;
+  flex: 1;
+}
+
+.kds-skeleton { height: 260px; border-radius: 16px; }
+
+/* ── Ticket ──────────────────────────────────────────────────────────── */
+.kds-ticket {
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  background: var(--bg-surface, #fff);
+  border: 3px solid var(--kds-edge, var(--border-strong, #cbd5e1));
+  overflow: hidden;
+  --kds-edge: var(--border-strong, #cbd5e1);
+  --kds-band: var(--bg-muted, #f1f5f9);
+  --kds-ink: var(--text-secondary, #64748b);
+}
+
+.kds-ticket.urgency-ok {
+  --kds-edge: var(--success, #16a34a);
+  --kds-band: var(--success-soft, #dcfce7);
+  --kds-ink: var(--success-text, #15803d);
+}
+
+.kds-ticket.urgency-warning {
+  --kds-edge: var(--warning, #f59e0b);
+  --kds-band: var(--warning-soft, #fef3c7);
+  --kds-ink: var(--warning-text, #92400e);
+}
+
+/* Late tickets get a heavier border as well as the colour — the third channel. */
+.kds-ticket.urgency-overdue {
+  --kds-edge: var(--danger, #ef4444);
+  --kds-band: var(--danger-soft, #fef2f2);
+  --kds-ink: var(--danger-text, #b91c1c);
+  border-width: 5px;
+  box-shadow: 0 0 0 1px var(--danger, #ef4444), var(--shadow-md, 0 8px 24px rgba(15, 23, 42, 0.12));
+}
+
+.kds-ticket.is-priority { border-style: dashed; }
+.kds-ticket.is-ready { opacity: 0.86; }
+
+.kds-ticket-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--kds-band);
+}
+
+.kds-ticket-id { min-width: 0; }
+
+.kds-ticket-table {
+  display: block;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  color: var(--text-heading, #0f172a);
+}
+
+.kds-ticket-meta {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--kds-ink);
+}
+
+.kds-ticket-timer { text-align: right; flex-shrink: 0; }
+
+.kds-age {
+  display: block;
+  font-size: 25px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--kds-ink);
+}
+
+.kds-age-word {
+  display: block;
+  margin-top: 2px;
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: var(--kds-ink);
+}
+
+.kds-flags { display: flex; gap: 6px; flex-wrap: wrap; padding: 8px 14px 0; }
+
+.kds-flag {
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: var(--bg-muted, #f1f5f9);
+  color: var(--text-secondary, #64748b);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.07em;
+}
+
+.kds-flag.is-priority { background: var(--danger, #ef4444); color: #fff; }
+.kds-flag.is-remake { background: var(--warning, #f59e0b); color: #fff; }
+.kds-flag.is-station { background: var(--accent-soft, rgba(43,127,255,.12)); color: var(--accent, #2b7fff); }
+
+/* ── Lines ───────────────────────────────────────────────────────────── */
+.kds-lines { list-style: none; margin: 0; padding: 6px 0; flex: 1; }
+
+.kds-line { border-bottom: 1px solid var(--border-light, #eef1f5); }
+.kds-line:last-child { border-bottom: none; }
+
+.kds-line-btn {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  /* Comfortably tappable with a wet thumb. */
+  min-height: 52px;
+  padding: 11px 14px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.kds-line-btn:hover:not(:disabled) { background: var(--bg-subtle, #f8fafc); }
+.kds-line-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.kds-line-btn:disabled { cursor: default; }
+
+.kds-line-qty {
+  flex-shrink: 0;
+  min-width: 34px;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.kds-line-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+
+.kds-line-name {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--text-heading, #0f172a);
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.kds-line-variant { font-size: 14px; font-weight: 600; color: var(--text-secondary, #64748b); }
+
+.kds-line-seat {
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: var(--accent-soft, rgba(43, 127, 255, 0.12));
+  color: var(--accent, #2b7fff);
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+.kds-line-mods {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--warning-text, #92400e);
+  line-height: 1.35;
+}
+
+.kds-line-note {
+  font-size: 13.5px;
+  font-style: italic;
+  color: var(--text-secondary, #64748b);
+}
+
+/* Allergens are the one thing on this screen that must never be missed. */
+.kds-line-allergen {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  align-self: flex-start;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: var(--danger, #ef4444);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+}
+
+.kds-line-allergen .material-symbols-outlined { font-size: 15px; }
+
+.kds-line.has-allergen { background: color-mix(in srgb, var(--danger, #ef4444) 5%, transparent); }
+
+.kds-line.is-done .kds-line-name,
+.kds-line.is-done .kds-line-qty { text-decoration: line-through; opacity: 0.45; }
+.kds-line.is-done .kds-line-mods { opacity: 0.45; }
+
+.kds-line-check {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--success, #16a34a);
+  color: #fff;
+}
+
+.kds-line-check .material-symbols-outlined { font-size: 18px; }
+
+/* ── Ticket footer ───────────────────────────────────────────────────── */
+.kds-ticket-foot {
+  display: flex;
+  gap: 7px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border-light, #eef1f5);
+  background: var(--bg-subtle, #f8fafc);
+}
+
+.kds-action {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  /* Big enough to hit without looking. */
+  min-height: 48px;
+  padding: 10px 12px;
+  border-radius: 11px;
+  border: 1px solid var(--border-strong, #cbd5e1);
+  background: var(--bg-surface, #fff);
+  color: var(--text-heading, #0f172a);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.kds-action:hover:not(:disabled) { background: var(--bg-muted, #f1f5f9); }
+.kds-action:active:not(:disabled) { transform: translateY(1px); }
+.kds-action:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.kds-action:disabled { opacity: 0.5; cursor: not-allowed; }
+.kds-action .material-symbols-outlined { font-size: 20px; }
+
+.kds-action.is-ready { background: var(--success, #16a34a); border-color: transparent; color: #fff; }
+.kds-action.is-ready:hover:not(:disabled) { background: var(--success-strong, #15803d); }
+
+.kds-action.is-bump { background: var(--accent, #2b7fff); border-color: transparent; color: #fff; }
+.kds-action.is-bump:hover:not(:disabled) { filter: brightness(1.07); background: var(--accent, #2b7fff); }
+
+.kds-action.is-icon { flex: 0 0 52px; }
+
+/* ── All clear ───────────────────────────────────────────────────────── */
+.kds-clear {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 80px 24px;
+  text-align: center;
+  color: var(--text-muted, #94a3b8);
+}
+
+.kds-clear > .material-symbols-outlined { font-size: 56px; color: var(--success, #16a34a); }
+.kds-clear-title { font-size: 22px; font-weight: 800; color: var(--text-heading, #0f172a); }
+.kds-clear-text { font-size: 14px; }
+
+/* ── Recently bumped ─────────────────────────────────────────────────── */
+.kds-recent {
+  border-radius: 14px;
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-default, #e6eaf0);
+  overflow: hidden;
+}
+
+.kds-recent-head {
+  padding: 10px 16px;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted, #94a3b8);
+  border-bottom: 1px solid var(--border-light, #eef1f5);
+}
+
+.kds-recent-list { display: flex; gap: 10px; padding: 12px 16px; overflow-x: auto; }
+
+.kds-recent-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 150px;
+  min-height: 82px;
+  padding: 11px 14px;
+  border-radius: 11px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-subtle, #f8fafc);
+  cursor: pointer;
+  text-align: left;
+}
+
+.kds-recent-card:hover:not(:disabled) { border-color: var(--accent, #2b7fff); }
+.kds-recent-card:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.kds-recent-table { font-size: 18px; font-weight: 800; color: var(--text-heading, #0f172a); }
+.kds-recent-meta { font-size: 11.5px; color: var(--text-muted, #94a3b8); }
+
+.kds-recent-recall {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 3px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent, #2b7fff);
+}
+
+.kds-recent-recall .material-symbols-outlined { font-size: 15px; }
+
+/* ── Larger screens: a wall panel wants more columns ─────────────────── */
+@media (min-width: 1600px) {
+  .kds-board { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+  .kds-ticket-table { font-size: 30px; }
+  .kds-age { font-size: 29px; }
+  .kds-line-name { font-size: 18px; }
+}
+
+@media (max-width: 640px) {
+  .kds-shell { padding: 12px 12px 18px; }
+  .kds-board { grid-template-columns: 1fr; }
+}

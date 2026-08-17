@@ -320,6 +320,36 @@
         }
       }
     },
+    "restaurant": {
+      "projectType": "library",
+      "root": "projects/restaurant",
+      "sourceRoot": "projects/restaurant/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "options": {
+            "project": "projects/restaurant/ng-package.json"
+          },
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/restaurant/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/restaurant/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/restaurant/tsconfig.spec.json",
+            "runner": "vitest"
+          }
+        }
+      }
+    },
     "manufacturing": {
       "projectType": "library",
       "root": "projects/manufacturing",

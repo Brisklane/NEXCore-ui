@@ -1,0 +1,256 @@
+<div class="kds-shell">
+  <!-- ══ Header ═══════════════════════════════════════════════════════ -->
+  <header class="kds-header">
+    <div class="kds-header-left">
+      <h2>{{ stationName(activeStationId) }}</h2>
+      @if (display) {
+        <div class="kds-counters">
+          <span class="kds-counter"><b>{{ display.newCount }}</b> new</span>
+          <span class="kds-counter"><b>{{ display.inProgressCount }}</b> cooking</span>
+          <span class="kds-counter is-ready"><b>{{ display.readyCount }}</b> ready</span>
+          @if (display.overdueCount > 0) {
+            <span class="kds-counter is-late"><b>{{ display.overdueCount }}</b> late</span>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="kds-header-right">
+      <rst-outlet-picker (outletChange)="onOutlet($event)"></rst-outlet-picker>
+
+      <button
+        type="button"
+        class="kds-tool"
+        [class.is-on]="showBumped"
+        (click)="toggleBumped()"
+        [attr.aria-pressed]="showBumped"
+      >
+        <span class="material-symbols-outlined">history</span>
+        Recent
+      </button>
+
+      <button type="button" class="kds-tool" (click)="load()" [disabled]="loading">
+        <span class="material-symbols-outlined">refresh</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ══ Station tabs ═════════════════════════════════════════════════ -->
+  @if (stations.length) {
+    <nav class="kds-stations" aria-label="Kitchen stations">
+      <button
+        type="button"
+        class="kds-station"
+        [class.is-active]="activeStationId === null"
+        (click)="selectStation(null)"
+      >
+        <span class="kds-station-name">Everything</span>
+      </button>
+
+      @for (s of stations; track s.id) {
+        <button
+          type="button"
+          class="kds-station"
+          [class.is-active]="activeStationId === s.id"
+          [class.is-expo]="s.isExpo"
+          (click)="selectStation(s.id)"
+        >
+          @if (s.colorHex) {
+            <span class="kds-station-dot" [style.background]="s.colorHex" aria-hidden="true"></span>
+          }
+          <span class="kds-station-name">{{ s.name }}</span>
+          @if (s.openTicketCount > 0) {
+            <span class="kds-station-count" [class.is-late]="s.overdueTicketCount > 0">
+              {{ s.openTicketCount }}
+            </span>
+          }
+        </button>
+      }
+    </nav>
+  }
+
+  <rst-help key="kitchen"></rst-help>
+
+  @if (error) { <div class="alert alert-error kds-alert">{{ error }}</div> }
+
+  <!-- ══ All-day counts ═══════════════════════════════════════════════ -->
+  @if (allDay.length) {
+    <section class="kds-allday" aria-label="Outstanding across all tickets">
+      <span class="kds-allday-label">All day</span>
+      <div class="kds-allday-list">
+        @for (a of allDay; track trackAllDay($index, a)) {
+          <span class="kds-allday-chip" [class.is-hot]="a.oldestAgeSeconds > 600">
+            <b>{{ a.outstandingQuantity | number:'1.0-2' }}</b>
+            {{ a.itemName }}@if (a.variantName) { <em>{{ a.variantName }}</em> }
+          </span>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- ══ Tickets ══════════════════════════════════════════════════════ -->
+  <div class="kds-board">
+    @if (loading && !display) {
+      @for (i of [1,2,3,4]; track i) { <div class="rst-skeleton kds-skeleton"></div> }
+    }
+
+    @for (t of liveTickets; track trackTicket($index, t)) {
+      <article
+        class="kds-ticket"
+        [class]="'urgency-' + urgency(t)"
+        [class.is-priority]="t.isPriority"
+        [class.is-ready]="t.status === TicketStatus.Ready"
+        [attr.aria-label]="
+          'Ticket ' + t.ticketNumber +
+          (t.tableNumber ? ', table ' + t.tableNumber : '') +
+          ', ' + ageLabel(t) + ' old' +
+          (urgency(t) === 'overdue' ? ', overdue' : urgency(t) === 'warning' ? ', running late' : '')
+        "
+      >
+        <header class="kds-ticket-head">
+          <div class="kds-ticket-id">
+            <span class="kds-ticket-table">{{ t.tableNumber || t.ticketNumber }}</span>
+            <span class="kds-ticket-meta">
+              {{ courseLabels[t.course] }}
+              @if (t.guestCount) { · {{ t.guestCount }} guests }
+              @if (t.waiterName) { · {{ t.waiterName }} }
+            </span>
+          </div>
+
+          <div class="kds-ticket-timer">
+            <span class="kds-age">{{ ageLabel(t) }}</span>
+            <span class="kds-age-word">
+              @switch (urgency(t)) {
+                @case ('overdue') { LATE }
+                @case ('warning') { PUSH }
+                @default { OK }
+              }
+            </span>
+          </div>
+        </header>
+
+        @if (t.isPriority || t.isRemake || t.recallCount > 0) {
+          <div class="kds-flags">
+            @if (t.isPriority) { <span class="kds-flag is-priority">PRIORITY</span> }
+            @if (t.isRemake) { <span class="kds-flag is-remake">REMAKE</span> }
+            @if (t.recallCount > 0) { <span class="kds-flag">RECALLED ×{{ t.recallCount }}</span> }
+            @if (isExpoView && t.stationName) { <span class="kds-flag is-station">{{ t.stationName }}</span> }
+          </div>
+        } @else if (isExpoView && t.stationName) {
+          <div class="kds-flags"><span class="kds-flag is-station">{{ t.stationName }}</span></div>
+        }
+
+        <ul class="kds-lines">
+          @for (l of t.lines; track trackLine($index, l)) {
+            <li
+              class="kds-line"
+              [class.is-done]="isDone(l)"
+              [class.has-allergen]="!!l.allergenWarning"
+            >
+              <button
+                type="button"
+                class="kds-line-btn"
+                (click)="markLineReady(t, l)"
+                [disabled]="busy || isDone(l)"
+                [attr.aria-label]="'Mark ' + l.itemName + ' ready'"
+              >
+                <span class="kds-line-qty">{{ l.quantity | number:'1.0-2' }}</span>
+
+                <span class="kds-line-body">
+                  <span class="kds-line-name">
+                    {{ l.itemName }}
+                    @if (l.variantName) { <span class="kds-line-variant">{{ l.variantName }}</span> }
+                    @if (l.seatNumber) { <span class="kds-line-seat">S{{ l.seatNumber }}</span> }
+                  </span>
+
+                  @if (l.modifierSummary) {
+                    <span class="kds-line-mods">{{ l.modifierSummary }}</span>
+                  }
+
+                  @if (l.specialInstructions) {
+                    <span class="kds-line-note">{{ l.specialInstructions }}</span>
+                  }
+
+                  @if (l.allergenWarning) {
+                    <span class="kds-line-allergen">
+                      <span class="material-symbols-outlined">warning</span>
+                      {{ l.allergenWarning }}
+                    </span>
+                  }
+                </span>
+
+                @if (isDone(l)) {
+                  <span class="kds-line-check" aria-hidden="true">
+                    <span class="material-symbols-outlined">check</span>
+                  </span>
+                }
+              </button>
+            </li>
+          }
+        </ul>
+
+        <footer class="kds-ticket-foot">
+          @if (t.status === TicketStatus.New) {
+            <button type="button" class="kds-action" (click)="start(t)" [disabled]="busy">
+              <span class="material-symbols-outlined">play_arrow</span>
+              Start
+            </button>
+          }
+
+          @if (t.status !== TicketStatus.Ready) {
+            <button type="button" class="kds-action is-ready" (click)="markReady(t)" [disabled]="busy">
+              <span class="material-symbols-outlined">done_all</span>
+              Ready
+            </button>
+          }
+
+          <button type="button" class="kds-action is-bump" (click)="bump(t)" [disabled]="busy">
+            <span class="material-symbols-outlined">keyboard_double_arrow_up</span>
+            Bump
+          </button>
+
+          <button
+            type="button"
+            class="kds-action is-icon"
+            (click)="togglePriority(t)"
+            [disabled]="busy"
+            [attr.aria-label]="t.isPriority ? 'Remove priority' : 'Make priority'"
+            [title]="t.isPriority ? 'Remove priority' : 'Make priority'"
+          >
+            <span class="material-symbols-outlined">{{ t.isPriority ? 'star' : 'star_outline' }}</span>
+          </button>
+        </footer>
+      </article>
+    }
+
+    @if (!loading && !liveTickets.length) {
+      <div class="kds-clear">
+        <span class="material-symbols-outlined">restaurant</span>
+        <div class="kds-clear-title">All clear</div>
+        <div class="kds-clear-text">Nothing waiting at {{ stationName(activeStationId) | lowercase }}.</div>
+      </div>
+    }
+  </div>
+
+  <!-- ══ Recently bumped ══════════════════════════════════════════════ -->
+  @if (showBumped && bumpedTickets.length) {
+    <section class="kds-recent" aria-label="Recently bumped">
+      <header class="kds-recent-head">Recently sent — tap to recall</header>
+      <div class="kds-recent-list">
+        @for (t of bumpedTickets; track trackTicket($index, t)) {
+          <button type="button" class="kds-recent-card" (click)="recall(t)" [disabled]="busy">
+            <span class="kds-recent-table">{{ t.tableNumber || t.ticketNumber }}</span>
+            <span class="kds-recent-meta">
+              {{ t.lines.length }} items
+              @if (t.prepSeconds) { · {{ (t.prepSeconds / 60) | number:'1.0-1' }} min }
+            </span>
+            <span class="kds-recent-recall">
+              <span class="material-symbols-outlined">undo</span>
+              Recall
+            </span>
+          </button>
+        }
+      </div>
+    </section>
+  }
+</div>

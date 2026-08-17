@@ -1,0 +1,336 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Recipes &amp; cost</h2>
+      <p class="subtitle">What a dish is made of, what it costs, and what got thrown away.</p>
+    </div>
+    <rst-outlet-picker (outletChange)="onOutlet($event)"></rst-outlet-picker>
+  </div>
+
+  <rst-help key="recipes"></rst-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <div class="rst-segment rc-tabs" role="tablist" aria-label="Sections">
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'recipes'" [class.is-active]="tab === 'recipes'" (click)="switchTab('recipes')">
+      <span class="material-symbols-outlined">menu_book</span>Recipes
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'wastage'" [class.is-active]="tab === 'wastage'" (click)="switchTab('wastage')">
+      <span class="material-symbols-outlined">delete_sweep</span>Wastage
+    </button>
+  </div>
+
+  <!-- ══ Recipes ══════════════════════════════════════════════════════ -->
+  @if (tab === 'recipes') {
+    <div class="rst-toolbar">
+      <span class="rc-note">
+        Yield and waste are applied per line — a 90% yield means you buy more than you use.
+      </span>
+      <div class="rst-spacer"></div>
+      <button type="button" class="rst-touch-btn" (click)="recostAll()" [disabled]="busy">
+        <span class="material-symbols-outlined">calculate</span>
+        Re-cost everything
+      </button>
+      <button type="button" class="rst-touch-btn is-primary" (click)="newRecipe()">
+        <span class="material-symbols-outlined">add</span>
+        New recipe
+      </button>
+    </div>
+
+    @if (loading) {
+      <div class="rst-skeleton" style="height: 280px"></div>
+    } @else if (!list.length) {
+      <div class="rst-empty">
+        <div class="rst-empty-icon"><span class="material-symbols-outlined">menu_book</span></div>
+        <div class="rst-empty-title">No recipes yet</div>
+        <div class="rst-empty-text">
+          A recipe is what turns selling a burger into depleting a bun. Add one, then map each
+          ingredient to an inventory item so stock moves by itself.
+        </div>
+      </div>
+    } @else {
+      <div class="rst-table-wrap">
+        <table class="rst-table">
+          <thead>
+            <tr>
+              <th>Recipe</th>
+              <th>Dish</th>
+              <th class="num">Yield</th>
+              <th class="num">Cost / portion</th>
+              <th class="num">Price</th>
+              <th class="num">Food cost</th>
+              <th class="num">Margin</th>
+              <th class="num">Lines</th>
+              <th class="actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of list; track trackRecipe($index, r)) {
+              <tr>
+                <td>
+                  <span class="strong">{{ r.name }}</span>
+                  @if (r.isSubRecipe) { <span class="rst-pill tone-violet">Sub-recipe</span> }
+                </td>
+                <td class="muted">{{ r.menuItemName || '—' }}</td>
+                <td class="num">{{ r.yieldQuantity }} {{ r.yieldUom }}</td>
+                <td class="num strong">{{ r.costPerPortion | number:'1.2-2' }}</td>
+                <td class="num muted">{{ r.sellingPrice | number:'1.2-2' }}</td>
+                <td class="num">
+                  <span class="rst-pill" [class]="costTone(r.foodCostPercent)">
+                    @if (r.foodCostPercent > 0) { {{ r.foodCostPercent }}% } @else { — }
+                  </span>
+                </td>
+                <td class="num">{{ r.contributionMargin | number:'1.2-2' }}</td>
+                <td class="num muted">{{ r.ingredients.length }}</td>
+                <td class="actions">
+                  <button type="button" class="rst-icon-btn" (click)="edit(r)" aria-label="Edit">
+                    <span class="material-symbols-outlined">edit</span>
+                  </button>
+                  <button type="button" class="rst-icon-btn is-danger" (click)="remove(r)" aria-label="Remove">
+                    <span class="material-symbols-outlined">delete</span>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <!-- ══ Wastage ══════════════════════════════════════════════════════ -->
+  @if (tab === 'wastage') {
+    <div class="rst-toolbar">
+      <input type="date" [(ngModel)]="from" (ngModelChange)="loadWastage()" aria-label="From" />
+      <input type="date" [(ngModel)]="to" (ngModelChange)="loadWastage()" aria-label="To" />
+      <span class="rc-note">{{ wastage.length }} entries · {{ wastageTotal | number:'1.2-2' }} thrown away</span>
+      <div class="rst-spacer"></div>
+      <button type="button" class="rst-touch-btn is-primary" (click)="startLog()">
+        <span class="material-symbols-outlined">add</span>
+        Record wastage
+      </button>
+    </div>
+
+    @if (!wastage.length) {
+      <div class="rst-empty">
+        <div class="rst-empty-icon"><span class="material-symbols-outlined">recycling</span></div>
+        <div class="rst-empty-title">Nothing recorded</div>
+        <div class="rst-empty-text">
+          Voiding a dish the kitchen already cooked records itself here automatically.
+        </div>
+      </div>
+    } @else {
+      <div class="rst-table-wrap">
+        <table class="rst-table">
+          <thead>
+            <tr>
+              <th>When</th>
+              <th>Item</th>
+              <th>Reason</th>
+              <th class="num">Quantity</th>
+              <th class="num">Cost</th>
+              <th>By</th>
+              <th>Note</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (w of wastage; track trackWaste($index, w)) {
+              <tr>
+                <td class="muted">{{ w.occurredAt | date:'d MMM HH:mm' }}</td>
+                <td class="strong">{{ w.itemName }}</td>
+                <td><span class="rst-pill tone-warning">{{ reasonLabels[w.reason] }}</span></td>
+                <td class="num">{{ w.quantity | number:'1.0-3' }} {{ w.uom }}</td>
+                <td class="num strong">{{ w.totalCost | number:'1.2-2' }}</td>
+                <td class="muted">{{ w.staffName || '—' }}</td>
+                <td class="muted">{{ w.note || '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</div>
+
+<!-- ══ Recipe editor ════════════════════════════════════════════════ -->
+@if (editing) {
+  <div class="rst-modal-backdrop" (click)="editing = null">
+    <div class="rst-modal is-wide" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div>
+          <div class="rst-modal-title">{{ editingId ? 'Edit recipe' : 'New recipe' }}</div>
+          <div class="rst-modal-sub">
+            Total {{ editingTotal | number:'1.2-4' }} ·
+            {{ editingPerPortion | number:'1.2-4' }} per {{ editing.yieldUom }}
+          </div>
+        </div>
+        <button type="button" class="rst-close" (click)="editing = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        <div class="rst-form-grid">
+          <div class="rst-field is-full">
+            <label for="rc-name">Name</label>
+            <input id="rc-name" type="text" [(ngModel)]="editing.name" placeholder="Classic Cheeseburger — standard"  [class.is-invalid]="!!fieldErrors['name']" [attr.aria-invalid]="!!fieldErrors['name'] || null" [attr.aria-describedby]="fieldErrors['name'] ? 'rc-name-error' : null" />
+            <rst-field-error [message]="fieldErrors['name']" for="rc-name"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="rc-item">Dish</label>
+            <select id="rc-item" [(ngModel)]="editing.menuItemId">
+              <option [ngValue]="null">None — sub-recipe</option>
+              @for (i of items; track i.id) { <option [ngValue]="i.id">{{ i.name }}</option> }
+            </select>
+          </div>
+          <div class="rst-field">
+            <label for="rc-yield">Yield</label>
+            <input id="rc-yield" type="number" step="0.01" min="0.01" [(ngModel)]="editing.yieldQuantity"  [class.is-invalid]="!!fieldErrors['yieldQuantity']" [attr.aria-invalid]="!!fieldErrors['yieldQuantity'] || null" [attr.aria-describedby]="fieldErrors['yieldQuantity'] ? 'rc-yield-error' : null" />
+            <rst-field-error [message]="fieldErrors['yieldQuantity']" for="rc-yield"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="rc-uom">Yield unit</label>
+            <input id="rc-uom" type="text" [(ngModel)]="editing.yieldUom" placeholder="portion"  [class.is-invalid]="!!fieldErrors['yieldUom']" [attr.aria-invalid]="!!fieldErrors['yieldUom'] || null" [attr.aria-describedby]="fieldErrors['yieldUom'] ? 'rc-uom-error' : null" />
+            <rst-field-error [message]="fieldErrors['yieldUom']" for="rc-uom"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="rc-prep">Prep (min)</label>
+            <input id="rc-prep" type="number" min="0" [(ngModel)]="editing.prepTimeMinutes"  [class.is-invalid]="!!fieldErrors['prepTimeMinutes']" [attr.aria-invalid]="!!fieldErrors['prepTimeMinutes'] || null" [attr.aria-describedby]="fieldErrors['prepTimeMinutes'] ? 'rc-prep-error' : null" />
+            <rst-field-error [message]="fieldErrors['prepTimeMinutes']" for="rc-prep"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="rc-cook">Cook (min)</label>
+            <input id="rc-cook" type="number" min="0" [(ngModel)]="editing.cookTimeMinutes"  [class.is-invalid]="!!fieldErrors['cookTimeMinutes']" [attr.aria-invalid]="!!fieldErrors['cookTimeMinutes'] || null" [attr.aria-describedby]="fieldErrors['cookTimeMinutes'] ? 'rc-cook-error' : null" />
+            <rst-field-error [message]="fieldErrors['cookTimeMinutes']" for="rc-cook"></rst-field-error>
+          </div>
+          <div class="rst-field is-full">
+            <label class="rst-check">
+              <input type="checkbox" [(ngModel)]="editing.isSubRecipe" />
+              Sub-recipe — prepared in bulk and used by other recipes
+            </label>
+          </div>
+        </div>
+
+        <div class="rc-section">
+          <div class="rc-section-head">
+            <h4>Ingredients</h4>
+            <button type="button" class="rst-touch-btn" (click)="addIngredient()">
+              <span class="material-symbols-outlined">add</span>Add line
+            </button>
+          </div>
+
+          @if (!editing.ingredients.length) {
+            <p class="rc-empty-inline">No ingredients yet — the cost will stay at zero.</p>
+          } @else {
+            <div class="rc-ing-head">
+              <span>Ingredient</span><span>Qty</span><span>Unit</span>
+              <span>Yield %</span><span>Waste %</span><span>Unit cost</span><span>Line cost</span><span></span>
+            </div>
+
+            @for (line of editing.ingredients; track $index) {
+              <div class="rc-ing-row">
+                <input type="text" [(ngModel)]="line.ingredientName" placeholder="Beef patty 150g" aria-label="Ingredient"  [class.is-invalid]="!!fieldErrors['ingredientName']" [attr.aria-invalid]="!!fieldErrors['ingredientName'] || null" />
+            <rst-field-error [message]="fieldErrors['ingredientName']"></rst-field-error>
+                <input type="number" step="0.001" [(ngModel)]="line.quantity" aria-label="Quantity"  [class.is-invalid]="!!fieldErrors['quantity']" [attr.aria-invalid]="!!fieldErrors['quantity'] || null" />
+            <rst-field-error [message]="fieldErrors['quantity']"></rst-field-error>
+                <input type="text" [(ngModel)]="line.uom" placeholder="g" aria-label="Unit"  [class.is-invalid]="!!fieldErrors['uom']" [attr.aria-invalid]="!!fieldErrors['uom'] || null" />
+            <rst-field-error [message]="fieldErrors['uom']"></rst-field-error>
+                <input type="number" step="0.1" min="1" max="100" [(ngModel)]="line.yieldPercent" aria-label="Yield percent"  [class.is-invalid]="!!fieldErrors['yieldPercent']" [attr.aria-invalid]="!!fieldErrors['yieldPercent'] || null" />
+            <rst-field-error [message]="fieldErrors['yieldPercent']"></rst-field-error>
+                <input type="number" step="0.1" min="0" [(ngModel)]="line.wastePercent" aria-label="Waste percent"  [class.is-invalid]="!!fieldErrors['wastePercent']" [attr.aria-invalid]="!!fieldErrors['wastePercent'] || null" />
+            <rst-field-error [message]="fieldErrors['wastePercent']"></rst-field-error>
+                <input type="number" step="0.0001" [(ngModel)]="line.unitCost" aria-label="Unit cost"  [class.is-invalid]="!!fieldErrors['unitCost']" [attr.aria-invalid]="!!fieldErrors['unitCost'] || null" />
+            <rst-field-error [message]="fieldErrors['unitCost']"></rst-field-error>
+                <span class="rc-line-cost">{{ lineCost(line) | number:'1.2-4' }}</span>
+                <button type="button" class="rst-icon-btn is-danger" (click)="removeIngredient($index)" aria-label="Remove line">
+                  <span class="material-symbols-outlined">delete</span>
+                </button>
+              </div>
+            }
+          }
+        </div>
+
+        <div class="rst-field is-full">
+          <label for="rc-instructions">Method</label>
+          <textarea id="rc-instructions" [(ngModel)]="editing.instructions" rows="4"></textarea>
+        </div>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="editing = null" [disabled]="busy">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-primary" (click)="save()" [disabled]="busy">
+          Save &amp; re-cost
+        </button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- ══ Wastage editor ═══════════════════════════════════════════════ -->
+@if (logging) {
+  <div class="rst-modal-backdrop" (click)="logging = null">
+    <div class="rst-modal is-narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div class="rst-modal-title">Record wastage</div>
+        <button type="button" class="rst-close" (click)="logging = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        <div class="rst-form-grid">
+          <div class="rst-field is-full">
+            <label for="rw-item">Dish</label>
+            <select id="rw-item" [(ngModel)]="logging.menuItemId" (ngModelChange)="onWastageItem()">
+              <option value="">Not a menu dish</option>
+              @for (i of items; track i.id) { <option [value]="i.id">{{ i.name }}</option> }
+            </select>
+          </div>
+          <div class="rst-field is-full">
+            <label for="rw-name">What was wasted?</label>
+            <input id="rw-name" type="text" [(ngModel)]="logging.itemName"  [class.is-invalid]="!!fieldErrors['itemName']" [attr.aria-invalid]="!!fieldErrors['itemName'] || null" [attr.aria-describedby]="fieldErrors['itemName'] ? 'rw-name-error' : null" />
+            <rst-field-error [message]="fieldErrors['itemName']" for="rw-name"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="rw-qty">Quantity</label>
+            <input id="rw-qty" type="number" step="0.01" min="0" [(ngModel)]="logging.quantity"  [class.is-invalid]="!!fieldErrors['quantity']" [attr.aria-invalid]="!!fieldErrors['quantity'] || null" [attr.aria-describedby]="fieldErrors['quantity'] ? 'rw-qty-error' : null" />
+            <rst-field-error [message]="fieldErrors['quantity']" for="rw-qty"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="rw-uom">Unit</label>
+            <input id="rw-uom" type="text" [(ngModel)]="logging.uom"  [class.is-invalid]="!!fieldErrors['uom']" [attr.aria-invalid]="!!fieldErrors['uom'] || null" [attr.aria-describedby]="fieldErrors['uom'] ? 'rw-uom-error' : null" />
+            <rst-field-error [message]="fieldErrors['uom']" for="rw-uom"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="rw-cost">Unit cost</label>
+            <input id="rw-cost" type="number" step="0.01" min="0" [(ngModel)]="logging.unitCost"  [class.is-invalid]="!!fieldErrors['unitCost']" [attr.aria-invalid]="!!fieldErrors['unitCost'] || null" [attr.aria-describedby]="fieldErrors['unitCost'] ? 'rw-cost-error' : null" />
+            <rst-field-error [message]="fieldErrors['unitCost']" for="rw-cost"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="rw-reason">Reason</label>
+            <select id="rw-reason" [(ngModel)]="logging.reason">
+              @for (o of reasonOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+            </select>
+          </div>
+          <div class="rst-field is-full">
+            <label for="rw-note">Note</label>
+            <input id="rw-note" type="text" [(ngModel)]="logging.note"  [class.is-invalid]="!!fieldErrors['note']" [attr.aria-invalid]="!!fieldErrors['note'] || null" [attr.aria-describedby]="fieldErrors['note'] ? 'rw-note-error' : null" />
+            <rst-field-error [message]="fieldErrors['note']" for="rw-note"></rst-field-error>
+          </div>
+        </div>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="logging = null">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-primary" (click)="saveLog()" [disabled]="busy">Record</button>
+      </footer>
+    </div>
+  </div>
+}

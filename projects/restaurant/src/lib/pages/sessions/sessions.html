@@ -1,0 +1,389 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Cash sessions</h2>
+      <p class="subtitle">The drawer, the day's takings, and the X/Z reads that close them.</p>
+    </div>
+    <rst-outlet-picker (outletChange)="onOutlet($event)"></rst-outlet-picker>
+  </div>
+
+  <rst-help key="sessions"></rst-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  @if (loading) {
+    <div class="rst-skeleton" style="height: 220px"></div>
+  } @else if (open; as s) {
+    <!-- ══ Open session ═══════════════════════════════════════════════ -->
+    <section class="rst-card se-open">
+      <header class="rst-card-head">
+        <span class="rst-card-title">
+          <span class="material-symbols-outlined">point_of_sale</span>
+          {{ s.sessionNumber }} — open
+        </span>
+        <span class="se-open-meta">
+          {{ s.terminalName || 'Till' }}
+          @if (s.cashierName) { · {{ s.cashierName }} }
+          · since {{ s.openedAt | date:'HH:mm' }}
+        </span>
+      </header>
+
+      <div class="rst-card-body">
+        @if (s.isBlindClose) {
+          <div class="se-blind">
+            <span class="material-symbols-outlined">visibility_off</span>
+            <div>
+              <strong>Blind close</strong>
+              <span>
+                The expected totals stay hidden until the drawer is counted. Counting against a
+                number on screen is not a count.
+              </span>
+            </div>
+          </div>
+        }
+
+        <div class="rst-stats se-stats">
+          <div class="rst-stat tone-brand">
+            <span class="rst-stat-label">Sales</span>
+            <span class="rst-stat-value">{{ s.totalSales | number:'1.2-2' }}</span>
+            <span class="rst-stat-foot">{{ s.checkCount }} checks · {{ s.coverCount }} covers</span>
+          </div>
+          <div class="rst-stat tone-cyan">
+            <span class="rst-stat-label">Opening float</span>
+            <span class="rst-stat-value">{{ s.openingFloat | number:'1.2-2' }}</span>
+          </div>
+          <div class="rst-stat tone-success">
+            <span class="rst-stat-label">Tips</span>
+            <span class="rst-stat-value">{{ s.totalTips | number:'1.2-2' }}</span>
+          </div>
+          <div class="rst-stat tone-warning">
+            <span class="rst-stat-label">Discounts</span>
+            <span class="rst-stat-value">{{ s.totalDiscounts | number:'1.2-2' }}</span>
+          </div>
+          <div class="rst-stat tone-danger">
+            <span class="rst-stat-label">Voids &amp; refunds</span>
+            <span class="rst-stat-value">{{ s.totalVoids + s.totalRefunds | number:'1.2-2' }}</span>
+          </div>
+        </div>
+
+        @if (s.cashMovements.length) {
+          <h4 class="se-sub">Cash movements</h4>
+          <div class="se-movements">
+            @for (m of s.cashMovements; track m.id) {
+              <div class="se-movement">
+                <span class="se-move-type">{{ movementLabels[m.movementType] }}</span>
+                <span class="se-move-amount" [class.is-out]="m.amount < 0">{{ m.amount | number:'1.2-2' }}</span>
+                <span class="se-move-meta">
+                  {{ m.occurredAt | date:'HH:mm' }}
+                  @if (m.reason) { · {{ m.reason }} }
+                </span>
+              </div>
+            }
+          </div>
+        }
+
+        <div class="se-actions">
+          <button type="button" class="rst-touch-btn" (click)="startMovement()">
+            <span class="material-symbols-outlined">swap_vert</span>Cash in / out
+          </button>
+          <button type="button" class="rst-touch-btn" (click)="showRead(s, 'x')" [disabled]="busy">
+            <span class="material-symbols-outlined">summarize</span>X-read
+          </button>
+          <button type="button" class="rst-touch-btn is-danger" (click)="startClose()">
+            <span class="material-symbols-outlined">lock</span>Close &amp; count
+          </button>
+        </div>
+      </div>
+    </section>
+  } @else {
+    <div class="rst-empty">
+      <div class="rst-empty-icon"><span class="material-symbols-outlined">point_of_sale</span></div>
+      <div class="rst-empty-title">No session open</div>
+      <div class="rst-empty-text">
+        Open a session with a float before taking payments — every tender is stamped with it, and
+        that is what makes the closing count attributable to a person.
+      </div>
+      <button type="button" class="rst-touch-btn is-primary" (click)="startOpen()">
+        <span class="material-symbols-outlined">lock_open</span>Open a session
+      </button>
+    </div>
+  }
+
+  <!-- ══ History ══════════════════════════════════════════════════════ -->
+  @if (history.length) {
+    <h3 class="se-history-head">Past sessions</h3>
+    <div class="rst-table-wrap">
+      <table class="rst-table">
+        <thead>
+          <tr>
+            <th>Session</th><th>Till</th><th>Cashier</th><th>Opened</th><th>Closed</th>
+            <th class="num">Sales</th><th class="num">Expected cash</th><th class="num">Counted</th>
+            <th class="num">Variance</th><th class="actions"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of history; track trackSession($index, s)) {
+            <tr>
+              <td class="strong">{{ s.sessionNumber }}</td>
+              <td class="muted">{{ s.terminalName || '—' }}</td>
+              <td class="muted">{{ s.cashierName || '—' }}</td>
+              <td class="muted">{{ s.openedAt | date:'d MMM HH:mm' }}</td>
+              <td class="muted">{{ s.closedAt ? (s.closedAt | date:'d MMM HH:mm') : '—' }}</td>
+              <td class="num strong">{{ s.totalSales | number:'1.2-2' }}</td>
+              <td class="num muted">{{ s.expectedCash | number:'1.2-2' }}</td>
+              <td class="num">{{ s.countedCash | number:'1.2-2' }}</td>
+              <td class="num">
+                <span class="rst-pill" [class]="varianceTone(s.cashVariance)">
+                  {{ s.cashVariance > 0 ? '+' : '' }}{{ s.cashVariance | number:'1.2-2' }}
+                </span>
+              </td>
+              <td class="actions">
+                <button type="button" class="rst-icon-btn" (click)="showRead(s, 'z')" aria-label="Z-read" title="Z-read">
+                  <span class="material-symbols-outlined">receipt_long</span>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>
+
+<!-- ══ Open dialog ══════════════════════════════════════════════════ -->
+@if (opening) {
+  <div class="rst-modal-backdrop" (click)="opening = null">
+    <div class="rst-modal is-narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div class="rst-modal-title">Open a session</div>
+        <button type="button" class="rst-close" (click)="opening = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        <div class="rst-form-grid">
+          <div class="rst-field is-full">
+            <label for="se-cashier">Cashier</label>
+            <select id="se-cashier" [(ngModel)]="opening.cashierId">
+              <option value="">Not set</option>
+              @for (s of staff; track s.id) { <option [value]="s.id">{{ s.displayName || s.fullName }}</option> }
+            </select>
+          </div>
+          <div class="rst-field">
+            <label for="se-terminal">Till</label>
+            <input id="se-terminal" type="text" [(ngModel)]="opening.terminalName"  [class.is-invalid]="!!fieldErrors['terminalName']" [attr.aria-invalid]="!!fieldErrors['terminalName'] || null" [attr.aria-describedby]="fieldErrors['terminalName'] ? 'se-terminal-error' : null" />
+            <rst-field-error [message]="fieldErrors['terminalName']" for="se-terminal"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="se-float">Opening float</label>
+            <input id="se-float" type="number" step="0.01" min="0" [(ngModel)]="opening.openingFloat"  [class.is-invalid]="!!fieldErrors['openingFloat']" [attr.aria-invalid]="!!fieldErrors['openingFloat'] || null" [attr.aria-describedby]="fieldErrors['openingFloat'] ? 'se-float-error' : null" />
+            <rst-field-error [message]="fieldErrors['openingFloat']" for="se-float"></rst-field-error>
+          </div>
+          <div class="rst-field is-full">
+            <label class="rst-check">
+              <input type="checkbox" [(ngModel)]="opening.isBlindClose" />
+              Blind close — hide the expected total until the drawer is counted
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="opening = null">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-primary" (click)="confirmOpen()" [disabled]="busy">Open</button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- ══ Close dialog ═════════════════════════════════════════════════ -->
+@if (closing && open) {
+  <div class="rst-modal-backdrop" (click)="closing = null">
+    <div class="rst-modal is-narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div>
+          <div class="rst-modal-title">Count the drawer</div>
+          <div class="rst-modal-sub">
+            @if (open.isBlindClose) { Count first — the expected figure appears once you save. }
+            @else { Expected cash {{ open.expectedCash | number:'1.2-2' }}. }
+          </div>
+        </div>
+        <button type="button" class="rst-close" (click)="closing = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        <div class="rst-form-grid">
+          <div class="rst-field is-full">
+            <label for="se-cash">Cash counted</label>
+            <input id="se-cash" type="number" step="0.01" min="0" [(ngModel)]="closing.countedCash" class="se-big"  [class.is-invalid]="!!fieldErrors['countedCash']" [attr.aria-invalid]="!!fieldErrors['countedCash'] || null" [attr.aria-describedby]="fieldErrors['countedCash'] ? 'se-cash-error' : null" />
+            <rst-field-error [message]="fieldErrors['countedCash']" for="se-cash"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="se-card">Card settled</label>
+            <input id="se-card" type="number" step="0.01" min="0" [(ngModel)]="closing.countedCard"  [class.is-invalid]="!!fieldErrors['countedCard']" [attr.aria-invalid]="!!fieldErrors['countedCard'] || null" [attr.aria-describedby]="fieldErrors['countedCard'] ? 'se-card-error' : null" />
+            <rst-field-error [message]="fieldErrors['countedCard']" for="se-card"></rst-field-error>
+          </div>
+          <div class="rst-field">
+            <label for="se-other">Other tenders</label>
+            <input id="se-other" type="number" step="0.01" min="0" [(ngModel)]="closing.countedOther"  [class.is-invalid]="!!fieldErrors['countedOther']" [attr.aria-invalid]="!!fieldErrors['countedOther'] || null" [attr.aria-describedby]="fieldErrors['countedOther'] ? 'se-other-error' : null" />
+            <rst-field-error [message]="fieldErrors['countedOther']" for="se-other"></rst-field-error>
+          </div>
+          <div class="rst-field is-full">
+            <label for="se-note">Note</label>
+            <input id="se-note" type="text" [(ngModel)]="closing.note" placeholder="Anything worth explaining"  [class.is-invalid]="!!fieldErrors['note']" [attr.aria-invalid]="!!fieldErrors['note'] || null" [attr.aria-describedby]="fieldErrors['note'] ? 'se-note-error' : null" />
+            <rst-field-error [message]="fieldErrors['note']" for="se-note"></rst-field-error>
+          </div>
+          <div class="rst-field is-full">
+            <label for="se-pin">Supervisor PIN</label>
+            <input id="se-pin" type="password" inputmode="numeric" [(ngModel)]="closing.pin" placeholder="••••"  [class.is-invalid]="!!fieldErrors['pin']" [attr.aria-invalid]="!!fieldErrors['pin'] || null" [attr.aria-describedby]="fieldErrors['pin'] ? 'se-pin-error' : null" />
+            <rst-field-error [message]="fieldErrors['pin']" for="se-pin"></rst-field-error>
+            <span class="rst-hint">Required if your venue asks for an approval to close.</span>
+          </div>
+        </div>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="closing = null">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-danger" (click)="confirmClose()" [disabled]="busy">
+          Close session
+        </button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- ══ Cash movement ════════════════════════════════════════════════ -->
+@if (movement) {
+  <div class="rst-modal-backdrop" (click)="movement = null">
+    <div class="rst-modal is-narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div class="rst-modal-title">Cash in or out</div>
+        <button type="button" class="rst-close" (click)="movement = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body">
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+        <div class="rst-form-grid">
+          <div class="rst-field is-full">
+            <label for="sm-type">Type</label>
+            <select id="sm-type" [(ngModel)]="movement.type">
+              @for (o of movementOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+            </select>
+            <span class="rst-hint">The direction comes from the type, so a payout can never be recorded as cash in.</span>
+          </div>
+          <div class="rst-field">
+            <label for="sm-amount">Amount</label>
+            <input id="sm-amount" type="number" step="0.01" min="0" [(ngModel)]="movement.amount"  [class.is-invalid]="!!fieldErrors['amount']" [attr.aria-invalid]="!!fieldErrors['amount'] || null" [attr.aria-describedby]="fieldErrors['amount'] ? 'sm-amount-error' : null" />
+            <rst-field-error [message]="fieldErrors['amount']" for="sm-amount"></rst-field-error>
+          </div>
+          <div class="rst-field is-full">
+            <label for="sm-reason">Reason</label>
+            <input id="sm-reason" type="text" [(ngModel)]="movement.reason"  [class.is-invalid]="!!fieldErrors['reason']" [attr.aria-invalid]="!!fieldErrors['reason'] || null" [attr.aria-describedby]="fieldErrors['reason'] ? 'sm-reason-error' : null" />
+            <rst-field-error [message]="fieldErrors['reason']" for="sm-reason"></rst-field-error>
+          </div>
+        </div>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="btn btn-secondary" (click)="movement = null">Cancel</button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="rst-touch-btn is-primary" (click)="saveMovement()" [disabled]="busy">Record</button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- ══ Read ═════════════════════════════════════════════════════════ -->
+@if (read; as r) {
+  <div class="rst-modal-backdrop" (click)="read = null">
+    <div class="rst-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="rst-modal-head">
+        <div>
+          <div class="rst-modal-title">{{ r.reportType }}-read — {{ r.sessionNumber }}</div>
+          <div class="rst-modal-sub">
+            {{ r.outletName }}
+            @if (r.cashierName) { · {{ r.cashierName }} }
+            · {{ r.generatedAt | date:'d MMM yyyy HH:mm' }}
+          </div>
+        </div>
+        <button type="button" class="rst-close" (click)="read = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="rst-modal-body se-read">
+        <div class="se-read-block">
+          <div class="se-read-row"><span>Opening float</span><span>{{ r.openingFloat | number:'1.2-2' }}</span></div>
+          <div class="se-read-row"><span>Gross sales</span><span>{{ r.grossSales | number:'1.2-2' }}</span></div>
+          <div class="se-read-row"><span>Discounts</span><span>−{{ r.discounts | number:'1.2-2' }}</span></div>
+          <div class="se-read-row"><span>Service charge</span><span>{{ r.serviceCharge | number:'1.2-2' }}</span></div>
+          <div class="se-read-row"><span>Tax</span><span>{{ r.tax | number:'1.2-2' }}</span></div>
+          <div class="se-read-row is-total"><span>Net sales</span><span>{{ r.netSales | number:'1.2-2' }}</span></div>
+          <div class="se-read-row"><span>Tips</span><span>{{ r.tips | number:'1.2-2' }}</span></div>
+          <div class="se-read-row"><span>Voids</span><span>{{ r.voids | number:'1.2-2' }}</span></div>
+          <div class="se-read-row"><span>Refunds</span><span>{{ r.refunds | number:'1.2-2' }}</span></div>
+        </div>
+
+        <div class="se-read-block">
+          <h4 class="se-sub">Cash</h4>
+          <div class="se-read-row"><span>Expected</span><span>{{ r.expectedCash | number:'1.2-2' }}</span></div>
+          <div class="se-read-row"><span>Counted</span><span>{{ r.countedCash | number:'1.2-2' }}</span></div>
+          <div class="se-read-row is-total" [class.is-bad]="r.cashVariance !== 0">
+            <span>Variance</span>
+            <span>{{ r.cashVariance > 0 ? '+' : '' }}{{ r.cashVariance | number:'1.2-2' }}</span>
+          </div>
+        </div>
+
+        <div class="se-read-block">
+          <h4 class="se-sub">Tenders</h4>
+          @for (t of r.tenderBreakdown; track t.tenderType) {
+            <div class="se-read-row">
+              <span>{{ tenderLabels[t.tenderType] }} <em>({{ t.count }})</em></span>
+              <span>{{ t.amount | number:'1.2-2' }}</span>
+            </div>
+          }
+        </div>
+
+        <div class="se-read-block">
+          <h4 class="se-sub">By category</h4>
+          @for (c of r.categoryBreakdown; track c.categoryId) {
+            <div class="se-read-row">
+              <span>{{ c.categoryName }} <em>({{ c.quantity | number:'1.0-0' }})</em></span>
+              <span>{{ c.amount | number:'1.2-2' }}</span>
+            </div>
+          }
+        </div>
+
+        <div class="se-read-block">
+          <h4 class="se-sub">Service</h4>
+          <div class="se-read-row"><span>Orders</span><span>{{ r.orderCount }}</span></div>
+          <div class="se-read-row"><span>Checks</span><span>{{ r.checkCount }}</span></div>
+          <div class="se-read-row"><span>Covers</span><span>{{ r.coverCount }}</span></div>
+          <div class="se-read-row"><span>Average check</span><span>{{ r.averageCheck | number:'1.2-2' }}</span></div>
+          <div class="se-read-row"><span>Per cover</span><span>{{ r.averagePerCover | number:'1.2-2' }}</span></div>
+        </div>
+      </div>
+
+      <footer class="rst-modal-foot">
+        <button type="button" class="rst-touch-btn" (click)="printRead()">
+          <span class="material-symbols-outlined">print</span>Print
+        </button>
+        <div class="rst-foot-spacer"></div>
+        <button type="button" class="btn btn-secondary" (click)="read = null">Close</button>
+      </footer>
+    </div>
+  </div>
+}

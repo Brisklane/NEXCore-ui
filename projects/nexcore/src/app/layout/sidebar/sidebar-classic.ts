@@ -1,8 +1,9 @@
-import { Component, EventEmitter, Output, OnDestroy, OnInit } from '@angular/core';
+import { Component, EventEmitter, Output, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { SidebarChild, SidebarItem, SIDEBAR_MENU, expandToRoute } from './sidebar-menu';
+import { InstalledAppsService } from '@nexcore/core';
 
 /**
  * Classic single-column sidebar (alternative to the two-tier icon rail).
@@ -49,9 +50,15 @@ export class SidebarClassic implements OnInit, OnDestroy {
   resizing = false;
   private stopResize?: () => void;
 
+  private appsService = inject(InstalledAppsService);
+
   constructor(private router: Router) {}
 
+  /** Hides an app the company has removed. Untagged entries are always shown. */
+  private isVisible = (i: SidebarItem): boolean => !i.appKey || this.appsService.isInstalled(i.appKey);
+
   ngOnInit(): void {
+    void this.appsService.load();
     const stored = Number(localStorage.getItem(SidebarClassic.WIDTH_KEY));
     if (Number.isFinite(stored) && stored > 0) this.width = this.clampWidth(stored);
 
@@ -109,15 +116,17 @@ export class SidebarClassic implements OnInit, OnDestroy {
     localStorage.setItem(SidebarClassic.WIDTH_KEY, String(this.width));
   }
 
-  // ── Groups (same partitioning as the rail) ──────────────────────────────────
+  // ── Groups ──────────────────────────────────────────────────────────────────
   get topItems(): SidebarItem[] { return this.menuItems.filter((i) => i.iconType === 'dashboard'); }
-  /** Core business modules. */
+  /** Retained for older menu data; nothing is tagged 'module' any more. */
   get modules(): SidebarItem[] {
-    return this.menuItems.filter((i) => i.iconType === 'module').sort((a, b) => a.label.localeCompare(b.label));
+    return this.menuItems.filter((i) => i.iconType === 'module' && this.isVisible(i))
+      .sort((a, b) => a.label.localeCompare(b.label));
   }
-  /** Apps built on top of the core modules (POS today; more later). */
+  /** Every business app the company has installed. */
   get apps(): SidebarItem[] {
-    return this.menuItems.filter((i) => i.iconType === 'app').sort((a, b) => a.label.localeCompare(b.label));
+    return this.menuItems.filter((i) => i.iconType === 'app' && this.isVisible(i))
+      .sort((a, b) => a.label.localeCompare(b.label));
   }
   get adminItems(): SidebarItem[] { return this.menuItems.filter((i) => i.iconType === 'admin'); }
 
