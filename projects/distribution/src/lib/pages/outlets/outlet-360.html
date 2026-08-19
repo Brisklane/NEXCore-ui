@@ -1,0 +1,544 @@
+<div class="page-container">
+  @if (loading && !data) {
+    <div class="dst-skeleton" style="height: 190px; border-radius: 16px; margin-bottom: 16px"></div>
+    <div class="dst-skeleton" style="height: 360px; border-radius: 16px"></div>
+  }
+
+  @if (error && !data) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">
+        {{ error }}
+        <div class="dst-banner-actions">
+          <button type="button" class="dst-btn is-sm" (click)="back()">Back to the outlet list</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (data; as d) {
+    <!-- ── Header ─────────────────────────────────────────────────────── -->
+    <div class="o3-head">
+      <button type="button" class="dst-btn is-sm is-ghost o3-back" (click)="back()">
+        <span class="material-symbols-outlined">arrow_back</span>
+        Outlets
+      </button>
+
+      <div class="o3-title-row">
+        <div class="o3-title">
+          <h2>{{ d.outlet.name }}</h2>
+          <div class="o3-title-meta">
+            @if (d.outlet.code) { <span class="dst-code">{{ d.outlet.code }}</span> }
+            <span class="o3-channel">
+              <span class="material-symbols-outlined">{{ channelIcons[d.outlet.channel] }}</span>
+              {{ channelLabels[d.outlet.channel] }}
+            </span>
+            <span class="dst-pill tone-neutral">Grade {{ gradeLabels[d.outlet.grade] }}</span>
+            <dst-status [label]="statusLabels[d.outlet.status]" [tone]="statusTone[d.outlet.status]"></dst-status>
+            @if (!d.outlet.isApproved) {
+              <span class="dst-pill tone-warning"><span class="material-symbols-outlined">pending</span>Awaiting approval</span>
+            }
+          </div>
+        </div>
+
+        <div class="o3-actions">
+          <button type="button" class="dst-btn" (click)="showNote = true">
+            <span class="material-symbols-outlined">edit_note</span>
+            Add a note
+          </button>
+          <button type="button" class="dst-btn" (click)="showCollection = true">
+            <span class="material-symbols-outlined">payments</span>
+            Collect
+          </button>
+          <button type="button" class="dst-btn is-primary" (click)="showOrderSheet = true">
+            <span class="material-symbols-outlined">shopping_cart</span>
+            Take an order
+          </button>
+        </div>
+      </div>
+
+      <!-- The four facts that change a decision -->
+      <div class="o3-facts">
+        <div class="o3-fact">
+          <span class="o3-fact-label">Route</span>
+          @if (d.outlet.routes.length) {
+            <span class="o3-fact-value">{{ d.outlet.routes[0].routeName }}</span>
+            <span class="o3-fact-foot">stop {{ d.outlet.routes[0].stopSequence }}@if (d.outlet.routes.length > 1) { · on {{ d.outlet.routes.length }} routes }</span>
+          } @else {
+            <span class="o3-fact-value is-warn">Unrouted</span>
+            <span class="o3-fact-foot">nobody is scheduled to visit</span>
+          }
+        </div>
+
+        <div class="o3-fact">
+          <span class="o3-fact-label">Last visit</span>
+          @if (d.outlet.lastVisitAt) {
+            <span class="o3-fact-value" [class.is-warn]="(d.outlet.daysSinceLastVisit ?? 0) > 30">
+              {{ d.outlet.lastVisitAt | date:'d MMM' }}
+            </span>
+            <span class="o3-fact-foot">{{ d.outlet.daysSinceLastVisit }} days ago · {{ d.outlet.totalVisits }} total</span>
+          } @else {
+            <span class="o3-fact-value is-warn">Never</span>
+            <span class="o3-fact-foot">no visit has ever been recorded</span>
+          }
+        </div>
+
+        <div class="o3-fact">
+          <span class="o3-fact-label">This month</span>
+          <span class="o3-fact-value">{{ d.monthToDateSales | number:'1.0-0' }}</span>
+          <span class="o3-fact-foot">
+            <span class="dst-delta" [class.is-up]="d.growthPercent >= 0" [class.is-down]="d.growthPercent < 0">
+              <span class="material-symbols-outlined">{{ d.growthPercent >= 0 ? 'north_east' : 'south_east' }}</span>
+              {{ d.growthPercent | number:'1.0-0' }}%
+            </span>
+            vs {{ d.lastMonthSales | number:'1.0-0' }} last month
+          </span>
+        </div>
+
+        <div class="o3-fact o3-credit" [class]="'o3-fact o3-credit ' + creditTone">
+          <span class="o3-fact-label">Owing</span>
+          <span class="o3-fact-value">{{ d.credit.outstandingAmount | number:'1.0-0' }}</span>
+          <span class="o3-credit-bar"><i [style.width.%]="creditUsedPercent"></i></span>
+          <span class="o3-fact-foot">
+            @if (d.credit.isBlocked) { <strong>Blocked</strong> — {{ d.credit.blockReason }} }
+            @else if (d.credit.overdueAmount > 0) { <strong>{{ d.credit.overdueAmount | number:'1.0-0' }} overdue</strong> · oldest {{ d.credit.oldestInvoiceDays }}d }
+            @else { {{ d.credit.availableCredit | number:'1.0-0' }} of {{ d.credit.effectiveLimit | number:'1.0-0' }} available }
+          </span>
+        </div>
+      </div>
+
+      @if (d.notes.length && d.notes[0].isPinned) {
+        <div class="dst-banner tone-info o3-pinned">
+          <span class="material-symbols-outlined">push_pin</span>
+          <div class="dst-banner-body">
+            {{ d.notes[0].text }}
+            <div class="o3-note-by">{{ d.notes[0].authorName }} · {{ d.notes[0].notedAt | date:'d MMM y' }}</div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <dst-help key="outlet360"></dst-help>
+
+    <!-- ── Tabs ───────────────────────────────────────────────────────── -->
+    <div class="dst-tabs" role="tablist">
+      <button type="button" role="tab" [attr.aria-selected]="tab === 'offtake'" [class.is-active]="tab === 'offtake'" (click)="tab = 'offtake'">
+        <span class="material-symbols-outlined">insights</span>Offtake
+      </button>
+      <button type="button" role="tab" [attr.aria-selected]="tab === 'visits'" [class.is-active]="tab === 'visits'" (click)="tab = 'visits'">
+        <span class="material-symbols-outlined">where_to_vote</span>Visits
+      </button>
+      <button type="button" role="tab" [attr.aria-selected]="tab === 'orders'" [class.is-active]="tab === 'orders'" (click)="tab = 'orders'">
+        <span class="material-symbols-outlined">receipt_long</span>Orders
+      </button>
+      <button type="button" role="tab" [attr.aria-selected]="tab === 'money'" [class.is-active]="tab === 'money'" (click)="tab = 'money'">
+        <span class="material-symbols-outlined">payments</span>Money
+      </button>
+      <button type="button" role="tab" [attr.aria-selected]="tab === 'returns'" [class.is-active]="tab === 'returns'" (click)="tab = 'returns'">
+        <span class="material-symbols-outlined">assignment_return</span>Returns
+      </button>
+      <button type="button" role="tab" [attr.aria-selected]="tab === 'assets'" [class.is-active]="tab === 'assets'" (click)="tab = 'assets'">
+        <span class="material-symbols-outlined">kitchen</span>Assets
+      </button>
+      <button type="button" role="tab" [attr.aria-selected]="tab === 'execution'" [class.is-active]="tab === 'execution'" (click)="tab = 'execution'">
+        <span class="material-symbols-outlined">photo_camera</span>Execution
+      </button>
+      <button type="button" role="tab" [attr.aria-selected]="tab === 'notes'" [class.is-active]="tab === 'notes'" (click)="tab = 'notes'">
+        <span class="material-symbols-outlined">sticky_note_2</span>Notes &amp; details
+      </button>
+    </div>
+
+    <!-- ── Offtake ────────────────────────────────────────────────────── -->
+    @if (tab === 'offtake') {
+      <div class="dst-grid cols-2">
+        <section class="dst-card">
+          <div class="dst-card-head">
+            <div class="dst-card-title"><span class="material-symbols-outlined">local_fire_department</span>What this shop sells</div>
+          </div>
+          <div class="dst-card-body is-flush">
+            @if (d.topItems.length === 0) {
+              <p class="o3-none">No purchase history yet.</p>
+            }
+            @for (row of d.topItems; track trackItem($index, row)) {
+              <div class="o3-offtake">
+                <div class="o3-offtake-body">
+                  <span class="o3-offtake-name">{{ row.itemName }}</span>
+                  <span class="o3-offtake-bar"><i [style.width.%]="barWidth(row, d.topItems)"></i></span>
+                  <span class="o3-offtake-meta">
+                    {{ row.quantity | number }} units
+                    @if (row.lastPurchasedAt) { · last took {{ row.lastPurchasedAt | date:'d MMM' }} }
+                  </span>
+                </div>
+                <span class="o3-offtake-value">{{ row.value | number:'1.0-0' }}</span>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="dst-card">
+          <div class="dst-card-head">
+            <div class="dst-card-title"><span class="material-symbols-outlined">lightbulb</span>What its peers sell and it does not</div>
+            <span class="dst-card-sub">Same channel and grade, same area</span>
+          </div>
+          <div class="dst-card-body is-flush">
+            @if (d.gapItems.length === 0) {
+              <p class="o3-none">Nothing obvious is missing from the range here.</p>
+            }
+            @for (row of d.gapItems; track trackItem($index, row)) {
+              <div class="o3-offtake is-gap">
+                <div class="o3-offtake-body">
+                  <span class="o3-offtake-name">{{ row.itemName }}</span>
+                  <span class="o3-offtake-bar"><i [style.width.%]="barWidth(row, d.gapItems)"></i></span>
+                  <span class="o3-offtake-meta">
+                    {{ row.peerBuyerCount }} similar shops buy it, averaging {{ row.peerAverageQuantity | number:'1.0-0' }} a month
+                  </span>
+                </div>
+                <button type="button" class="dst-btn is-sm" (click)="showOrderSheet = true">Pitch</button>
+              </div>
+            }
+          </div>
+        </section>
+      </div>
+    }
+
+    <!-- ── Visits ─────────────────────────────────────────────────────── -->
+    @if (tab === 'visits') {
+      <section class="dst-card">
+        <div class="dst-card-head">
+          <div class="dst-card-title"><span class="material-symbols-outlined">where_to_vote</span>Recent visits</div>
+          <span class="dst-card-sub">{{ d.outlet.productiveVisits }} of {{ d.outlet.totalVisits }} produced an order</span>
+        </div>
+        <div class="dst-card-body is-flush">
+          @if (d.recentVisits.length === 0) { <p class="o3-none">Nobody has visited this shop yet.</p> }
+          @if (d.recentVisits.length) {
+            <div class="dst-table-wrap">
+              <table class="dst-table">
+                <thead>
+                  <tr><th>When</th><th>Rep</th><th>Status</th><th class="num">Order</th><th class="num">Collected</th><th>Outcome</th></tr>
+                </thead>
+                <tbody>
+                  @for (v of d.recentVisits; track trackId($index, v)) {
+                    <tr>
+                      <td class="nowrap">{{ v.checkedInAt | date:'d MMM, HH:mm' }}</td>
+                      <td>{{ v.fieldRepName }}</td>
+                      <td><dst-status [label]="visitStatusLabels[v.status]" [tone]="visitStatusTone[v.status]"></dst-status></td>
+                      <td class="num">{{ v.orderValue | number:'1.0-0' }}</td>
+                      <td class="num">{{ v.collectedAmount | number:'1.0-0' }}</td>
+                      <td>
+                        @if (v.isProductive) { <span class="dst-pill tone-success">Ordered</span> }
+                        @else { <span class="muted">{{ v.noOrderReasonName || 'No order' }}</span> }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- ── Orders ─────────────────────────────────────────────────────── -->
+    @if (tab === 'orders') {
+      <section class="dst-card">
+        <div class="dst-card-head">
+          <div class="dst-card-title"><span class="material-symbols-outlined">receipt_long</span>Recent orders</div>
+        </div>
+        <div class="dst-card-body is-flush">
+          @if (d.recentOrders.length === 0) { <p class="o3-none">No orders yet.</p> }
+          @if (d.recentOrders.length) {
+            <div class="dst-table-wrap">
+              <table class="dst-table">
+                <thead>
+                  <tr><th>Order</th><th>Date</th><th>Status</th><th class="num">Lines</th><th class="num">Fill rate</th><th class="num">Value</th></tr>
+                </thead>
+                <tbody>
+                  @for (o of d.recentOrders; track trackId($index, o)) {
+                    <tr class="is-clickable" [routerLink]="['/distribution/orders', o.id]">
+                      <td><span class="dst-code">{{ o.orderNumber }}</span></td>
+                      <td class="nowrap">{{ o.orderDate | date:'d MMM y' }}</td>
+                      <td><dst-status [label]="orderStatusLabels[o.status]" [tone]="orderStatusTone[o.status]"></dst-status></td>
+                      <td class="num">{{ o.lineCount }}</td>
+                      <td class="num">{{ o.fillRatePercent | number:'1.0-0' }}%</td>
+                      <td class="num strong">{{ o.totalAmount | number:'1.2-2' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- ── Money ──────────────────────────────────────────────────────── -->
+    @if (tab === 'money') {
+      <div class="dst-grid cols-2">
+        <section class="dst-card">
+          <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">account_balance</span>Ageing</div></div>
+          <div class="dst-card-body">
+            <div class="o3-ageing">
+              <div class="o3-age"><span>0–30</span><strong>{{ d.credit.bucket0To30 | number:'1.0-0' }}</strong></div>
+              <div class="o3-age"><span>31–60</span><strong>{{ d.credit.bucket31To60 | number:'1.0-0' }}</strong></div>
+              <div class="o3-age"><span>61–90</span><strong>{{ d.credit.bucket61To90 | number:'1.0-0' }}</strong></div>
+              <div class="o3-age is-worst"><span>90+</span><strong>{{ d.credit.bucket90Plus | number:'1.0-0' }}</strong></div>
+            </div>
+
+            <div class="dst-kv o3-kv">
+              <div class="dst-kv-item"><span class="dst-kv-key">Limit</span><span class="dst-kv-value">{{ d.credit.effectiveLimit | number:'1.2-2' }}</span></div>
+              <div class="dst-kv-item"><span class="dst-kv-key">Terms</span><span class="dst-kv-value">{{ d.credit.creditDays }} days</span></div>
+              <div class="dst-kv-item"><span class="dst-kv-key">Unbilled orders</span><span class="dst-kv-value">{{ d.credit.unbilledOrderValue | number:'1.2-2' }}</span></div>
+              <div class="dst-kv-item"><span class="dst-kv-key">Bounced cheques</span><span class="dst-kv-value">{{ d.credit.bouncedChequeCount }}</span></div>
+              <div class="dst-kv-item"><span class="dst-kv-key">Deposit held</span><span class="dst-kv-value">{{ d.credit.securityDeposit | number:'1.2-2' }}</span></div>
+              <div class="dst-kv-item">
+                <span class="dst-kv-key">Last payment</span>
+                <span class="dst-kv-value">
+                  @if (d.credit.lastPaymentAt) { {{ d.credit.lastPaymentAmount | number:'1.0-0' }} on {{ d.credit.lastPaymentAt | date:'d MMM' }} }
+                  @else { none recorded }
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="dst-card">
+          <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">receipt</span>Recent receipts</div></div>
+          <div class="dst-card-body is-flush">
+            @if (d.recentCollections.length === 0) { <p class="o3-none">No receipts recorded.</p> }
+            @for (c of d.recentCollections; track trackId($index, c)) {
+              <div class="o3-receipt">
+                <div class="dst-cell-stack">
+                  <span class="top">{{ c.receiptNumber }}</span>
+                  <span class="sub">{{ c.collectedAt | date:'d MMM y' }} · {{ tenderLabels[c.tender] }} · {{ c.fieldRepName }}</span>
+                </div>
+                <span class="o3-receipt-amount">{{ c.amount | number:'1.2-2' }}</span>
+              </div>
+            }
+          </div>
+        </section>
+      </div>
+    }
+
+    <!-- ── Returns ────────────────────────────────────────────────────── -->
+    @if (tab === 'returns') {
+      <section class="dst-card">
+        <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">assignment_return</span>Returns</div></div>
+        <div class="dst-card-body is-flush">
+          @if (d.recentReturns.length === 0) { <p class="o3-none">Nothing has come back from this shop.</p> }
+          @if (d.recentReturns.length) {
+            <div class="dst-table-wrap">
+              <table class="dst-table">
+                <thead><tr><th>Return</th><th>Raised</th><th>Reason</th><th>Status</th><th class="num">Claimed</th><th class="num">Approved</th></tr></thead>
+                <tbody>
+                  @for (r of d.recentReturns; track trackId($index, r)) {
+                    <tr>
+                      <td><span class="dst-code">{{ r.returnNumber }}</span></td>
+                      <td class="nowrap">{{ r.requestedOn | date:'d MMM y' }}</td>
+                      <td>{{ r.reasonCodeName }}</td>
+                      <td><dst-status [label]="returnStatusLabels[r.status]" [tone]="returnStatusTone[r.status]"></dst-status></td>
+                      <td class="num">{{ r.claimedValue | number:'1.2-2' }}</td>
+                      <td class="num strong">{{ r.approvedValue | number:'1.2-2' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- ── Assets ─────────────────────────────────────────────────────── -->
+    @if (tab === 'assets') {
+      <section class="dst-card">
+        <div class="dst-card-head">
+          <div class="dst-card-title"><span class="material-symbols-outlined">kitchen</span>Our assets here</div>
+          <span class="dst-card-sub">Things we own but do not hold</span>
+        </div>
+        <div class="dst-card-body is-flush">
+          @if (d.outlet.assets.length === 0) { <p class="o3-none">No coolers, racks or branded units placed here.</p> }
+          @if (d.outlet.assets.length) {
+            <div class="dst-table-wrap">
+              <table class="dst-table">
+                <thead><tr><th>Asset</th><th>Serial</th><th>Placed</th><th>Condition</th><th>Last verified</th><th class="num">Value</th></tr></thead>
+                <tbody>
+                  @for (a of d.outlet.assets; track trackId($index, a)) {
+                    <tr [class.is-flagged]="(a.daysSinceVerified ?? 0) > 180">
+                      <td>
+                        <div class="dst-cell-stack">
+                          <span class="top">{{ assetKindLabels[a.kind] }}</span>
+                          <span class="sub">{{ a.manufacturer }} {{ a.model }}</span>
+                        </div>
+                      </td>
+                      <td><span class="dst-code is-plain">{{ a.assetTag }}</span></td>
+                      <td class="nowrap">{{ a.placedOn | date:'MMM y' }}</td>
+                      <td><dst-status [label]="conditionLabels[a.condition]" [tone]="conditionTone[a.condition]"></dst-status></td>
+                      <td class="nowrap">
+                        @if (a.lastVerifiedAt) {
+                          <span [class.o3-stale]="(a.daysSinceVerified ?? 0) > 180">
+                            {{ a.lastVerifiedAt | date:'d MMM y' }} ({{ a.daysSinceVerified }}d)
+                          </span>
+                        } @else { <span class="muted">never verified</span> }
+                      </td>
+                      <td class="num">{{ a.assetValue | number:'1.0-0' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- ── Execution ──────────────────────────────────────────────────── -->
+    @if (tab === 'execution') {
+      <div class="dst-grid cols-2">
+        <section class="dst-card">
+          <div class="dst-card-head">
+            <div class="dst-card-title"><span class="material-symbols-outlined">grading</span>Audits</div>
+            <span class="dst-card-sub">Perfect-store score {{ d.outlet.perfectStoreScore | number:'1.0-0' }}</span>
+          </div>
+          <div class="dst-card-body is-flush">
+            @if (d.audits.length === 0) { <p class="o3-none">No shelf audits recorded here.</p> }
+            @for (a of d.audits; track trackId($index, a)) {
+              <div class="o3-audit">
+                <div class="dst-cell-stack">
+                  <span class="top">{{ a.auditedAt | date:'d MMM y' }}</span>
+                  <span class="sub">{{ a.fieldRepName }} · share of shelf {{ a.shareOfShelfPercent | number:'1.0-0' }}% · availability {{ a.onShelfAvailabilityPercent | number:'1.0-0' }}%</span>
+                </div>
+                <span class="o3-score" [class.is-good]="a.score >= 80" [class.is-bad]="a.score < 50">{{ a.score | number:'1.0-0' }}</span>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="dst-card">
+          <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">photo_library</span>Photos</div></div>
+          <div class="dst-card-body">
+            @if (d.photos.length === 0) { <p class="o3-none">No photos of this shop yet.</p> }
+            @if (d.photos.length) {
+              <div class="o3-photos">
+                @for (p of d.photos; track trackId($index, p)) {
+                  <figure class="o3-photo">
+                    <img [src]="p.imageUrl" [alt]="p.caption || 'Photo of ' + d.outlet.name" loading="lazy" />
+                    <figcaption>
+                      {{ p.tag || p.caption }}
+                      <span>{{ p.capturedAt | date:'d MMM y' }}</span>
+                    </figcaption>
+                  </figure>
+                }
+              </div>
+            }
+          </div>
+        </section>
+      </div>
+    }
+
+    <!-- ── Notes and details ──────────────────────────────────────────── -->
+    @if (tab === 'notes') {
+      <div class="dst-grid cols-2">
+        <section class="dst-card">
+          <div class="dst-card-head">
+            <div class="dst-card-title"><span class="material-symbols-outlined">sticky_note_2</span>Notes</div>
+            <button type="button" class="dst-btn is-sm" (click)="showNote = true">
+              <span class="material-symbols-outlined">add</span>Add
+            </button>
+          </div>
+          <div class="dst-card-body is-flush">
+            @if (d.notes.length === 0) { <p class="o3-none">Nothing has been noted about this shop.</p> }
+            @for (n of d.notes; track trackId($index, n)) {
+              <div class="o3-note" [class.is-pinned]="n.isPinned">
+                @if (n.isPinned) { <span class="material-symbols-outlined o3-pin">push_pin</span> }
+                <div>
+                  <div class="o3-note-text">{{ n.text }}</div>
+                  <div class="o3-note-by">{{ n.authorName }} · {{ n.notedAt | date:'d MMM y, HH:mm' }}</div>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="dst-card">
+          <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">info</span>Details</div></div>
+          <div class="dst-card-body">
+            <div class="dst-kv">
+              <div class="dst-kv-item"><span class="dst-kv-key">Owner</span><span class="dst-kv-value">{{ d.outlet.ownerName || '—' }}</span></div>
+              <div class="dst-kv-item"><span class="dst-kv-key">Phone</span><span class="dst-kv-value">{{ d.outlet.ownerPhone || '—' }}</span></div>
+              <div class="dst-kv-item"><span class="dst-kv-key">Address</span><span class="dst-kv-value is-quiet">{{ d.outlet.addressLine }}@if (d.outlet.landmark) { , {{ d.outlet.landmark }} }</span></div>
+              <div class="dst-kv-item"><span class="dst-kv-key">Area</span><span class="dst-kv-value is-quiet">{{ d.outlet.area }}, {{ d.outlet.city }}</span></div>
+              <div class="dst-kv-item"><span class="dst-kv-key">Serviced by</span><span class="dst-kv-value">{{ d.outlet.partnerName || 'Direct' }}</span></div>
+              <div class="dst-kv-item"><span class="dst-kv-key">Territory</span><span class="dst-kv-value">{{ d.outlet.territoryName || '—' }}</span></div>
+              <div class="dst-kv-item"><span class="dst-kv-key">Tax number</span><span class="dst-kv-value is-quiet">{{ d.outlet.taxRegistrationNumber || '—' }}</span></div>
+              <div class="dst-kv-item">
+                <span class="dst-kv-key">Licence</span>
+                <span class="dst-kv-value is-quiet">
+                  {{ d.outlet.licenceNumber || '—' }}
+                  @if (d.outlet.licenceExpiresOn) { · expires {{ d.outlet.licenceExpiresOn | date:'d MMM y' }} }
+                </span>
+              </div>
+              <div class="dst-kv-item"><span class="dst-kv-key">Opening hours</span><span class="dst-kv-value is-quiet">{{ d.outlet.opensAt || '—' }} – {{ d.outlet.closesAt || '—' }}</span></div>
+              <div class="dst-kv-item"><span class="dst-kv-key">Refrigeration</span><span class="dst-kv-value">{{ d.outlet.hasRefrigeration ? 'Yes' : 'No' }}</span></div>
+              <div class="dst-kv-item"><span class="dst-kv-key">Onboarded</span><span class="dst-kv-value is-quiet">{{ d.outlet.onboardedAt | date:'d MMM y' }}</span></div>
+              <div class="dst-kv-item"><span class="dst-kv-key">Lifetime sales</span><span class="dst-kv-value">{{ d.outlet.lifetimeSales | number:'1.0-0' }}</span></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    }
+  }
+</div>
+
+<!-- ── Add a note ───────────────────────────────────────────────────────── -->
+@if (showNote && data) {
+  <div class="dst-modal-backdrop" (click)="showNote = false">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Add a note" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Add a note</div>
+          <div class="dst-modal-sub">Pinned notes appear on the rep's screen when they check in here.</div>
+        </div>
+        <button type="button" class="dst-close" (click)="showNote = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-field">
+          <label for="o3-note">Note</label>
+          <textarea id="o3-note" [(ngModel)]="newNote" placeholder="What should the next person here know?"></textarea>
+        </div>
+        <label class="dst-check">
+          <input type="checkbox" [(ngModel)]="pinNote" />
+          <span>
+            Pin it
+            <span class="dst-check-sub">Shows on the field terminal at check-in until somebody unpins it.</span>
+          </span>
+        </label>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showNote = false" [disabled]="savingNote">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="saveNote()" [disabled]="savingNote || !newNote.trim()">Save</button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showOrderSheet && data) {
+  <dst-order-sheet
+    [outletId]="data.outlet.id"
+    [outletName]="data.outlet.name"
+    (placed)="onOrderPlaced($event)"
+    (closed)="showOrderSheet = false"
+  ></dst-order-sheet>
+}
+
+@if (showCollection && data) {
+  <dst-collection-sheet
+    [outletId]="data.outlet.id"
+    [partyName]="data.outlet.name"
+    (recorded)="onCollectionRecorded($event)"
+    (closed)="showCollection = false"
+  ></dst-collection-sheet>
+}

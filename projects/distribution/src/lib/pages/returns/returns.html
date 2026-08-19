@@ -1,0 +1,434 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Returns</h2>
+      <p class="subtitle">Damages, expiries, recalls and refusals — request through to credit.</p>
+    </div>
+    <dst-scope-bar (scopeChange)="onScope($event)"></dst-scope-bar>
+  </div>
+
+  <dst-help key="returns"></dst-help>
+
+  @if (error) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">{{ error }}</div>
+      <button type="button" class="dst-icon-btn" (click)="error = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  @if (notice) {
+    <div class="dst-banner tone-success" role="status">
+      <span class="material-symbols-outlined">check_circle</span>
+      <div class="dst-banner-body">{{ notice }}</div>
+      <button type="button" class="dst-icon-btn" (click)="notice = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  <div class="dst-toolbar">
+    <div class="dst-segment" role="tablist" aria-label="Return queues">
+      @for (q of queues; track q.key) {
+        <button
+          type="button"
+          role="tab"
+          [attr.aria-selected]="queue === q.key"
+          [class.is-active]="queue === q.key"
+          (click)="setQueue(q.key)"
+        >
+          <span class="material-symbols-outlined">{{ q.icon }}</span>
+          {{ q.label }}
+        </button>
+      }
+    </div>
+
+    <span class="dst-spacer"></span>
+
+    <div class="dst-search">
+      <span class="material-symbols-outlined">search</span>
+      <input type="search" [(ngModel)]="search" (ngModelChange)="onSearch()" placeholder="Return number, shop or partner" aria-label="Search returns" />
+    </div>
+
+    <select class="dst-filter-select" [(ngModel)]="kindFilter" (ngModelChange)="load()" aria-label="Return kind">
+      <option value="">All kinds</option>
+      @for (o of kindOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+    </select>
+  </div>
+
+  <div class="dst-split rt-split">
+    <!-- ── Queue ──────────────────────────────────────────────────────── -->
+    <aside class="dst-card rt-list" aria-label="Returns">
+      <div class="dst-card-body is-flush rt-list-body">
+        @if (loading) {
+          <div class="rt-loading">
+            @for (i of [1,2,3,4,5]; track i) { <div class="dst-skeleton" style="height: 72px"></div> }
+          </div>
+        } @else if (rows.length === 0) {
+          <dst-empty icon="assignment_return" title="Nothing in this queue" text="Requests come from the field, the delivery screen, or straight from a partner."></dst-empty>
+        } @else {
+          @for (r of rows; track trackRow($index, r)) {
+            <button type="button" class="rt-item" [class.is-selected]="detail?.id === r.id" (click)="open(r.id)">
+              <div class="rt-item-top">
+                <span class="dst-code">{{ r.returnNumber }}</span>
+                <dst-status [label]="statusLabels[r.status]" [tone]="statusTone[r.status]"></dst-status>
+              </div>
+              <div class="rt-item-name">{{ r.outletName || r.partnerName }}</div>
+              <div class="rt-item-meta">
+                {{ kindLabels[r.kind] }} · {{ r.requestedOn | date:'d MMM' }} · {{ r.lineCount }} lines
+              </div>
+              <div class="rt-item-foot">
+                <span>{{ r.claimedValue | number:'1.0-0' }} claimed</span>
+                @if (r.approvedValue > 0) { <span class="rt-approved">{{ r.approvedValue | number:'1.0-0' }} approved</span> }
+              </div>
+            </button>
+          }
+        }
+      </div>
+
+      <dst-pager [meta]="meta" noun="returns" (pageChange)="changePage($event)" (sizeChange)="changeSize($event)"></dst-pager>
+    </aside>
+
+    <!-- ── Detail ─────────────────────────────────────────────────────── -->
+    <section class="rt-detail" aria-label="Return detail">
+      @if (!detail) {
+        <div class="dst-card">
+          <dst-empty icon="assignment_return" title="Pick a return" text="Choose a return on the left to approve it, receive it, or decide what happens to the stock."></dst-empty>
+        </div>
+      } @else {
+        <div class="dst-card">
+          <div class="dst-card-head">
+            <div class="dst-card-title">
+              <span class="material-symbols-outlined">assignment_return</span>
+              <div>
+                {{ detail.returnNumber }}
+                <div class="dst-card-sub">
+                  {{ detail.outletName || detail.partnerName }} ·
+                  {{ kindLabels[detail.kind] }} ·
+                  raised {{ detail.requestedOn | date:'d MMM y' }}
+                  @if (detail.fieldRepName) { by {{ detail.fieldRepName }} }
+                </div>
+              </div>
+            </div>
+            <dst-status [label]="statusLabels[detail.status]" [tone]="statusTone[detail.status]" [large]="true"></dst-status>
+          </div>
+
+          <div class="dst-card-body">
+            <div class="dst-kv rt-facts">
+              <div class="dst-kv-item"><span class="dst-kv-key">Reason</span><span class="dst-kv-value">{{ detail.reasonCodeName || '—' }}</span></div>
+              <div class="dst-kv-item"><span class="dst-kv-key">Valued at</span><span class="dst-kv-value">{{ valuationLabels[detail.valuationBasis] }}</span></div>
+              <div class="dst-kv-item"><span class="dst-kv-key">Claimed</span><span class="dst-kv-value">{{ detail.claimedValue | number:'1.2-2' }}</span></div>
+              <div class="dst-kv-item"><span class="dst-kv-key">Approved</span><span class="dst-kv-value">{{ detail.approvedValue | number:'1.2-2' }}</span></div>
+              <div class="dst-kv-item"><span class="dst-kv-key">Credited</span><span class="dst-kv-value">{{ detail.creditedValue | number:'1.2-2' }}</span></div>
+              @if (detail.originalInvoiceNumber) {
+                <div class="dst-kv-item"><span class="dst-kv-key">Against invoice</span><span class="dst-kv-value">{{ detail.originalInvoiceNumber }}</span></div>
+              }
+            </div>
+
+            @if (detail.reasonNote) {
+              <div class="dst-banner tone-info rt-note">
+                <span class="material-symbols-outlined">sticky_note_2</span>
+                <div class="dst-banner-body">{{ detail.reasonNote }}</div>
+              </div>
+            }
+
+            @if (detail.isExpired) {
+              <div class="dst-banner tone-warning">
+                <span class="material-symbols-outlined">schedule</span>
+                <div class="dst-banner-body">
+                  <strong>This request has passed its collection window.</strong>
+                  It expired on {{ detail.validUntil | date:'d MMM y' }} and would need re-raising.
+                </div>
+              </div>
+            }
+
+            @if (detail.photoUrl) {
+              <figure class="rt-photo">
+                <img [src]="detail.photoUrl" alt="Photo of the returned goods" loading="lazy" />
+                <figcaption>Photographed when the return was raised</figcaption>
+              </figure>
+            }
+          </div>
+        </div>
+
+        <!-- Lines -->
+        <div class="dst-card">
+          <div class="dst-card-head">
+            <div class="dst-card-title"><span class="material-symbols-outlined">list</span>Lines</div>
+          </div>
+          <div class="dst-card-body is-flush">
+            <div class="dst-table-wrap">
+              <table class="dst-table rt-lines">
+                <thead>
+                  <tr>
+                    <th>Item</th><th>Batch</th><th>Reason</th>
+                    <th class="num">Requested</th><th class="num">Approved</th><th class="num">Received</th>
+                    <th class="num">Unit price</th><th class="num">Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (l of detail.lines; track trackLine($index, l)) {
+                    <tr>
+                      <td class="strong">{{ l.itemName }}</td>
+                      <td class="muted">
+                        {{ l.batchNumber || '—' }}
+                        @if (l.expiryDate) { <span class="rt-exp">exp {{ l.expiryDate | date:'MMM y' }}</span> }
+                      </td>
+                      <td class="muted">{{ l.reasonCodeName }}</td>
+                      <td class="num">{{ l.requestedQuantity | number }} {{ l.uom }}</td>
+                      <td class="num">
+                        @if (canDecide) {
+                          <input
+                            type="number"
+                            class="rt-cell"
+                            min="0"
+                            [max]="l.requestedQuantity"
+                            [ngModel]="approvedFor(l)"
+                            (ngModelChange)="setApproved(l, $event)"
+                            [attr.aria-label]="'Approved quantity for ' + l.itemName"
+                          />
+                        } @else {
+                          {{ l.approvedQuantity | number }}
+                        }
+                      </td>
+                      <td class="num">{{ l.receivedQuantity | number }}</td>
+                      <td class="num muted">{{ l.unitPrice | number:'1.2-2' }}</td>
+                      <td class="num strong">{{ l.lineValue | number:'1.2-2' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Receipts -->
+        @if (detail.receipts.length) {
+          <div class="dst-card">
+            <div class="dst-card-head">
+              <div class="dst-card-title"><span class="material-symbols-outlined">fact_check</span>Received and inspected</div>
+              @if (undispositioned > 0) {
+                <span class="dst-pill tone-warning">{{ undispositioned }} lines still in quarantine</span>
+              }
+            </div>
+            <div class="dst-card-body is-flush">
+              @for (rec of detail.receipts; track trackReceipt($index, rec)) {
+                <div class="rt-receipt">
+                  <div class="rt-receipt-head">
+                    <span class="dst-code">{{ rec.receiptNumber }}</span>
+                    <span class="rt-receipt-meta">
+                      received {{ rec.receivedAt | date:'d MMM y' }}
+                      @if (rec.inspectedAt) { · inspected {{ rec.inspectedAt | date:'d MMM y' }} }
+                      · restocked {{ rec.restockedValue | number:'1.0-0' }} · scrapped {{ rec.scrappedValue | number:'1.0-0' }}
+                    </span>
+                  </div>
+
+                  @if (rec.destructionCertificateNumber) {
+                    <div class="rt-certificate">
+                      <span class="material-symbols-outlined">verified</span>
+                      Destroyed {{ rec.destroyedOn | date:'d MMM y' }} · certificate {{ rec.destructionCertificateNumber }}
+                    </div>
+                  }
+
+                  <div class="dst-table-wrap">
+                    <table class="dst-table">
+                      <thead>
+                        <tr>
+                          <th>Item</th><th class="num">Expected</th><th class="num">Received</th>
+                          <th class="num">Accepted</th><th>Disposition</th><th class="actions"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (l of rec.lines; track trackReceiptLine($index, l)) {
+                          <tr [class.is-flagged]="!l.disposition">
+                            <td class="strong">{{ l.itemName }}</td>
+                            <td class="num muted">{{ l.expectedQuantity | number }}</td>
+                            <td class="num">{{ l.receivedQuantity | number }} {{ l.uom }}</td>
+                            <td class="num">{{ l.acceptedQuantity | number }}</td>
+                            <td>
+                              @if (l.disposition) {
+                                <span class="dst-pill tone-neutral">{{ dispositionLabels[l.disposition] }}</span>
+                              } @else {
+                                <span class="dst-pill tone-warning">In quarantine</span>
+                              }
+                            </td>
+                            <td class="actions">
+                              @if (!l.disposition) {
+                                <button type="button" class="dst-btn is-sm" (click)="startDisposition(l)">Decide</button>
+                              }
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Actions -->
+        <div class="rt-actions">
+          @if (canDecide) {
+            <div class="dst-field rt-note-field">
+              <label for="rt-decision-note">Note</label>
+              <input id="rt-decision-note" type="text" [(ngModel)]="decisionNote" placeholder="Optional — the partner sees this" />
+            </div>
+            <span class="rt-total">Approving {{ approvedValue | number:'1.2-2' }}</span>
+          }
+
+          <span class="dst-spacer"></span>
+
+          @if (canDecide) {
+            <button type="button" class="dst-btn is-danger" (click)="decide(false)" [disabled]="busy">Reject</button>
+            <button type="button" class="dst-btn is-success" (click)="decide(true)" [disabled]="busy">
+              <span class="material-symbols-outlined">check</span>Approve
+            </button>
+          }
+          @if (canReceive) {
+            <button type="button" class="dst-btn is-primary" (click)="openReceive()" [disabled]="busy">
+              <span class="material-symbols-outlined">inventory</span>Receive the goods
+            </button>
+          }
+          @if (canCredit) {
+            <button type="button" class="dst-btn" (click)="credit(false)" [disabled]="busy || undispositioned > 0">Credit only</button>
+            <button type="button" class="dst-btn is-primary" (click)="credit(true)" [disabled]="busy || undispositioned > 0">
+              <span class="material-symbols-outlined">receipt_long</span>Credit and raise a claim
+            </button>
+          }
+        </div>
+      }
+    </section>
+  </div>
+</div>
+
+<!-- ── Receive ──────────────────────────────────────────────────────────── -->
+@if (showReceive && detail) {
+  <div class="dst-modal-backdrop" (click)="showReceive = false">
+    <div class="dst-modal" role="dialog" aria-modal="true" aria-label="Receive the return" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Receive {{ detail.returnNumber }}</div>
+          <div class="dst-modal-sub">
+            Count what physically arrived. Everything lands in quarantine and needs a disposition
+            before it can go anywhere.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="showReceive = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-table-wrap">
+          <table class="dst-table">
+            <thead><tr><th>Item</th><th>Batch</th><th class="num">Approved</th><th class="num">Actually arrived</th></tr></thead>
+            <tbody>
+              @for (l of detail.lines; track trackLine($index, l)) {
+                <tr [class.is-flagged]="receivedFor(l) !== l.approvedQuantity">
+                  <td class="strong">{{ l.itemName }}</td>
+                  <td class="muted">{{ l.batchNumber || '—' }}</td>
+                  <td class="num">{{ l.approvedQuantity | number }} {{ l.uom }}</td>
+                  <td class="num">
+                    <input
+                      type="number"
+                      class="rt-cell"
+                      min="0"
+                      [ngModel]="receivedFor(l)"
+                      (ngModelChange)="setReceived(l, $event)"
+                      [attr.aria-label]="'Quantity received for ' + l.itemName"
+                    />
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showReceive = false" [disabled]="busy">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="confirmReceive()" [disabled]="busy">
+          @if (busy) { Receiving… } @else { Receive into quarantine }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Disposition ──────────────────────────────────────────────────────── -->
+@if (dispositionTarget) {
+  <div class="dst-modal-backdrop" (click)="dispositionTarget = null">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Decide the disposition" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">What happens to {{ dispositionTarget.itemName }}?</div>
+          <div class="dst-modal-sub">
+            {{ dispositionTarget.receivedQuantity | number }} {{ dispositionTarget.uom }} in quarantine.
+            Nothing goes back to saleable stock without this decision.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="dispositionTarget = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-form-grid">
+          <div class="dst-field is-full">
+            <label for="rt-disp-kind">Disposition</label>
+            <select id="rt-disp-kind" [(ngModel)]="disposition.kind">
+              @for (o of dispositionOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+            </select>
+          </div>
+
+          <div class="dst-field">
+            <label for="rt-disp-qty">Quantity</label>
+            <input id="rt-disp-qty" type="number" min="0" [max]="dispositionTarget.receivedQuantity" [(ngModel)]="disposition.quantity" />
+          </div>
+        </div>
+
+        @if (isDestruction) {
+          <div class="dst-banner tone-danger rt-destroy">
+            <span class="material-symbols-outlined">delete_forever</span>
+            <div class="dst-banner-body">
+              Scrapping makes stock disappear with no counterparty, so it needs a witness and a
+              certificate reference on the record.
+            </div>
+          </div>
+
+          <div class="dst-form-grid">
+            <div class="dst-field">
+              <label for="rt-witness">Witness <span class="req">*</span></label>
+              <input id="rt-witness" type="text" [(ngModel)]="disposition.witnessName" />
+            </div>
+            <div class="dst-field">
+              <label for="rt-cert">Certificate reference <span class="req">*</span></label>
+              <input id="rt-cert" type="text" [(ngModel)]="disposition.certificateReference" />
+            </div>
+          </div>
+        }
+
+        <div class="dst-field">
+          <label for="rt-disp-note">Note</label>
+          <textarea id="rt-disp-note" [(ngModel)]="disposition.note"></textarea>
+        </div>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="dispositionTarget = null" [disabled]="busy">Cancel</button>
+        <button
+          type="button"
+          class="dst-btn"
+          [class.is-danger]="isDestruction"
+          [class.is-primary]="!isDestruction"
+          (click)="confirmDisposition()"
+          [disabled]="busy || (isDestruction && (!disposition.witnessName.trim() || !disposition.certificateReference.trim()))"
+        >Record it</button>
+      </div>
+    </div>
+  </div>
+}

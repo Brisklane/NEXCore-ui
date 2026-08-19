@@ -15,7 +15,8 @@
       "@nexcore/hr": ["projects/hr/src/public-api"],
       "@nexcore/crm": ["projects/crm/src/public-api"],
       "@nexcore/manufacturing": ["projects/manufacturing/src/public-api"],
-      "@nexcore/restaurant": ["projects/restaurant/src/public-api"]
+      "@nexcore/restaurant": ["projects/restaurant/src/public-api"],
+      "@nexcore/distribution": ["projects/distribution/src/public-api"]
     },
 
     "moduleResolution": "bundler",

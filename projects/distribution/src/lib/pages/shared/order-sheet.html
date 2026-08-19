@@ -1,0 +1,334 @@
+<div class="dst-modal-backdrop" (click)="closed.emit()">
+  <div
+    class="dst-modal is-wide os"
+    [class.is-touch]="touch"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Order sheet"
+    (click)="$event.stopPropagation()"
+  >
+    <div class="dst-modal-head">
+      <div>
+        <div class="dst-modal-title">
+          @if (isVanSale) { Van sale } @else { New order }
+          @if (outletName) { — {{ outletName }} }
+        </div>
+        <div class="dst-modal-sub">
+          @if (quote) {
+            {{ quote.lines.length }} lines · every price and scheme comes from the server
+          } @else {
+            Tap a product to add it. Prices and schemes are applied as you go.
+          }
+        </div>
+      </div>
+      <button type="button" class="dst-close" (click)="closed.emit()" aria-label="Close the order sheet">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <div class="dst-modal-body is-flush os-body">
+      <!-- ── Catalogue ──────────────────────────────────────────────────── -->
+      <section class="os-catalogue" aria-label="Products">
+        <div class="os-filters">
+          <div class="dst-search">
+            <span class="material-symbols-outlined">search</span>
+            <input
+              type="search"
+              [(ngModel)]="search"
+              placeholder="Product, code or barcode"
+              aria-label="Search products"
+            />
+          </div>
+
+          @if (brands.length > 1) {
+            <select class="dst-filter-select" [(ngModel)]="brandFilter" aria-label="Filter by brand">
+              <option value="">All brands</option>
+              @for (b of brands; track b) { <option [value]="b">{{ b }}</option> }
+            </select>
+          }
+
+          <label class="os-toggle">
+            <input type="checkbox" [(ngModel)]="onlyFocus" />
+            Must-sell
+          </label>
+          <label class="os-toggle">
+            <input type="checkbox" [(ngModel)]="onlySuggested" />
+            Suggested
+          </label>
+        </div>
+
+        @if (loading) {
+          <div class="os-loading">
+            @for (i of [1,2,3,4,5,6]; track i) { <div class="dst-skeleton" style="height: 64px"></div> }
+          </div>
+        } @else if (visibleCatalogue.length === 0) {
+          <div class="dst-empty">
+            <div class="dst-empty-icon"><span class="material-symbols-outlined">search_off</span></div>
+            <div class="dst-empty-title">No products match</div>
+            <p class="dst-empty-text">Clear the search or the filters. Products this outlet is not authorised to buy are shown but cannot be added.</p>
+          </div>
+        } @else {
+          <div class="os-list">
+            @for (item of visibleCatalogue; track trackItem($index, item)) {
+              <div class="os-item" [class.is-blocked]="!item.isAuthorised" [class.is-picked]="quantityOf(item) > 0">
+                <div class="os-item-main">
+                  <div class="os-item-name">
+                    {{ item.itemName }}
+                    @if (item.isFocusItem) {
+                      <span class="dst-pill tone-violet"><span class="material-symbols-outlined">star</span>Must-sell</span>
+                    }
+                    @if (item.isNeverBought) {
+                      <span class="dst-pill tone-info">Never bought here</span>
+                    }
+                  </div>
+                  <div class="os-item-meta">
+                    @if (item.itemCode) { <span class="dst-code is-plain">{{ item.itemCode }}</span> · }
+                    MRP {{ item.mrp | number:'1.2-2' }}
+                    @if (item.availableQuantity > 0) { · {{ item.availableQuantity | number }} available }
+                    @else { · <span class="os-out">out of stock</span> }
+                    @if (item.lastOrderedQuantity > 0) { · last took {{ item.lastOrderedQuantity | number }} }
+                  </div>
+                  @if (item.activeSchemes.length) {
+                    <div class="os-item-schemes">
+                      @for (s of item.activeSchemes; track s) {
+                        <span class="dst-pill tone-warning"><span class="material-symbols-outlined">redeem</span>{{ s }}</span>
+                      }
+                    </div>
+                  }
+                  @if (!item.isAuthorised) {
+                    <div class="os-item-blocked">
+                      <span class="material-symbols-outlined">block</span>
+                      {{ item.unauthorisedReason || 'Not authorised for this outlet.' }}
+                    </div>
+                  }
+                </div>
+
+                <div class="os-item-actions">
+                  @if (item.isAuthorised) {
+                    @if (item.suggestedQuantity > 0 && quantityOf(item) === 0) {
+                      <button type="button" class="dst-btn is-sm" (click)="addSuggested(item)">
+                        <span class="material-symbols-outlined">auto_awesome</span>
+                        {{ item.suggestedQuantity }}
+                      </button>
+                    }
+                    <button type="button" class="os-add" (click)="add(item)" [attr.aria-label]="'Add ' + item.itemName">
+                      <span class="material-symbols-outlined">add</span>
+                    </button>
+                    @if (quantityOf(item) > 0) {
+                      <span class="os-item-qty">{{ quantityOf(item) }}</span>
+                    }
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </section>
+
+      <!-- ── The order ──────────────────────────────────────────────────── -->
+      <section class="os-order" aria-label="This order">
+        @if (lines.length === 0) {
+          <div class="dst-empty">
+            <div class="dst-empty-icon"><span class="material-symbols-outlined">shopping_cart</span></div>
+            <div class="dst-empty-title">Nothing on the order yet</div>
+            <p class="dst-empty-text">Add products from the list. Slab and free-goods schemes are applied automatically as quantities change.</p>
+          </div>
+        } @else {
+          <div class="os-lines">
+            @for (line of lines; track trackLine($index, line)) {
+              <div class="os-line">
+                <div class="os-line-top">
+                  <span class="os-line-name">{{ line.item.itemName }}</span>
+                  <button type="button" class="dst-icon-btn is-danger" (click)="remove(line)" [attr.aria-label]="'Remove ' + line.item.itemName">
+                    <span class="material-symbols-outlined">close</span>
+                  </button>
+                </div>
+
+                <div class="os-line-controls">
+                  <div class="dst-stepper">
+                    <button type="button" (click)="step(line, -1)" aria-label="One less">
+                      <span class="material-symbols-outlined">remove</span>
+                    </button>
+                    <input
+                      type="number"
+                      inputmode="numeric"
+                      min="0"
+                      [ngModel]="line.quantity"
+                      (ngModelChange)="setQuantity(line, $event)"
+                      [attr.aria-label]="'Quantity of ' + line.item.itemName"
+                    />
+                    <button type="button" (click)="step(line, 1)" aria-label="One more">
+                      <span class="material-symbols-outlined">add</span>
+                    </button>
+                  </div>
+
+                  @if (line.item.uoms.length > 1) {
+                    <select
+                      class="dst-filter-select"
+                      [ngModel]="line.uom"
+                      (ngModelChange)="setUom(line, $event)"
+                      [attr.aria-label]="'Unit for ' + line.item.itemName"
+                    >
+                      @for (u of line.item.uoms; track u.uom) { <option [value]="u.uom">{{ u.uom }}</option> }
+                    </select>
+                  } @else {
+                    <span class="os-uom">{{ line.uom }}</span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- Priced result from the server -->
+          @if (quote; as q) {
+            @if (q.lines.length) {
+              <div class="os-priced">
+                <div class="os-priced-head">Priced</div>
+                <table class="os-priced-table">
+                  <tbody>
+                    @for (l of q.lines; track l.id) {
+                      <tr [class.is-free]="l.isFreeGoods">
+                        <td>
+                          {{ l.itemName }}
+                          @if (l.isFreeGoods) {
+                            <span class="dst-pill tone-success"><span class="material-symbols-outlined">redeem</span>Free — {{ l.schemeName }}</span>
+                          }
+                        </td>
+                        <td class="num">{{ l.quantity | number }} {{ l.uom }}</td>
+                        <td class="num">{{ l.unitPrice | number:'1.2-2' }}</td>
+                        <td class="num strong">{{ l.lineTotal | number:'1.2-2' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+
+            @if (q.nextSlabHints.length) {
+              <div class="os-hints">
+                @for (h of q.nextSlabHints; track h.schemeId + (h.itemId ?? '')) {
+                  <button type="button" class="os-hint" (click)="topUpToSlab(h.itemId, h.shortfallQuantity)">
+                    <span class="material-symbols-outlined">trending_up</span>
+                    <span class="os-hint-body">
+                      <span class="os-hint-msg">{{ h.message }}</span>
+                      <span class="os-hint-sub">
+                        {{ h.shortfallQuantity | number }} {{ h.uom }} more earns
+                        {{ h.extraBenefit | number:'1.2-2' }} extra
+                      </span>
+                    </span>
+                    <span class="os-hint-cta">Add</span>
+                  </button>
+                }
+              </div>
+            }
+
+            @if (q.blockers.length) {
+              <div class="dst-banner tone-danger">
+                <span class="material-symbols-outlined">block</span>
+                <div class="dst-banner-body">
+                  <strong>This order cannot be placed.</strong>
+                  <ul class="os-msgs">@for (b of q.blockers; track b) { <li>{{ b }}</li> }</ul>
+                </div>
+              </div>
+            }
+
+            @if (q.warnings.length) {
+              <div class="dst-banner tone-warning">
+                <span class="material-symbols-outlined">warning</span>
+                <div class="dst-banner-body">
+                  <ul class="os-msgs">@for (w of q.warnings; track w) { <li>{{ w }}</li> }</ul>
+                </div>
+              </div>
+            }
+
+            @if (q.credit && !q.credit.isAllowed) {
+              <div class="dst-banner tone-warning">
+                <span class="material-symbols-outlined">credit_card_off</span>
+                <div class="dst-banner-body">
+                  <strong>Credit</strong> — {{ q.credit.message }}
+                  <div class="os-credit-nums">
+                    Available {{ q.credit.availableCredit | number:'1.2-2' }} ·
+                    over by {{ q.credit.excessAmount | number:'1.2-2' }}
+                    @if (q.credit.overdueAmount > 0) { · overdue {{ q.credit.overdueAmount | number:'1.2-2' }} }
+                  </div>
+                </div>
+              </div>
+            }
+
+            @if (q.requiresApproval) {
+              <div class="dst-banner tone-info">
+                <span class="material-symbols-outlined">approval</span>
+                <div class="dst-banner-body">
+                  <strong>Needs approval before it can be picked.</strong>
+                  {{ q.approvalReason }}
+                </div>
+              </div>
+            }
+          }
+
+          <div class="os-extras">
+            <div class="dst-field">
+              <label for="os-delivery">Requested delivery</label>
+              <input id="os-delivery" type="date" [(ngModel)]="requestedDeliveryDate" />
+            </div>
+            <div class="dst-field">
+              <label for="os-note">Note for the warehouse</label>
+              <input id="os-note" type="text" [(ngModel)]="note" placeholder="Optional" />
+            </div>
+          </div>
+        }
+      </section>
+    </div>
+
+    <!-- ── Totals and actions ───────────────────────────────────────────── -->
+    <div class="dst-modal-foot os-foot">
+      @if (error) {
+        <div class="os-error" role="alert">
+          <span class="material-symbols-outlined">error</span>{{ error }}
+        </div>
+      }
+
+      <div class="os-totals">
+        @if (quote; as q) {
+          <div class="os-total-line"><span>Subtotal</span><span class="dst-money">{{ q.subTotal | number:'1.2-2' }}</span></div>
+          @if (q.discountAmount > 0) {
+            <div class="os-total-line"><span>Discount</span><span class="dst-money is-negative">−{{ q.discountAmount | number:'1.2-2' }}</span></div>
+          }
+          @if (q.schemeDiscountAmount > 0) {
+            <div class="os-total-line"><span>Schemes</span><span class="dst-money is-negative">−{{ q.schemeDiscountAmount | number:'1.2-2' }}</span></div>
+          }
+          @if (q.freeGoodsValue > 0) {
+            <div class="os-total-line"><span>Free goods</span><span class="dst-money">{{ q.freeGoodsValue | number:'1.2-2' }}</span></div>
+          }
+          @if (q.taxAmount > 0) {
+            <div class="os-total-line"><span>Tax</span><span class="dst-money">{{ q.taxAmount | number:'1.2-2' }}</span></div>
+          }
+          <div class="os-total-line is-grand">
+            <span>Total</span>
+            <span class="dst-money is-total">
+              <span class="cur">{{ q.currencyCode }}</span>{{ q.totalAmount | number:'1.2-2' }}
+            </span>
+          </div>
+        } @else {
+          <div class="os-total-line is-grand"><span>Total</span><span class="dst-money is-total">—</span></div>
+        }
+
+        @if (quoting) {
+          <div class="os-quoting"><span class="material-symbols-outlined">sync</span>Pricing…</div>
+        }
+      </div>
+
+      <div class="os-actions">
+        @if (lines.length > 0) {
+          <button type="button" class="dst-btn is-ghost" (click)="clear()" [disabled]="saving">Clear</button>
+        }
+        <button type="button" class="dst-btn" (click)="closed.emit()" [disabled]="saving">Cancel</button>
+        <button type="button" class="dst-btn" (click)="place(false)" [disabled]="!canPlace">Save as draft</button>
+        <button type="button" class="dst-btn is-primary" (click)="place(true)" [disabled]="!canPlace">
+          <span class="material-symbols-outlined">check</span>
+          @if (saving) { Placing… } @else if (isVanSale) { Sell from van } @else { Place order }
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,404 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Merchandising &amp; surveys</h2>
+      <p class="subtitle">Planogram compliance, share of shelf, POSM and competitor activity.</p>
+    </div>
+    <dst-scope-bar [showPeriod]="true" (scopeChange)="onScope($event)"></dst-scope-bar>
+  </div>
+
+  <dst-help key="merchandising"></dst-help>
+
+  @if (error) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">{{ error }}</div>
+      <button type="button" class="dst-icon-btn" (click)="error = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  <div class="dst-tabs" role="tablist">
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'audits'" [class.is-active]="tab === 'audits'" (click)="setTab('audits')">
+      <span class="material-symbols-outlined">grading</span>Shelf audits
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'surveys'" [class.is-active]="tab === 'surveys'" (click)="setTab('surveys')">
+      <span class="material-symbols-outlined">quiz</span>Surveys
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'competitors'" [class.is-active]="tab === 'competitors'" (click)="setTab('competitors')">
+      <span class="material-symbols-outlined">visibility</span>Competitors
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'posm'" [class.is-active]="tab === 'posm'" (click)="setTab('posm')">
+      <span class="material-symbols-outlined">campaign</span>POSM
+    </button>
+  </div>
+
+  <!-- ── Audits ───────────────────────────────────────────────────────── -->
+  @if (tab === 'audits') {
+    @if (audits.length) {
+      <div class="dst-stats">
+        <div class="dst-stat" [class.tone-success]="averageScore >= 80" [class.tone-warning]="averageScore < 80 && averageScore >= 55" [class.tone-danger]="averageScore < 55">
+          <span class="dst-stat-label">Average score</span>
+          <span class="dst-stat-value">{{ averageScore | number:'1.0-0' }}</span>
+          <span class="dst-stat-foot">across {{ audits.length }} audits in this period</span>
+        </div>
+        <div class="dst-stat tone-violet">
+          <span class="dst-stat-label">Share of shelf</span>
+          <span class="dst-stat-value">{{ averageShelfShare | number:'1.1-1' }}%</span>
+          <span class="dst-stat-foot">our facings against the category</span>
+        </div>
+        <div class="dst-stat tone-cyan">
+          <span class="dst-stat-label">On-shelf availability</span>
+          <span class="dst-stat-value">{{ averageAvailability | number:'1.1-1' }}%</span>
+          <span class="dst-stat-foot">of the expected assortment actually present</span>
+        </div>
+      </div>
+    }
+
+    <div class="dst-toolbar">
+      <select class="dst-filter-select" [(ngModel)]="kindFilter" (ngModelChange)="load()" aria-label="Audit kind">
+        <option value="">Every kind</option>
+        @for (o of kindOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+      </select>
+    </div>
+
+    <div class="dst-card">
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="mc-loading">
+            @for (i of [1,2,3,4]; track i) { <div class="dst-skeleton" style="height: 62px"></div> }
+          </div>
+        } @else if (audits.length === 0) {
+          <dst-empty icon="grading" title="No audits in this period" text="Audits captured in the field arrive here with their photos and line detail."></dst-empty>
+        } @else {
+          <div class="dst-table-wrap">
+            <table class="dst-table mc-table">
+              <thead>
+                <tr>
+                  <th>Outlet</th><th>Kind</th><th>When</th><th>By</th>
+                  <th class="num">Score</th><th>Breakdown</th>
+                  <th class="num">Shelf share</th><th class="num">Availability</th><th class="actions"></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (a of audits; track trackAudit($index, a)) {
+                  <tr class="is-clickable" (click)="openAuditDetail(a)">
+                    <td class="strong">{{ a.outletName }}</td>
+                    <td>{{ kindLabels[a.kind] }}</td>
+                    <td class="nowrap muted">{{ a.auditedAt | date:'d MMM, HH:mm' }}</td>
+                    <td>{{ a.fieldRepName }}</td>
+                    <td class="num">
+                      <span class="mc-score" [class]="'mc-score is-' + scoreTone(a.score, a.maxScore)">
+                        {{ a.score | number:'1.0-0' }}
+                      </span>
+                    </td>
+                    <td>
+                      <div class="mc-breakdown">
+                        @for (b of breakdown(a); track b.label) {
+                          <span class="mc-seg" [attr.title]="b.label + ': ' + b.value">
+                            <i [style.height.%]="b.value"></i>
+                          </span>
+                        }
+                      </div>
+                    </td>
+                    <td class="num">{{ a.shareOfShelfPercent | number:'1.1-1' }}%</td>
+                    <td class="num">{{ a.onShelfAvailabilityPercent | number:'1.1-1' }}%</td>
+                    <td class="actions">
+                      <button type="button" class="dst-icon-btn" (click)="$event.stopPropagation(); openAuditDetail(a)" aria-label="Open the audit">
+                        <span class="material-symbols-outlined">chevron_right</span>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ── Surveys ──────────────────────────────────────────────────────── -->
+  @if (tab === 'surveys') {
+    <div class="dst-grid cols-2">
+      <section class="dst-card">
+        <div class="dst-card-head">
+          <div class="dst-card-title"><span class="material-symbols-outlined">quiz</span>Forms</div>
+        </div>
+        <div class="dst-card-body is-flush">
+          @if (surveys.length === 0) { <p class="mc-none">No survey forms defined.</p> }
+          @for (s of surveys; track trackSurvey($index, s)) {
+            <button type="button" class="mc-survey" [class.is-selected]="openSurvey?.id === s.id" (click)="openSurvey = openSurvey?.id === s.id ? null : s">
+              <div class="mc-survey-top">
+                <span class="mc-survey-name">{{ s.name }}</span>
+                @if (s.isMandatory) { <span class="dst-pill tone-danger">Mandatory</span> }
+                @if (!s.isActive) { <span class="dst-pill tone-neutral">Inactive</span> }
+              </div>
+              <div class="mc-survey-meta">
+                {{ s.questions.length }} questions · {{ s.responseCount }} responses
+                @if (s.repeatEveryVisit) { · asked every visit }
+              </div>
+
+              @if (openSurvey?.id === s.id) {
+                <ol class="mc-questions">
+                  @for (q of s.questions; track q.id) {
+                    <li>
+                      {{ q.text }}
+                      <span class="mc-question-kind">{{ questionKindLabels[q.kind] }}</span>
+                      @if (q.isRequired) { <span class="mc-required">required</span> }
+                    </li>
+                  }
+                </ol>
+              }
+            </button>
+          }
+        </div>
+      </section>
+
+      <section class="dst-card">
+        <div class="dst-card-head">
+          <div class="dst-card-title"><span class="material-symbols-outlined">assignment_turned_in</span>Responses</div>
+        </div>
+        <div class="dst-card-body is-flush mc-scroll">
+          @if (responses.length === 0) { <p class="mc-none">No responses in this period.</p> }
+          @for (r of responses; track trackResponse($index, r)) {
+            <div class="mc-response">
+              <div class="mc-response-head">
+                <div class="dst-cell-stack">
+                  <span class="top">{{ r.outletName }}</span>
+                  <span class="sub">{{ r.surveyName }} · {{ r.fieldRepName }} · {{ r.submittedAt | date:'d MMM, HH:mm' }}</span>
+                </div>
+              </div>
+              <dl class="mc-answers">
+                @for (a of r.answers; track trackIndex($index)) {
+                  <div class="mc-answer">
+                    <dt>{{ a.questionText }}</dt>
+                    <dd>
+                      @if (a.textValue) { {{ a.textValue }} }
+                      @else if (a.numericValue != null) { {{ a.numericValue | number }} }
+                      @else if (a.boolValue != null) { {{ a.boolValue ? 'Yes' : 'No' }} }
+                      @else if (a.dateValue) { {{ a.dateValue | date:'d MMM y' }} }
+                      @else if (a.photoUrl) {
+                        <a [href]="a.photoUrl" target="_blank" rel="noopener">Photo</a>
+                      }
+                      @else { <span class="muted">no answer</span> }
+                    </dd>
+                  </div>
+                }
+              </dl>
+            </div>
+          }
+        </div>
+      </section>
+    </div>
+  }
+
+  <!-- ── Competitors ──────────────────────────────────────────────────── -->
+  @if (tab === 'competitors') {
+    <div class="dst-card">
+      <div class="dst-card-head">
+        <div class="dst-card-title"><span class="material-symbols-outlined">visibility</span>What reps have seen</div>
+        <span class="dst-card-sub">Pricing, packs and visible activity from the shelf next to ours</span>
+      </div>
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="mc-loading">
+            @for (i of [1,2,3,4]; track i) { <div class="dst-skeleton" style="height: 52px"></div> }
+          </div>
+        } @else if (competitors.length === 0) {
+          <dst-empty icon="visibility" title="Nothing recorded" text="A rep standing in front of a rival's shelf is the only person who will ever capture this. It is worth asking for."></dst-empty>
+        } @else {
+          <div class="dst-table-wrap">
+            <table class="dst-table">
+              <thead>
+                <tr>
+                  <th>Outlet</th><th>Competitor</th><th>Product</th><th>Pack</th>
+                  <th class="num">Price</th><th class="num">MRP</th><th class="num">Facings</th>
+                  <th>Activity</th><th>Seen</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (c of competitors; track trackCompetitor($index, c)) {
+                  <tr>
+                    <td class="strong">{{ c.outletName }}</td>
+                    <td>{{ c.competitorName }}</td>
+                    <td>{{ c.productName }}</td>
+                    <td class="muted">{{ c.packSize }}</td>
+                    <td class="num">{{ c.observedPrice | number:'1.2-2' }}</td>
+                    <td class="num muted">{{ c.observedMrp | number:'1.2-2' }}</td>
+                    <td class="num">{{ c.facings | number }}</td>
+                    <td>
+                      @if (c.hasDisplay) { <span class="dst-pill tone-warning">Display</span> }
+                      @if (c.hasPosm) { <span class="dst-pill tone-warning">POSM</span> }
+                      @if (c.schemeDescription) { <span class="mc-scheme">{{ c.schemeDescription }}</span> }
+                    </td>
+                    <td class="nowrap muted">{{ c.observedAt | date:'d MMM' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ── POSM ─────────────────────────────────────────────────────────── -->
+  @if (tab === 'posm') {
+    @if (expiredPosmCount > 0) {
+      <div class="dst-banner tone-warning">
+        <span class="material-symbols-outlined">campaign</span>
+        <div class="dst-banner-body">
+          <strong>{{ expiredPosmCount }} pieces of point-of-sale material are past their date and still up.</strong>
+          Out-of-date material advertising a finished scheme is worse than none.
+        </div>
+      </div>
+    }
+
+    <div class="dst-card">
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="mc-loading">
+            @for (i of [1,2,3,4]; track i) { <div class="dst-skeleton" style="height: 52px"></div> }
+          </div>
+        } @else if (posm.length === 0) {
+          <dst-empty icon="campaign" title="No POSM placed" text="Branded material placed in the trade is tracked here from placement to removal."></dst-empty>
+        } @else {
+          <div class="dst-table-wrap">
+            <table class="dst-table">
+              <thead>
+                <tr>
+                  <th>Outlet</th><th>Material</th><th>Position</th>
+                  <th class="num">Quantity</th><th>Placed</th><th>Expires</th>
+                  <th>Scheme</th><th>Verified</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (p of posm; track trackPosm($index, p)) {
+                  <tr [class.is-flagged]="p.isExpired && !p.removedOn">
+                    <td class="strong">{{ p.outletName }}</td>
+                    <td>{{ p.materialName }}</td>
+                    <td class="muted">{{ p.position || '—' }}</td>
+                    <td class="num">{{ p.quantity | number }}</td>
+                    <td class="nowrap">{{ p.placedOn | date:'d MMM y' }}</td>
+                    <td class="nowrap">
+                      @if (p.removedOn) {
+                        <span class="muted">removed {{ p.removedOn | date:'d MMM' }}</span>
+                      } @else if (p.expiresOn) {
+                        <span [class.mc-expired]="p.isExpired">{{ p.expiresOn | date:'d MMM y' }}</span>
+                      } @else { <span class="muted">no end date</span> }
+                    </td>
+                    <td class="muted">{{ p.schemeName || '—' }}</td>
+                    <td>
+                      @if (p.isVerified) {
+                        <span class="dst-pill tone-success">{{ p.lastVerifiedAt | date:'d MMM' }}</span>
+                      } @else {
+                        <span class="dst-pill tone-warning">Never checked</span>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  @if (tab === 'audits' || tab === 'surveys' || tab === 'competitors') {
+    <dst-pager [meta]="meta" noun="rows" (pageChange)="changePage($event)" (sizeChange)="changeSize($event)"></dst-pager>
+  }
+</div>
+
+<!-- ── Audit detail ─────────────────────────────────────────────────────── -->
+@if (openAudit) {
+  <div class="dst-modal-backdrop" (click)="openAudit = null">
+    <div class="dst-modal is-sheet" role="dialog" aria-modal="true" aria-label="Audit detail" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">{{ openAudit.outletName }}</div>
+          <div class="dst-modal-sub">
+            {{ kindLabels[openAudit.kind] }} ·
+            {{ openAudit.auditedAt | date:'d MMM y, HH:mm' }} ·
+            {{ openAudit.fieldRepName }}
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="openAudit = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="mc-detail-scores">
+          <div class="mc-headline" [class]="'mc-headline is-' + scoreTone(openAudit.score, openAudit.maxScore)">
+            <span class="mc-headline-value">{{ openAudit.score | number:'1.0-0' }}</span>
+            <span class="mc-headline-of">of {{ openAudit.maxScore }}</span>
+          </div>
+
+          <div class="mc-bars">
+            @for (b of breakdown(openAudit); track b.label) {
+              <div class="mc-bar-row">
+                <span class="mc-bar-label">{{ b.label }}</span>
+                <span class="dst-bar" [class]="'dst-bar tone-' + (b.value >= 80 ? 'success' : b.value >= 55 ? 'warning' : 'danger')">
+                  <span class="dst-bar-fill" [style.width.%]="b.value"></span>
+                </span>
+                <span class="mc-bar-value">{{ b.value | number:'1.0-0' }}</span>
+              </div>
+            }
+          </div>
+        </div>
+
+        @if (openAudit.beforePhotoUrl || openAudit.afterPhotoUrl) {
+          <div class="mc-photos">
+            @if (openAudit.beforePhotoUrl) {
+              <figure><img [src]="openAudit.beforePhotoUrl" alt="Shelf before the visit" loading="lazy" /><figcaption>Before</figcaption></figure>
+            }
+            @if (openAudit.afterPhotoUrl) {
+              <figure><img [src]="openAudit.afterPhotoUrl" alt="Shelf after the visit" loading="lazy" /><figcaption>After</figcaption></figure>
+            }
+          </div>
+        }
+
+        <div class="dst-section-label">Line by line</div>
+        <div class="dst-table-wrap">
+          <table class="dst-table">
+            <thead>
+              <tr>
+                <th>Item</th><th>Expected</th><th>Present</th>
+                <th class="num">Facings</th><th class="num">Shelf stock</th>
+                <th class="num">Price seen</th><th class="num">Mandated</th><th>Compliance</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (l of openAudit.lines; track l.id) {
+                <tr [class.is-flagged]="l.isExpectedInAssortment && !l.isPresent">
+                  <td class="strong">{{ l.itemName }}</td>
+                  <td>{{ l.isExpectedInAssortment ? 'Yes' : 'No' }}</td>
+                  <td>
+                    @if (l.isPresent) { <span class="dst-pill tone-success">On shelf</span> }
+                    @else { <span class="dst-pill tone-danger">Missing</span> }
+                  </td>
+                  <td class="num">{{ l.facings | number }}<span class="mc-expected">/{{ l.expectedFacings | number }}</span></td>
+                  <td class="num">{{ l.shelfStock | number }}</td>
+                  <td class="num">{{ l.observedPrice | number:'1.2-2' }}</td>
+                  <td class="num muted">{{ l.mandatedPrice | number:'1.2-2' }}</td>
+                  <td>
+                    @if (!l.isPriceCompliant) { <span class="dst-pill tone-warning">Price off</span> }
+                    @if (!l.isCorrectPosition) { <span class="dst-pill tone-warning">Wrong position</span> }
+                    @if (l.isPriceCompliant && l.isCorrectPosition) { <span class="dst-pill tone-success">Compliant</span> }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="openAudit = null">Close</button>
+      </div>
+    </div>
+  </div>
+}

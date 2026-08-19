@@ -1,0 +1,43 @@
+/* Demand planning — the override sits beside the computed number, never on top of it. */
+
+.pl-loading { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.pl-table { min-width: 1180px; }
+.pl-forecast { min-width: 1080px; }
+
+.pl-check { width: 42px; }
+.pl-check input { width: 16px; height: 16px; accent-color: var(--accent, #2b7fff); cursor: pointer; }
+
+.pl-selected {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--accent, #2b7fff);
+  font-variant-numeric: tabular-nums;
+}
+
+.pl-lead {
+  display: block;
+  font-size: 10.5px;
+  color: var(--text-muted, #94a3b8);
+  margin-top: 3px;
+}
+
+.pl-delta {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 750;
+  margin-top: 2px;
+}
+
+.pl-delta.is-up { color: var(--warning-text, #92400e); }
+.pl-delta.is-down { color: var(--info-text, #1d4ed8); }
+.pl-good { color: var(--success-text, #15803d); font-weight: 750; }
+.pl-bad { color: var(--danger-text, #b91c1c); font-weight: 750; }
+
+.pl-reject {
+  display: block;
+  font-size: 10.5px;
+  color: var(--danger-text, #b91c1c);
+  margin-top: 3px;
+  max-width: 180px;
+  line-height: 1.4;
+}

@@ -1,0 +1,429 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Fleet &amp; drivers</h2>
+      <p class="subtitle">What you run, who drives it, and what expires when.</p>
+    </div>
+    <div class="fl-head-actions">
+      @if (tab === 'vehicles') {
+        <button type="button" class="dst-btn is-primary" (click)="createVehicle()">
+          <span class="material-symbols-outlined">local_shipping</span>Add a vehicle
+        </button>
+      } @else {
+        <button type="button" class="dst-btn is-primary" (click)="createDriver()">
+          <span class="material-symbols-outlined">person_add</span>Add a driver
+        </button>
+      }
+    </div>
+  </div>
+
+  <dst-help key="fleet"></dst-help>
+
+  @if (error) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">{{ error }}</div>
+      <button type="button" class="dst-icon-btn" (click)="error = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  @if (expiring.length) {
+    <div class="dst-banner tone-danger">
+      <span class="material-symbols-outlined">gpp_maybe</span>
+      <div class="dst-banner-body">
+        <strong>{{ expiring.length }} vehicle documents expire within the month.</strong>
+        A lapsed permit is discovered at a roadside check, not in a report.
+        <ul class="fl-expiring">
+          @for (c of expiring.slice(0, 6); track trackCompliance($index, c)) {
+            <li>
+              <strong>{{ c.vehicleRegistration }}</strong> — {{ complianceLabels[c.kind] }}
+              {{ c.documentNumber }} expires {{ c.expiresOn | date:'d MMM y' }}
+              <span class="fl-days" [class.is-bad]="c.daysToExpiry < 14">
+                @if (c.daysToExpiry < 0) { expired {{ -c.daysToExpiry }} days ago }
+                @else { {{ c.daysToExpiry }} days }
+              </span>
+            </li>
+          }
+        </ul>
+      </div>
+    </div>
+  }
+
+  <div class="dst-tabs" role="tablist">
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'vehicles'" [class.is-active]="tab === 'vehicles'" (click)="setTab('vehicles')">
+      <span class="material-symbols-outlined">local_shipping</span>Vehicles
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'drivers'" [class.is-active]="tab === 'drivers'" (click)="setTab('drivers')">
+      <span class="material-symbols-outlined">badge</span>Drivers
+    </button>
+  </div>
+
+  <div class="dst-toolbar">
+    <div class="dst-search">
+      <span class="material-symbols-outlined">search</span>
+      <input
+        type="search"
+        [(ngModel)]="search"
+        (ngModelChange)="onSearch()"
+        [placeholder]="tab === 'vehicles' ? 'Registration, make or model' : 'Name, licence or phone'"
+        aria-label="Search"
+      />
+    </div>
+
+    @if (tab === 'vehicles' && blockedVehicles > 0) {
+      <span class="dst-spacer"></span>
+      <span class="dst-pill tone-danger is-lg">
+        <span class="material-symbols-outlined">block</span>
+        {{ blockedVehicles }} cannot be put on a trip
+      </span>
+    }
+  </div>
+
+  <!-- ── Vehicles ─────────────────────────────────────────────────────── -->
+  @if (tab === 'vehicles') {
+    <div class="dst-card">
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="fl-loading">
+            @for (i of [1,2,3,4,5]; track i) { <div class="dst-skeleton" style="height: 54px"></div> }
+          </div>
+        } @else if (vehicles.length === 0) {
+          <dst-empty
+            icon="local_shipping"
+            title="No vehicles"
+            text="Vehicles carry their compliance documents and expiry dates, which is what keeps them off a trip when a permit lapses."
+            actionLabel="Add a vehicle"
+            actionIcon="local_shipping"
+            (action)="createVehicle()"
+          ></dst-empty>
+        } @else {
+          <div class="dst-table-wrap">
+            <table class="dst-table fl-table">
+              <thead>
+                <tr>
+                  <th>Vehicle</th><th>Kind</th><th>Capacity</th><th>Driver</th>
+                  <th class="num">Odometer</th><th>Service</th><th>Compliance</th>
+                  <th>State</th><th class="actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (v of vehicles; track trackVehicle($index, v)) {
+                  <tr [class.is-flagged]="v.hasExpiredCompliance || v.isOutOfService">
+                    <td>
+                      <div class="dst-cell-stack">
+                        <span class="top">{{ v.registrationNumber }}</span>
+                        <span class="sub">{{ v.make }} {{ v.model }}@if (v.manufactureYear) { · {{ v.manufactureYear }} }</span>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="dst-cell-stack">
+                        <span class="top">{{ kindLabels[v.kind] }}</span>
+                        <span class="sub">{{ ownershipLabels[v.ownership] }}</span>
+                      </div>
+                    </td>
+                    <td class="nowrap">
+                      {{ v.capacityWeightKg | number }} kg
+                      @if (v.capacityVolumeM3 > 0) { <span class="fl-quiet">{{ v.capacityVolumeM3 | number:'1.1-1' }} m³</span> }
+                      @if (v.isRefrigerated) {
+                        <span class="dst-pill tone-info fl-cold">
+                          <span class="material-symbols-outlined">ac_unit</span>{{ v.minSafeCelsius }}–{{ v.maxSafeCelsius }}°
+                        </span>
+                      }
+                    </td>
+                    <td>{{ v.defaultDriverName || '—' }}</td>
+                    <td class="num">{{ v.currentOdometerKm | number }} km</td>
+                    <td class="nowrap">
+                      @if (serviceDue(v)) {
+                        <span class="fl-bad">Due now</span>
+                      } @else if (v.nextServiceDueOn) {
+                        {{ v.nextServiceDueOn | date:'d MMM y' }}
+                      } @else if (v.nextServiceDueAtKm) {
+                        at {{ v.nextServiceDueAtKm | number }} km
+                      } @else { <span class="muted">—</span> }
+                    </td>
+                    <td>
+                      @if (v.earliestComplianceExpiry) {
+                        <span [class.fl-bad]="v.hasExpiredCompliance">
+                          {{ v.earliestComplianceExpiry | date:'d MMM y' }}
+                        </span>
+                      } @else { <span class="muted">nothing on file</span> }
+                    </td>
+                    <td><dst-status [label]="vehicleState(v).label" [tone]="vehicleState(v).tone"></dst-status></td>
+                    <td class="actions">
+                      <button type="button" class="dst-icon-btn" (click)="editVehicle(v)" aria-label="Edit the vehicle" title="Edit">
+                        <span class="material-symbols-outlined">edit</span>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ── Drivers ──────────────────────────────────────────────────────── -->
+  @if (tab === 'drivers') {
+    <div class="dst-card">
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="fl-loading">
+            @for (i of [1,2,3,4]; track i) { <div class="dst-skeleton" style="height: 54px"></div> }
+          </div>
+        } @else if (drivers.length === 0) {
+          <dst-empty
+            icon="badge"
+            title="No drivers"
+            text="Drivers carry licence and training records on the same basis as vehicles carry permits."
+            actionLabel="Add a driver"
+            actionIcon="person_add"
+            (action)="createDriver()"
+          ></dst-empty>
+        } @else {
+          <div class="dst-table-wrap">
+            <table class="dst-table">
+              <thead>
+                <tr>
+                  <th>Driver</th><th>Phone</th><th>Licence</th><th>Class</th>
+                  <th>Expires</th><th>Usual vehicle</th><th>Joined</th><th class="actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (d of drivers; track trackDriver($index, d)) {
+                  <tr [class.is-flagged]="(d.daysToLicenceExpiry ?? 999) < 0">
+                    <td>
+                      <div class="dst-cell-stack">
+                        <span class="top">{{ d.fullName }}</span>
+                        <span class="sub">
+                          @if (d.code) { <span class="dst-code is-plain">{{ d.code }}</span> }
+                          @if (d.partnerName) { · {{ d.partnerName }} }
+                          @if (!d.isActive) { · inactive }
+                        </span>
+                      </div>
+                    </td>
+                    <td>{{ d.phone }}</td>
+                    <td class="muted">{{ d.licenceNumber || '—' }}</td>
+                    <td>{{ d.licenceClass }}</td>
+                    <td>
+                      <dst-status [label]="licenceLabel(d)" [tone]="licenceTone(d)"></dst-status>
+                      @if (d.licenceExpiresOn) { <span class="fl-quiet">{{ d.licenceExpiresOn | date:'d MMM y' }}</span> }
+                    </td>
+                    <td>{{ d.defaultVehicleRegistration || '—' }}</td>
+                    <td class="nowrap muted">{{ (d.joinedOn | date:'MMM y') || '—' }}</td>
+                    <td class="actions">
+                      <button type="button" class="dst-icon-btn" (click)="editDriver(d)" aria-label="Edit the driver" title="Edit">
+                        <span class="material-symbols-outlined">edit</span>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <dst-pager [meta]="meta" noun="rows" (pageChange)="changePage($event)" (sizeChange)="changeSize($event)"></dst-pager>
+</div>
+
+<!-- ── Vehicle editor ───────────────────────────────────────────────────── -->
+@if (showVehicle) {
+  <div class="dst-modal-backdrop" (click)="showVehicle = false">
+    <div class="dst-modal" role="dialog" aria-modal="true" aria-label="Vehicle" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">@if (vehicle.id) { Edit vehicle } @else { Add a vehicle }</div>
+          <div class="dst-modal-sub">Capacity is what the trip builder uses to decide what fits.</div>
+        </div>
+        <button type="button" class="dst-close" (click)="showVehicle = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-form-grid">
+          <div class="dst-field">
+            <label for="fl-reg">Registration <span class="req">*</span></label>
+            <input id="fl-reg" type="text" [(ngModel)]="vehicle.registrationNumber" [class.is-invalid]="!!vehicleErrors['registrationNumber']" />
+            <dst-field-error [message]="vehicleErrors['registrationNumber']" for="fl-reg"></dst-field-error>
+          </div>
+
+          <div class="dst-field">
+            <label for="fl-name">Name</label>
+            <input id="fl-name" type="text" [(ngModel)]="vehicle.name" placeholder="Optional — a nickname the depot uses" />
+          </div>
+
+          <div class="dst-field">
+            <label for="fl-kind">Kind</label>
+            <select id="fl-kind" [(ngModel)]="vehicle.kind">
+              @for (o of kindOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+            </select>
+          </div>
+
+          <div class="dst-field">
+            <label for="fl-ownership">Ownership</label>
+            <select id="fl-ownership" [(ngModel)]="vehicle.ownership">
+              @for (o of ownershipOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+            </select>
+          </div>
+
+          <div class="dst-field">
+            <label for="fl-make">Make</label>
+            <input id="fl-make" type="text" [(ngModel)]="vehicle.make" />
+          </div>
+
+          <div class="dst-field">
+            <label for="fl-model">Model</label>
+            <input id="fl-model" type="text" [(ngModel)]="vehicle.model" />
+          </div>
+
+          <div class="dst-field">
+            <label for="fl-weight">Capacity (kg)</label>
+            <input id="fl-weight" type="number" min="0" [(ngModel)]="vehicle.capacityWeightKg" [class.is-invalid]="!!vehicleErrors['capacityWeightKg']" />
+            <dst-field-error [message]="vehicleErrors['capacityWeightKg']" for="fl-weight"></dst-field-error>
+          </div>
+
+          <div class="dst-field">
+            <label for="fl-volume">Capacity (m³)</label>
+            <input id="fl-volume" type="number" step="0.1" min="0" [(ngModel)]="vehicle.capacityVolumeM3" />
+          </div>
+
+          <div class="dst-field">
+            <label for="fl-odo">Odometer (km)</label>
+            <input id="fl-odo" type="number" min="0" [(ngModel)]="vehicle.currentOdometerKm" [class.is-invalid]="!!vehicleErrors['currentOdometerKm']" />
+            <dst-field-error [message]="vehicleErrors['currentOdometerKm']" for="fl-odo"></dst-field-error>
+          </div>
+
+          <div class="dst-field">
+            <label for="fl-service-date">Next service due</label>
+            <input id="fl-service-date" type="date" [(ngModel)]="vehicle.nextServiceDueOn" />
+          </div>
+
+          <div class="dst-field">
+            <label for="fl-service-km">Next service at (km)</label>
+            <input id="fl-service-km" type="number" min="0" [(ngModel)]="vehicle.nextServiceDueAtKm" />
+          </div>
+
+          <div class="dst-field is-full">
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="vehicle.isRefrigerated" />
+              <span>
+                Refrigerated
+                <span class="dst-check-sub">Chilled loads will only be offered vehicles that can carry them.</span>
+              </span>
+            </label>
+          </div>
+
+          @if (vehicle.isRefrigerated) {
+            <div class="dst-field">
+              <label for="fl-min">Minimum safe °C</label>
+              <input id="fl-min" type="number" step="0.5" [(ngModel)]="vehicle.minSafeCelsius" />
+            </div>
+            <div class="dst-field">
+              <label for="fl-max">Maximum safe °C</label>
+              <input id="fl-max" type="number" step="0.5" [(ngModel)]="vehicle.maxSafeCelsius" />
+            </div>
+          }
+
+          <div class="dst-field is-full">
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="vehicle.isOutOfService" />
+              <span>
+                Out of service
+                <span class="dst-check-sub">Keeps it off every trip until somebody clears it.</span>
+              </span>
+            </label>
+          </div>
+
+          @if (vehicle.isOutOfService) {
+            <div class="dst-field is-full">
+              <label for="fl-oos">Why is it out of service?</label>
+              <input id="fl-oos" type="text" [(ngModel)]="vehicle.outOfServiceReason" />
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showVehicle = false" [disabled]="busy">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="saveVehicle()" [disabled]="busy">Save</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Driver editor ────────────────────────────────────────────────────── -->
+@if (showDriver) {
+  <div class="dst-modal-backdrop" (click)="showDriver = false">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Driver" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">@if (driver.id) { Edit driver } @else { Add a driver }</div>
+          <div class="dst-modal-sub">Licence expiry is checked when a trip is built.</div>
+        </div>
+        <button type="button" class="dst-close" (click)="showDriver = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-form-grid">
+          <div class="dst-field is-full">
+            <label for="fl-driver-name">Name <span class="req">*</span></label>
+            <input id="fl-driver-name" type="text" [(ngModel)]="driver.fullName" [class.is-invalid]="!!driverErrors['fullName']" />
+            <dst-field-error [message]="driverErrors['fullName']" for="fl-driver-name"></dst-field-error>
+          </div>
+
+          <div class="dst-field">
+            <label for="fl-driver-phone">Phone</label>
+            <input id="fl-driver-phone" type="tel" [(ngModel)]="driver.phone" [class.is-invalid]="!!driverErrors['phone']" />
+            <dst-field-error [message]="driverErrors['phone']" for="fl-driver-phone"></dst-field-error>
+          </div>
+
+          <div class="dst-field">
+            <label for="fl-driver-employee">Employee id</label>
+            <input id="fl-driver-employee" type="text" [(ngModel)]="driver.employeeId" />
+          </div>
+
+          <div class="dst-field">
+            <label for="fl-licence">Licence number</label>
+            <input id="fl-licence" type="text" [(ngModel)]="driver.licenceNumber" />
+          </div>
+
+          <div class="dst-field">
+            <label for="fl-licence-class">Licence class</label>
+            <input id="fl-licence-class" type="text" [(ngModel)]="driver.licenceClass" />
+          </div>
+
+          <div class="dst-field">
+            <label for="fl-licence-expiry">Licence expires</label>
+            <input id="fl-licence-expiry" type="date" [(ngModel)]="driver.licenceExpiresOn" />
+          </div>
+
+          <div class="dst-field">
+            <label for="fl-driver-joined">Joined</label>
+            <input id="fl-driver-joined" type="date" [(ngModel)]="driver.joinedOn" />
+          </div>
+
+          <div class="dst-field is-full">
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="driver.isActive" />
+              <span>Active</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showDriver = false" [disabled]="busy">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="saveDriver()" [disabled]="busy">Save</button>
+      </div>
+    </div>
+  </div>
+}

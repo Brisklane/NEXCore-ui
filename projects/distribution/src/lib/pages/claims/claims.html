@@ -1,0 +1,443 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Claims</h2>
+      <p class="subtitle">Money owed back to the trade, and how fast you settle it.</p>
+    </div>
+    <dst-scope-bar [showPeriod]="true" (scopeChange)="onScope($event)"></dst-scope-bar>
+  </div>
+
+  <dst-help key="claims"></dst-help>
+
+  @if (error) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">{{ error }}</div>
+      <button type="button" class="dst-icon-btn" (click)="error = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  @if (notice) {
+    <div class="dst-banner tone-success" role="status">
+      <span class="material-symbols-outlined">check_circle</span>
+      <div class="dst-banner-body">{{ notice }}</div>
+      <button type="button" class="dst-icon-btn" (click)="notice = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  <div class="dst-toolbar">
+    <div class="dst-segment" role="tablist" aria-label="Claim queues">
+      @for (q of queues; track q.key) {
+        <button
+          type="button"
+          role="tab"
+          [attr.aria-selected]="queue === q.key"
+          [class.is-active]="queue === q.key"
+          (click)="setQueue(q.key)"
+        >
+          <span class="material-symbols-outlined">{{ q.icon }}</span>
+          {{ q.label }}
+        </button>
+      }
+    </div>
+
+    <span class="dst-spacer"></span>
+
+    <div class="dst-search">
+      <span class="material-symbols-outlined">search</span>
+      <input type="search" [(ngModel)]="search" (ngModelChange)="onSearch()" placeholder="Claim number or partner" aria-label="Search claims" />
+    </div>
+
+    <select class="dst-filter-select" [(ngModel)]="kindFilter" (ngModelChange)="load()" aria-label="Claim kind">
+      <option value="">All kinds</option>
+      @for (o of kindOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+    </select>
+  </div>
+
+  <div class="dst-split cl-split">
+    <!-- ── Queue ──────────────────────────────────────────────────────── -->
+    <aside class="dst-card cl-queue" aria-label="Claims">
+      <div class="dst-card-body is-flush cl-queue-body">
+        @if (loading) {
+          <div class="cl-loading">
+            @for (i of [1,2,3,4,5,6]; track i) { <div class="dst-skeleton" style="height: 68px"></div> }
+          </div>
+        } @else if (rows.length === 0) {
+          <dst-empty
+            icon="gavel"
+            title="Nothing waiting"
+            text="No claims in this queue. An empty open queue is the target — claim ageing is the number distributors judge you on."
+          ></dst-empty>
+        } @else {
+          @for (row of rows; track trackRow($index, row)) {
+            <button
+              type="button"
+              class="cl-item"
+              [class.is-selected]="detail?.id === row.id"
+              [class.is-breaching]="row.isBreachingSla"
+              (click)="open(row.id)"
+            >
+              <div class="cl-item-top">
+                <span class="dst-code">{{ row.claimNumber }}</span>
+                <span class="cl-age" [class.is-bad]="row.isBreachingSla">{{ row.ageingDays }}d</span>
+              </div>
+              <div class="cl-item-partner">{{ row.partnerName }}</div>
+              <div class="cl-item-meta">
+                {{ kindLabels[row.kind] }}
+                @if (row.schemeName) { · {{ row.schemeName }} }
+                @if (row.isSystemGenerated) { · auto }
+              </div>
+              <div class="cl-item-foot">
+                <span class="cl-item-amount">{{ row.claimedAmount | number:'1.0-0' }}</span>
+                <dst-status [label]="statusLabels[row.status]" [tone]="statusTone[row.status]"></dst-status>
+              </div>
+            </button>
+          }
+        }
+      </div>
+
+      <dst-pager [meta]="meta" noun="claims" (pageChange)="changePage($event)" (sizeChange)="changeSize($event)"></dst-pager>
+    </aside>
+
+    <!-- ── Detail ─────────────────────────────────────────────────────── -->
+    <section class="cl-detail" aria-label="Claim detail">
+      @if (loadingDetail) {
+        <div class="dst-skeleton" style="height: 420px; border-radius: 16px"></div>
+      } @else if (!detail) {
+        <div class="dst-card">
+          <dst-empty icon="gavel" title="Pick a claim" text="Choose a claim on the left to compare what was claimed against what the system computed."></dst-empty>
+        </div>
+      } @else {
+        <div class="dst-card">
+          <div class="dst-card-head">
+            <div class="dst-card-title">
+              <span class="material-symbols-outlined">gavel</span>
+              <div>
+                {{ detail.claimNumber }}
+                <div class="dst-card-sub">
+                  {{ detail.partnerName || detail.outletName }} ·
+                  {{ kindLabels[detail.kind] }} ·
+                  {{ detail.periodStart | date:'d MMM' }} – {{ detail.periodEnd | date:'d MMM y' }}
+                </div>
+              </div>
+            </div>
+            <div class="dst-card-actions">
+              <dst-status [label]="statusLabels[detail.status]" [tone]="statusTone[detail.status]" [large]="true"></dst-status>
+              @if (detail.isBreachingSla) {
+                <span class="dst-pill tone-danger is-lg">
+                  <span class="material-symbols-outlined">schedule</span>
+                  {{ detail.ageingDays }} days — past SLA
+                </span>
+              }
+            </div>
+          </div>
+
+          <div class="dst-card-body">
+            <div class="cl-amounts">
+              <div class="cl-amount">
+                <span class="cl-amount-label">Claimed</span>
+                <span class="cl-amount-value">{{ detail.claimedAmount | number:'1.2-2' }}</span>
+              </div>
+              <span class="cl-vs" aria-hidden="true">vs</span>
+              <div class="cl-amount">
+                <span class="cl-amount-label">System computed</span>
+                <span class="cl-amount-value">{{ detail.computedAmount | number:'1.2-2' }}</span>
+              </div>
+              <div class="cl-amount is-variance">
+                <span class="cl-amount-label">Difference</span>
+                <span class="cl-amount-value" [class]="'cl-amount-value ' + varianceTone(detail)">
+                  {{ detail.varianceAmount | number:'1.2-2' }}
+                </span>
+              </div>
+              @if (detail.approvedAmount > 0) {
+                <div class="cl-amount">
+                  <span class="cl-amount-label">Approved</span>
+                  <span class="cl-amount-value is-approved">{{ detail.approvedAmount | number:'1.2-2' }}</span>
+                </div>
+              }
+            </div>
+
+            @if (detail.queryNote) {
+              <div class="dst-banner tone-warning">
+                <span class="material-symbols-outlined">help</span>
+                <div class="dst-banner-body">
+                  <strong>Queried {{ detail.queriedAt | date:'d MMM y' }}.</strong> {{ detail.queryNote }}
+                  @if (detail.resubmittedAt) { <br />Resubmitted {{ detail.resubmittedAt | date:'d MMM y' }}. }
+                </div>
+              </div>
+            }
+
+            @if (detail.rejectionNote) {
+              <div class="dst-banner tone-danger">
+                <span class="material-symbols-outlined">block</span>
+                <div class="dst-banner-body"><strong>Rejected.</strong> {{ detail.rejectionNote }}</div>
+              </div>
+            }
+
+            @if (detail.settledAt) {
+              <div class="dst-banner tone-success">
+                <span class="material-symbols-outlined">task_alt</span>
+                <div class="dst-banner-body">
+                  Settled {{ detail.settledAt | date:'d MMM y' }} by
+                  {{ detail.settlementMode != null ? settlementLabels[detail.settlementMode] : 'unknown method' }}
+                  @if (detail.settlementReference) { · reference {{ detail.settlementReference }} }
+                  @if (detail.settlementDays) { · took {{ detail.settlementDays }} days }
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Lines -->
+        <div class="dst-card">
+          <div class="dst-card-head">
+            <div class="dst-card-title"><span class="material-symbols-outlined">list</span>Lines</div>
+            @if (canDecide) {
+              <div class="dst-card-actions">
+                <button type="button" class="dst-btn is-sm" (click)="acceptComputed()">Accept computed</button>
+                <button type="button" class="dst-btn is-sm" (click)="acceptClaimed()">Accept as claimed</button>
+              </div>
+            }
+          </div>
+
+          <div class="dst-card-body is-flush">
+            <div class="dst-table-wrap">
+              <table class="dst-table cl-lines">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th class="num">Qty</th>
+                    <th class="num">Rate</th>
+                    <th class="num">Claimed</th>
+                    <th class="num">Computed</th>
+                    <th class="num">Approve</th>
+                    <th>Reason if short</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (l of detail.lines; track trackLine($index, l)) {
+                    <tr [class.is-flagged]="lineDisagrees(l)">
+                      <td>
+                        <div class="dst-cell-stack">
+                          <span class="top">{{ l.itemName || 'Claim line' }}</span>
+                          <span class="sub">
+                            @if (l.batchNumber) { batch {{ l.batchNumber }} · }
+                            @if (l.sourceInvoiceNumber) { invoice {{ l.sourceInvoiceNumber }} }
+                          </span>
+                        </div>
+                      </td>
+                      <td class="num">{{ l.quantity | number }} {{ l.uom }}</td>
+                      <td class="num muted">{{ l.unitRate | number:'1.2-2' }}</td>
+                      <td class="num">{{ l.claimedAmount | number:'1.2-2' }}</td>
+                      <td class="num strong">{{ l.computedAmount | number:'1.2-2' }}</td>
+                      <td class="num">
+                        @if (canDecide) {
+                          <input
+                            type="number"
+                            class="cl-cell"
+                            step="0.01"
+                            min="0"
+                            [ngModel]="decisionFor(l).approvedAmount"
+                            (ngModelChange)="setApproved(l, $event)"
+                            [attr.aria-label]="'Approved amount for ' + (l.itemName || 'this line')"
+                          />
+                        } @else {
+                          {{ l.approvedAmount | number:'1.2-2' }}
+                        }
+                      </td>
+                      <td>
+                        @if (canDecide && decisionFor(l).approvedAmount < l.claimedAmount) {
+                          <select
+                            class="cl-cell is-wide"
+                            [ngModel]="decisionFor(l).rejectionReasonCodeId"
+                            (ngModelChange)="setRejectReason(l, $event)"
+                            [attr.aria-label]="'Reason for approving less on ' + (l.itemName || 'this line')"
+                          >
+                            <option value="">Pick a reason</option>
+                            @for (r of rejectReasons; track r.id) { <option [value]="r.id">{{ r.name }}</option> }
+                          </select>
+                        } @else if (l.rejectionReasonName) {
+                          <span class="muted">{{ l.rejectionReasonName }}</span>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td colspan="3">Total</td>
+                    <td class="num">{{ detail.claimedAmount | number:'1.2-2' }}</td>
+                    <td class="num">{{ detail.computedAmount | number:'1.2-2' }}</td>
+                    <td class="num">{{ (canDecide ? decidedTotal : detail.approvedAmount) | number:'1.2-2' }}</td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Documents and trail -->
+        <div class="dst-grid cols-2">
+          <section class="dst-card">
+            <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">attach_file</span>Documents</div></div>
+            <div class="dst-card-body is-flush">
+              @if (detail.documents.length === 0) {
+                <p class="cl-none">No documents attached. Most claim disputes are really evidence disputes.</p>
+              }
+              @for (d of detail.documents; track d.id) {
+                <div class="cl-doc">
+                  <div class="dst-cell-stack">
+                    <span class="top">{{ d.documentType }}</span>
+                    <span class="sub">{{ d.fileName }} · {{ d.uploadedAt | date:'d MMM y' }}</span>
+                  </div>
+                  <a class="dst-icon-btn" [href]="d.fileUrl" target="_blank" rel="noopener" aria-label="Open the document">
+                    <span class="material-symbols-outlined">open_in_new</span>
+                  </a>
+                </div>
+              }
+            </div>
+          </section>
+
+          <section class="dst-card">
+            <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">history</span>What happened</div></div>
+            <div class="dst-card-body">
+              <div class="dst-timeline">
+                @for (e of detail.statusEvents; track trackIndex($index)) {
+                  <div class="dst-timeline-item">
+                    <span class="dst-timeline-dot tone-brand"><span class="material-symbols-outlined">arrow_forward</span></span>
+                    <div class="dst-timeline-body">
+                      <div class="dst-timeline-title">{{ statusLabels[e.toStatus] }}</div>
+                      <div class="dst-timeline-meta">
+                        {{ e.occurredAt | date:'d MMM y, HH:mm' }}
+                        @if (e.actorName) { · {{ e.actorName }} }
+                      </div>
+                      @if (e.note) { <div class="dst-timeline-note">{{ e.note }}</div> }
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- Actions -->
+        @if (canDecide || canSettle || canReview) {
+          <div class="cl-actions">
+            @if (canDecide) {
+              <div class="dst-field cl-note">
+                <label for="cl-note">Note on the decision</label>
+                <input id="cl-note" type="text" [(ngModel)]="decisionNote" placeholder="Optional — the partner sees this" />
+              </div>
+
+              @if (missingReasons > 0) {
+                <span class="cl-warn">
+                  <span class="material-symbols-outlined">warning</span>
+                  {{ missingReasons }} lines short of claimed without a reason
+                </span>
+              }
+            }
+
+            <span class="dst-spacer"></span>
+
+            @if (canReview) {
+              <button type="button" class="dst-btn" (click)="startReview()" [disabled]="busy">Start review</button>
+            }
+            @if (canDecide) {
+              <button type="button" class="dst-btn" (click)="showQuery = true" [disabled]="busy">
+                <span class="material-symbols-outlined">help</span>Query back
+              </button>
+              <button type="button" class="dst-btn is-danger" (click)="decide(false)" [disabled]="busy">Reject</button>
+              <button type="button" class="dst-btn is-success" (click)="decide(true)" [disabled]="busy">
+                <span class="material-symbols-outlined">check</span>
+                Approve {{ decidedTotal | number:'1.2-2' }}
+              </button>
+            }
+            @if (canSettle) {
+              <button type="button" class="dst-btn is-primary" (click)="openSettle()" [disabled]="busy">
+                <span class="material-symbols-outlined">payments</span>Settle
+              </button>
+            }
+          </div>
+        }
+      }
+    </section>
+  </div>
+</div>
+
+<!-- ── Query ────────────────────────────────────────────────────────────── -->
+@if (showQuery && detail) {
+  <div class="dst-modal-backdrop" (click)="showQuery = false">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Query the claim" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Query {{ detail.claimNumber }}</div>
+          <div class="dst-modal-sub">
+            The claim goes back to the partner and the SLA clock pauses until they resubmit. Say
+            exactly what is missing.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="showQuery = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="dst-modal-body">
+        <div class="dst-field">
+          <label for="cl-query">What do you need? <span class="req">*</span></label>
+          <textarea id="cl-query" [(ngModel)]="queryNote" placeholder="The delivery notes for lines 3 and 4, and the signed display photo."></textarea>
+        </div>
+      </div>
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showQuery = false">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="raiseQuery()" [disabled]="!queryNote.trim() || busy">Send the query</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Settle ───────────────────────────────────────────────────────────── -->
+@if (showSettle && detail) {
+  <div class="dst-modal-backdrop" (click)="showSettle = false">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Settle the claim" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Settle {{ detail.claimNumber }}</div>
+          <div class="dst-modal-sub">{{ detail.approvedAmount | number:'1.2-2' }} approved for {{ detail.partnerName }}.</div>
+        </div>
+        <button type="button" class="dst-close" (click)="showSettle = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="dst-modal-body">
+        <div class="dst-form-grid">
+          <div class="dst-field is-full">
+            <label for="cl-mode">How</label>
+            <select id="cl-mode" [(ngModel)]="settle.settlementMode">
+              @for (o of settlementOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+            </select>
+          </div>
+          <div class="dst-field">
+            <label for="cl-amount">Amount</label>
+            <input id="cl-amount" type="number" step="0.01" min="0" [(ngModel)]="settle.settledAmount" />
+          </div>
+          <div class="dst-field">
+            <label for="cl-ref">Reference</label>
+            <input id="cl-ref" type="text" [(ngModel)]="settle.settlementReference" placeholder="Credit note or payment reference" />
+          </div>
+          <div class="dst-field is-full">
+            <label for="cl-settle-note">Note</label>
+            <input id="cl-settle-note" type="text" [(ngModel)]="settle.note" />
+          </div>
+        </div>
+      </div>
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showSettle = false">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="confirmSettle()" [disabled]="busy">Record the settlement</button>
+      </div>
+    </div>
+  </div>
+}

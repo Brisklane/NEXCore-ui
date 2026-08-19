@@ -1,0 +1,157 @@
+/* Credit control — the ageing buckets are the filter, not a decoration. */
+
+.cr-loading { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.cr-table { min-width: 1120px; }
+.cr-table a { color: var(--accent, #2b7fff); text-decoration: none; font-weight: 700; }
+.cr-table a:hover { text-decoration: underline; }
+
+.cr-buckets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 11px;
+  margin-bottom: 16px;
+}
+
+.cr-bucket {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 13px 15px;
+  border-radius: 14px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-surface, #fff);
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.13s ease, background 0.13s ease, transform 0.08s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.cr-bucket::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--border-strong, #cbd5e1);
+}
+
+.cr-bucket.is-warn::after { background: var(--warning, #f59e0b); }
+.cr-bucket.is-bad::after { background: var(--danger, #ef4444); }
+.cr-bucket:hover { border-color: var(--accent, #2b7fff); }
+.cr-bucket:active { transform: translateY(1px); }
+.cr-bucket:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.cr-bucket.is-active {
+  border-color: var(--accent, #2b7fff);
+  background: var(--accent-soft, rgba(43, 127, 255, 0.09));
+  box-shadow: inset 0 0 0 1px var(--accent, #2b7fff);
+}
+
+.cr-bucket-label {
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted, #94a3b8);
+}
+
+.cr-bucket-value {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.cr-bucket-foot { font-size: 11px; color: var(--text-muted, #94a3b8); }
+
+.cr-quick {
+  padding: 0 11px;
+  border-radius: 10px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-surface, #fff);
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--text-secondary, #64748b);
+  min-height: 40px;
+  white-space: nowrap;
+}
+
+/* ── Table bits ────────────────────────────────────────────────────── */
+.cr-enforce {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 650;
+  color: var(--text-muted, #94a3b8);
+  margin-top: 2px;
+}
+
+.cr-used { display: flex; flex-direction: column; gap: 3px; align-items: flex-end; min-width: 110px; }
+.cr-used-nums { font-size: 12.5px; font-weight: 750; font-variant-numeric: tabular-nums; }
+.cr-used .dst-bar { width: 100%; }
+.cr-used-limit { font-size: 10.5px; color: var(--text-muted, #94a3b8); }
+
+.cr-overdue { color: var(--danger-text, #b91c1c); font-weight: 750; }
+
+.cr-block-reason {
+  display: block;
+  font-size: 10.5px;
+  color: var(--danger-text, #b91c1c);
+  margin-top: 3px;
+  max-width: 190px;
+  line-height: 1.4;
+}
+
+.cr-tender {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 650;
+}
+
+.cr-tender .material-symbols-outlined { font-size: 16px; color: var(--text-muted, #94a3b8); }
+
+.cr-ref {
+  display: block;
+  font-size: 10.5px;
+  color: var(--text-muted, #94a3b8);
+  font-family: var(--font-mono, ui-monospace, Menlo, monospace);
+  margin-top: 2px;
+}
+
+.cr-pdc {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--warning-text, #92400e);
+  margin-top: 2px;
+}
+
+/* ── Overrides ─────────────────────────────────────────────────────── */
+.cr-override {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-light, #eef1f5);
+  flex-wrap: wrap;
+}
+
+.cr-override:last-child { border-bottom: none; }
+.cr-override-body { flex: 1; min-width: 0; }
+
+.cr-override-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+}
+
+.cr-override-meta { font-size: 11.5px; color: var(--text-muted, #94a3b8); margin-top: 3px; }
+.cr-override-note { font-size: 12.5px; color: var(--text-secondary, #64748b); margin-top: 6px; line-height: 1.5; }

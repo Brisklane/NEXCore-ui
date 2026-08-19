@@ -1,0 +1,148 @@
+/* Secondary sales — the unmatched rows are the point, not a footnote. */
+
+.ss-head-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ss-loading { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.ss-table { min-width: 1080px; }
+.ss-recon { min-width: 1180px; }
+
+.ss-late { color: var(--warning-text, #92400e); font-weight: 700; }
+.ss-warn { color: var(--warning-text, #92400e); font-weight: 750; }
+
+.ss-accuracy { display: flex; flex-direction: column; gap: 3px; align-items: flex-end; }
+
+.ss-unmapped {
+  font-size: 10.5px;
+  font-weight: 750;
+  color: var(--danger-text, #b91c1c);
+}
+
+.ss-reject {
+  display: block;
+  font-size: 10.5px;
+  color: var(--danger-text, #b91c1c);
+  margin-top: 3px;
+  max-width: 200px;
+  line-height: 1.4;
+}
+
+.ss-variance-pct {
+  display: block;
+  font-size: 10.5px;
+  color: var(--text-muted, #94a3b8);
+  margin-top: 2px;
+}
+
+.ss-explained {
+  display: block;
+  font-size: 10.5px;
+  color: var(--text-muted, #94a3b8);
+  margin-top: 3px;
+  max-width: 180px;
+  line-height: 1.4;
+}
+
+/* ── Unmatched rows ────────────────────────────────────────────────── */
+.ss-exception {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--border-light, #eef1f5);
+  border-left: 3px solid var(--warning, #f59e0b);
+  flex-wrap: wrap;
+}
+
+.ss-exception:last-child { border-bottom: none; }
+.ss-exception-body { flex: 1; min-width: 0; }
+.ss-exception-raw { display: flex; gap: 16px; flex-wrap: wrap; }
+
+.ss-raw {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+  font-family: var(--font-mono, ui-monospace, Menlo, monospace);
+}
+
+.ss-raw-key {
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted, #94a3b8);
+  font-family: inherit;
+}
+
+.ss-exception-meta { font-size: 11.5px; color: var(--text-muted, #94a3b8); margin-top: 5px; }
+.ss-suggestions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 7px; }
+
+.ss-suggestion-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ss-suggestion {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--bg-muted, #f1f5f9);
+  border: 1px solid var(--border-default, #e6eaf0);
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--text-secondary, #64748b);
+}
+
+.ss-suggestion i { font-style: normal; font-size: 10px; color: var(--text-muted, #94a3b8); }
+
+/* ── Resolve dialog ────────────────────────────────────────────────── */
+.ss-raw-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 13px 15px;
+  border-radius: 12px;
+  background: var(--bg-subtle, #f8fafc);
+  border: 1px solid var(--border-default, #e6eaf0);
+  margin-bottom: 16px;
+}
+
+.ss-raw-panel > div { display: flex; flex-direction: column; gap: 2px; }
+.ss-raw-panel strong { font-size: 13.5px; color: var(--text-heading, #0f172a); font-family: var(--font-mono, ui-monospace, Menlo, monospace); }
+
+.ss-suggest-list { display: flex; flex-direction: column; gap: 6px; }
+
+.ss-suggest {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 13px;
+  border-radius: 11px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-surface, #fff);
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  min-height: 52px;
+}
+
+.ss-suggest:hover { border-color: var(--accent, #2b7fff); background: var(--bg-subtle, #f8fafc); }
+.ss-suggest:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.ss-suggest.is-picked {
+  border-color: var(--accent, #2b7fff);
+  background: var(--accent-soft, rgba(43, 127, 255, 0.1));
+  box-shadow: inset 0 0 0 1px var(--accent, #2b7fff);
+}
+
+.ss-suggest-name { font-size: 13px; font-weight: 700; color: var(--text-heading, #0f172a); }
+.ss-suggest-meta { font-size: 11px; color: var(--text-muted, #94a3b8); }
+
+.ss-manual { margin-top: 16px; }

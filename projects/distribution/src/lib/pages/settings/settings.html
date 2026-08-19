@@ -1,0 +1,651 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Distribution settings</h2>
+      <p class="subtitle">Numbering, tolerances, SLAs, reason codes and approval thresholds.</p>
+    </div>
+    @if (settings && tab !== 'reasons') {
+      <button type="button" class="dst-btn is-primary" (click)="save()" [disabled]="saving">
+        <span class="material-symbols-outlined">save</span>
+        @if (saving) { Saving… } @else { Save changes }
+      </button>
+    }
+  </div>
+
+  <dst-help key="settings"></dst-help>
+
+  @if (error) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">{{ error }}</div>
+      <button type="button" class="dst-icon-btn" (click)="error = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  @if (notice) {
+    <div class="dst-banner tone-success" role="status">
+      <span class="material-symbols-outlined">check_circle</span>
+      <div class="dst-banner-body">{{ notice }}</div>
+      <button type="button" class="dst-icon-btn" (click)="notice = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  @if (loading) {
+    <div class="dst-skeleton" style="height: 440px; border-radius: 16px"></div>
+  }
+
+  @if (!loading && settings; as s) {
+    <div class="dst-tabs" role="tablist">
+      <button type="button" role="tab" [attr.aria-selected]="tab === 'field'" [class.is-active]="tab === 'field'" (click)="tab = 'field'">
+        <span class="material-symbols-outlined">near_me</span>Field
+      </button>
+      <button type="button" role="tab" [attr.aria-selected]="tab === 'orders'" [class.is-active]="tab === 'orders'" (click)="tab = 'orders'">
+        <span class="material-symbols-outlined">receipt_long</span>Orders
+      </button>
+      <button type="button" role="tab" [attr.aria-selected]="tab === 'credit'" [class.is-active]="tab === 'credit'" (click)="tab = 'credit'">
+        <span class="material-symbols-outlined">account_balance</span>Credit
+      </button>
+      <button type="button" role="tab" [attr.aria-selected]="tab === 'stock'" [class.is-active]="tab === 'stock'" (click)="tab = 'stock'">
+        <span class="material-symbols-outlined">inventory</span>Stock &amp; expiry
+      </button>
+      <button type="button" role="tab" [attr.aria-selected]="tab === 'settlement'" [class.is-active]="tab === 'settlement'" (click)="tab = 'settlement'">
+        <span class="material-symbols-outlined">rule</span>Settlement
+      </button>
+      <button type="button" role="tab" [attr.aria-selected]="tab === 'schemes'" [class.is-active]="tab === 'schemes'" (click)="tab = 'schemes'">
+        <span class="material-symbols-outlined">redeem</span>Schemes &amp; claims
+      </button>
+      <button type="button" role="tab" [attr.aria-selected]="tab === 'reasons'" [class.is-active]="tab === 'reasons'" (click)="tab = 'reasons'">
+        <span class="material-symbols-outlined">label</span>Reason codes
+      </button>
+    </div>
+
+    <!-- ── Field ──────────────────────────────────────────────────────── -->
+    @if (tab === 'field') {
+      <div class="dst-card">
+        <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">near_me</span>How the field terminal behaves</div></div>
+        <div class="dst-card-body">
+          <div class="dst-form-grid">
+            <div class="dst-field">
+              <label for="st-geofence">Default geofence radius (m)</label>
+              <input id="st-geofence" type="number" min="0" [(ngModel)]="s.defaultGeofenceRadiusMetres" />
+              <span class="dst-hint">Used when an outlet has no radius of its own.</span>
+            </div>
+
+            <div class="dst-field">
+              <label for="st-unplanned">Maximum unplanned calls a day</label>
+              <input id="st-unplanned" type="number" min="0" [(ngModel)]="s.maxUnplannedVisitsPerDay" />
+              <span class="dst-hint">Zero means no limit. A high count usually means the journey plan is wrong.</span>
+            </div>
+
+            <div class="dst-field">
+              <label for="st-deadline">Day must start by</label>
+              <input id="st-deadline" type="time" [(ngModel)]="s.dayStartDeadline" />
+              <span class="dst-hint">Reps who have not started by this time appear on the dashboard.</span>
+            </div>
+          </div>
+
+          <div class="st-switches">
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="s.requireGeoOnCheckIn" />
+              <span>
+                Require a location on check-in
+                <span class="dst-check-sub">A device with no fix cannot check in at all.</span>
+              </span>
+            </label>
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="s.allowOutOfFenceCheckIn" />
+              <span>
+                Allow check-in outside the geofence
+                <span class="dst-check-sub">Recommended. Blocking it teaches reps to stop using the app; recording it with a reason does not.</span>
+              </span>
+            </label>
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="s.requireReasonOnNoOrder" />
+              <span>
+                Require a reason when a call produces no order
+                <span class="dst-check-sub">This is the number the whole business improves on.</span>
+              </span>
+            </label>
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="s.requireStartSelfie" />
+              <span>
+                Require a photo at start of day
+                <span class="dst-check-sub">Proves the rep is where they say they are before the day opens.</span>
+              </span>
+            </label>
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="s.blockDayCloseWithUnsynced" />
+              <span>
+                Block day close while records are unsynced
+                <span class="dst-check-sub">Stops a day being closed on figures the server has never seen.</span>
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- ── Orders ─────────────────────────────────────────────────────── -->
+    @if (tab === 'orders') {
+      <div class="dst-card">
+        <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">receipt_long</span>Orders and allocation</div></div>
+        <div class="dst-card-body">
+          <div class="dst-form-grid">
+            <div class="dst-field">
+              <label for="st-min-order">Minimum order value</label>
+              <input id="st-min-order" type="number" step="0.01" min="0" [(ngModel)]="s.minimumOrderValue" />
+              <span class="dst-hint">Below this, an order needs approval. Zero means no minimum.</span>
+            </div>
+
+            <div class="dst-field">
+              <label for="st-discount">Discount approval threshold (%)</label>
+              <input id="st-discount" type="number" step="0.1" min="0" max="100" [(ngModel)]="s.discountApprovalThreshold" />
+              <span class="dst-hint">Any discount above this goes for a second pair of eyes.</span>
+            </div>
+
+            <div class="dst-field">
+              <label for="st-margin">Margin floor (%)</label>
+              <input id="st-margin" type="number" step="0.1" min="0" max="100" [(ngModel)]="s.marginFloorPercent" />
+              <span class="dst-hint">An order below this margin cannot be approved without an override.</span>
+            </div>
+
+            <div class="dst-field">
+              <label for="st-edit-window">Edit window (minutes)</label>
+              <input id="st-edit-window" type="number" min="0" [(ngModel)]="s.orderEditWindowMinutes" />
+              <span class="dst-hint">How long a rep can correct their own order before it locks.</span>
+            </div>
+
+            <div class="dst-field">
+              <label for="st-allocation">Default allocation strategy</label>
+              <select id="st-allocation" [(ngModel)]="s.defaultAllocationStrategy">
+                @for (o of allocationOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+              </select>
+            </div>
+
+            <div class="dst-field">
+              <label for="st-soft-hold">Soft allocation holds for (hours)</label>
+              <input id="st-soft-hold" type="number" min="0" [(ngModel)]="s.softAllocationHoldHours" />
+              <span class="dst-hint">After this, unconfirmed reservations release back to free stock.</span>
+            </div>
+          </div>
+
+          <div class="st-switches">
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="s.allowBackorders" />
+              <span>
+                Allow backorders
+                <span class="dst-check-sub">A short-supplied line stays open as a backorder rather than being cancelled.</span>
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- ── Credit ─────────────────────────────────────────────────────── -->
+    @if (tab === 'credit') {
+      <div class="dst-card">
+        <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">account_balance</span>Where credit is enforced</div></div>
+        <div class="dst-card-body">
+          <p class="st-blurb">
+            Enforcement can differ by point. Warning at order and blocking at dispatch is a common
+            setup: the rep does not argue in the shop, but nothing leaves the warehouse against a
+            breached limit.
+          </p>
+
+          <div class="dst-form-grid">
+            <div class="dst-field">
+              <label for="st-credit-order">At order</label>
+              <select id="st-credit-order" [(ngModel)]="s.creditEnforcementAtOrder">
+                @for (o of enforcementOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+              </select>
+            </div>
+            <div class="dst-field">
+              <label for="st-credit-dispatch">At dispatch</label>
+              <select id="st-credit-dispatch" [(ngModel)]="s.creditEnforcementAtDispatch">
+                @for (o of enforcementOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+              </select>
+            </div>
+            <div class="dst-field">
+              <label for="st-credit-van">At van sale</label>
+              <select id="st-credit-van" [(ngModel)]="s.creditEnforcementAtVanSale">
+                @for (o of enforcementOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+              </select>
+            </div>
+          </div>
+
+          <div class="dst-section-label">Ageing buckets</div>
+          <div class="dst-form-grid">
+            <div class="dst-field">
+              <label for="st-bucket1">First bucket ends at (days)</label>
+              <input id="st-bucket1" type="number" min="1" [(ngModel)]="s.ageingBucket1Days" />
+            </div>
+            <div class="dst-field">
+              <label for="st-bucket2">Second bucket ends at</label>
+              <input id="st-bucket2" type="number" min="1" [(ngModel)]="s.ageingBucket2Days" />
+            </div>
+            <div class="dst-field">
+              <label for="st-bucket3">Third bucket ends at</label>
+              <input id="st-bucket3" type="number" min="1" [(ngModel)]="s.ageingBucket3Days" />
+              <span class="dst-hint">Anything older falls into the final bucket.</span>
+            </div>
+          </div>
+
+          <div class="dst-section-label">Cheques</div>
+          <div class="dst-form-grid">
+            <div class="dst-field">
+              <label for="st-bounce-charge">Bounce charge</label>
+              <input id="st-bounce-charge" type="number" step="0.01" min="0" [(ngModel)]="s.chequeBounceCharge" />
+              <span class="dst-hint">Recharged to the account with the reversal.</span>
+            </div>
+          </div>
+
+          <div class="st-switches">
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="s.autoBlockOnBouncedCheque" />
+              <span>
+                Block the account automatically when a cheque bounces
+                <span class="dst-check-sub">The block clears when a replacement receipt is recorded.</span>
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- ── Stock and expiry ───────────────────────────────────────────── -->
+    @if (tab === 'stock') {
+      <div class="dst-card">
+        <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">inventory</span>Batches, expiry and FEFO</div></div>
+        <div class="dst-card-body">
+          <div class="dst-form-grid">
+            <div class="dst-field">
+              <label for="st-warn-days">Near expiry warning (days)</label>
+              <input id="st-warn-days" type="number" min="0" [(ngModel)]="s.nearExpiryWarningDays" />
+              <span class="dst-hint">Stock appears on the at-risk list this far out.</span>
+            </div>
+
+            <div class="dst-field">
+              <label for="st-critical-days">Near expiry critical (days)</label>
+              <input id="st-critical-days" type="number" min="0" [(ngModel)]="s.nearExpiryCriticalDays" />
+              <span class="dst-hint">Below this it is flagged red everywhere it appears.</span>
+            </div>
+
+            <div class="dst-field">
+              <label for="st-shelf-life">Minimum shelf life on despatch (%)</label>
+              <input id="st-shelf-life" type="number" step="1" min="0" max="100" [(ngModel)]="s.minimumShelfLifePercentOnDespatch" />
+              <span class="dst-hint">Modern trade usually contracts for 70% or more. Shipping below it invites a return.</span>
+            </div>
+          </div>
+
+          <div class="st-switches">
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="s.enforceFefo" />
+              <span>
+                Enforce FEFO
+                <span class="dst-check-sub">Picking nominates the earliest-expiring batch.</span>
+              </span>
+            </label>
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="s.allowFefoOverride" />
+              <span>
+                Allow a picker to take a different batch
+                <span class="dst-check-sub">Recommended. The shelf beats the system, but the override is recorded with a reason.</span>
+              </span>
+            </label>
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="s.autoQuarantineExpired" />
+              <span>
+                Quarantine expired stock automatically
+                <span class="dst-check-sub">Stops it being picked the moment it passes its date.</span>
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- ── Settlement ─────────────────────────────────────────────────── -->
+    @if (tab === 'settlement') {
+      <div class="dst-card">
+        <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">rule</span>Tolerances and cut-off</div></div>
+        <div class="dst-card-body">
+          <p class="st-blurb">
+            A tolerance decides when a difference is rounding and when it is an exception somebody
+            has to explain. Set it too tight and every settlement has noise; too loose and real
+            losses hide inside it.
+          </p>
+
+          <div class="dst-form-grid">
+            <div class="dst-field">
+              <label for="st-cash-tolerance">Cash variance tolerance</label>
+              <input id="st-cash-tolerance" type="number" step="0.01" min="0" [(ngModel)]="s.cashVarianceTolerance" />
+              <span class="dst-hint">Differences inside this are accepted without a reason.</span>
+            </div>
+
+            <div class="dst-field">
+              <label for="st-stock-tolerance">Stock variance tolerance (%)</label>
+              <input id="st-stock-tolerance" type="number" step="0.1" min="0" max="100" [(ngModel)]="s.stockVarianceTolerancePercent" />
+            </div>
+
+            <div class="dst-field">
+              <label for="st-variance-approval">Variance approval threshold</label>
+              <input id="st-variance-approval" type="number" step="0.01" min="0" [(ngModel)]="s.varianceApprovalThreshold" />
+              <span class="dst-hint">Above this, a supervisor has to approve the explanation as well as read it.</span>
+            </div>
+
+            <div class="dst-field">
+              <label for="st-cutoff">Settlement cut-off</label>
+              <input id="st-cutoff" type="time" [(ngModel)]="s.settlementCutOff" />
+              <span class="dst-hint">Days not settled by this time appear as unsettled on the dashboard.</span>
+            </div>
+          </div>
+
+          <div class="st-switches">
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="s.blockSettlementOnUnexplainedVariance" />
+              <span>
+                Block closing while variances are unexplained
+                <span class="dst-check-sub">Strongly recommended. The reason, not the number, is what makes a variance useful.</span>
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- ── Schemes and claims ─────────────────────────────────────────── -->
+    @if (tab === 'schemes') {
+      <div class="dst-card">
+        <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">redeem</span>Schemes, claims and secondary sales</div></div>
+        <div class="dst-card-body">
+          <div class="dst-form-grid">
+            <div class="dst-field">
+              <label for="st-claim-window">Claim submission window (days)</label>
+              <input id="st-claim-window" type="number" min="0" [(ngModel)]="s.claimSubmissionWindowDays" />
+              <span class="dst-hint">How long after the period a partner may still claim.</span>
+            </div>
+
+            <div class="dst-field">
+              <label for="st-claim-sla">Claim settlement SLA (days)</label>
+              <input id="st-claim-sla" type="number" min="0" [(ngModel)]="s.claimSettlementSlaDays" />
+              <span class="dst-hint">The promise. Claims past it are flagged and go to the top of the queue.</span>
+            </div>
+
+            <div class="dst-field">
+              <label for="st-upload-day">Secondary sales due on day</label>
+              <input id="st-upload-day" type="number" min="1" max="28" [(ngModel)]="s.secondaryUploadDueDayOfMonth" />
+              <span class="dst-hint">Of the following month. Lateness is measured against this.</span>
+            </div>
+
+            <div class="dst-field">
+              <label for="st-mapping">Minimum mapping accuracy (%)</label>
+              <input id="st-mapping" type="number" step="0.1" min="0" max="100" [(ngModel)]="s.minimumMappingAccuracyPercent" />
+              <span class="dst-hint">A batch below this cannot post until more rows are matched.</span>
+            </div>
+
+            <div class="dst-field">
+              <label for="st-recon-tolerance">Reconciliation tolerance (%)</label>
+              <input id="st-recon-tolerance" type="number" step="0.1" min="0" max="100" [(ngModel)]="s.reconciliationTolerancePercent" />
+            </div>
+          </div>
+
+          <div class="st-switches">
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="s.autoApplySchemes" />
+              <span>
+                Apply schemes automatically
+                <span class="dst-check-sub">Off means a rep chooses which scheme to apply, which is almost always worse.</span>
+              </span>
+            </label>
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="s.showNextSlabPrompt" />
+              <span>
+                Prompt the rep with the next slab
+                <span class="dst-check-sub">"Three more cases earns another free" — the single most effective prompt in the app.</span>
+              </span>
+            </label>
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="s.stopSchemeOnBudgetExhausted" />
+              <span>
+                Stop a scheme when its budget runs out
+                <span class="dst-check-sub">Off lets it keep paying and shows the overspend instead.</span>
+              </span>
+            </label>
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="s.autoGenerateDeferredSchemeClaims" />
+              <span>
+                Raise deferred scheme claims automatically
+                <span class="dst-check-sub">Saves partners claiming for benefits the system already computed.</span>
+              </span>
+            </label>
+          </div>
+
+          <div class="dst-section-label">Documents</div>
+          <div class="dst-form-grid">
+            <div class="dst-field">
+              <label for="st-currency">Base currency</label>
+              <input id="st-currency" type="text" maxlength="3" [(ngModel)]="s.baseCurrencyCode" />
+            </div>
+            <div class="dst-field is-full">
+              <label for="st-footer">Invoice footer</label>
+              <textarea id="st-footer" [(ngModel)]="s.invoiceFooter" placeholder="Printed at the bottom of every invoice"></textarea>
+            </div>
+          </div>
+
+          <div class="st-switches">
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="s.printThermalInvoices" />
+              <span>
+                Print thermal invoices in the field
+                <span class="dst-check-sub">For reps carrying a portable printer.</span>
+              </span>
+            </label>
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="s.sendDigitalReceipts" />
+              <span>
+                Send digital receipts
+                <span class="dst-check-sub">A receipt by message when a phone number or email is on the outlet.</span>
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- ── Reason codes ───────────────────────────────────────────────── -->
+    @if (tab === 'reasons') {
+      <div class="dst-toolbar">
+        <select class="dst-filter-select" [(ngModel)]="surfaceFilter" aria-label="Where the reason appears">
+          <option value="">Everywhere</option>
+          @for (o of surfaceOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+        </select>
+        <span class="dst-spacer"></span>
+        <button type="button" class="dst-btn is-primary" (click)="createReason()">
+          <span class="material-symbols-outlined">add</span>New reason
+        </button>
+      </div>
+
+      @if (reasonGroups.length === 0) {
+        <div class="dst-card">
+          <dst-empty
+            icon="label"
+            title="No reason codes"
+            text="Reason codes are what turn a variance into information. A reason for a failed delivery is not a reason for a returned case, so they are grouped by where they appear."
+            actionLabel="New reason"
+            actionIcon="add"
+            (action)="createReason()"
+          ></dst-empty>
+        </div>
+      }
+
+      @for (g of reasonGroups; track trackGroup($index, g)) {
+        <section class="dst-card st-reason-group">
+          <div class="dst-card-head">
+            <div class="dst-card-title"><span class="material-symbols-outlined">label</span>{{ g.label }}</div>
+            <button type="button" class="dst-btn is-sm" (click)="createReason(g.surface)">
+              <span class="material-symbols-outlined">add</span>Add
+            </button>
+          </div>
+          <div class="dst-card-body is-flush">
+            <div class="dst-table-wrap">
+              <table class="dst-table">
+                <thead>
+                  <tr><th class="num">Order</th><th>Reason</th><th>Code</th><th>Behaviour</th><th>State</th><th class="actions">Actions</th></tr>
+                </thead>
+                <tbody>
+                  @for (r of g.rows; track trackReason($index, r)) {
+                    <tr>
+                      <td class="num muted">{{ r.displayOrder }}</td>
+                      <td>
+                        <div class="dst-cell-stack">
+                          <span class="top">{{ r.name }}</span>
+                          @if (r.description) { <span class="sub">{{ r.description }}</span> }
+                        </div>
+                      </td>
+                      <td><span class="dst-code is-plain">{{ r.code || '—' }}</span></td>
+                      <td>
+                        <div class="st-flags">
+                          @if (r.requiresNote) { <span class="st-flag">needs a note</span> }
+                          @if (r.requiresApproval) { <span class="st-flag">needs approval</span> }
+                          @if (r.isRecoverable) { <span class="st-flag">recoverable</span> }
+                          @if (r.isNegative) { <span class="st-flag is-bad">counts against</span> }
+                        </div>
+                      </td>
+                      <td>
+                        @if (r.isSystem) { <span class="dst-pill tone-neutral">Built in</span> }
+                        @else if (!r.isActive) { <span class="dst-pill tone-warning">Inactive</span> }
+                        @else { <span class="dst-pill tone-success">Active</span> }
+                      </td>
+                      <td class="actions">
+                        <button type="button" class="dst-icon-btn" (click)="editReason(r)" aria-label="Edit the reason" title="Edit">
+                          <span class="material-symbols-outlined">edit</span>
+                        </button>
+                        @if (!r.isSystem) {
+                          <button type="button" class="dst-icon-btn is-danger" (click)="deleteTarget = r" aria-label="Remove the reason" title="Remove">
+                            <span class="material-symbols-outlined">delete</span>
+                          </button>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      }
+    }
+  }
+</div>
+
+<!-- ── Reason editor ────────────────────────────────────────────────────── -->
+@if (showReason) {
+  <div class="dst-modal-backdrop" (click)="showReason = false">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Reason code" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">@if (reason.id) { Edit reason } @else { New reason }</div>
+          <div class="dst-modal-sub">
+            The reason a person picks in a hurry is the data everybody analyses later. Write them
+            the way a rep would say them out loud.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="showReason = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-form-grid">
+          <div class="dst-field is-full">
+            <label for="st-reason-name">Reason <span class="req">*</span></label>
+            <input id="st-reason-name" type="text" [(ngModel)]="reason.name" [class.is-invalid]="!!reasonErrors['name']" placeholder="Shop closed" />
+            <dst-field-error [message]="reasonErrors['name']" for="st-reason-name"></dst-field-error>
+          </div>
+
+          <div class="dst-field">
+            <label for="st-reason-code">Code</label>
+            <input id="st-reason-code" type="text" [(ngModel)]="reason.code" />
+          </div>
+
+          <div class="dst-field">
+            <label for="st-reason-surface">Where it appears</label>
+            <select id="st-reason-surface" [(ngModel)]="reason.surface">
+              @for (o of surfaceOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+            </select>
+          </div>
+
+          <div class="dst-field">
+            <label for="st-reason-order">Display order</label>
+            <input id="st-reason-order" type="number" min="0" [(ngModel)]="reason.displayOrder" [class.is-invalid]="!!reasonErrors['displayOrder']" />
+            <span class="dst-hint">Lower appears first. Put the commonest reason at the top.</span>
+            <dst-field-error [message]="reasonErrors['displayOrder']" for="st-reason-order"></dst-field-error>
+          </div>
+
+          <div class="dst-field is-full">
+            <label for="st-reason-desc">Description</label>
+            <input id="st-reason-desc" type="text" [(ngModel)]="reason.description" />
+          </div>
+
+          <div class="dst-field is-full">
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="reason.requiresNote" />
+              <span>
+                Requires a note
+                <span class="dst-check-sub">Picking this reason is not enough on its own.</span>
+              </span>
+            </label>
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="reason.requiresApproval" />
+              <span>
+                Requires approval
+                <span class="dst-check-sub">A supervisor has to sign it off before the document moves on.</span>
+              </span>
+            </label>
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="reason.isRecoverable" />
+              <span>
+                Recoverable
+                <span class="dst-check-sub">Offers to deduct the loss from the person responsible.</span>
+              </span>
+            </label>
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="reason.isNegative" />
+              <span>
+                Counts against performance
+                <span class="dst-check-sub">Included in the reasons that pull a rep's productivity down.</span>
+              </span>
+            </label>
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="reason.isActive" />
+              <span>Active</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showReason = false" [disabled]="saving">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="saveReason()" [disabled]="saving">Save</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Delete a reason ──────────────────────────────────────────────────── -->
+@if (deleteTarget) {
+  <dst-confirm
+    title="Remove this reason?"
+    [message]="'&quot;' + deleteTarget.name + '&quot; will no longer be offered. Documents that already used it keep it.'"
+    confirmLabel="Remove it"
+    cancelLabel="Keep it"
+    [destructive]="true"
+    (confirm)="confirmDelete()"
+    (cancel)="deleteTarget = null"
+  ></dst-confirm>
+}

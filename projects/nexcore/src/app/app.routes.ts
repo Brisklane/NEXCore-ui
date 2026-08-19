@@ -72,6 +72,11 @@ export const routes: Routes = [
         canMatch: [appInstalledGuard],
         loadChildren: () => import('@nexcore/restaurant').then(m => m.restaurantRoutes),
       },
+      {
+        path: 'distribution',
+        canMatch: [appInstalledGuard],
+        loadChildren: () => import('@nexcore/distribution').then(m => m.distributionRoutes),
+      },
 
       /**
        * POS Back Office.

@@ -1,0 +1,609 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Secondary sales</h2>
+      <p class="subtitle">What your distributors actually sold onward, however it reaches you.</p>
+    </div>
+    <div class="ss-head-actions">
+      <dst-scope-bar [showPeriod]="true" (scopeChange)="onScope($event)"></dst-scope-bar>
+      <button type="button" class="dst-btn is-primary" (click)="showUpload = true">
+        <span class="material-symbols-outlined">upload_file</span>
+        Upload a file
+      </button>
+    </div>
+  </div>
+
+  <dst-help key="secondary"></dst-help>
+
+  @if (error) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">{{ error }}</div>
+      <button type="button" class="dst-icon-btn" (click)="error = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  @if (notice) {
+    <div class="dst-banner tone-success" role="status">
+      <span class="material-symbols-outlined">check_circle</span>
+      <div class="dst-banner-body">{{ notice }}</div>
+      <button type="button" class="dst-icon-btn" (click)="notice = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  <div class="dst-tabs" role="tablist">
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'uploads'" [class.is-active]="tab === 'uploads'" (click)="setTab('uploads')">
+      <span class="material-symbols-outlined">cloud_upload</span>Batches
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'exceptions'" [class.is-active]="tab === 'exceptions'" (click)="setTab('exceptions')">
+      <span class="material-symbols-outlined">link_off</span>Unmatched
+      @if (exceptions.length) { <span class="dst-seg-count">{{ exceptions.length }}</span> }
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'stock'" [class.is-active]="tab === 'stock'" (click)="setTab('stock')">
+      <span class="material-symbols-outlined">inventory</span>Channel stock
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'reconciliation'" [class.is-active]="tab === 'reconciliation'" (click)="setTab('reconciliation')">
+      <span class="material-symbols-outlined">rule</span>Reconciliation
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'quality'" [class.is-active]="tab === 'quality'" (click)="setTab('quality')">
+      <span class="material-symbols-outlined">verified</span>Reporting quality
+    </button>
+  </div>
+
+  <div class="dst-toolbar">
+    <select class="dst-filter-select" [(ngModel)]="partnerFilter" (ngModelChange)="load()" aria-label="Partner">
+      <option value="">All partners</option>
+      @for (p of partnerList; track p.id) { <option [value]="p.id">{{ p.name }}</option> }
+    </select>
+
+    <span class="dst-spacer"></span>
+
+    @if (tab === 'reconciliation') {
+      <button type="button" class="dst-btn" (click)="runReconciliation()" [disabled]="busy">
+        <span class="material-symbols-outlined">calculate</span>
+        Run reconciliation
+      </button>
+    }
+  </div>
+
+  <!-- ── Batches ──────────────────────────────────────────────────────── -->
+  @if (tab === 'uploads') {
+    @if (unmappedTotal > 0) {
+      <div class="dst-banner tone-warning">
+        <span class="material-symbols-outlined">link_off</span>
+        <div class="dst-banner-body">
+          <strong>{{ unmappedTotal }} rows on this page cannot be matched to a real outlet or item.</strong>
+          Nothing posts until they are resolved — half-mapped secondary data understates exactly the
+          products and shops you most want to measure.
+          <div class="dst-banner-actions">
+            <button type="button" class="dst-btn is-sm" (click)="setTab('exceptions')">Resolve them</button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <div class="dst-card">
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="ss-loading">
+            @for (i of [1,2,3,4,5]; track i) { <div class="dst-skeleton" style="height: 60px"></div> }
+          </div>
+        } @else if (uploads.length === 0) {
+          <dst-empty
+            icon="cloud_upload"
+            title="No batches yet"
+            text="Three ways in: a partner portal declaration, a file upload, or a direct feed. Uploads land here in staging first."
+            actionLabel="Upload a file"
+            actionIcon="upload_file"
+            (action)="showUpload = true"
+          ></dst-empty>
+        } @else {
+          <div class="dst-table-wrap">
+            <table class="dst-table ss-table">
+              <thead>
+                <tr>
+                  <th>Batch</th><th>Partner</th><th>Period</th>
+                  <th class="num">Rows</th><th class="num">Matched</th><th class="num">Value</th>
+                  <th>Status</th><th class="actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (u of uploads; track trackUpload($index, u)) {
+                  <tr [class.is-flagged]="u.unmappedRows > 0">
+                    <td>
+                      <div class="dst-cell-stack">
+                        <span class="dst-code">{{ u.batchNumber }}</span>
+                        <span class="sub">{{ u.fileName }}</span>
+                      </div>
+                    </td>
+                    <td class="strong">{{ u.partnerName }}</td>
+                    <td class="nowrap">
+                      <div class="dst-cell-stack">
+                        <span class="top">{{ u.periodStart | date:'d MMM' }} – {{ u.periodEnd | date:'d MMM y' }}</span>
+                        <span class="sub">
+                          submitted {{ u.submittedAt | date:'d MMM' }}
+                          @if (u.latenessDays > 0) { · <span class="ss-late">{{ u.latenessDays }}d late</span> }
+                        </span>
+                      </div>
+                    </td>
+                    <td class="num">{{ u.totalRows | number }}</td>
+                    <td class="num">
+                      <div class="ss-accuracy">
+                        <span [class]="'dst-pill ' + accuracyTone(u)">{{ u.mappingAccuracyPercent | number:'1.1-1' }}%</span>
+                        @if (u.unmappedRows > 0) {
+                          <span class="ss-unmapped">{{ u.unmappedRows }} unmatched</span>
+                        }
+                      </div>
+                    </td>
+                    <td class="num strong">{{ u.totalValue | number:'1.0-0' }}</td>
+                    <td>
+                      <dst-status [label]="uploadStatusLabels[u.status]" [tone]="uploadStatusTone[u.status]"></dst-status>
+                      @if (u.rejectionReason) { <span class="ss-reject">{{ u.rejectionReason }}</span> }
+                    </td>
+                    <td class="actions">
+                      @if (u.status === UploadBatchStatus.Validated || u.status === UploadBatchStatus.Staged) {
+                        <button
+                          type="button"
+                          class="dst-btn is-sm is-success"
+                          (click)="post(u)"
+                          [disabled]="busy || u.unmappedRows > 0"
+                          [title]="u.unmappedRows > 0 ? 'Resolve the unmatched rows first' : 'Post this batch'"
+                        >Post</button>
+                        <button type="button" class="dst-icon-btn is-danger" (click)="reject(u)" aria-label="Reject the batch" title="Reject">
+                          <span class="material-symbols-outlined">block</span>
+                        </button>
+                      }
+                      @if (u.fileUrl) {
+                        <a class="dst-icon-btn" [href]="u.fileUrl" target="_blank" rel="noopener" aria-label="Download the original file" title="Download">
+                          <span class="material-symbols-outlined">download</span>
+                        </a>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ── Unmatched rows ───────────────────────────────────────────────── -->
+  @if (tab === 'exceptions') {
+    <div class="dst-card">
+      <div class="dst-card-head">
+        <div class="dst-card-title"><span class="material-symbols-outlined">link_off</span>Rows that could not be matched</div>
+        <span class="dst-card-sub">Resolve one and the mapping profile learns it for next month</span>
+      </div>
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="ss-loading">
+            @for (i of [1,2,3,4]; track i) { <div class="dst-skeleton" style="height: 66px"></div> }
+          </div>
+        } @else if (exceptions.length === 0) {
+          <dst-empty icon="task_alt" title="Everything is matched" text="No rows are waiting. Batches can post as soon as they land."></dst-empty>
+        } @else {
+          @for (e of exceptions; track trackException($index, e)) {
+            <div class="ss-exception">
+              <div class="ss-exception-body">
+                <div class="ss-exception-raw">
+                  @if (e.rawOutletName) {
+                    <span class="ss-raw"><span class="ss-raw-key">Shop</span>{{ e.rawOutletName }}</span>
+                  }
+                  @if (e.rawItemCode) {
+                    <span class="ss-raw"><span class="ss-raw-key">Item</span>{{ e.rawItemCode }}</span>
+                  }
+                </div>
+                <div class="ss-exception-meta">
+                  {{ e.quantity | number }} units · {{ e.value | number:'1.2-2' }} · {{ e.saleDate | date:'d MMM y' }}
+                  @if (e.reason) { · {{ e.reason }} }
+                </div>
+                @if (e.suggestions.length) {
+                  <div class="ss-suggestions">
+                    <span class="ss-suggestion-label">Closest matches:</span>
+                    @for (s of e.suggestions.slice(0, 3); track s.name) {
+                      <span class="ss-suggestion">
+                        {{ s.name }}
+                        <i>{{ s.confidence | number:'1.0-0' }}%</i>
+                      </span>
+                    }
+                  </div>
+                }
+              </div>
+              <button type="button" class="dst-btn is-primary" (click)="startResolve(e)">Match it</button>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ── Channel stock ────────────────────────────────────────────────── -->
+  @if (tab === 'stock') {
+    @if (channelStock; as cs) {
+      <div class="dst-stats">
+        <div class="dst-stat tone-brand">
+          <span class="dst-stat-label">Bought from us</span>
+          <span class="dst-stat-value">{{ cs.primarySalesValue | number:'1.0-0' }}</span>
+          <span class="dst-stat-foot">{{ cs.periodStart | date:'d MMM' }} – {{ cs.periodEnd | date:'d MMM y' }}</span>
+        </div>
+        <div class="dst-stat tone-cyan">
+          <span class="dst-stat-label">Sold onward</span>
+          <span class="dst-stat-value">{{ cs.secondarySalesValue | number:'1.0-0' }}</span>
+          <span class="dst-stat-foot">sell-through {{ cs.sellThroughPercent | number:'1.0-0' }}%</span>
+        </div>
+        <div class="dst-stat tone-warning">
+          <span class="dst-stat-label">Sitting in the channel</span>
+          <span class="dst-stat-value">{{ cs.channelStockValue | number:'1.0-0' }}</span>
+          <span class="dst-stat-foot">{{ cs.channelStockDaysOfCover | number:'1.0-0' }} days of cover</span>
+        </div>
+        <div class="dst-stat" [class.tone-danger]="cs.nearExpiryValue > 0" [class.tone-neutral]="cs.nearExpiryValue === 0">
+          <span class="dst-stat-label">Near expiry</span>
+          <span class="dst-stat-value">{{ cs.nearExpiryValue | number:'1.0-0' }}</span>
+          <span class="dst-stat-foot">
+            @if (cs.expiredValue > 0) { <strong>{{ cs.expiredValue | number:'1.0-0' }}</strong> already expired }
+            @else { nothing expired yet }
+          </span>
+        </div>
+        <div class="dst-stat" [class.tone-danger]="cs.reportingCompliancePercent < 80" [class.tone-success]="cs.reportingCompliancePercent >= 80">
+          <span class="dst-stat-label">Partners reporting</span>
+          <span class="dst-stat-value">{{ cs.reportingPartnerCount }}<small>/{{ cs.partnerCount }}</small></span>
+          <span class="dst-stat-foot">{{ cs.reportingCompliancePercent | number:'1.0-0' }}% compliance</span>
+        </div>
+      </div>
+    }
+
+    <div class="dst-card">
+      <div class="dst-card-head">
+        <div class="dst-card-title"><span class="material-symbols-outlined">inventory</span>Stock declarations</div>
+        <span class="dst-card-sub">What each partner says they are holding</span>
+      </div>
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="ss-loading">
+            @for (i of [1,2,3,4]; track i) { <div class="dst-skeleton" style="height: 52px"></div> }
+          </div>
+        } @else if (declarations.length === 0) {
+          <dst-empty icon="inventory" title="No declarations" text="A stock declaration is what makes channel inventory calculable rather than guessed."></dst-empty>
+        } @else {
+          <div class="dst-table-wrap">
+            <table class="dst-table">
+              <thead>
+                <tr>
+                  <th>Declaration</th><th>Partner</th><th>As at</th>
+                  <th class="num">Lines</th><th class="num">Value</th>
+                  <th class="num">Near expiry</th><th class="num">Days cover</th><th>Verified</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (d of declarations; track trackDeclaration($index, d)) {
+                  <tr>
+                    <td><span class="dst-code">{{ d.declarationNumber }}</span></td>
+                    <td class="strong">{{ d.partnerName }}</td>
+                    <td class="nowrap">
+                      {{ d.asOfDate | date:'d MMM y' }}
+                      @if (d.latenessDays > 0) { <span class="ss-late">{{ d.latenessDays }}d late</span> }
+                    </td>
+                    <td class="num">{{ d.lineCount }}</td>
+                    <td class="num strong">{{ d.totalValue | number:'1.0-0' }}</td>
+                    <td class="num" [class.ss-warn]="d.nearExpiryValue > 0">{{ d.nearExpiryValue | number:'1.0-0' }}</td>
+                    <td class="num">{{ d.daysOfCover | number:'1.0-0' }}</td>
+                    <td>
+                      @if (d.isVerified) { <span class="dst-pill tone-success">Verified</span> }
+                      @else { <span class="dst-pill tone-warning">As declared</span> }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ── Reconciliation ───────────────────────────────────────────────── -->
+  @if (tab === 'reconciliation') {
+    <div class="dst-card">
+      <div class="dst-card-head">
+        <div class="dst-card-title"><span class="material-symbols-outlined">rule</span>Opening + bought − sold = closing</div>
+        <span class="dst-card-sub">Every line that does not balance needs a reason</span>
+      </div>
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="ss-loading">
+            @for (i of [1,2,3,4]; track i) { <div class="dst-skeleton" style="height: 52px"></div> }
+          </div>
+        } @else if (reconciliations.length === 0) {
+          <dst-empty
+            icon="rule"
+            title="Nothing reconciled yet"
+            text="Run the reconciliation for this period to compare what partners declared against what the movements say."
+          ></dst-empty>
+        } @else {
+          <div class="dst-table-wrap">
+            <table class="dst-table ss-recon">
+              <thead>
+                <tr>
+                  <th>Partner</th><th>Item</th>
+                  <th class="num">Opening</th><th class="num">Bought</th><th class="num">Sold</th>
+                  <th class="num">Declared</th><th class="num">Computed</th>
+                  <th class="num">Variance</th><th>Outcome</th><th class="actions"></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of reconciliations; track trackReconciliation($index, r)) {
+                  <tr [class.is-flagged]="!r.isExplained && r.varianceQuantity !== 0">
+                    <td class="strong">{{ r.partnerName }}</td>
+                    <td>{{ r.itemName }}</td>
+                    <td class="num muted">{{ r.openingQuantity | number }}</td>
+                    <td class="num">{{ r.primaryQuantity | number }}</td>
+                    <td class="num">{{ r.secondaryQuantity | number }}</td>
+                    <td class="num">{{ r.declaredClosingQuantity | number }}</td>
+                    <td class="num muted">{{ r.computedClosingQuantity | number }}</td>
+                    <td class="num">
+                      <span [class.ss-warn]="r.varianceQuantity !== 0">
+                        {{ r.varianceQuantity > 0 ? '+' : '' }}{{ r.varianceQuantity | number }}
+                      </span>
+                      <span class="ss-variance-pct">{{ r.variancePercent | number:'1.1-1' }}%</span>
+                    </td>
+                    <td>
+                      <dst-status [label]="reconciliationLabels[r.outcome]" [tone]="reconciliationTone[r.outcome]"></dst-status>
+                      @if (r.isExplained) {
+                        <span class="ss-explained">{{ r.explanationNote || 'Explained' }}</span>
+                      }
+                    </td>
+                    <td class="actions">
+                      @if (!r.isExplained && r.varianceQuantity !== 0) {
+                        <button type="button" class="dst-btn is-sm" (click)="startExplain(r)">Explain</button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ── Reporting quality ────────────────────────────────────────────── -->
+  @if (tab === 'quality') {
+    <div class="dst-card">
+      <div class="dst-card-head">
+        <div class="dst-card-title"><span class="material-symbols-outlined">verified</span>How reliably each partner reports</div>
+        <span class="dst-card-sub">The number to fix before you trust their offtake</span>
+      </div>
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="ss-loading">
+            @for (i of [1,2,3,4]; track i) { <div class="dst-skeleton" style="height: 52px"></div> }
+          </div>
+        } @else if (quality.length === 0) {
+          <dst-empty icon="verified" title="No reporting history" text="Quality is measured over submitted periods. It appears once partners have reported at least once."></dst-empty>
+        } @else {
+          <div class="dst-table-wrap">
+            <table class="dst-table">
+              <thead>
+                <tr>
+                  <th>Partner</th><th>Capture mode</th>
+                  <th class="num">Periods</th><th class="num">On time</th>
+                  <th class="num">Mapping accuracy</th><th class="num">Average variance</th>
+                  <th>Score</th><th>Last submitted</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (q of quality; track trackQuality($index, q)) {
+                  <tr [class.is-flagged]="q.qualityScore < 60">
+                    <td class="strong">{{ q.partnerName }}</td>
+                    <td>{{ captureLabels[q.captureMode] }}</td>
+                    <td class="num">{{ q.periodsSubmitted }}/{{ q.periodsExpected }}</td>
+                    <td class="num">
+                      @if (q.averageLatenessDays > 0) {
+                        <span class="ss-warn">{{ q.averageLatenessDays | number:'1.1-1' }}d late</span>
+                      } @else { <span class="muted">on time</span> }
+                    </td>
+                    <td class="num">{{ q.averageMappingAccuracyPercent | number:'1.1-1' }}%</td>
+                    <td class="num">{{ q.averageVariancePercent | number:'1.1-1' }}%</td>
+                    <td><dst-status [label]="(q.qualityScore | number:'1.0-0') || '0'" [tone]="qualityTone(q)"></dst-status></td>
+                    <td class="nowrap muted">{{ (q.lastSubmissionAt | date:'d MMM y') || 'never' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  @if (tab === 'uploads' || tab === 'stock' || tab === 'reconciliation') {
+    <dst-pager [meta]="meta" noun="rows" (pageChange)="changePage($event)" (sizeChange)="changeSize($event)"></dst-pager>
+  }
+</div>
+
+<!-- ── Upload ───────────────────────────────────────────────────────────── -->
+@if (showUpload) {
+  <div class="dst-modal-backdrop" (click)="showUpload = false">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Upload secondary sales" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Upload secondary sales</div>
+          <div class="dst-modal-sub">
+            The file is read against the partner's mapping profile and staged. Nothing posts until
+            every row matches a real outlet and item.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="showUpload = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-form-grid">
+          <div class="dst-field is-full">
+            <label for="ss-partner">Partner <span class="req">*</span></label>
+            <select id="ss-partner" [(ngModel)]="uploadPartnerId">
+              <option value="">Choose a partner</option>
+              @for (p of partnerList; track p.id) { <option [value]="p.id">{{ p.name }}</option> }
+            </select>
+          </div>
+
+          <div class="dst-field">
+            <label for="ss-from">Period from</label>
+            <input id="ss-from" type="date" [(ngModel)]="uploadPeriodStart" />
+          </div>
+
+          <div class="dst-field">
+            <label for="ss-to">Period to</label>
+            <input id="ss-to" type="date" [(ngModel)]="uploadPeriodEnd" />
+          </div>
+
+          <div class="dst-field is-full">
+            <label for="ss-file">File <span class="req">*</span></label>
+            <input id="ss-file" type="file" accept=".csv,.txt,.tsv,.xlsx" (change)="pickFile($event)" />
+            <span class="dst-hint">CSV or tab-delimited. Column positions come from the partner's mapping profile.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showUpload = false" [disabled]="uploading">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="submitUpload()" [disabled]="!uploadPartnerId || !uploadFile || uploading">
+          @if (uploading) { Reading the file… } @else { Upload }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Resolve a mapping ────────────────────────────────────────────────── -->
+@if (resolving) {
+  <div class="dst-modal-backdrop" (click)="resolving = null">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Match the row" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Match this row</div>
+          <div class="dst-modal-sub">
+            The partner wrote "{{ resolving.rawOutletName || resolving.rawItemCode }}". Tell the system
+            what that is once and it will match by itself from now on.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="resolving = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="ss-raw-panel">
+          @if (resolving.rawOutletName) {
+            <div><span class="ss-raw-key">Shop as written</span><strong>{{ resolving.rawOutletName }}</strong></div>
+          }
+          @if (resolving.rawItemCode) {
+            <div><span class="ss-raw-key">Item as written</span><strong>{{ resolving.rawItemCode }}</strong></div>
+          }
+          <div><span class="ss-raw-key">Line</span><strong>{{ resolving.quantity | number }} units · {{ resolving.value | number:'1.2-2' }}</strong></div>
+        </div>
+
+        @if (resolving.suggestions.length) {
+          <div class="dst-section-label">Suggestions</div>
+          <div class="ss-suggest-list">
+            @for (s of resolving.suggestions; track s.name) {
+              <button
+                type="button"
+                class="ss-suggest"
+                [class.is-picked]="(s.itemId && s.itemId === resolveItemId) || (s.outletId && s.outletId === resolveOutletId)"
+                (click)="pickSuggestion(s)"
+              >
+                <span class="ss-suggest-name">{{ s.name }}</span>
+                <span class="ss-suggest-meta">
+                  @if (s.code) { {{ s.code }} · }
+                  {{ s.confidence | number:'1.0-0' }}% confident
+                </span>
+              </button>
+            }
+          </div>
+        }
+
+        <div class="dst-form-grid ss-manual">
+          <div class="dst-field">
+            <label for="ss-outlet-id">Outlet id</label>
+            <input id="ss-outlet-id" type="text" [(ngModel)]="resolveOutletId" placeholder="Leave blank if this row is item-only" />
+          </div>
+          <div class="dst-field">
+            <label for="ss-item-id">Item id</label>
+            <input id="ss-item-id" type="text" [(ngModel)]="resolveItemId" />
+          </div>
+        </div>
+
+        <label class="dst-check">
+          <input type="checkbox" [(ngModel)]="rememberMapping" />
+          <span>
+            Remember this mapping
+            <span class="dst-check-sub">Teaches the partner's profile so the same row matches next month without anybody looking at it.</span>
+          </span>
+        </label>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn is-danger" (click)="confirmResolve(true)" [disabled]="busy">
+          Reject the row
+        </button>
+        <span class="dst-foot-spacer"></span>
+        <button type="button" class="dst-btn" (click)="resolving = null" [disabled]="busy">Cancel</button>
+        <button
+          type="button"
+          class="dst-btn is-primary"
+          (click)="confirmResolve(false)"
+          [disabled]="busy || (!resolveItemId && !resolveOutletId)"
+        >Match it</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Explain a variance ───────────────────────────────────────────────── -->
+@if (explaining) {
+  <div class="dst-modal-backdrop" (click)="explaining = null">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Explain the variance" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Explain the variance</div>
+          <div class="dst-modal-sub">
+            {{ explaining.partnerName }} · {{ explaining.itemName }} ·
+            {{ explaining.varianceQuantity > 0 ? '+' : '' }}{{ explaining.varianceQuantity | number }} units
+            ({{ explaining.varianceValue | number:'1.2-2' }})
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="explaining = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-field">
+          <label for="ss-reason">Reason <span class="req">*</span></label>
+          <select id="ss-reason" [(ngModel)]="explainReasonId">
+            <option value="">Pick a reason</option>
+            @for (r of varianceReasons; track r.id) { <option [value]="r.id">{{ r.name }}</option> }
+          </select>
+        </div>
+        <div class="dst-field">
+          <label for="ss-explain-note">Note</label>
+          <textarea id="ss-explain-note" [(ngModel)]="explainNote" placeholder="What actually happened to this stock?"></textarea>
+        </div>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="explaining = null">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="confirmExplain()" [disabled]="!explainReasonId">Save</button>
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,332 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Proof of delivery</h2>
+      <p class="subtitle">What actually reached the outlet — and everything that did not.</p>
+    </div>
+    <dst-scope-bar [showPeriod]="true" (scopeChange)="onScope($event)"></dst-scope-bar>
+  </div>
+
+  <dst-help key="pod"></dst-help>
+
+  @if (error) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">{{ error }}</div>
+      <button type="button" class="dst-icon-btn" (click)="error = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  @if (notice) {
+    <div class="dst-banner tone-success" role="status">
+      <span class="material-symbols-outlined">check_circle</span>
+      <div class="dst-banner-body">{{ notice }}</div>
+      <button type="button" class="dst-icon-btn" (click)="notice = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  <div class="dst-toolbar">
+    <div class="dst-segment" role="tablist" aria-label="Delivery queues">
+      <button type="button" role="tab" [attr.aria-selected]="queue === 'exceptions'" [class.is-active]="queue === 'exceptions'" (click)="setQueue('exceptions')">
+        <span class="material-symbols-outlined">report</span>Needs a decision
+      </button>
+      <button type="button" role="tab" [attr.aria-selected]="queue === 'clean'" [class.is-active]="queue === 'clean'" (click)="setQueue('clean')">
+        <span class="material-symbols-outlined">check_circle</span>Clean
+      </button>
+      <button type="button" role="tab" [attr.aria-selected]="queue === 'all'" [class.is-active]="queue === 'all'" (click)="setQueue('all')">
+        <span class="material-symbols-outlined">list</span>Everything
+      </button>
+    </div>
+
+    <span class="dst-spacer"></span>
+
+    <div class="dst-search">
+      <span class="material-symbols-outlined">search</span>
+      <input type="search" [(ngModel)]="search" (ngModelChange)="onSearch()" placeholder="POD, order or shop" aria-label="Search delivery proofs" />
+    </div>
+  </div>
+
+  <div class="dst-split pd-split">
+    <!-- ── Queue ──────────────────────────────────────────────────────── -->
+    <aside class="dst-card pd-list" aria-label="Delivery proofs">
+      <div class="dst-card-body is-flush pd-list-body">
+        @if (loading) {
+          <div class="pd-loading">
+            @for (i of [1,2,3,4,5]; track i) { <div class="dst-skeleton" style="height: 72px"></div> }
+          </div>
+        } @else if (rows.length === 0) {
+          <dst-empty
+            icon="task_alt"
+            title="Nothing needs a decision"
+            [text]="queue === 'exceptions'
+              ? 'Every delivery in this period arrived as dispatched. That is the state to aim for.'
+              : 'No delivery proofs match the current filters.'"
+          ></dst-empty>
+        } @else {
+          @for (p of rows; track trackPod($index, p)) {
+            <button
+              type="button"
+              class="pd-item"
+              [class.is-selected]="detail?.id === p.id"
+              [class.is-exception]="!p.isClean && !p.isExceptionResolved"
+              (click)="open(p.id)"
+            >
+              <div class="pd-item-top">
+                <span class="dst-code">{{ p.podNumber }}</span>
+                <span class="pd-age">{{ ageDays(p) }}d</span>
+              </div>
+              <div class="pd-item-name">{{ p.outletName }}</div>
+              <div class="pd-item-meta">
+                {{ p.deliveredAt | date:'d MMM, HH:mm' }}
+                @if (p.orderNumber) { · {{ p.orderNumber }} }
+              </div>
+              <div class="pd-item-foot">
+                <span>{{ p.deliveredValue | number:'1.0-0' }} delivered</span>
+                @if (!p.isClean) {
+                  <span class="pd-gap">{{ (p.shortValue + p.damagedValue + p.rejectedValue) | number:'1.0-0' }} disputed</span>
+                }
+                @if (p.isExceptionResolved) { <span class="dst-pill tone-success">Resolved</span> }
+              </div>
+            </button>
+          }
+        }
+      </div>
+
+      <dst-pager [meta]="meta" noun="deliveries" (pageChange)="changePage($event)" (sizeChange)="changeSize($event)"></dst-pager>
+    </aside>
+
+    <!-- ── Detail ─────────────────────────────────────────────────────── -->
+    <section class="pd-detail" aria-label="Delivery detail">
+      @if (!detail) {
+        <div class="dst-card">
+          <dst-empty icon="local_shipping" title="Pick a delivery" text="Choose a delivery on the left to compare what was dispatched with what was received."></dst-empty>
+        </div>
+      } @else {
+        <div class="dst-card">
+          <div class="dst-card-head">
+            <div class="dst-card-title">
+              <span class="material-symbols-outlined">assignment_turned_in</span>
+              <div>
+                {{ detail.podNumber }}
+                <div class="dst-card-sub">
+                  {{ detail.outletName }} ·
+                  {{ detail.deliveredAt | date:'d MMM y, HH:mm' }}
+                  @if (detail.tripNumber) { · trip {{ detail.tripNumber }} }
+                  @if (detail.orderId) {
+                    · <a [routerLink]="['/distribution/orders', detail.orderId]">{{ detail.orderNumber }}</a>
+                  }
+                </div>
+              </div>
+            </div>
+            <div class="dst-card-actions">
+              @if (detail.isClean) {
+                <span class="dst-pill tone-success is-lg">
+                  <span class="material-symbols-outlined">check_circle</span>Clean delivery
+                </span>
+              } @else if (detail.isExceptionResolved) {
+                <span class="dst-pill tone-success is-lg">Exception resolved</span>
+              } @else {
+                <span class="dst-pill tone-danger is-lg">
+                  <span class="material-symbols-outlined">report</span>{{ exceptionValue | number:'1.2-2' }} disputed
+                </span>
+                <button type="button" class="dst-btn is-primary" (click)="openResolve()">Resolve it</button>
+              }
+            </div>
+          </div>
+
+          <div class="dst-card-body">
+            <div class="dst-kv pd-facts">
+              <div class="dst-kv-item">
+                <span class="dst-kv-key">Received by</span>
+                <span class="dst-kv-value">
+                  {{ detail.receivedByName || '—' }}
+                  @if (detail.receivedByPhone) { <span class="pd-quiet">{{ detail.receivedByPhone }}</span> }
+                </span>
+              </div>
+              <div class="dst-kv-item">
+                <span class="dst-kv-key">Location check</span>
+                <span class="dst-kv-value">
+                  <span class="dst-pill" [class.tone-success]="geoTone(detail) === 'good'" [class.tone-warning]="geoTone(detail) !== 'good'">
+                    {{ geoLabels[detail.geoValidation] }}
+                  </span>
+                </span>
+              </div>
+              <div class="dst-kv-item">
+                <span class="dst-kv-key">OTP</span>
+                <span class="dst-kv-value">{{ detail.otpVerified ? 'Verified' : 'Not used' }}</span>
+              </div>
+              <div class="dst-kv-item">
+                <span class="dst-kv-key">Delivered</span>
+                <span class="dst-kv-value">{{ detail.deliveredValue | number:'1.2-2' }}</span>
+              </div>
+              <div class="dst-kv-item">
+                <span class="dst-kv-key">Collected at the door</span>
+                <span class="dst-kv-value">{{ detail.collectedAmount | number:'1.2-2' }}</span>
+              </div>
+              <div class="dst-kv-item">
+                <span class="dst-kv-key">Short / damaged / refused</span>
+                <span class="dst-kv-value">
+                  {{ detail.shortValue | number:'1.0-0' }} / {{ detail.damagedValue | number:'1.0-0' }} / {{ detail.rejectedValue | number:'1.0-0' }}
+                </span>
+              </div>
+            </div>
+
+            @if (detail.exceptionNote) {
+              <div class="dst-banner tone-info pd-note">
+                <span class="material-symbols-outlined">sticky_note_2</span>
+                <div class="dst-banner-body">{{ detail.exceptionNote }}</div>
+              </div>
+            }
+
+            @if (detail.signatureImageUrl || detail.photoUrl) {
+              <div class="pd-evidence">
+                @if (detail.signatureImageUrl) {
+                  <figure class="pd-figure">
+                    <img [src]="detail.signatureImageUrl" alt="Signature captured at delivery" loading="lazy" />
+                    <figcaption>Signature</figcaption>
+                  </figure>
+                }
+                @if (detail.photoUrl) {
+                  <figure class="pd-figure">
+                    <img [src]="detail.photoUrl" alt="Photo taken at delivery" loading="lazy" />
+                    <figcaption>At the door</figcaption>
+                  </figure>
+                }
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Lines -->
+        <div class="dst-card">
+          <div class="dst-card-head">
+            <div class="dst-card-title"><span class="material-symbols-outlined">compare_arrows</span>Dispatched against received</div>
+          </div>
+          <div class="dst-card-body is-flush">
+            <div class="dst-table-wrap">
+              <table class="dst-table pd-lines">
+                <thead>
+                  <tr>
+                    <th>Item</th><th>Batch</th>
+                    <th class="num">Dispatched</th><th class="num">Accepted</th>
+                    <th class="num">Short</th><th class="num">Damaged</th><th class="num">Refused</th>
+                    <th class="num">Credit</th><th>Outcome</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (l of detail.lines; track trackLine($index, l)) {
+                    <tr [class.is-flagged]="lineHasIssue(l)">
+                      <td class="strong">{{ l.itemName }}</td>
+                      <td class="muted">{{ l.batchNumber || '—' }}</td>
+                      <td class="num">{{ l.despatchedQuantity | number }} {{ l.uom }}</td>
+                      <td class="num strong">{{ l.acceptedQuantity | number }}</td>
+                      <td class="num" [class.pd-bad]="l.shortQuantity > 0">
+                        @if (l.shortQuantity > 0) { {{ l.shortQuantity | number }} } @else { <span class="muted">—</span> }
+                      </td>
+                      <td class="num" [class.pd-bad]="l.damagedQuantity > 0">
+                        @if (l.damagedQuantity > 0) { {{ l.damagedQuantity | number }} } @else { <span class="muted">—</span> }
+                      </td>
+                      <td class="num" [class.pd-bad]="l.rejectedQuantity > 0">
+                        @if (l.rejectedQuantity > 0) { {{ l.rejectedQuantity | number }} } @else { <span class="muted">—</span> }
+                      </td>
+                      <td class="num">{{ l.creditValue | number:'1.2-2' }}</td>
+                      <td>
+                        <dst-status [label]="outcomeLabels[l.outcome]" [tone]="outcomeTone[l.outcome]"></dst-status>
+                        @if (l.reasonCodeName) { <span class="pd-reason">{{ l.reasonCodeName }}</span> }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      }
+    </section>
+  </div>
+</div>
+
+<!-- ── Resolve ──────────────────────────────────────────────────────────── -->
+@if (showResolve && detail) {
+  <div class="dst-modal-backdrop" (click)="showResolve = false">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Resolve the exception" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Resolve {{ exceptionValue | number:'1.2-2' }} on {{ detail.podNumber }}</div>
+          <div class="dst-modal-sub">
+            The delivery proof itself is never edited — it is the record of what happened at the
+            door. This decides what happens next.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="showResolve = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="pd-options" role="radiogroup" aria-label="How to resolve">
+          <button
+            type="button"
+            role="radio"
+            [attr.aria-checked]="resolution === 'return'"
+            class="pd-option"
+            [class.is-active]="resolution === 'return'"
+            (click)="resolution = 'return'"
+          >
+            <span class="material-symbols-outlined">assignment_return</span>
+            <span>
+              <strong>Raise a return</strong>
+              <small>The stock comes back and is inspected. Use this when goods were damaged or refused.</small>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            role="radio"
+            [attr.aria-checked]="resolution === 'credit'"
+            class="pd-option"
+            [class.is-active]="resolution === 'credit'"
+            (click)="resolution = 'credit'"
+          >
+            <span class="material-symbols-outlined">receipt_long</span>
+            <span>
+              <strong>Credit the difference</strong>
+              <small>The money goes back without the stock. Use this when nothing was ever delivered.</small>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            role="radio"
+            [attr.aria-checked]="resolution === 'accept'"
+            class="pd-option"
+            [class.is-active]="resolution === 'accept'"
+            (click)="resolution = 'accept'"
+          >
+            <span class="material-symbols-outlined">done_all</span>
+            <span>
+              <strong>Accept the difference</strong>
+              <small>No credit and no return — the shortfall is written off against this delivery.</small>
+            </span>
+          </button>
+        </div>
+
+        <div class="dst-field pd-resolve-note">
+          <label for="pd-note">What happened? <span class="req">*</span></label>
+          <textarea id="pd-note" [(ngModel)]="resolveNote" placeholder="Two cases crushed in transit; driver photographed them at the door."></textarea>
+        </div>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showResolve = false" [disabled]="busy">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="resolve()" [disabled]="busy || !resolveNote.trim()">
+          @if (busy) { Resolving… } @else { Resolve }
+        </button>
+      </div>
+    </div>
+  </div>
+}

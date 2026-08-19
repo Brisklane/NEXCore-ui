@@ -1,0 +1,319 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Pick waves</h2>
+      <p class="subtitle">The batched picking work on the floor, and how far each one has got.</p>
+    </div>
+    <label class="dst-check pw-toggle">
+      <input type="checkbox" [(ngModel)]="openOnly" (ngModelChange)="load()" />
+      Open waves only
+    </label>
+  </div>
+
+  <dst-help key="waves"></dst-help>
+
+  @if (error) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">{{ error }}</div>
+      <button type="button" class="dst-icon-btn" (click)="error = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  @if (notice) {
+    <div class="dst-banner tone-success" role="status">
+      <span class="material-symbols-outlined">check_circle</span>
+      <div class="dst-banner-body">{{ notice }}</div>
+      <button type="button" class="dst-icon-btn" (click)="notice = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  <div class="dst-split pw-split">
+    <!-- ── Waves ──────────────────────────────────────────────────────── -->
+    <aside class="dst-card pw-list" aria-label="Waves">
+      <div class="dst-card-body is-flush pw-list-body">
+        @if (loading) {
+          <div class="pw-loading">
+            @for (i of [1,2,3,4,5]; track i) { <div class="dst-skeleton" style="height: 78px"></div> }
+          </div>
+        } @else if (waves.length === 0) {
+          <dst-empty icon="conveyor_belt" title="No waves" text="Waves are built from the dispatch desk once orders are allocated."></dst-empty>
+        } @else {
+          @for (w of waves; track trackWave($index, w)) {
+            <button
+              type="button"
+              class="pw-wave"
+              [class.is-selected]="selected?.id === w.id"
+              (click)="select(w.id)"
+            >
+              <div class="pw-wave-top">
+                <span class="dst-code">{{ w.waveNumber }}</span>
+                @if (w.isClosed) { <span class="dst-pill tone-neutral">Closed</span> }
+              </div>
+              <div class="pw-wave-meta">
+                {{ strategyLabels[w.strategy] }} · {{ w.orderCount }} orders
+                @if (w.routeName) { · {{ w.routeName }} }
+              </div>
+              <div class="dst-bar-row">
+                <span class="dst-bar" [class]="'dst-bar ' + waveTone(w)">
+                  <span class="dst-bar-fill" [style.width.%]="w.progressPercent"></span>
+                </span>
+                <span class="dst-bar-value">{{ w.pickedLines }}/{{ w.totalLines }}</span>
+              </div>
+              @if (w.shortLines > 0) {
+                <div class="pw-wave-short">{{ w.shortLines }} short lines</div>
+              }
+            </button>
+          }
+        }
+      </div>
+
+      <dst-pager [meta]="meta" noun="waves" (pageChange)="changePage($event)" (sizeChange)="changeSize($event)"></dst-pager>
+    </aside>
+
+    <!-- ── Wave detail ────────────────────────────────────────────────── -->
+    <section class="pw-detail" aria-label="Wave detail">
+      @if (loadingDetail) {
+        <div class="dst-skeleton" style="height: 400px; border-radius: 16px"></div>
+      } @else if (!selected) {
+        <div class="dst-card">
+          <dst-empty icon="conveyor_belt" title="Pick a wave" text="Choose a wave to see its tasks and who is on them."></dst-empty>
+        </div>
+      } @else {
+        <div class="dst-card">
+          <div class="dst-card-head">
+            <div class="dst-card-title">
+              <span class="material-symbols-outlined">conveyor_belt</span>
+              <div>
+                {{ selected.waveNumber }}
+                <div class="dst-card-sub">
+                  Released {{ selected.releasedAt | date:'d MMM, HH:mm' }} ·
+                  {{ strategyLabels[selected.strategy] }}
+                  @if (selected.deliveryDate) { · for delivery {{ selected.deliveryDate | date:'d MMM' }} }
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="dst-card-body">
+            <div class="pw-stats">
+              <div class="pw-stat">
+                <span class="pw-stat-label">Progress</span>
+                <span class="pw-stat-value">{{ selected.progressPercent | number:'1.0-0' }}%</span>
+                <span class="pw-stat-foot">{{ selected.pickedLines }} of {{ selected.totalLines }} lines</span>
+              </div>
+              <div class="pw-stat">
+                <span class="pw-stat-label">Tasks</span>
+                <span class="pw-stat-value">{{ selected.completedTaskCount }}<small>/{{ selected.taskCount }}</small></span>
+                <span class="pw-stat-foot">{{ selected.orderCount }} orders in the wave</span>
+              </div>
+              <div class="pw-stat" [class.is-bad]="selected.shortLines > 0">
+                <span class="pw-stat-label">Short</span>
+                <span class="pw-stat-value">{{ selected.shortLines }}</span>
+                <span class="pw-stat-foot">
+                  @if (selected.shortLines > 0) { each needs a reason } @else { nothing short }
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tasks -->
+        <div class="dst-card">
+          <div class="dst-card-head">
+            <div class="dst-card-title"><span class="material-symbols-outlined">assignment</span>Tasks</div>
+          </div>
+          <div class="dst-card-body is-flush">
+            @for (t of selected.tasks; track trackTask($index, t)) {
+              <div class="pw-task" [class.is-open]="openTask?.id === t.id">
+                <button type="button" class="pw-task-head" (click)="openTaskDetail(t)">
+                  <span class="pw-task-no">{{ t.taskNumber }}</span>
+                  <span class="pw-task-body">
+                    <span class="pw-task-title">
+                      {{ t.orderNumber || 'Batch task' }}
+                      @if (t.zoneName) { <span class="dst-pill tone-neutral">{{ t.zoneName }}</span> }
+                    </span>
+                    <span class="pw-task-meta">
+                      {{ t.lineCount }} lines
+                      @if (t.assignedToName) { · {{ t.assignedToName }} } @else { · unassigned }
+                      @if (t.shortLineCount > 0) { · <span class="pw-short">{{ t.shortLineCount }} short</span> }
+                    </span>
+                  </span>
+                  <dst-status [label]="statusLabels[t.status]" [tone]="statusTone[t.status]"></dst-status>
+                  <span class="material-symbols-outlined pw-chevron">
+                    {{ openTask?.id === t.id ? 'expand_less' : 'expand_more' }}
+                  </span>
+                </button>
+
+                @if (openTask?.id === t.id && openTask; as task) {
+                  <div class="pw-lines">
+                    <div class="dst-table-wrap">
+                      <table class="dst-table pw-line-table">
+                        <thead>
+                          <tr>
+                            <th class="num">Seq</th><th>Item</th><th>Bin</th><th>Batch</th>
+                            <th class="num">Need</th><th class="num">Picked</th><th>State</th><th class="actions"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (l of task.lines; track trackLine($index, l)) {
+                            <tr [class.is-flagged]="l.isShort">
+                              <td class="num muted">{{ l.pickSequence }}</td>
+                              <td>
+                                <div class="dst-cell-stack">
+                                  <span class="top">{{ l.itemName }}</span>
+                                  <span class="sub">
+                                    @if (l.itemCode) { <span class="dst-code is-plain">{{ l.itemCode }}</span> }
+                                    @if (l.orderNumber) { · {{ l.orderNumber }} }
+                                  </span>
+                                </div>
+                              </td>
+                              <td><span class="pw-bin">{{ l.binCode || '—' }}</span></td>
+                              <td>
+                                <div class="dst-cell-stack">
+                                  <span class="top">{{ l.pickedBatchNumber || l.nominatedBatchNumber || '—' }}</span>
+                                  <span class="sub">
+                                    @if (l.expiryDate) {
+                                      exp {{ l.expiryDate | date:'MMM y' }}
+                                      @if (daysToExpiry(l) !== null && daysToExpiry(l)! < 90) {
+                                        <span class="pw-expiring">{{ daysToExpiry(l) }}d</span>
+                                      }
+                                    }
+                                    @if (l.isFefoOverridden) { <span class="pw-override">FEFO overridden</span> }
+                                  </span>
+                                </div>
+                              </td>
+                              <td class="num strong">{{ l.requiredQuantity | number }} {{ l.uom }}</td>
+                              <td class="num">{{ l.pickedQuantity | number }}</td>
+                              <td><dst-status [label]="lineState(l).label" [tone]="lineState(l).tone"></dst-status></td>
+                              <td class="actions">
+                                @if (task.status !== PickTaskStatus.Picked && task.status !== PickTaskStatus.Cancelled) {
+                                  <button type="button" class="dst-btn is-sm" (click)="startPick(l)">
+                                    @if (l.pickedQuantity > 0) { Adjust } @else { Confirm }
+                                  </button>
+                                }
+                              </td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div class="pw-task-actions">
+                      @if (task.status === PickTaskStatus.Assigned || task.status === PickTaskStatus.Released) {
+                        <button type="button" class="dst-btn is-primary" (click)="startTask(task)" [disabled]="busy">
+                          <span class="material-symbols-outlined">play_arrow</span>Start picking
+                        </button>
+                      }
+                      @if (task.status === PickTaskStatus.InProgress) {
+                        <button type="button" class="dst-btn is-success" (click)="completeTask(task)" [disabled]="busy">
+                          <span class="material-symbols-outlined">check</span>Complete the task
+                        </button>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+
+            @if (selected.tasks.length === 0) {
+              <p class="pw-none">This wave has no tasks.</p>
+            }
+          </div>
+        </div>
+      }
+    </section>
+  </div>
+</div>
+
+<!-- ── Confirm a pick ───────────────────────────────────────────────────── -->
+@if (confirming) {
+  <div class="dst-modal-backdrop" (click)="confirming = null">
+    <div class="dst-modal is-narrow pw-confirm" role="dialog" aria-modal="true" aria-label="Confirm the pick" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">{{ confirming.itemName }}</div>
+          <div class="dst-modal-sub">
+            Bin {{ confirming.binCode || 'unspecified' }}
+            @if (confirming.nominatedBatchNumber) { · take batch {{ confirming.nominatedBatchNumber }} }
+            @if (confirming.expiryDate) { (expires {{ confirming.expiryDate | date:'MMM y' }}) }
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="confirming = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="pw-required">
+          <span class="pw-required-label">Required</span>
+          <span class="pw-required-value">{{ confirming.requiredQuantity | number }} {{ confirming.uom }}</span>
+        </div>
+
+        <div class="dst-field">
+          <label for="pw-qty">Picked</label>
+          <div class="dst-stepper pw-stepper">
+            <button type="button" (click)="pickQuantity = pickQuantity > 0 ? pickQuantity - 1 : 0" aria-label="One less">
+              <span class="material-symbols-outlined">remove</span>
+            </button>
+            <input id="pw-qty" type="number" inputmode="numeric" min="0" [(ngModel)]="pickQuantity" />
+            <button type="button" (click)="pickQuantity = pickQuantity + 1" aria-label="One more">
+              <span class="material-symbols-outlined">add</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="dst-field">
+          <label for="pw-batch">Batch actually taken</label>
+          <input id="pw-batch" type="text" [(ngModel)]="pickBatchId" placeholder="Batch id" />
+          <span class="dst-hint">
+            FEFO nominated {{ confirming.nominatedBatchNumber || 'no particular batch' }}. Taking a
+            different one is allowed but recorded.
+          </span>
+        </div>
+
+        @if (isBatchOverride) {
+          <div class="dst-field">
+            <label for="pw-override">Why a different batch? <span class="req">*</span></label>
+            <input id="pw-override" type="text" [(ngModel)]="overrideReason" placeholder="Nominated batch was not on the shelf" />
+          </div>
+        }
+
+        @if (isShortPick) {
+          <div class="dst-banner tone-warning pw-short-banner">
+            <span class="material-symbols-outlined">warning</span>
+            <div class="dst-banner-body">
+              This is {{ confirming.requiredQuantity - pickQuantity | number }} short. The order's
+              fill rate drops and the shortfall goes to the exception queue.
+            </div>
+          </div>
+
+          <div class="dst-field">
+            <label for="pw-short">Why is it short? <span class="req">*</span></label>
+            <select id="pw-short" [(ngModel)]="shortReasonId">
+              <option value="">Pick a reason</option>
+              @for (r of shortReasons; track r.id) { <option [value]="r.id">{{ r.name }}</option> }
+            </select>
+          </div>
+        }
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="confirming = null" [disabled]="busy">Cancel</button>
+        <button
+          type="button"
+          class="dst-btn is-primary"
+          (click)="confirmPick()"
+          [disabled]="busy || (isShortPick && !shortReasonId) || (isBatchOverride && !overrideReason.trim())"
+        >
+          <span class="material-symbols-outlined">check</span>
+          Confirm
+        </button>
+      </div>
+    </div>
+  </div>
+}

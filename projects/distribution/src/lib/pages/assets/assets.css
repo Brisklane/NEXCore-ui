@@ -1,0 +1,52 @@
+/* Trade assets — time since verification is the number that matters. */
+
+.as-head-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.as-loading { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.as-table { min-width: 1180px; }
+.as-table a { color: var(--accent, #2b7fff); text-decoration: none; font-weight: 700; }
+.as-table a:hover { text-decoration: underline; }
+
+.as-quick {
+  padding: 0 11px;
+  border-radius: 10px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-surface, #fff);
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--text-secondary, #64748b);
+  min-height: 40px;
+  white-space: nowrap;
+}
+
+.as-stale { color: var(--danger-text, #b91c1c); font-weight: 750; }
+.as-stale small { font-size: 10.5px; opacity: 0.9; }
+
+.as-outlet-results {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 6px;
+  max-height: 190px;
+  overflow-y: auto;
+  border: 1px solid var(--border-default, #e6eaf0);
+  border-radius: 10px;
+  padding: 5px;
+}
+
+.as-outlet {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 11px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.as-outlet:hover { background: var(--bg-subtle, #f8fafc); }
+.as-outlet:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.as-outlet span:first-child { font-size: 13px; font-weight: 650; color: var(--text-heading, #0f172a); }
+.as-outlet-meta { font-size: 11px; color: var(--text-muted, #94a3b8); }

@@ -1,0 +1,534 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Van sales</h2>
+      <p class="subtitle">Vans as moving warehouses — what is loaded, what sold, what comes back.</p>
+    </div>
+    <div class="dst-context">
+      <label for="vs-van">Van</label>
+      <select id="vs-van" [(ngModel)]="selectedVanId" (ngModelChange)="onVanChange()">
+        @for (v of vanList; track v.id) {
+          <option [value]="v.id">{{ v.name }}@if (v.fieldRepName) { — {{ v.fieldRepName }} }</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  <dst-help key="vanSales"></dst-help>
+
+  @if (error) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">{{ error }}</div>
+      <button type="button" class="dst-icon-btn" (click)="error = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  @if (notice) {
+    <div class="dst-banner tone-success" role="status">
+      <span class="material-symbols-outlined">check_circle</span>
+      <div class="dst-banner-body">{{ notice }}</div>
+      <button type="button" class="dst-icon-btn" (click)="notice = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  @if (selectedVan; as van) {
+    <div class="dst-stats">
+      <div class="dst-stat tone-brand">
+        <span class="dst-stat-label">On board</span>
+        <span class="dst-stat-value">{{ van.stockValue | number:'1.0-0' }}</span>
+        <span class="dst-stat-foot">{{ van.stockLineCount }} lines · {{ van.utilisationPercent | number:'1.0-0' }}% of capacity</span>
+      </div>
+      <div class="dst-stat tone-neutral">
+        <span class="dst-stat-label">Assigned to</span>
+        <span class="dst-stat-value vs-name">{{ van.fieldRepName || 'Unassigned' }}</span>
+        <span class="dst-stat-foot">{{ van.routeName || 'no fixed route' }} · {{ van.vehicleRegistration || 'no vehicle' }}</span>
+      </div>
+      <div class="dst-stat" [class.tone-cyan]="van.isRefrigerated" [class.tone-neutral]="!van.isRefrigerated">
+        <span class="dst-stat-label">Cold chain</span>
+        <span class="dst-stat-value vs-name">
+          @if (van.isRefrigerated) { Refrigerated } @else { Ambient only }
+        </span>
+        <span class="dst-stat-foot">
+          @if (van.isRefrigerated) { safe between {{ van.minSafeCelsius }}° and {{ van.maxSafeCelsius }}° }
+          @else { no chilled compartment }
+        </span>
+      </div>
+      <div class="dst-stat tone-violet">
+        <span class="dst-stat-label">Last settled</span>
+        <span class="dst-stat-value vs-name">{{ (van.lastSettledAt | date:'d MMM') || 'never' }}</span>
+        <span class="dst-stat-foot">loaded {{ (van.lastLoadedAt | date:'d MMM, HH:mm') || 'never' }}</span>
+      </div>
+    </div>
+  }
+
+  <div class="dst-tabs" role="tablist">
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'stock'" [class.is-active]="tab === 'stock'" (click)="setTab('stock')">
+      <span class="material-symbols-outlined">inventory_2</span>On board
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'loads'" [class.is-active]="tab === 'loads'" (click)="setTab('loads')">
+      <span class="material-symbols-outlined">forklift</span>Load sheets
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'movements'" [class.is-active]="tab === 'movements'" (click)="setTab('movements')">
+      <span class="material-symbols-outlined">swap_vert</span>Movements
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'counts'" [class.is-active]="tab === 'counts'" (click)="setTab('counts')">
+      <span class="material-symbols-outlined">checklist</span>Counts
+    </button>
+  </div>
+
+  <!-- ── On board ─────────────────────────────────────────────────────── -->
+  @if (tab === 'stock') {
+    <div class="dst-toolbar">
+      <select class="dst-filter-select" [(ngModel)]="compartmentFilter" (ngModelChange)="load()" aria-label="Compartment">
+        <option value="">Every compartment</option>
+        @for (c of [1,2,3,4,5,6]; track c) { <option [value]="c">{{ compartmentLabels[c] }}</option> }
+      </select>
+      <span class="dst-spacer"></span>
+      <button type="button" class="dst-btn" (click)="showStartCount = true">
+        <span class="material-symbols-outlined">checklist</span>
+        Start a count
+      </button>
+    </div>
+
+    @if (stock; as s) {
+      <div class="vs-values">
+        <div class="vs-value"><span>Sellable</span><strong>{{ s.sellableValue | number:'1.2-2' }}</strong></div>
+        <div class="vs-value"><span>Returns on board</span><strong>{{ s.returnValue | number:'1.2-2' }}</strong></div>
+        <div class="vs-value is-bad"><span>Damaged</span><strong>{{ s.damagedValue | number:'1.2-2' }}</strong></div>
+        <div class="vs-value is-bad"><span>Expired</span><strong>{{ s.expiredValue | number:'1.2-2' }}</strong></div>
+        <div class="vs-value is-total"><span>Total</span><strong>{{ s.totalValue | number:'1.2-2' }}</strong></div>
+      </div>
+
+      @if (s.nearExpiryLineCount > 0) {
+        <div class="dst-banner tone-warning">
+          <span class="material-symbols-outlined">schedule</span>
+          <div class="dst-banner-body">
+            <strong>{{ s.nearExpiryLineCount }} lines on this van expire within the month.</strong>
+            Push them today or bring them back — stock that expires on a van is a total loss, not a discount.
+          </div>
+        </div>
+      }
+    }
+
+    <div class="dst-card">
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="vs-loading">
+            @for (i of [1,2,3,4,5]; track i) { <div class="dst-skeleton" style="height: 48px"></div> }
+          </div>
+        } @else if (balances.length === 0) {
+          <dst-empty icon="inventory_2" title="The van is empty" text="Load it from a load sheet. Nothing can be sold from a van that has not been loaded."></dst-empty>
+        } @else {
+          <div class="dst-table-wrap">
+            <table class="dst-table vs-table">
+              <thead>
+                <tr>
+                  <th>Item</th><th>Batch</th><th>Compartment</th>
+                  <th class="num">On board</th><th class="num">Reserved</th><th class="num">Available</th>
+                  <th class="num">Value</th><th>Expiry</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (b of balances; track trackBalance($index, b)) {
+                  <tr [class.is-flagged]="b.daysToExpiry != null && b.daysToExpiry < 30">
+                    <td>
+                      <div class="dst-cell-stack">
+                        <span class="top">{{ b.itemName }}</span>
+                        @if (b.itemCode) { <span class="sub"><span class="dst-code is-plain">{{ b.itemCode }}</span></span> }
+                      </div>
+                    </td>
+                    <td class="muted">{{ b.batchNumber || '—' }}</td>
+                    <td><dst-status [label]="compartmentLabels[b.compartment]" [tone]="compartmentTone[b.compartment]"></dst-status></td>
+                    <td class="num strong">{{ b.quantity | number }} {{ b.uom }}</td>
+                    <td class="num muted">{{ b.reservedQuantity | number }}</td>
+                    <td class="num">{{ b.availableQuantity | number }}</td>
+                    <td class="num">{{ b.stockValue | number:'1.2-2' }}</td>
+                    <td class="nowrap">
+                      @if (b.expiryDate) {
+                        <span [class]="expiryTone(b)">
+                          {{ b.expiryDate | date:'MMM y' }}
+                          @if (b.daysToExpiry != null) {
+                            <small>
+                              @if (b.daysToExpiry < 0) { expired } @else { {{ b.daysToExpiry }}d }
+                            </small>
+                          }
+                        </span>
+                      } @else { <span class="muted">—</span> }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ── Load sheets ──────────────────────────────────────────────────── -->
+  @if (tab === 'loads') {
+    <div class="dst-split vs-split">
+      <aside class="dst-card vs-list" aria-label="Load sheets">
+        <div class="dst-card-body is-flush vs-list-body">
+          @if (loading) {
+            <div class="vs-loading">
+              @for (i of [1,2,3,4]; track i) { <div class="dst-skeleton" style="height: 70px"></div> }
+            </div>
+          } @else if (loads.length === 0) {
+            <dst-empty icon="forklift" title="No load sheets" text="A load sheet is what moves stock from the warehouse onto the van, and what settlement is measured against."></dst-empty>
+          } @else {
+            @for (l of loads; track trackLoad($index, l)) {
+              <button type="button" class="vs-load" [class.is-selected]="openLoad?.id === l.id" (click)="openLoadSheet(l)">
+                <div class="vs-load-top">
+                  <span class="dst-code">{{ l.loadNumber }}</span>
+                  <dst-status [label]="loadStatusLabels[l.status]" [tone]="loadStatusTone[l.status]"></dst-status>
+                </div>
+                <div class="vs-load-meta">
+                  {{ l.loadDate | date:'d MMM y' }} · {{ l.lines.length }} lines
+                  @if (l.routeName) { · {{ l.routeName }} }
+                </div>
+                <div class="vs-load-value">{{ l.totalSaleValue | number:'1.0-0' }}</div>
+                @if (l.varianceLineCount > 0) {
+                  <div class="vs-load-variance">{{ l.varianceLineCount }} lines differed from plan</div>
+                }
+              </button>
+            }
+          }
+        </div>
+        <dst-pager [meta]="meta" noun="loads" (pageChange)="changePage($event)" (sizeChange)="changeSize($event)"></dst-pager>
+      </aside>
+
+      <section class="vs-detail" aria-label="Load sheet">
+        @if (!openLoad) {
+          <div class="dst-card">
+            <dst-empty icon="forklift" title="Pick a load sheet" text="Choose a load on the left to approve it or confirm what actually went on the van."></dst-empty>
+          </div>
+        } @else {
+          <div class="dst-card">
+            <div class="dst-card-head">
+              <div class="dst-card-title">
+                <span class="material-symbols-outlined">forklift</span>
+                <div>
+                  {{ openLoad.loadNumber }}
+                  <div class="dst-card-sub">
+                    {{ openLoad.loadDate | date:'d MMM y' }} ·
+                    {{ openLoad.fieldRepName || 'no rep' }} ·
+                    cost {{ openLoad.totalCostValue | number:'1.0-0' }} ·
+                    sale {{ openLoad.totalSaleValue | number:'1.0-0' }}
+                  </div>
+                </div>
+              </div>
+              <dst-status [label]="loadStatusLabels[openLoad.status]" [tone]="loadStatusTone[openLoad.status]" [large]="true"></dst-status>
+            </div>
+
+            <div class="dst-card-body is-flush">
+              <div class="dst-table-wrap">
+                <table class="dst-table vs-load-table">
+                  <thead>
+                    <tr>
+                      <th>Item</th><th>Batch</th><th>Compartment</th>
+                      <th class="num">Suggested</th><th class="num">Requested</th><th class="num">Approved</th>
+                      <th class="num">Loaded</th><th>Variance reason</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (l of openLoad.lines; track trackLoadLine($index, l)) {
+                      <tr [class.is-flagged]="loadHasVariance(l)">
+                        <td>
+                          <div class="dst-cell-stack">
+                            <span class="top">{{ l.itemName }}</span>
+                            <span class="sub">
+                              {{ l.uom }}
+                              @if (l.availableAtSource < l.approvedQuantity) {
+                                · <span class="vs-short">only {{ l.availableAtSource | number }} in the warehouse</span>
+                              }
+                            </span>
+                          </div>
+                        </td>
+                        <td class="muted">{{ l.batchNumber || '—' }}</td>
+                        <td><dst-status [label]="compartmentLabels[l.compartment]" [tone]="compartmentTone[l.compartment]"></dst-status></td>
+                        <td class="num muted">{{ l.suggestedQuantity | number }}</td>
+                        <td class="num">{{ l.requestedQuantity | number }}</td>
+                        <td class="num strong">{{ l.approvedQuantity | number }}</td>
+                        <td class="num">
+                          @if (openLoad.status === VanLoadStatus.Approved) {
+                            <input
+                              type="number"
+                              class="vs-cell"
+                              min="0"
+                              [ngModel]="confirmFor(l).loadedQuantity"
+                              (ngModelChange)="setLoaded(l, $event)"
+                              [attr.aria-label]="'Loaded quantity for ' + l.itemName"
+                            />
+                          } @else {
+                            {{ l.loadedQuantity | number }}
+                          }
+                        </td>
+                        <td>
+                          @if (openLoad.status === VanLoadStatus.Approved && loadHasVariance(l)) {
+                            <input
+                              type="text"
+                              class="vs-cell is-wide"
+                              [ngModel]="confirmFor(l).varianceReason"
+                              (ngModelChange)="setLoadVarianceReason(l, $event)"
+                              placeholder="Why the difference?"
+                              [attr.aria-label]="'Variance reason for ' + l.itemName"
+                            />
+                          } @else if (l.varianceReason) {
+                            <span class="muted">{{ l.varianceReason }}</span>
+                          }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="vs-actions">
+            @if (loadVarianceCount > 0) {
+              <span class="vs-warn">
+                <span class="material-symbols-outlined">warning</span>
+                {{ loadVarianceCount }} lines differ from what was approved
+              </span>
+            }
+            <span class="dst-spacer"></span>
+
+            @if (openLoad.status === VanLoadStatus.Draft || openLoad.status === VanLoadStatus.Requested) {
+              <button type="button" class="dst-btn is-danger" (click)="approveLoad(false)" [disabled]="busy">Reject</button>
+              <button type="button" class="dst-btn is-success" (click)="approveLoad(true)" [disabled]="busy">
+                <span class="material-symbols-outlined">check</span>Approve the load
+              </button>
+            }
+
+            @if (openLoad.status === VanLoadStatus.Approved) {
+              <button type="button" class="dst-btn is-primary" (click)="confirmLoad()" [disabled]="busy || loadMissingReasons > 0">
+                <span class="material-symbols-outlined">local_shipping</span>
+                Confirm what went on the van
+              </button>
+            }
+          </div>
+        }
+      </section>
+    </div>
+  }
+
+  <!-- ── Movements ────────────────────────────────────────────────────── -->
+  @if (tab === 'movements') {
+    <div class="dst-card">
+      <div class="dst-card-head">
+        <div class="dst-card-title"><span class="material-symbols-outlined">swap_vert</span>Every movement, newest first</div>
+        <span class="dst-card-sub">The balance above is a projection of this ledger</span>
+      </div>
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="vs-loading">
+            @for (i of [1,2,3,4,5,6]; track i) { <div class="dst-skeleton" style="height: 44px"></div> }
+          </div>
+        } @else if (movements.length === 0) {
+          <dst-empty icon="swap_vert" title="No movements" text="Loads, sales, returns, transfers and adjustments all appear here in the order they happened."></dst-empty>
+        } @else {
+          <div class="dst-table-wrap">
+            <table class="dst-table">
+              <thead>
+                <tr>
+                  <th>When</th><th>What</th><th>Item</th><th>Batch</th><th>Compartment</th>
+                  <th class="num">Quantity</th><th class="num">Balance after</th><th>Reference</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (m of movements; track trackMovement($index, m)) {
+                  <tr>
+                    <td class="nowrap muted">{{ m.occurredAt | date:'d MMM, HH:mm' }}</td>
+                    <td class="strong">{{ movementLabels[m.kind] }}</td>
+                    <td>{{ m.itemName }}</td>
+                    <td class="muted">{{ m.batchNumber || '—' }}</td>
+                    <td>{{ compartmentLabels[m.compartment] }}</td>
+                    <td class="num">
+                      <span [class]="'vs-qty ' + movementSign(m)">
+                        {{ m.quantity > 0 ? '+' : '' }}{{ m.quantity | number }} {{ m.uom }}
+                      </span>
+                    </td>
+                    <td class="num strong">{{ m.balanceAfter | number }}</td>
+                    <td class="muted">
+                      {{ m.referenceNumber || m.referenceType }}
+                      @if (m.reason) { <span class="vs-reason">{{ m.reason }}</span> }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+
+    <dst-pager [meta]="meta" noun="movements" (pageChange)="changePage($event)" (sizeChange)="changeSize($event)"></dst-pager>
+  }
+
+  <!-- ── Counts ───────────────────────────────────────────────────────── -->
+  @if (tab === 'counts') {
+    @if (!openCount) {
+      <div class="dst-card">
+        <dst-empty
+          icon="checklist"
+          title="No count open"
+          text="A count is what settlement is measured against. A blind count hides the expected quantity so the number is genuinely counted, not confirmed."
+          actionLabel="Start a count"
+          actionIcon="checklist"
+          (action)="showStartCount = true"
+        ></dst-empty>
+      </div>
+    } @else {
+      <div class="dst-card">
+        <div class="dst-card-head">
+          <div class="dst-card-title">
+            <span class="material-symbols-outlined">checklist</span>
+            <div>
+              {{ openCount.countNumber }}
+              <div class="dst-card-sub">
+                {{ openCount.countedAt | date:'d MMM y, HH:mm' }} ·
+                {{ openCount.isFullCount ? 'full count' : 'partial count' }} ·
+                {{ openCount.isBlind ? 'blind' : 'expected shown' }}
+              </div>
+            </div>
+          </div>
+          @if (openCount.isApproved) {
+            <span class="dst-pill tone-success is-lg">Approved</span>
+          }
+        </div>
+
+        <div class="dst-card-body is-flush">
+          <div class="dst-table-wrap">
+            <table class="dst-table vs-count-table">
+              <thead>
+                <tr>
+                  <th>Item</th><th>Batch</th><th>Compartment</th>
+                  @if (!openCount.isBlind || openCount.isApproved) { <th class="num">Expected</th> }
+                  <th class="num">Counted</th><th class="num">Variance</th><th>Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (l of openCount.lines; track trackCountLine($index, l)) {
+                  <tr [class.is-flagged]="countVariance(l) !== 0">
+                    <td class="strong">{{ l.itemName }}</td>
+                    <td class="muted">{{ l.batchNumber || '—' }}</td>
+                    <td>{{ compartmentLabels[l.compartment] }}</td>
+                    @if (!openCount.isBlind || openCount.isApproved) {
+                      <td class="num muted">{{ l.expectedQuantity | number }}</td>
+                    }
+                    <td class="num">
+                      @if (!openCount.isApproved) {
+                        <input
+                          type="number"
+                          class="vs-cell"
+                          min="0"
+                          [ngModel]="countFor(l).countedQuantity"
+                          (ngModelChange)="setCounted(l, $event)"
+                          [attr.aria-label]="'Counted quantity for ' + l.itemName"
+                        />
+                      } @else {
+                        {{ l.countedQuantity | number }}
+                      }
+                    </td>
+                    <td class="num">
+                      @if (countVariance(l) !== 0) {
+                        <span class="vs-variance">
+                          {{ countVariance(l) > 0 ? '+' : '' }}{{ countVariance(l) | number }}
+                        </span>
+                      } @else { <span class="muted">—</span> }
+                    </td>
+                    <td>
+                      @if (!openCount.isApproved && countVariance(l) !== 0) {
+                        <select
+                          class="vs-cell is-wide"
+                          [ngModel]="countFor(l).reasonCodeId"
+                          (ngModelChange)="setCountReason(l, $event)"
+                          [attr.aria-label]="'Variance reason for ' + l.itemName"
+                        >
+                          <option value="">Pick a reason</option>
+                          @for (r of varianceReasons; track r.id) { <option [value]="r.id">{{ r.name }}</option> }
+                        </select>
+                      } @else if (l.reasonCodeName) {
+                        <span class="muted">{{ l.reasonCodeName }}</span>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="vs-actions">
+        <span class="vs-variance-total" [class.is-bad]="countVarianceValue !== 0">
+          Net variance {{ countVarianceValue | number:'1.2-2' }}
+        </span>
+        @if (countMissingReasons > 0) {
+          <span class="vs-warn">
+            <span class="material-symbols-outlined">warning</span>
+            {{ countMissingReasons }} lines need a reason
+          </span>
+        }
+        <span class="dst-spacer"></span>
+        @if (!openCount.isApproved) {
+          <button type="button" class="dst-btn is-primary" (click)="submitCount()" [disabled]="busy || countMissingReasons > 0">
+            Submit the count
+          </button>
+          <button type="button" class="dst-btn is-success" (click)="approveCount()" [disabled]="busy">
+            <span class="material-symbols-outlined">check</span>Approve
+          </button>
+        }
+      </div>
+    }
+  }
+</div>
+
+<!-- ── Start a count ────────────────────────────────────────────────────── -->
+@if (showStartCount) {
+  <div class="dst-modal-backdrop" (click)="showStartCount = false">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Start a count" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Count {{ selectedVan?.name }}</div>
+          <div class="dst-modal-sub">
+            A blind count hides the expected quantity, so what comes back is what somebody actually
+            counted rather than what they were shown.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="showStartCount = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <label class="dst-check">
+          <input type="checkbox" [(ngModel)]="startCount.isFullCount" />
+          <span>
+            Count everything on the van
+            <span class="dst-check-sub">Off counts only the lines you nominate.</span>
+          </span>
+        </label>
+        <label class="dst-check">
+          <input type="checkbox" [(ngModel)]="startCount.isBlind" />
+          <span>
+            Blind count
+            <span class="dst-check-sub">Strongly recommended. Showing the expected number turns a count into a confirmation.</span>
+          </span>
+        </label>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showStartCount = false" [disabled]="busy">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="beginCount()" [disabled]="busy">Start</button>
+      </div>
+    </div>
+  </div>
+}

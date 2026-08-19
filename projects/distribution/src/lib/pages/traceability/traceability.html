@@ -1,0 +1,693 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Batch, expiry &amp; recall</h2>
+      <p class="subtitle">Knowing exactly where a batch went, and getting it back.</p>
+    </div>
+    <dst-scope-bar (scopeChange)="onScope($event)"></dst-scope-bar>
+  </div>
+
+  <dst-help key="traceability"></dst-help>
+
+  @if (error) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">{{ error }}</div>
+      <button type="button" class="dst-icon-btn" (click)="error = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  @if (notice) {
+    <div class="dst-banner tone-success" role="status">
+      <span class="material-symbols-outlined">check_circle</span>
+      <div class="dst-banner-body">{{ notice }}</div>
+      <button type="button" class="dst-icon-btn" (click)="notice = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  <div class="dst-tabs" role="tablist">
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'expiry'" [class.is-active]="tab === 'expiry'" (click)="setTab('expiry')">
+      <span class="material-symbols-outlined">schedule</span>Near expiry
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'trace'" [class.is-active]="tab === 'trace'" (click)="setTab('trace')">
+      <span class="material-symbols-outlined">route</span>Trace a batch
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'recalls'" [class.is-active]="tab === 'recalls'" (click)="setTab('recalls')">
+      <span class="material-symbols-outlined">campaign</span>Recalls
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'coldchain'" [class.is-active]="tab === 'coldchain'" (click)="setTab('coldchain')">
+      <span class="material-symbols-outlined">ac_unit</span>Cold chain
+    </button>
+  </div>
+
+  <!-- ── Near expiry ──────────────────────────────────────────────────── -->
+  @if (tab === 'expiry') {
+    <div class="dst-stats">
+      <div class="dst-stat" [class.tone-danger]="expiredValue > 0" [class.tone-warning]="expiredValue === 0 && nearExpiryValue > 0" [class.tone-success]="nearExpiryValue === 0">
+        <span class="dst-stat-label">At risk</span>
+        <span class="dst-stat-value">{{ nearExpiryValue | number:'1.0-0' }}</span>
+        <span class="dst-stat-foot">
+          @if (expiredValue > 0) { <strong>{{ expiredValue | number:'1.0-0' }}</strong> already expired }
+          @else { nothing expired yet }
+        </span>
+      </div>
+      <div class="dst-stat tone-neutral">
+        <span class="dst-stat-label">Lines</span>
+        <span class="dst-stat-value">{{ nearExpiry.length | number }}</span>
+        <span class="dst-stat-foot">expiring within {{ withinDays }} days</span>
+      </div>
+    </div>
+
+    <div class="dst-toolbar">
+      <div class="dst-context-group">
+        <label for="tc-within">Within</label>
+        <select id="tc-within" class="dst-filter-select" [(ngModel)]="withinDays" (ngModelChange)="load()">
+          <option [value]="30">30 days</option>
+          <option [value]="60">60 days</option>
+          <option [value]="90">90 days</option>
+          <option [value]="180">180 days</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="dst-card">
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="tc-loading">
+            @for (i of [1,2,3,4,5]; track i) { <div class="dst-skeleton" style="height: 48px"></div> }
+          </div>
+        } @else if (nearExpiry.length === 0) {
+          <dst-empty icon="verified" title="Nothing near expiry" text="No stock in the network expires within the selected window."></dst-empty>
+        } @else {
+          <div class="dst-table-wrap">
+            <table class="dst-table tc-table">
+              <thead>
+                <tr>
+                  <th>Item</th><th>Batch</th><th>Where</th>
+                  <th class="num">Quantity</th><th class="num">Value</th>
+                  <th>Expires</th><th>Shelf life left</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (n of nearExpiry; track trackExpiry($index, n)) {
+                  <tr [class.is-flagged]="n.daysToExpiry <= 30">
+                    <td>
+                      <div class="dst-cell-stack">
+                        <span class="top">{{ n.itemName }}</span>
+                        @if (n.itemCode) { <span class="sub"><span class="dst-code is-plain">{{ n.itemCode }}</span></span> }
+                      </div>
+                    </td>
+                    <td><span class="dst-code is-plain">{{ n.batchNumber }}</span></td>
+                    <td>{{ n.location }}</td>
+                    <td class="num">{{ n.quantity | number }} {{ n.uom }}</td>
+                    <td class="num strong">{{ n.value | number:'1.0-0' }}</td>
+                    <td class="nowrap">{{ n.expiryDate | date:'d MMM y' }}</td>
+                    <td><dst-status [label]="expiryLabel(n)" [tone]="expiryTone(n)"></dst-status></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+
+    <dst-pager [meta]="meta" noun="lines" (pageChange)="changePage($event)" (sizeChange)="changeSize($event)"></dst-pager>
+  }
+
+  <!-- ── Trace ────────────────────────────────────────────────────────── -->
+  @if (tab === 'trace') {
+    <div class="dst-card">
+      <div class="dst-card-head">
+        <div class="dst-card-title"><span class="material-symbols-outlined">route</span>Where did this batch go?</div>
+      </div>
+      <div class="dst-card-body">
+        <div class="tc-trace-form">
+          <div class="dst-field">
+            <label for="tc-batch">Batch number <span class="req">*</span></label>
+            <input id="tc-batch" type="text" [(ngModel)]="traceQuery.batchNumber" placeholder="Batch or lot number" />
+          </div>
+          <div class="dst-field">
+            <label for="tc-item">Item id</label>
+            <input id="tc-item" type="text" [(ngModel)]="traceQuery.itemId" placeholder="Optional — narrows the search" />
+          </div>
+          <button type="button" class="dst-btn is-primary" (click)="runTrace()" [disabled]="tracing || !traceQuery.batchNumber.trim()">
+            <span class="material-symbols-outlined">search</span>
+            @if (tracing) { Tracing… } @else { Trace }
+          </button>
+        </div>
+      </div>
+    </div>
+
+    @if (tracing) { <div class="dst-skeleton" style="height: 300px; border-radius: 16px; margin-top: 16px"></div> }
+
+    @if (traceResult; as t) {
+      <div class="dst-card tc-result">
+        <div class="dst-card-head">
+          <div class="dst-card-title">
+            <span class="material-symbols-outlined">inventory_2</span>
+            <div>
+              {{ t.itemName }} · batch {{ t.batchNumber }}
+              <div class="dst-card-sub">
+                @if (t.expiryDate) { expires {{ t.expiryDate | date:'d MMM y' }} · }
+                @if (t.supplierName) { from {{ t.supplierName }} }
+                @if (t.supplierLotReference) { · supplier lot {{ t.supplierLotReference }} }
+              </div>
+            </div>
+          </div>
+          <button type="button" class="dst-btn is-danger" (click)="recallFromTrace()">
+            <span class="material-symbols-outlined">campaign</span>
+            Recall this batch
+          </button>
+        </div>
+
+        <div class="dst-card-body">
+          <div class="tc-quantities">
+            <div class="tc-qty"><span>Received</span><strong>{{ t.receivedQuantity | number }}</strong></div>
+            <div class="tc-qty"><span>Despatched</span><strong>{{ t.despatchedQuantity | number }}</strong></div>
+            <div class="tc-qty"><span>Returned</span><strong>{{ t.returnedQuantity | number }}</strong></div>
+            <div class="tc-qty is-total"><span>Still out there</span><strong>{{ t.remainingQuantity | number }}</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dst-grid cols-2 tc-grid">
+        <section class="dst-card">
+          <div class="dst-card-head">
+            <div class="dst-card-title"><span class="material-symbols-outlined">storefront</span>Who has it</div>
+            <span class="dst-card-sub">{{ traceResult.destinations.length }} destinations</span>
+          </div>
+          <div class="dst-card-body is-flush tc-scroll">
+            @if (t.destinations.length === 0) { <p class="tc-none">This batch has not reached any outlet.</p> }
+            @for (d of t.destinations; track trackIndex($index)) {
+              <div class="tc-destination">
+                <div class="dst-cell-stack">
+                  <span class="top">
+                    @if (d.outletId) {
+                      <a [routerLink]="['/distribution/outlets', d.outletId]">{{ d.outletName }}</a>
+                    } @else { {{ d.partnerName }} }
+                  </span>
+                  <span class="sub">
+                    @if (d.phone) { {{ d.phone }} · }
+                    last supplied {{ d.lastSuppliedAt | date:'d MMM y' }}
+                  </span>
+                </div>
+                <div class="tc-destination-qty">
+                  <span class="tc-destination-value">{{ d.quantity | number }}</span>
+                  <span class="tc-destination-money">{{ d.value | number:'1.0-0' }}</span>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="dst-card">
+          <div class="dst-card-head">
+            <div class="dst-card-title"><span class="material-symbols-outlined">timeline</span>Every hop</div>
+          </div>
+          <div class="dst-card-body tc-scroll">
+            <div class="dst-timeline">
+              @for (h of t.hops; track trackIndex($index)) {
+                <div class="dst-timeline-item">
+                  <span class="dst-timeline-dot tone-brand"><span class="material-symbols-outlined">arrow_forward</span></span>
+                  <div class="dst-timeline-body">
+                    <div class="dst-timeline-title">
+                      {{ h.movementType }} · {{ h.quantity | number }} {{ h.uom }}
+                    </div>
+                    <div class="dst-timeline-meta">
+                      {{ h.movedAt | date:'d MMM y, HH:mm' }}
+                      @if (h.documentNumber) { · {{ h.documentNumber }} }
+                      @if (h.outletName) { · {{ h.outletName }} }
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        </section>
+      </div>
+    }
+  }
+
+  <!-- ── Recalls ──────────────────────────────────────────────────────── -->
+  @if (tab === 'recalls') {
+    <div class="dst-toolbar">
+      <span class="dst-spacer"></span>
+      <button type="button" class="dst-btn is-danger" (click)="openRecallDialog()">
+        <span class="material-symbols-outlined">campaign</span>
+        Initiate a recall
+      </button>
+    </div>
+
+    @if (openRecall; as r) {
+      <div class="dst-card tc-recall">
+        <div class="dst-card-head">
+          <div class="dst-card-title">
+            <span class="material-symbols-outlined">campaign</span>
+            <div>
+              {{ r.recallNumber }} — {{ r.title }}
+              <div class="dst-card-sub">
+                {{ r.itemName }} · batch {{ r.batchNumber }} ·
+                {{ severityLabels[r.severity] }} ·
+                raised {{ r.initiatedOn | date:'d MMM y' }}
+              </div>
+            </div>
+          </div>
+          <div class="dst-card-actions">
+            <dst-status [label]="recallStatusLabels[r.status]" [tone]="recallStatusTone[r.status]" [large]="true"></dst-status>
+            @if (r.status === RecallStatus.Draft) {
+              <button type="button" class="dst-btn is-danger" (click)="announce()" [disabled]="busy">
+                <span class="material-symbols-outlined">campaign</span>
+                Announce to {{ r.affectedOutletCount }} outlets
+              </button>
+            }
+            @if (r.status === RecallStatus.InProgress || r.status === RecallStatus.Announced) {
+              <button type="button" class="dst-btn is-primary" (click)="closingRecall = true" [disabled]="busy">Close it out</button>
+            }
+            <button type="button" class="dst-btn is-sm is-ghost" (click)="openRecall = null">Close</button>
+          </div>
+        </div>
+
+        <div class="dst-card-body">
+          @if (r.reason) {
+            <div class="dst-banner tone-danger">
+              <span class="material-symbols-outlined">warning</span>
+              <div class="dst-banner-body">
+                {{ r.reason }}
+                @if (r.regulatoryReference) { <br /><strong>Regulatory reference:</strong> {{ r.regulatoryReference }} }
+              </div>
+            </div>
+          }
+
+          <div class="tc-recall-stats">
+            <div class="tc-stat">
+              <span class="tc-stat-label">Recovery</span>
+              <span class="tc-stat-value">{{ r.recoveryPercent | number:'1.0-0' }}%</span>
+              <span class="dst-bar" [class.tone-success]="r.recoveryPercent >= 90" [class.tone-warning]="r.recoveryPercent < 90">
+                <span class="dst-bar-fill" [style.width.%]="r.recoveryPercent"></span>
+              </span>
+              <span class="tc-stat-foot">{{ r.recoveredQuantity | number }} of {{ r.despatchedQuantity | number }} units back</span>
+            </div>
+            <div class="tc-stat">
+              <span class="tc-stat-label">Outlets</span>
+              <span class="tc-stat-value">{{ r.respondedOutletCount }}<small>/{{ r.affectedOutletCount }}</small></span>
+              <span class="tc-stat-foot">{{ r.notifiedOutletCount }} notified, {{ r.respondedOutletCount }} responded</span>
+            </div>
+            <div class="tc-stat">
+              <span class="tc-stat-label">Value at risk</span>
+              <span class="tc-stat-value">{{ r.estimatedValue | number:'1.0-0' }}</span>
+              <span class="tc-stat-foot">{{ r.recoveredValue | number:'1.0-0' }} recovered · {{ r.destroyedQuantity | number }} destroyed</span>
+            </div>
+            <div class="tc-stat">
+              <span class="tc-stat-label">Target date</span>
+              <span class="tc-stat-value tc-date">{{ r.targetCompletionOn | date:'d MMM' }}</span>
+              <span class="tc-stat-foot">
+                @if (r.completedAt) { closed {{ r.completedAt | date:'d MMM y' }} }
+                @else if (r.announcedAt) { announced {{ r.announcedAt | date:'d MMM' }} }
+                @else { not yet announced }
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="dst-card-body is-flush">
+          <div class="dst-table-wrap">
+            <table class="dst-table">
+              <thead>
+                <tr>
+                  <th>Outlet</th><th>Phone</th>
+                  <th class="num">Supplied</th><th class="num">Returned</th><th class="num">Value</th>
+                  <th>Notified</th><th>Acknowledged</th><th>Collected</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (n of r.notices; track trackNotice($index, n)) {
+                  <tr [class.is-flagged]="!n.isClosed">
+                    <td class="strong">{{ n.outletName || n.destinationName }}</td>
+                    <td class="muted">{{ n.phone }}</td>
+                    <td class="num">{{ n.suppliedQuantity | number }}</td>
+                    <td class="num strong">{{ n.returnedQuantity | number }}</td>
+                    <td class="num">{{ n.value | number:'1.0-0' }}</td>
+                    <td class="nowrap">
+                      @if (n.notifiedAt) { {{ n.notifiedAt | date:'d MMM' }} <span class="tc-channel">{{ n.notificationChannel }}</span> }
+                      @else { <span class="muted">not yet</span> }
+                    </td>
+                    <td class="nowrap">{{ (n.acknowledgedAt | date:'d MMM') || '—' }}</td>
+                    <td class="nowrap">
+                      @if (n.collectedAt) { <span class="dst-pill tone-success">{{ n.collectedAt | date:'d MMM' }}</span> }
+                      @else { <span class="dst-pill tone-warning">Outstanding</span> }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    }
+
+    <div class="dst-card">
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="tc-loading">
+            @for (i of [1,2,3]; track i) { <div class="dst-skeleton" style="height: 52px"></div> }
+          </div>
+        } @else if (recalls.length === 0) {
+          <dst-empty icon="verified" title="No recalls" text="A recall turns a batch trace into notices, tracks returns against them, and closes with a report."></dst-empty>
+        } @else {
+          <div class="dst-table-wrap">
+            <table class="dst-table">
+              <thead>
+                <tr>
+                  <th>Recall</th><th>Item &amp; batch</th><th>Severity</th><th>Raised</th>
+                  <th class="num">Outlets</th><th class="num">Recovery</th><th class="num">Value</th>
+                  <th>Status</th><th class="actions"></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of recalls; track trackRecall($index, r)) {
+                  <tr class="is-clickable" (click)="viewRecall(r)">
+                    <td>
+                      <div class="dst-cell-stack">
+                        <span class="dst-code">{{ r.recallNumber }}</span>
+                        <span class="sub">{{ r.title }}</span>
+                      </div>
+                    </td>
+                    <td>{{ r.itemName }} <span class="muted">{{ r.batchNumber }}</span></td>
+                    <td><span class="dst-pill tone-danger">{{ severityLabels[r.severity] }}</span></td>
+                    <td class="nowrap muted">{{ r.initiatedOn | date:'d MMM y' }}</td>
+                    <td class="num">{{ r.affectedOutletCount }}</td>
+                    <td class="num">
+                      <span [class.tc-good]="r.recoveryPercent >= 90" [class.tc-bad]="r.recoveryPercent < 60">
+                        {{ r.recoveryPercent | number:'1.0-0' }}%
+                      </span>
+                    </td>
+                    <td class="num">{{ r.estimatedValue | number:'1.0-0' }}</td>
+                    <td><dst-status [label]="recallStatusLabels[r.status]" [tone]="recallStatusTone[r.status]"></dst-status></td>
+                    <td class="actions">
+                      <button type="button" class="dst-icon-btn" (click)="$event.stopPropagation(); viewRecall(r)" aria-label="Open the recall">
+                        <span class="material-symbols-outlined">chevron_right</span>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ── Cold chain ───────────────────────────────────────────────────── -->
+  @if (tab === 'coldchain') {
+    @if (breachedCheckpoints > 0 || overdueChecks > 0) {
+      <div class="dst-banner tone-danger">
+        <span class="material-symbols-outlined">ac_unit</span>
+        <div class="dst-banner-body">
+          @if (breachedCheckpoints > 0) { <strong>{{ breachedCheckpoints }} checkpoints are outside their safe range right now.</strong> }
+          @if (overdueChecks > 0) { {{ overdueChecks }} are overdue for a reading. }
+        </div>
+      </div>
+    }
+
+    <div class="dst-grid cols-2">
+      <section class="dst-card">
+        <div class="dst-card-head">
+          <div class="dst-card-title"><span class="material-symbols-outlined">thermostat</span>Checkpoints</div>
+        </div>
+        <div class="dst-card-body is-flush">
+          @if (checkpoints.length === 0) {
+            <p class="tc-none">No cold-chain checkpoints defined.</p>
+          }
+          @for (c of checkpoints; track trackCheckpoint($index, c)) {
+            <div class="tc-checkpoint" [class.is-breach]="c.isInBreach" [class.is-overdue]="c.isCheckOverdue">
+              <div class="tc-checkpoint-body">
+                <div class="tc-checkpoint-name">
+                  {{ c.name }}
+                  <span class="dst-pill tone-neutral">{{ pointLabels[c.kind] }}</span>
+                </div>
+                <div class="tc-checkpoint-meta">
+                  Safe between {{ c.minSafeCelsius }}° and {{ c.maxSafeCelsius }}° ·
+                  checked every {{ c.checkIntervalHours }}h
+                  @if (c.location) { · {{ c.location }} }
+                </div>
+                @if (c.unresolvedExcursionCount > 0) {
+                  <div class="tc-checkpoint-alert">{{ c.unresolvedExcursionCount }} unresolved excursions</div>
+                }
+              </div>
+
+              <div class="tc-checkpoint-right">
+                @if (c.lastReadingCelsius != null) {
+                  <span class="tc-temp" [class.is-breach]="c.isInBreach">{{ c.lastReadingCelsius | number:'1.1-1' }}°</span>
+                  <span class="tc-temp-when" [class.is-overdue]="c.isCheckOverdue">
+                    {{ c.lastReadingAt | date:'d MMM, HH:mm' }}
+                  </span>
+                } @else {
+                  <span class="tc-temp-none">no reading</span>
+                }
+                <button type="button" class="dst-btn is-sm" (click)="startReading(c)">Record</button>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="dst-card">
+        <div class="dst-card-head">
+          <div class="dst-card-title"><span class="material-symbols-outlined">warning</span>Excursions</div>
+          <span class="dst-card-sub">Out-of-range readings, newest first</span>
+        </div>
+        <div class="dst-card-body is-flush tc-scroll">
+          @if (readings.length === 0) {
+            <p class="tc-none">No temperature excursions recorded. That is the state to aim for.</p>
+          }
+          @for (l of readings; track trackReading($index, l)) {
+            <div class="tc-excursion" [class.is-resolved]="l.isResolved">
+              <div class="tc-excursion-body">
+                <div class="tc-excursion-head">
+                  <span class="tc-excursion-temp">{{ l.readingCelsius | number:'1.1-1' }}°</span>
+                  <span class="tc-excursion-name">{{ l.checkpointName }}</span>
+                </div>
+                <div class="tc-excursion-meta">
+                  {{ l.recordedAt | date:'d MMM y, HH:mm' }}
+                  @if (l.excursionMinutes) { · out of range for {{ l.excursionMinutes }} min }
+                  @if (l.affectedStockValue > 0) { · <strong>{{ l.affectedStockValue | number:'1.0-0' }}</strong> of stock affected }
+                  @if (l.isAutomatic) { · sensor } @else { · {{ l.recordedByName }} }
+                </div>
+                @if (l.correctiveAction) {
+                  <div class="tc-excursion-action">{{ l.correctiveAction }}</div>
+                }
+              </div>
+
+              @if (l.isResolved) {
+                <span class="dst-pill tone-success">Resolved</span>
+              } @else {
+                <button type="button" class="dst-btn is-sm" (click)="startExcursion(l)">Resolve</button>
+              }
+            </div>
+          }
+        </div>
+      </section>
+    </div>
+  }
+</div>
+
+<!-- ── Initiate a recall ────────────────────────────────────────────────── -->
+@if (showRecall) {
+  <div class="dst-modal-backdrop" (click)="showRecall = false">
+    <div class="dst-modal" role="dialog" aria-modal="true" aria-label="Initiate a recall" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Initiate a recall</div>
+          <div class="dst-modal-sub">
+            The recall is raised as a draft. Announcing it notifies every outlet that received the
+            batch and starts the clock.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="showRecall = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-form-grid">
+          <div class="dst-field is-full">
+            <label for="tc-recall-title">Title <span class="req">*</span></label>
+            <input id="tc-recall-title" type="text" [(ngModel)]="recall.title" />
+          </div>
+
+          <div class="dst-field">
+            <label for="tc-recall-item">Item id <span class="req">*</span></label>
+            <input id="tc-recall-item" type="text" [(ngModel)]="recall.itemId" />
+          </div>
+
+          <div class="dst-field">
+            <label for="tc-recall-batch">Batch number</label>
+            <input id="tc-recall-batch" type="text" [(ngModel)]="recall.batchNumber" />
+          </div>
+
+          <div class="dst-field">
+            <label for="tc-recall-severity">Severity</label>
+            <select id="tc-recall-severity" [(ngModel)]="recall.severity">
+              @for (o of severityOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+            </select>
+            <span class="dst-hint">Class I is a reasonable probability of serious harm. It changes the response time.</span>
+          </div>
+
+          <div class="dst-field">
+            <label for="tc-recall-target">Target completion</label>
+            <input id="tc-recall-target" type="date" [(ngModel)]="recall.targetCompletionOn" />
+          </div>
+
+          <div class="dst-field is-full">
+            <label for="tc-recall-reason">Reason <span class="req">*</span></label>
+            <textarea id="tc-recall-reason" [(ngModel)]="recall.reason" placeholder="What is wrong with this batch?"></textarea>
+          </div>
+
+          <div class="dst-field">
+            <label for="tc-recall-reg">Regulatory reference</label>
+            <input id="tc-recall-reg" type="text" [(ngModel)]="recall.regulatoryReference" />
+          </div>
+
+          <div class="dst-field is-full">
+            <label for="tc-recall-notice">Public notice</label>
+            <textarea id="tc-recall-notice" [(ngModel)]="recall.publicNotice" placeholder="The wording sent to outlets, word for word"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showRecall = false" [disabled]="busy">Cancel</button>
+        <button type="button" class="dst-btn is-danger" (click)="initiateRecall()" [disabled]="busy || !recall.title.trim() || !recall.itemId.trim()">
+          Raise the recall
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Close a recall ───────────────────────────────────────────────────── -->
+@if (closingRecall && openRecall) {
+  <div class="dst-modal-backdrop" (click)="closingRecall = false">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Close the recall" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Close {{ openRecall.recallNumber }}</div>
+          <div class="dst-modal-sub">
+            {{ openRecall.recoveryPercent | number:'1.0-0' }}% recovered.
+            The closure report is the document a regulator asks for.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="closingRecall = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="dst-modal-body">
+        <div class="dst-field">
+          <label for="tc-closure">Closure report <span class="req">*</span></label>
+          <textarea id="tc-closure" [(ngModel)]="closureReport" placeholder="What was recovered, what was destroyed, and what was not accounted for."></textarea>
+        </div>
+      </div>
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="closingRecall = false" [disabled]="busy">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="completeRecall()" [disabled]="busy || !closureReport.trim()">Close the recall</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Record a reading ─────────────────────────────────────────────────── -->
+@if (showReading && readingFor) {
+  <div class="dst-modal-backdrop" (click)="showReading = false">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Record a temperature" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">{{ readingFor.name }}</div>
+          <div class="dst-modal-sub">Safe between {{ readingFor.minSafeCelsius }}° and {{ readingFor.maxSafeCelsius }}°.</div>
+        </div>
+        <button type="button" class="dst-close" (click)="showReading = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-field">
+          <label for="tc-reading">Temperature (°C)</label>
+          <input id="tc-reading" type="number" step="0.1" [(ngModel)]="reading.readingCelsius" class="tc-reading-input" />
+        </div>
+
+        @if (readingOutOfRange) {
+          <div class="dst-banner tone-danger">
+            <span class="material-symbols-outlined">warning</span>
+            <div class="dst-banner-body">
+              This is outside the safe range. It is recorded as an excursion and needs a corrective
+              action before it can be saved.
+            </div>
+          </div>
+
+          <div class="dst-field">
+            <label for="tc-corrective">Corrective action <span class="req">*</span></label>
+            <textarea id="tc-corrective" [(ngModel)]="reading.correctiveAction" placeholder="Moved stock to the second cold room; engineer called."></textarea>
+          </div>
+        }
+
+        <div class="dst-field">
+          <label for="tc-reading-note">Note</label>
+          <input id="tc-reading-note" type="text" [(ngModel)]="reading.note" />
+        </div>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showReading = false" [disabled]="busy">Cancel</button>
+        <button
+          type="button"
+          class="dst-btn is-primary"
+          (click)="saveReading()"
+          [disabled]="busy || (readingOutOfRange && !reading.correctiveAction.trim())"
+        >Record</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Resolve an excursion ─────────────────────────────────────────────── -->
+@if (excursionTarget) {
+  <div class="dst-modal-backdrop" (click)="excursionTarget = null">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Resolve the excursion" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">{{ excursionTarget.readingCelsius | number:'1.1-1' }}° at {{ excursionTarget.checkpointName }}</div>
+          <div class="dst-modal-sub">
+            {{ excursionTarget.recordedAt | date:'d MMM y, HH:mm' }}
+            @if (excursionTarget.excursionMinutes) { · out of range for {{ excursionTarget.excursionMinutes }} minutes }
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="excursionTarget = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-field">
+          <label for="tc-exc-action">What was done? <span class="req">*</span></label>
+          <textarea id="tc-exc-action" [(ngModel)]="excursion.correctiveAction"></textarea>
+        </div>
+        <div class="dst-field">
+          <label for="tc-exc-value">Stock value affected</label>
+          <input id="tc-exc-value" type="number" step="0.01" min="0" [(ngModel)]="excursion.affectedValue" />
+          <span class="dst-hint">The cost is the question after a freezer failure. Degrees alone do not answer it.</span>
+        </div>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="excursionTarget = null" [disabled]="busy">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="resolveExcursion()" [disabled]="busy || !excursion.correctiveAction.trim()">Resolve</button>
+      </div>
+    </div>
+  </div>
+}

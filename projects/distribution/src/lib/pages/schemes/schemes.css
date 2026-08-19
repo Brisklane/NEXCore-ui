@@ -1,0 +1,74 @@
+/* Trade schemes — budget visibility on the list, simulation before the money goes. */
+
+.sc-head-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.sc-loading { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.sc-table { min-width: 1080px; }
+
+.sc-group {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 6px;
+  background: var(--bg-muted, #f1f5f9);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-secondary, #64748b);
+}
+
+.sc-budget { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; min-width: 140px; }
+.sc-budget-nums { font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.sc-budget .dst-bar { width: 100%; }
+
+.sc-exhausted {
+  font-size: 10.5px;
+  font-weight: 750;
+  color: var(--danger-text, #b91c1c);
+  text-transform: lowercase;
+}
+
+/* ── Editor ────────────────────────────────────────────────────────── */
+.sc-tabs { margin: 0 20px; }
+.sc-slabs { min-width: 900px; }
+
+.sc-cell {
+  width: 84px;
+  min-height: 34px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--input-border, #cbd5e1);
+  background: var(--input-bg, #fff);
+  color: var(--input-text, #1e293b);
+  font-size: 12.5px;
+  font-family: inherit;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.sc-cell.is-wide { width: 150px; text-align: left; }
+.sc-cell:focus { outline: none; border-color: var(--accent, #2b7fff); box-shadow: 0 0 0 3px var(--input-ring, rgba(43,127,255,.15)); }
+
+.sc-add-slab { margin-top: 14px; }
+.sc-problems { margin: 6px 0 0; padding-left: 18px; }
+.sc-problems li { font-size: 12.5px; line-height: 1.6; }
+
+.sc-sim-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+  margin-bottom: 14px;
+}
+
+.sc-sim-blurb {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-muted, #94a3b8);
+  line-height: 1.55;
+  max-width: 60ch;
+}
+
+.sc-sim .dst-stats { margin-bottom: 8px; }
+.sc-up { color: var(--success-text, #15803d); font-weight: 750; }
+.sc-down { color: var(--danger-text, #b91c1c); font-weight: 750; }

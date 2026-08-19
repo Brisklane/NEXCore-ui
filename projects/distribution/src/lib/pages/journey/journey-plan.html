@@ -1,0 +1,357 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Journey plan</h2>
+      <p class="subtitle">Which rep is on which route on which day, for a whole cycle.</p>
+    </div>
+    <dst-scope-bar (scopeChange)="onScope($event)"></dst-scope-bar>
+  </div>
+
+  <dst-help key="journey"></dst-help>
+
+  @if (error) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">{{ error }}</div>
+      <button type="button" class="dst-icon-btn" (click)="error = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  @if (notice) {
+    <div class="dst-banner tone-success" role="status">
+      <span class="material-symbols-outlined">check_circle</span>
+      <div class="dst-banner-body">{{ notice }}</div>
+      <button type="button" class="dst-icon-btn" (click)="notice = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  <!-- ── Controls ─────────────────────────────────────────────────────── -->
+  <div class="dst-toolbar">
+    <div class="dst-context-group">
+      <label for="jp-rep">Rep</label>
+      <select id="jp-rep" class="dst-filter-select" [(ngModel)]="repId" (ngModelChange)="load()">
+        @for (r of visibleReps; track r.id) { <option [value]="r.id">{{ r.fullName }}</option> }
+      </select>
+    </div>
+
+    <div class="jp-month">
+      <button type="button" class="dst-icon-btn" (click)="shiftMonth(-1)" aria-label="Previous month">
+        <span class="material-symbols-outlined">chevron_left</span>
+      </button>
+      <span class="jp-month-label">{{ periodStart | date:'MMMM y' }}</span>
+      <button type="button" class="dst-icon-btn" (click)="shiftMonth(1)" aria-label="Next month">
+        <span class="material-symbols-outlined">chevron_right</span>
+      </button>
+    </div>
+
+    <span class="dst-spacer"></span>
+
+    <button type="button" class="dst-btn" (click)="openGenerate()" [disabled]="!repId">
+      <span class="material-symbols-outlined">auto_awesome</span>
+      Generate cycle
+    </button>
+
+    @if (plan && !plan.isPublished) {
+      <button type="button" class="dst-btn is-primary" (click)="publish()" [disabled]="busy">
+        <span class="material-symbols-outlined">publish</span>
+        Publish
+      </button>
+    }
+  </div>
+
+  @if (plan && plan.isPublished) {
+    <div class="dst-banner tone-success">
+      <span class="material-symbols-outlined">verified</span>
+      <div class="dst-banner-body">
+        Published {{ plan.publishedAt | date:'d MMM y, HH:mm' }}. The rep can see this plan.
+        Later changes are amendments and stay visible as such.
+      </div>
+    </div>
+  }
+
+  @if (plan && uncoveredRoutes > 0) {
+    <div class="dst-banner tone-warning">
+      <span class="material-symbols-outlined">warning</span>
+      <div class="dst-banner-body">
+        <strong>{{ uncoveredRoutes }} routes get no day in this cycle.</strong>
+        Every shop on them would go the whole month without a visit. Fix it before publishing.
+      </div>
+    </div>
+  }
+
+  @if (loading) {
+    <div class="dst-skeleton" style="height: 460px; border-radius: 16px"></div>
+  }
+
+  @if (!loading && !plan) {
+    <div class="dst-card">
+      <dst-empty
+        icon="calendar_month"
+        title="No plan for this month"
+        text="Generate a cycle from the routes this rep owns and their visit frequency, then adjust the exceptions by hand."
+        actionLabel="Generate the cycle"
+        actionIcon="auto_awesome"
+        (action)="openGenerate()"
+      ></dst-empty>
+    </div>
+  }
+
+  @if (!loading && plan; as p) {
+    <div class="jp-layout">
+      <!-- ── Calendar ───────────────────────────────────────────────── -->
+      <section class="dst-card" aria-label="Journey calendar">
+        <div class="dst-card-head">
+          <div class="dst-card-title">
+            <span class="material-symbols-outlined">calendar_month</span>
+            {{ p.fieldRepName }}
+            <div class="dst-card-sub">{{ p.periodStart | date:'d MMM' }} – {{ p.periodEnd | date:'d MMM y' }}</div>
+          </div>
+          <div class="jp-legend">
+            <span><i class="k-planned"></i> planned</span>
+            <span><i class="k-done"></i> worked</span>
+            <span><i class="k-skipped"></i> skipped</span>
+            <span><i class="k-reassigned"></i> reassigned</span>
+          </div>
+        </div>
+
+        <div class="dst-card-body">
+          <div class="jp-weekdays" aria-hidden="true">
+            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+          </div>
+
+          <div class="jp-grid">
+            @for (cell of cells; track trackCell($index, cell)) {
+              @if (cell.isPad) {
+                <div class="jp-cell is-pad" aria-hidden="true"></div>
+              } @else {
+                <button
+                  type="button"
+                  class="jp-cell"
+                  [class]="'jp-cell ' + statusClass(cell.day!)"
+                  (click)="openDay(cell.day!)"
+                  [attr.aria-label]="(cell.date | date:'d MMMM') + ': ' + (cell.day!.routeName || 'no route') + ', ' + dayLabels[cell.day!.status]"
+                >
+                  <span class="jp-cell-date">{{ cell.date | date:'d' }}</span>
+
+                  @if (cell.day!.routeName) {
+                    <span class="jp-cell-route">
+                      @if (cell.day!.routeKind) {
+                        <span class="material-symbols-outlined">{{ kindIcons[cell.day!.routeKind!] }}</span>
+                      }
+                      {{ cell.day!.routeName }}
+                    </span>
+                  } @else {
+                    <span class="jp-cell-route is-empty">No route</span>
+                  }
+
+                  @if (cell.day!.status === JourneyPlanDayStatus.Completed) {
+                    <span class="jp-cell-nums">
+                      {{ cell.day!.actualCalls }}/{{ cell.day!.plannedCalls }} calls
+                      @if (cell.day!.productiveCalls > 0) { · {{ cell.day!.productiveCalls }} sold }
+                    </span>
+                  } @else if (cell.day!.status === JourneyPlanDayStatus.Skipped) {
+                    <span class="jp-cell-nums">{{ cell.day!.skipReason || 'Skipped' }}</span>
+                  } @else if (cell.day!.reassignedToName) {
+                    <span class="jp-cell-nums">→ {{ cell.day!.reassignedToName }}</span>
+                  } @else if (cell.day!.plannedCalls > 0) {
+                    <span class="jp-cell-nums">{{ cell.day!.plannedCalls }} calls planned</span>
+                  }
+                </button>
+              }
+            }
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Coverage ───────────────────────────────────────────────── -->
+      <aside class="jp-side">
+        <section class="dst-card">
+          <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">query_stats</span>Cycle</div></div>
+          <div class="dst-card-body">
+            <div class="dst-kv">
+              <div class="dst-kv-item"><span class="dst-kv-key">Planned calls</span><span class="dst-kv-value">{{ p.plannedCalls | number }}</span></div>
+              <div class="dst-kv-item"><span class="dst-kv-key">Actual calls</span><span class="dst-kv-value">{{ p.actualCalls | number }}</span></div>
+              <div class="dst-kv-item"><span class="dst-kv-key">Productive</span><span class="dst-kv-value">{{ p.productiveCalls | number }}</span></div>
+              <div class="dst-kv-item"><span class="dst-kv-key">Unplanned</span><span class="dst-kv-value">{{ p.unplannedCalls | number }}</span></div>
+              <div class="dst-kv-item"><span class="dst-kv-key">Missed</span><span class="dst-kv-value" [class.jp-bad]="p.missedCalls > 0">{{ p.missedCalls | number }}</span></div>
+              <div class="dst-kv-item"><span class="dst-kv-key">Coverage</span><span class="dst-kv-value">{{ p.coveragePercent | number:'1.0-0' }}%</span></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="dst-card">
+          <div class="dst-card-head">
+            <div class="dst-card-title"><span class="material-symbols-outlined">alt_route</span>Days per route</div>
+            <span class="dst-card-sub">Zero is a month with no visit</span>
+          </div>
+          <div class="dst-card-body is-flush">
+            @if (routeCoverage.length === 0) {
+              <p class="jp-none">This rep owns no routes in the selected territory.</p>
+            }
+            @for (row of routeCoverage; track row.route.id) {
+              <div class="jp-coverage" [class.is-zero]="row.days === 0">
+                <span class="jp-coverage-name">{{ row.route.name }}</span>
+                <span class="jp-coverage-days">
+                  @if (row.days === 0) {
+                    <span class="dst-pill tone-danger"><span class="material-symbols-outlined">block</span>Never</span>
+                  } @else {
+                    {{ row.days }} days
+                  }
+                </span>
+              </div>
+            }
+          </div>
+        </section>
+      </aside>
+    </div>
+  }
+</div>
+
+<!-- ── Generate ─────────────────────────────────────────────────────────── -->
+@if (showGenerate) {
+  <div class="dst-modal-backdrop" (click)="showGenerate = false">
+    <div class="dst-modal" role="dialog" aria-modal="true" aria-label="Generate a cycle" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Generate the cycle for {{ periodStart | date:'MMMM y' }}</div>
+          <div class="dst-modal-sub">
+            Days are laid out from each route's frequency and the days it runs. Adjust exceptions
+            afterwards — the generator gets the shape right, not the leave calendar.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="showGenerate = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        @if (plan) {
+          <div class="dst-banner tone-warning">
+            <span class="material-symbols-outlined">warning</span>
+            <div class="dst-banner-body">
+              A plan already exists for this month.
+              @if (generate.overwrite) { Generating will replace the unworked days in it. }
+              @else { Generating will add only to days that are currently empty. }
+            </div>
+          </div>
+        }
+
+        <div class="dst-section-label">Routes to include</div>
+        <div class="jp-route-picker">
+          @for (r of territoryRoutes; track r.id) {
+            <label class="jp-route-option">
+              <input type="checkbox" [checked]="generate.routeIds.includes(r.id)" (change)="toggleRoute(r.id)" />
+              <span>
+                <span class="jp-route-name">{{ r.name }}</span>
+                <span class="jp-route-meta">{{ r.outletCount }} shops · {{ r.fieldRepName || 'unassigned' }}</span>
+              </span>
+            </label>
+          }
+          @if (territoryRoutes.length === 0) {
+            <p class="jp-none">No routes in this territory yet.</p>
+          }
+        </div>
+
+        <div class="dst-section-label">Non-working days</div>
+        <div class="jp-days">
+          @for (d of weekdays; track d.value) {
+            <button
+              type="button"
+              class="jp-day"
+              [class.is-off]="generate.nonWorkingDays.includes(d.value)"
+              [attr.aria-pressed]="generate.nonWorkingDays.includes(d.value)"
+              (click)="toggleNonWorking(d.value)"
+            >{{ d.short }}</button>
+          }
+        </div>
+        <span class="dst-hint jp-hint">Highlighted days are left blank in the cycle.</span>
+
+        @if (plan) {
+          <label class="dst-check jp-overwrite">
+            <input type="checkbox" [(ngModel)]="generate.overwrite" />
+            <span>
+              Replace the existing plan
+              <span class="dst-check-sub">Days already worked are never touched, published or not.</span>
+            </span>
+          </label>
+        }
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showGenerate = false" [disabled]="busy">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="runGenerate()" [disabled]="busy">
+          @if (busy) { Generating… } @else { Generate }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Edit a day ───────────────────────────────────────────────────────── -->
+@if (editingDay) {
+  <div class="dst-modal-backdrop" (click)="editingDay = null">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Edit the day" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">{{ editingDay.planDate | date:'EEEE d MMMM' }}</div>
+          <div class="dst-modal-sub">Move the route, hand the day to somebody else, or mark it as not worked.</div>
+        </div>
+        <button type="button" class="dst-close" (click)="editingDay = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-field">
+          <label for="jp-edit-route">Route</label>
+          <select id="jp-edit-route" [(ngModel)]="editRouteId">
+            <option value="">No route this day</option>
+            @for (r of territoryRoutes; track r.id) { <option [value]="r.id">{{ r.name }}</option> }
+          </select>
+        </div>
+
+        <div class="dst-field">
+          <label for="jp-edit-status">Status</label>
+          <select id="jp-edit-status" [(ngModel)]="editStatus">
+            <option [value]="JourneyPlanDayStatus.Planned">Planned</option>
+            <option [value]="JourneyPlanDayStatus.Skipped">Skipped</option>
+            <option [value]="JourneyPlanDayStatus.Reassigned">Reassigned</option>
+          </select>
+        </div>
+
+        @if (editStatus === JourneyPlanDayStatus.Reassigned) {
+          <div class="dst-field">
+            <label for="jp-edit-rep">Reassign to</label>
+            <select id="jp-edit-rep" [(ngModel)]="editReassignTo">
+              <option value="">Choose a rep</option>
+              @for (r of visibleReps; track r.id) {
+                @if (r.id !== repId) { <option [value]="r.id">{{ r.fullName }}</option> }
+              }
+            </select>
+          </div>
+        }
+
+        @if (editNeedsReason) {
+          <div class="dst-field">
+            <label for="jp-edit-reason">Why is this day not worked? <span class="req">*</span></label>
+            <input id="jp-edit-reason" type="text" [(ngModel)]="editSkipReason" placeholder="Leave, training, public holiday" />
+          </div>
+        }
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="editingDay = null" [disabled]="busy">Cancel</button>
+        <button
+          type="button"
+          class="dst-btn is-primary"
+          (click)="saveDay()"
+          [disabled]="busy || (editNeedsReason && !editSkipReason.trim())"
+        >Save</button>
+      </div>
+    </div>
+  </div>
+}

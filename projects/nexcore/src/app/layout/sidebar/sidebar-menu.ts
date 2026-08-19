@@ -784,6 +784,99 @@ export function expandToRoute(nodes: SidebarChild[] | undefined, url: string): v
         ],
       },
       {
+        label: 'Distribution',
+        iconType: 'app',
+        appKey: 'distribution',
+        moduleImage: 'images/inventory.svg',
+        expanded: false,
+        /**
+         * Grouped by who does the work, not by data model. **In the field** is the rep's day and
+         * the plan behind it; **Network** is the universe they sell into; **Trade** is the
+         * commercial machinery; **Fulfilment** is the warehouse and the road; **Money** is what
+         * has to reconcile before a day can close. That is also roughly the order a case of
+         * stock moves through the business.
+         */
+        children: [
+          { label: 'Dashboard', route: '/distribution/dashboard', icon: 'dashboard' },
+          {
+            label: 'In the Field',
+            icon: 'near_me',
+            expanded: false,
+            children: [
+              { label: 'Field Terminal', route: '/distribution/terminal', icon: 'smartphone' },
+              { label: 'Journey Plan', route: '/distribution/journey', icon: 'calendar_month' },
+              { label: 'Routes & Beats', route: '/distribution/routes', icon: 'alt_route' },
+              { label: 'Merchandising', route: '/distribution/merchandising', icon: 'shelves' },
+            ],
+          },
+          {
+            label: 'Network',
+            icon: 'hub',
+            expanded: false,
+            children: [
+              { label: 'Outlets', route: '/distribution/outlets', icon: 'storefront' },
+              { label: 'Channel Partners', route: '/distribution/partners', icon: 'handshake' },
+              { label: 'Trade Assets', route: '/distribution/assets', icon: 'kitchen' },
+            ],
+          },
+          {
+            label: 'Trade',
+            icon: 'sell',
+            expanded: false,
+            children: [
+              { label: 'Orders', route: '/distribution/orders', icon: 'receipt_long' },
+              { label: 'Trade Schemes', route: '/distribution/schemes', icon: 'redeem' },
+              { label: 'Pricing & Margin', route: '/distribution/pricing', icon: 'payments' },
+              { label: 'Secondary Sales', route: '/distribution/secondary', icon: 'insights' },
+            ],
+          },
+          {
+            label: 'Fulfilment',
+            icon: 'local_shipping',
+            expanded: false,
+            children: [
+              { label: 'Load & Dispatch', route: '/distribution/dispatch', icon: 'forklift' },
+              { label: 'Pick Waves', route: '/distribution/waves', icon: 'conveyor_belt' },
+              { label: 'Van Sales', route: '/distribution/van-sales', icon: 'directions_car' },
+              { label: 'Delivery Trips', route: '/distribution/trips', icon: 'route' },
+              { label: 'Proof of Delivery', route: '/distribution/pod', icon: 'assignment_turned_in' },
+              { label: 'Returns', route: '/distribution/returns', icon: 'assignment_return' },
+            ],
+          },
+          {
+            label: 'Money',
+            icon: 'account_balance',
+            expanded: false,
+            children: [
+              { label: 'Claims', route: '/distribution/claims', icon: 'gavel' },
+              { label: 'Credit & Collections', route: '/distribution/credit', icon: 'credit_score' },
+              { label: 'Route Settlement', route: '/distribution/settlement', icon: 'rule' },
+            ],
+          },
+          {
+            label: 'Planning & Insight',
+            icon: 'query_stats',
+            expanded: false,
+            children: [
+              { label: 'Targets & Incentives', route: '/distribution/targets', icon: 'flag' },
+              { label: 'Demand & Replenishment', route: '/distribution/planning', icon: 'auto_graph' },
+              { label: 'Batch, Expiry & Recall', route: '/distribution/traceability', icon: 'inventory' },
+              { label: 'Reports', route: '/distribution/reports', icon: 'analytics' },
+            ],
+          },
+          {
+            label: 'Setup',
+            icon: 'settings',
+            expanded: false,
+            children: [
+              { label: 'Fleet & Drivers', route: '/distribution/fleet', icon: 'commute' },
+              { label: 'Field Team & Devices', route: '/distribution/team', icon: 'groups' },
+              { label: 'Settings', route: '/distribution/settings', icon: 'tune' },
+            ],
+          },
+        ],
+      },
+      {
         label: 'Administration',
         iconType: 'admin',
         expanded: true,

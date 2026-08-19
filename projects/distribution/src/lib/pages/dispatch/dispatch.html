@@ -1,0 +1,323 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Load &amp; dispatch</h2>
+      <p class="subtitle">What has to leave the warehouse today, and whether it can.</p>
+    </div>
+    <div class="dd-live">
+      <span class="dst-live-dot" aria-hidden="true"></span>
+      Live
+      @if (board) { <span class="dd-live-time">· {{ board.asOf | date:'HH:mm:ss' }}</span> }
+    </div>
+  </div>
+
+  <dst-help key="dispatch"></dst-help>
+
+  @if (error) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">{{ error }}</div>
+      <button type="button" class="dst-icon-btn" (click)="error = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  @if (notice) {
+    <div class="dst-banner tone-success" role="status">
+      <span class="material-symbols-outlined">check_circle</span>
+      <div class="dst-banner-body">{{ notice }}</div>
+      <button type="button" class="dst-icon-btn" (click)="notice = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  @if (loading && !board) {
+    <div class="dst-stats">
+      @for (i of [1,2,3,4,5,6]; track i) { <div class="dst-stat dst-skeleton" style="height: 90px"></div> }
+    </div>
+    <div class="dst-skeleton" style="height: 340px; border-radius: 16px"></div>
+  }
+
+  @if (board; as b) {
+    <!-- ── Pipeline ───────────────────────────────────────────────────── -->
+    <div class="dd-pipeline" role="group" aria-label="Fulfilment pipeline">
+      <div class="dd-stage">
+        <span class="dd-stage-label">To allocate</span>
+        <span class="dd-stage-value">{{ b.pendingAllocation | number }}</span>
+      </div>
+      <span class="dd-arrow" aria-hidden="true"><span class="material-symbols-outlined">chevron_right</span></span>
+      <div class="dd-stage">
+        <span class="dd-stage-label">To pick</span>
+        <span class="dd-stage-value">{{ b.awaitingPick | number }}</span>
+      </div>
+      <span class="dd-arrow" aria-hidden="true"><span class="material-symbols-outlined">chevron_right</span></span>
+      <div class="dd-stage is-live">
+        <span class="dd-stage-label">Picking</span>
+        <span class="dd-stage-value">{{ b.picking | number }}</span>
+      </div>
+      <span class="dd-arrow" aria-hidden="true"><span class="material-symbols-outlined">chevron_right</span></span>
+      <div class="dd-stage">
+        <span class="dd-stage-label">Packed</span>
+        <span class="dd-stage-value">{{ b.packed | number }}</span>
+      </div>
+      <span class="dd-arrow" aria-hidden="true"><span class="material-symbols-outlined">chevron_right</span></span>
+      <div class="dd-stage">
+        <span class="dd-stage-label">Staged</span>
+        <span class="dd-stage-value">{{ b.staged | number }}</span>
+      </div>
+      <span class="dd-arrow" aria-hidden="true"><span class="material-symbols-outlined">chevron_right</span></span>
+      <div class="dd-stage is-done">
+        <span class="dd-stage-label">Dispatched</span>
+        <span class="dd-stage-value">{{ b.dispatched | number }}</span>
+        <span class="dd-stage-foot">{{ b.dispatchedValue | number:'1.0-0' }}</span>
+      </div>
+    </div>
+
+    @if (b.lateOrders.length) {
+      <div class="dst-banner tone-danger">
+        <span class="material-symbols-outlined">schedule</span>
+        <div class="dst-banner-body">
+          <strong>{{ b.lateOrders.length }} orders are past their promised delivery date.</strong>
+          <ul class="dd-late-list">
+            @for (o of b.lateOrders.slice(0, 5); track trackOrder($index, o)) {
+              <li>
+                <a [routerLink]="['/distribution/orders', o.id]">{{ o.orderNumber }}</a>
+                — {{ o.outletName || o.partnerName }},
+                promised {{ o.promisedDeliveryDate | date:'d MMM' }}
+              </li>
+            }
+          </ul>
+        </div>
+      </div>
+    }
+
+    <div class="dd-layout">
+      <!-- ── Ready to pick ──────────────────────────────────────────── -->
+      <section class="dst-card dd-ready" aria-label="Ready to build into a wave">
+        <div class="dst-card-head">
+          <div class="dst-card-title">
+            <span class="material-symbols-outlined">inventory</span>
+            Ready to pick
+            <div class="dst-card-sub">{{ readyOrders.length }} orders · {{ b.pendingValue | number:'1.0-0' }} waiting</div>
+          </div>
+
+          <div class="dst-card-actions">
+            <div class="dst-segment">
+              <button type="button" [class.is-active]="groupBy === 'route'" (click)="groupBy = 'route'">By route</button>
+              <button type="button" [class.is-active]="groupBy === 'date'" (click)="groupBy = 'date'">By date</button>
+            </div>
+            <button type="button" class="dst-btn is-primary" (click)="openWave()" [disabled]="selection.size === 0">
+              <span class="material-symbols-outlined">playlist_add_check</span>
+              Build a wave ({{ selection.size }})
+            </button>
+          </div>
+        </div>
+
+        <div class="dst-card-body is-flush dd-ready-body">
+          @if (readyOrders.length === 0) {
+            <dst-empty
+              icon="task_alt"
+              title="Nothing waiting to pick"
+              text="Every approved and allocated order is already on a wave. That is the state to aim for by mid-morning."
+            ></dst-empty>
+          } @else {
+            @for (g of groups; track trackGroup($index, g)) {
+              <div class="dd-group">
+                <button type="button" class="dd-group-head" (click)="toggleGroup(g)">
+                  <input
+                    type="checkbox"
+                    [checked]="groupSelected(g)"
+                    (click)="$event.stopPropagation(); toggleGroup(g)"
+                    [attr.aria-label]="'Select every order for ' + g.label"
+                  />
+                  <span class="dd-group-name">{{ g.label }}</span>
+                  <span class="dd-group-meta">{{ g.orders.length }} orders · {{ g.value | number:'1.0-0' }}</span>
+                </button>
+
+                @for (o of g.orders; track trackOrder($index, o)) {
+                  <label class="dd-order" [class.is-selected]="selection.has(o.id)" [class.is-late]="o.isOverdueForDelivery">
+                    <input type="checkbox" [checked]="selection.has(o.id)" (change)="toggle(o.id)" />
+                    <span class="dd-order-body">
+                      <span class="dd-order-top">
+                        <span class="dst-code">{{ o.orderNumber }}</span>
+                        <span class="dd-order-value">{{ o.totalAmount | number:'1.0-0' }}</span>
+                      </span>
+                      <span class="dd-order-name">{{ o.outletName || o.partnerName }}</span>
+                      <span class="dd-order-meta">
+                        {{ o.lineCount }} lines
+                        @if (o.promisedDeliveryDate) { · promised {{ o.promisedDeliveryDate | date:'d MMM' }} }
+                        @if (o.isOverdueForDelivery) { · <span class="dd-late-tag">late</span> }
+                      </span>
+                    </span>
+                  </label>
+                }
+              </div>
+            }
+          }
+        </div>
+
+        @if (selection.size > 0) {
+          <div class="dd-selection-bar">
+            <span>{{ selection.size }} orders selected · {{ selectedValue | number:'1.0-0' }}</span>
+            <button type="button" class="dst-btn is-sm is-ghost" (click)="selection.clear()">Clear</button>
+          </div>
+        }
+      </section>
+
+      <!-- ── Live waves and trips ───────────────────────────────────── -->
+      <aside class="dd-side">
+        <section class="dst-card">
+          <div class="dst-card-head">
+            <div class="dst-card-title"><span class="material-symbols-outlined">conveyor_belt</span>Waves on the floor</div>
+          </div>
+          <div class="dst-card-body is-flush">
+            @if (b.activeWaves.length === 0) {
+              <p class="dd-none">No waves are running.</p>
+            }
+            @for (w of b.activeWaves; track trackWave($index, w)) {
+              <div class="dd-wave">
+                <div class="dd-wave-top">
+                  <span class="dst-code">{{ w.waveNumber }}</span>
+                  <span class="dst-pill tone-neutral">{{ strategyLabels[w.strategy] }}</span>
+                </div>
+                <div class="dd-wave-meta">
+                  {{ w.orderCount }} orders · {{ w.completedTaskCount }}/{{ w.taskCount }} tasks
+                  @if (w.routeName) { · {{ w.routeName }} }
+                </div>
+                <div class="dst-bar-row">
+                  <span class="dst-bar" [class]="'dst-bar ' + waveTone(w)">
+                    <span class="dst-bar-fill" [style.width.%]="w.progressPercent"></span>
+                  </span>
+                  <span class="dst-bar-value">{{ w.progressPercent | number:'1.0-0' }}%</span>
+                </div>
+                @if (w.shortLines > 0) {
+                  <div class="dd-wave-short">
+                    <span class="material-symbols-outlined">error</span>
+                    {{ w.shortLines }} short-picked lines need a decision
+                  </div>
+                }
+                <div class="dd-wave-actions">
+                  <a class="dst-btn is-sm" [routerLink]="['/distribution/waves']" [queryParams]="{ waveId: w.id }">Open</a>
+                  @if (w.progressPercent >= 100 && !w.isClosed) {
+                    <button type="button" class="dst-btn is-sm is-success" (click)="closeWave(w)">Close</button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="dst-card">
+          <div class="dst-card-head">
+            <div class="dst-card-title"><span class="material-symbols-outlined">local_shipping</span>Today's trips</div>
+            <a class="dst-btn is-sm is-ghost" routerLink="/distribution/trips">
+              All trips<span class="material-symbols-outlined">arrow_forward</span>
+            </a>
+          </div>
+          <div class="dst-card-body is-flush">
+            @if (b.todayTrips.length === 0) {
+              <p class="dd-none">No trips scheduled today.</p>
+            }
+            @for (t of b.todayTrips; track trackTrip($index, t)) {
+              <div class="dd-trip">
+                <div class="dd-trip-top">
+                  <span class="dst-code">{{ t.tripNumber }}</span>
+                  <dst-status [label]="tripStatusLabels[t.status]" [tone]="tripStatusTone[t.status]"></dst-status>
+                </div>
+                <div class="dd-trip-meta">
+                  {{ t.vehicleRegistration }} · {{ t.driverName }}
+                  @if (t.routeName) { · {{ t.routeName }} }
+                </div>
+                <div class="dst-bar-row">
+                  <span class="dst-bar" [class.tone-danger]="t.failedStops > 0">
+                    <span class="dst-bar-fill" [style.width.%]="t.progressPercent"></span>
+                  </span>
+                  <span class="dst-bar-value">{{ t.completedStops }}/{{ t.plannedStops }}</span>
+                </div>
+                @if (t.failedStops > 0) {
+                  <div class="dd-trip-failed">{{ t.failedStops }} failed stops</div>
+                }
+              </div>
+            }
+          </div>
+        </section>
+
+        @if (b.urgentOrders.length) {
+          <section class="dst-card">
+            <div class="dst-card-head">
+              <div class="dst-card-title"><span class="material-symbols-outlined">bolt</span>Urgent</div>
+            </div>
+            <div class="dst-card-body is-flush">
+              @for (o of b.urgentOrders; track trackOrder($index, o)) {
+                <a class="dd-urgent" [routerLink]="['/distribution/orders', o.id]">
+                  <div class="dst-cell-stack">
+                    <span class="top">{{ o.orderNumber }}</span>
+                    <span class="sub">{{ o.outletName || o.partnerName }} · {{ o.totalAmount | number:'1.0-0' }}</span>
+                  </div>
+                  <dst-status [label]="statusLabels[o.status]" [tone]="statusTone[o.status]"></dst-status>
+                </a>
+              }
+            </div>
+          </section>
+        }
+      </aside>
+    </div>
+  }
+</div>
+
+<!-- ── Build a wave ─────────────────────────────────────────────────────── -->
+@if (showWave) {
+  <div class="dst-modal-backdrop" (click)="showWave = false">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Build a pick wave" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Build a wave from {{ selection.size }} orders</div>
+          <div class="dst-modal-sub">
+            {{ selectedValue | number:'1.0-0' }} of stock. The wave becomes tasks on the warehouse
+            handhelds the moment it is released.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="showWave = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-form-grid">
+          <div class="dst-field is-full">
+            <label for="dd-strategy">Picking strategy</label>
+            <select id="dd-strategy" [(ngModel)]="wave.strategy">
+              @for (o of strategyOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+            </select>
+            <span class="dst-hint">Batch picking walks the warehouse once for many orders; discrete walks it per order.</span>
+          </div>
+
+          <div class="dst-field">
+            <label for="dd-date">Delivery date</label>
+            <input id="dd-date" type="date" [(ngModel)]="wave.deliveryDate" />
+          </div>
+
+          <div class="dst-field">
+            <label for="dd-priority">Priority</label>
+            <input id="dd-priority" type="number" [(ngModel)]="wave.priority" />
+            <span class="dst-hint">Lower is picked first.</span>
+          </div>
+
+          <div class="dst-field is-full">
+            <label for="dd-note">Note for the floor</label>
+            <input id="dd-note" type="text" [(ngModel)]="wave.note" placeholder="Optional" />
+          </div>
+        </div>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showWave = false" [disabled]="busy">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="createWave()" [disabled]="busy">
+          @if (busy) { Releasing… } @else { Release the wave }
+        </button>
+      </div>
+    </div>
+  </div>
+}

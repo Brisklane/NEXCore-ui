@@ -1,0 +1,582 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Reports</h2>
+      <p class="subtitle">Sales, coverage, logistics, money and stock — one period, one scope.</p>
+    </div>
+    <dst-scope-bar [showPeriod]="true" (scopeChange)="onScope($event)"></dst-scope-bar>
+  </div>
+
+  <dst-help key="reports"></dst-help>
+
+  @if (error) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">{{ error }}</div>
+      <button type="button" class="dst-icon-btn" (click)="error = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  <div class="dst-segment rp-picker" role="tablist" aria-label="Reports">
+    @for (r of reportList; track r.key) {
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="report === r.key"
+        [class.is-active]="report === r.key"
+        (click)="setReport(r.key)"
+      >
+        <span class="material-symbols-outlined">{{ r.icon }}</span>
+        {{ r.label }}
+      </button>
+    }
+  </div>
+
+  @if (loading) {
+    <div class="dst-stats">
+      @for (i of [1,2,3,4]; track i) { <div class="dst-stat dst-skeleton" style="height: 90px"></div> }
+    </div>
+    <div class="dst-skeleton" style="height: 340px; border-radius: 16px"></div>
+  }
+
+  <!-- ── Sales ────────────────────────────────────────────────────────── -->
+  @if (!loading && report === 'sales') {
+    @if (!sales) {
+      <div class="dst-card"><dst-empty icon="trending_up" title="No sales in this period" text="Widen the period or the territory."></dst-empty></div>
+    } @else {
+      <div class="dst-stats">
+        <div class="dst-stat tone-brand">
+          <span class="dst-stat-label">Primary sales</span>
+          <span class="dst-stat-value">{{ sales.primaryValue | number:'1.0-0' }}</span>
+          <span class="dst-stat-foot">{{ sales.orderCount | number }} orders · average {{ sales.averageOrderValue | number:'1.0-0' }}</span>
+        </div>
+        <div class="dst-stat tone-cyan">
+          <span class="dst-stat-label">Secondary sales</span>
+          <span class="dst-stat-value">{{ sales.secondaryValue | number:'1.0-0' }}</span>
+          <span class="dst-stat-foot">what the market actually consumed</span>
+        </div>
+        <div class="dst-stat tone-violet">
+          <span class="dst-stat-label">Net after returns</span>
+          <span class="dst-stat-value">{{ sales.netValue | number:'1.0-0' }}</span>
+          <span class="dst-stat-foot">{{ sales.returnValue | number:'1.0-0' }} came back</span>
+        </div>
+        <div class="dst-stat tone-success">
+          <span class="dst-stat-label">Margin</span>
+          <span class="dst-stat-value">{{ sales.marginPercent | number:'1.1-1' }}%</span>
+          <span class="dst-stat-foot">{{ sales.marginAmount | number:'1.0-0' }} on {{ sales.quantity | number }} units</span>
+        </div>
+      </div>
+
+      @if (sales.trend.length) {
+        <section class="dst-card rp-chart-card">
+          <div class="dst-card-head">
+            <div class="dst-card-title"><span class="material-symbols-outlined">show_chart</span>Over the period</div>
+            <div class="rp-key">
+              <span><i class="k-bar"></i> this period</span>
+              <span><i class="k-cmp"></i> previous</span>
+            </div>
+          </div>
+          <div class="dst-card-body">
+            <div class="rp-chart" role="img" aria-label="Sales over the period against the previous one">
+              @for (p of sales.trend; track trackTrend($index, p)) {
+                <div class="rp-chart-col" [attr.title]="p.label + ': ' + (p.value | number:'1.0-0')">
+                  <div class="rp-chart-stack">
+                    <div class="rp-chart-cmp" [style.height.%]="comparisonHeight(p, sales.trend)"></div>
+                    <div class="rp-chart-bar" [style.height.%]="barHeight(p, sales.trend)"></div>
+                  </div>
+                  <span class="rp-chart-label">{{ p.label }}</span>
+                </div>
+              }
+            </div>
+          </div>
+        </section>
+      }
+
+      <section class="dst-card">
+        <div class="dst-card-head">
+          <div class="dst-card-title"><span class="material-symbols-outlined">table_rows</span>Breakdown</div>
+          <div class="dst-card-actions">
+            <select class="dst-filter-select" [(ngModel)]="groupBy" (ngModelChange)="run()" aria-label="Group by">
+              @for (g of groupOptions; track g) { <option [value]="g">By {{ g.toLowerCase() }}</option> }
+            </select>
+            <button type="button" class="dst-btn is-sm" (click)="exportRows(sales.rows, 'sales-' + groupBy)">
+              <span class="material-symbols-outlined">download</span>Export
+            </button>
+          </div>
+        </div>
+        <div class="dst-card-body is-flush">
+          @if (sales.rows.length === 0) { <p class="rp-none">Nothing to break down.</p> }
+          <div class="dst-table-wrap">
+            <table class="dst-table">
+              <thead>
+                <tr><th class="num">#</th><th>{{ groupBy }}</th><th>Share</th><th class="num">Quantity</th><th class="num">Value</th><th class="num">Growth</th></tr>
+              </thead>
+              <tbody>
+                @for (row of sales.rows; track trackRow($index, row)) {
+                  <tr>
+                    <td class="num muted">{{ row.rank }}</td>
+                    <td>
+                      <div class="dst-cell-stack">
+                        <span class="top">{{ row.name }}</span>
+                        @if (row.subLabel) { <span class="sub">{{ row.subLabel }}</span> }
+                      </div>
+                    </td>
+                    <td class="rp-share-cell">
+                      <span class="rp-share"><i [style.width.%]="rowWidth(row, sales.rows)"></i></span>
+                      <span class="rp-share-pct">{{ row.sharePercent | number:'1.1-1' }}%</span>
+                    </td>
+                    <td class="num">{{ row.quantity | number }}</td>
+                    <td class="num strong">{{ row.value | number:'1.0-0' }}</td>
+                    <td class="num">
+                      <span class="dst-delta" [class.is-up]="row.growthPercent >= 0" [class.is-down]="row.growthPercent < 0">
+                        <span class="material-symbols-outlined">{{ row.growthPercent >= 0 ? 'north_east' : 'south_east' }}</span>
+                        {{ row.growthPercent | number:'1.0-0' }}%
+                      </span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    }
+  }
+
+  <!-- ── Productivity ─────────────────────────────────────────────────── -->
+  @if (!loading && report === 'productivity' && productivity) {
+    <div class="dst-stats">
+      <div class="dst-stat tone-brand">
+        <span class="dst-stat-label">Coverage</span>
+        <span class="dst-stat-value">{{ productivity.totals.coveragePercent | number:'1.1-1' }}%</span>
+        <span class="dst-stat-foot">{{ productivity.totals.actualCalls | number }} of {{ productivity.totals.plannedCalls | number }} planned calls</span>
+      </div>
+      <div class="dst-stat tone-success">
+        <span class="dst-stat-label">Strike rate</span>
+        <span class="dst-stat-value">{{ productivity.totals.strikeRatePercent | number:'1.1-1' }}%</span>
+        <span class="dst-stat-foot">{{ productivity.totals.productiveCalls | number }} calls produced an order</span>
+      </div>
+      <div class="dst-stat tone-violet">
+        <span class="dst-stat-label">Lines per call</span>
+        <span class="dst-stat-value">{{ productivity.totals.linesPerCall | number:'1.1-1' }}</span>
+        <span class="dst-stat-foot">range selling {{ productivity.totals.rangeSellingPercent | number:'1.0-0' }}%</span>
+      </div>
+      <div class="dst-stat tone-cyan">
+        <span class="dst-stat-label">Drop size</span>
+        <span class="dst-stat-value">{{ productivity.totals.dropSize | number:'1.0-0' }}</span>
+        <span class="dst-stat-foot">{{ productivity.totals.billCount | number }} bills · must-sell {{ productivity.totals.mustSellCompliancePercent | number:'1.0-0' }}%</span>
+      </div>
+    </div>
+
+    @if (productivity.heatmap.length) {
+      <section class="dst-card">
+        <div class="dst-card-head">
+          <div class="dst-card-title"><span class="material-symbols-outlined">grid_on</span>Coverage day by day</div>
+          <div class="rp-heat-key">
+            <span>low</span>
+            <i class="is-none"></i><i class="is-low"></i><i class="is-mid"></i><i class="is-high"></i>
+            <span>high</span>
+          </div>
+        </div>
+        <div class="dst-card-body">
+          <div class="rp-heatmap">
+            @for (c of productivity.heatmap; track trackIndex($index)) {
+              <div
+                class="rp-heat-cell"
+                [class]="'rp-heat-cell ' + coverageTone(c.coveragePercent)"
+                [class.is-holiday]="c.isHoliday"
+                [attr.title]="(c.fieldRepName || '') + ' ' + (c.date | date:'d MMM') + ': ' + (c.coveragePercent | number:'1.0-0') + '% (' + c.actualCalls + '/' + c.plannedCalls + ')'"
+              >
+                <span class="rp-heat-date">{{ c.date | date:'d' }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      </section>
+    }
+
+    <section class="dst-card">
+      <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">groups</span>By rep</div></div>
+      <div class="dst-card-body is-flush">
+        <div class="dst-table-wrap">
+          <table class="dst-table rp-table">
+            <thead>
+              <tr>
+                <th>Rep</th><th>Route</th>
+                <th class="num">Planned</th><th class="num">Actual</th><th class="num">Productive</th>
+                <th class="num">Coverage</th><th class="num">Strike</th><th class="num">Lines/call</th>
+                <th class="num">Drop size</th><th class="num">Sales</th><th class="num">In market</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (k of productivity.rows; track trackIndex($index)) {
+                <tr [class.is-flagged]="k.coveragePercent < 70">
+                  <td class="strong">{{ k.fieldRepName }}</td>
+                  <td class="muted">{{ k.routeName }}</td>
+                  <td class="num muted">{{ k.plannedCalls | number }}</td>
+                  <td class="num">{{ k.actualCalls | number }}</td>
+                  <td class="num">{{ k.productiveCalls | number }}</td>
+                  <td class="num strong">{{ k.coveragePercent | number:'1.0-0' }}%</td>
+                  <td class="num">{{ k.strikeRatePercent | number:'1.0-0' }}%</td>
+                  <td class="num">{{ k.linesPerCall | number:'1.1-1' }}</td>
+                  <td class="num">{{ k.dropSize | number:'1.0-0' }}</td>
+                  <td class="num strong">{{ k.salesValue | number:'1.0-0' }}</td>
+                  <td class="num muted">{{ (k.timeInMarketMinutes / 60) | number:'1.1-1' }}h</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- ── Outlets ──────────────────────────────────────────────────────── -->
+  @if (!loading && report === 'outlets' && outlets) {
+    <div class="dst-stats">
+      <div class="dst-stat tone-brand">
+        <span class="dst-stat-label">Universe</span>
+        <span class="dst-stat-value">{{ outlets.totalOutlets | number }}</span>
+        <span class="dst-stat-foot">{{ outlets.activeOutlets | number }} active · {{ outlets.billedOutlets | number }} billed in period</span>
+      </div>
+      <div class="dst-stat tone-success">
+        <span class="dst-stat-label">New</span>
+        <span class="dst-stat-value">{{ outlets.newOutlets | number }}</span>
+        <span class="dst-stat-foot">added in the period</span>
+      </div>
+      <div class="dst-stat" [class.tone-danger]="outlets.churnPercent > 5" [class.tone-warning]="outlets.churnPercent <= 5">
+        <span class="dst-stat-label">Churn</span>
+        <span class="dst-stat-value">{{ outlets.churnPercent | number:'1.1-1' }}%</span>
+        <span class="dst-stat-foot">{{ outlets.lostOutlets | number }} lost · {{ outlets.dormantOutlets | number }} dormant</span>
+      </div>
+      <div class="dst-stat tone-violet">
+        <span class="dst-stat-label">Average offtake</span>
+        <span class="dst-stat-value">{{ outlets.averageOfftake | number:'1.0-0' }}</span>
+        <span class="dst-stat-foot">per billed outlet</span>
+      </div>
+    </div>
+
+    <div class="dst-grid cols-2">
+      <section class="dst-card">
+        <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">category</span>By channel</div></div>
+        <div class="dst-card-body is-flush">
+          @for (row of outlets.byChannel; track trackRow($index, row)) {
+            <div class="rp-rank">
+              <span class="rp-rank-name">{{ row.name }}</span>
+              <span class="rp-rank-bar"><i [style.width.%]="rowWidth(row, outlets.byChannel)"></i></span>
+              <span class="rp-rank-value">{{ row.value | number:'1.0-0' }}</span>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="dst-card">
+        <div class="dst-card-head">
+          <div class="dst-card-title"><span class="material-symbols-outlined">bedtime</span>Gone quiet</div>
+          <button type="button" class="dst-btn is-sm" (click)="exportRows(outlets.dormantList, 'dormant-outlets')">
+            <span class="material-symbols-outlined">download</span>Export
+          </button>
+        </div>
+        <div class="dst-card-body is-flush rp-scroll">
+          @if (outlets.dormantList.length === 0) { <p class="rp-none">Nothing has gone dormant.</p> }
+          @for (row of outlets.dormantList; track trackRow($index, row)) {
+            <div class="rp-dormant">
+              <div class="dst-cell-stack">
+                <span class="top">{{ row.name }}</span>
+                <span class="sub">{{ row.subLabel }}</span>
+              </div>
+              <span class="rp-dormant-value">{{ row.value | number:'1.0-0' }}</span>
+            </div>
+          }
+        </div>
+      </section>
+    </div>
+  }
+
+  <!-- ── Logistics ────────────────────────────────────────────────────── -->
+  @if (!loading && report === 'logistics' && logistics) {
+    <div class="dst-stats">
+      <div class="dst-stat tone-brand">
+        <span class="dst-stat-label">Fill rate</span>
+        <span class="dst-stat-value">{{ logistics.fillRatePercent | number:'1.1-1' }}%</span>
+        <span class="dst-stat-foot">{{ logistics.completedStops | number }} of {{ logistics.stopCount | number }} stops</span>
+      </div>
+      <div class="dst-stat" [class.tone-success]="logistics.onTimePercent >= 90" [class.tone-warning]="logistics.onTimePercent < 90">
+        <span class="dst-stat-label">On time</span>
+        <span class="dst-stat-value">{{ logistics.onTimePercent | number:'1.1-1' }}%</span>
+        <span class="dst-stat-foot">{{ logistics.failedStops | number }} failed · cycle {{ logistics.averageCycleTimeHours | number:'1.1-1' }}h</span>
+      </div>
+      <div class="dst-stat tone-violet">
+        <span class="dst-stat-label">Cost per drop</span>
+        <span class="dst-stat-value">{{ logistics.costPerDrop | number:'1.2-2' }}</span>
+        <span class="dst-stat-foot">{{ logistics.costPerKm | number:'1.2-2' }} per km · {{ logistics.totalExpense | number:'1.0-0' }} total</span>
+      </div>
+      <div class="dst-stat tone-cyan">
+        <span class="dst-stat-label">Distance</span>
+        <span class="dst-stat-value">{{ logistics.totalDistanceKm | number:'1.0-0' }} km</span>
+        <span class="dst-stat-foot">{{ logistics.tripCount | number }} trips · {{ logistics.deliveredValue | number:'1.0-0' }} delivered</span>
+      </div>
+    </div>
+
+    <div class="dst-grid cols-2">
+      <section class="dst-card">
+        <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">error</span>Why deliveries failed</div></div>
+        <div class="dst-card-body is-flush">
+          @if (logistics.failureReasons.length === 0) { <p class="rp-none">No failed deliveries in this period.</p> }
+          @for (row of logistics.failureReasons; track trackRow($index, row)) {
+            <div class="rp-rank">
+              <span class="rp-rank-name">{{ row.name }}</span>
+              <span class="rp-rank-bar is-bad"><i [style.width.%]="rowWidth(row, logistics.failureReasons)"></i></span>
+              <span class="rp-rank-value">{{ row.quantity | number }}</span>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="dst-card">
+        <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">local_shipping</span>By vehicle</div></div>
+        <div class="dst-card-body is-flush rp-scroll">
+          @for (row of logistics.byVehicle; track trackRow($index, row)) {
+            <div class="rp-rank">
+              <span class="rp-rank-name">{{ row.name }}</span>
+              <span class="rp-rank-bar"><i [style.width.%]="rowWidth(row, logistics.byVehicle)"></i></span>
+              <span class="rp-rank-value">{{ row.value | number:'1.0-0' }}</span>
+            </div>
+          }
+        </div>
+      </section>
+    </div>
+  }
+
+  <!-- ── Receivables ──────────────────────────────────────────────────── -->
+  @if (!loading && report === 'receivables' && receivables) {
+    <div class="dst-stats">
+      <div class="dst-stat tone-brand">
+        <span class="dst-stat-label">Outstanding</span>
+        <span class="dst-stat-value">{{ receivables.totalOutstanding | number:'1.0-0' }}</span>
+        <span class="dst-stat-foot">{{ receivables.totalOverdue | number:'1.0-0' }} overdue</span>
+      </div>
+      <div class="dst-stat" [class.tone-success]="receivables.collectionEfficiencyPercent >= 90" [class.tone-warning]="receivables.collectionEfficiencyPercent < 90">
+        <span class="dst-stat-label">Collection efficiency</span>
+        <span class="dst-stat-value">{{ receivables.collectionEfficiencyPercent | number:'1.1-1' }}%</span>
+        <span class="dst-stat-foot">{{ receivables.collectedInPeriod | number:'1.0-0' }} of {{ receivables.dueInPeriod | number:'1.0-0' }} due</span>
+      </div>
+      <div class="dst-stat tone-violet">
+        <span class="dst-stat-label">Average days to collect</span>
+        <span class="dst-stat-value">{{ receivables.averageCollectionDays | number:'1.0-0' }}</span>
+        <span class="dst-stat-foot">{{ receivables.blockedOutletCount }} accounts blocked</span>
+      </div>
+      <div class="dst-stat" [class.tone-danger]="receivables.bouncedChequeCount > 0" [class.tone-neutral]="receivables.bouncedChequeCount === 0">
+        <span class="dst-stat-label">Bounced cheques</span>
+        <span class="dst-stat-value">{{ receivables.bouncedChequeCount }}</span>
+        <span class="dst-stat-foot">{{ receivables.bouncedChequeValue | number:'1.0-0' }} · provisioned {{ receivables.provisionedAmount | number:'1.0-0' }}</span>
+      </div>
+    </div>
+
+    <section class="dst-card">
+      <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">hourglass_bottom</span>Ageing</div></div>
+      <div class="dst-card-body">
+        <div class="rp-ageing">
+          <div class="rp-age"><span>0–30</span><strong>{{ receivables.bucket0To30 | number:'1.0-0' }}</strong></div>
+          <div class="rp-age"><span>31–60</span><strong>{{ receivables.bucket31To60 | number:'1.0-0' }}</strong></div>
+          <div class="rp-age"><span>61–90</span><strong>{{ receivables.bucket61To90 | number:'1.0-0' }}</strong></div>
+          <div class="rp-age is-worst"><span>90+</span><strong>{{ receivables.bucket90Plus | number:'1.0-0' }}</strong></div>
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- ── Returns ──────────────────────────────────────────────────────── -->
+  @if (!loading && report === 'returns' && returns) {
+    <div class="dst-stats">
+      <div class="dst-stat" [class.tone-danger]="returns.returnRatePercent > 3" [class.tone-success]="returns.returnRatePercent <= 3">
+        <span class="dst-stat-label">Return rate</span>
+        <span class="dst-stat-value">{{ returns.returnRatePercent | number:'1.2-2' }}%</span>
+        <span class="dst-stat-foot">{{ returns.returnValue | number:'1.0-0' }} against {{ returns.salesValue | number:'1.0-0' }} sold</span>
+      </div>
+      <div class="dst-stat tone-success">
+        <span class="dst-stat-label">Back to saleable</span>
+        <span class="dst-stat-value">{{ returns.restockedValue | number:'1.0-0' }}</span>
+        <span class="dst-stat-foot">of {{ returns.saleableValue | number:'1.0-0' }} received saleable</span>
+      </div>
+      <div class="dst-stat tone-danger">
+        <span class="dst-stat-label">Written off</span>
+        <span class="dst-stat-value">{{ returns.scrappedValue | number:'1.0-0' }}</span>
+        <span class="dst-stat-foot">damaged {{ returns.damagedValue | number:'1.0-0' }} · expired {{ returns.expiredValue | number:'1.0-0' }}</span>
+      </div>
+      <div class="dst-stat tone-neutral">
+        <span class="dst-stat-label">Returns raised</span>
+        <span class="dst-stat-value">{{ returns.returnCount | number }}</span>
+        <span class="dst-stat-foot">in this period</span>
+      </div>
+    </div>
+
+    <div class="dst-grid cols-2">
+      <section class="dst-card">
+        <div class="dst-card-head">
+          <div class="dst-card-title"><span class="material-symbols-outlined">psychology</span>Why things come back</div>
+          <button type="button" class="dst-btn is-sm" (click)="exportRows(returns.byReason, 'return-reasons')">
+            <span class="material-symbols-outlined">download</span>Export
+          </button>
+        </div>
+        <div class="dst-card-body is-flush">
+          @for (row of returns.byReason; track trackRow($index, row)) {
+            <div class="rp-rank">
+              <span class="rp-rank-name">{{ row.name }}</span>
+              <span class="rp-rank-bar is-bad"><i [style.width.%]="rowWidth(row, returns.byReason)"></i></span>
+              <span class="rp-rank-value">{{ row.value | number:'1.0-0' }}</span>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="dst-card">
+        <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">inventory_2</span>Worst items</div></div>
+        <div class="dst-card-body is-flush rp-scroll">
+          @for (row of returns.byItem; track trackRow($index, row)) {
+            <div class="rp-rank">
+              <span class="rp-rank-name">{{ row.name }}</span>
+              <span class="rp-rank-bar is-bad"><i [style.width.%]="rowWidth(row, returns.byItem)"></i></span>
+              <span class="rp-rank-value">{{ row.value | number:'1.0-0' }}</span>
+            </div>
+          }
+        </div>
+      </section>
+    </div>
+  }
+
+  <!-- ── Claims ───────────────────────────────────────────────────────── -->
+  @if (!loading && report === 'claims' && claims) {
+    <div class="dst-stats">
+      <div class="dst-stat tone-brand">
+        <span class="dst-stat-label">Claimed</span>
+        <span class="dst-stat-value">{{ claims.claimedValue | number:'1.0-0' }}</span>
+        <span class="dst-stat-foot">{{ claims.totalClaims | number }} claims in the period</span>
+      </div>
+      <div class="dst-stat tone-success">
+        <span class="dst-stat-label">Approval rate</span>
+        <span class="dst-stat-value">{{ claims.approvalRatePercent | number:'1.1-1' }}%</span>
+        <span class="dst-stat-foot">{{ claims.approvedValue | number:'1.0-0' }} approved · {{ claims.rejectedValue | number:'1.0-0' }} rejected</span>
+      </div>
+      <div class="dst-stat" [class.tone-danger]="claims.breachingSlaCount > 0" [class.tone-success]="claims.breachingSlaCount === 0">
+        <span class="dst-stat-label">Past SLA</span>
+        <span class="dst-stat-value">{{ claims.breachingSlaCount }}</span>
+        <span class="dst-stat-foot">{{ claims.openClaims }} open · {{ claims.openClaimValue | number:'1.0-0' }} outstanding</span>
+      </div>
+      <div class="dst-stat tone-violet">
+        <span class="dst-stat-label">Days to settle</span>
+        <span class="dst-stat-value">{{ claims.averageSettlementDays | number:'1.1-1' }}</span>
+        <span class="dst-stat-foot">the number distributors judge you on</span>
+      </div>
+    </div>
+
+    <section class="dst-card">
+      <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">hourglass_bottom</span>How long claims have waited</div></div>
+      <div class="dst-card-body">
+        <div class="rp-ageing">
+          <div class="rp-age"><span>0–15 days</span><strong>{{ claims.bucket0To15 | number:'1.0-0' }}</strong></div>
+          <div class="rp-age"><span>16–30</span><strong>{{ claims.bucket16To30 | number:'1.0-0' }}</strong></div>
+          <div class="rp-age"><span>31–60</span><strong>{{ claims.bucket31To60 | number:'1.0-0' }}</strong></div>
+          <div class="rp-age is-worst"><span>60+</span><strong>{{ claims.bucket60Plus | number:'1.0-0' }}</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="dst-grid cols-2">
+      <section class="dst-card">
+        <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">category</span>By kind</div></div>
+        <div class="dst-card-body is-flush">
+          @for (row of claims.byKind; track trackRow($index, row)) {
+            <div class="rp-rank">
+              <span class="rp-rank-name">{{ row.name }}</span>
+              <span class="rp-rank-bar"><i [style.width.%]="rowWidth(row, claims.byKind)"></i></span>
+              <span class="rp-rank-value">{{ row.value | number:'1.0-0' }}</span>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="dst-card">
+        <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">gavel</span>Why claims get rejected</div></div>
+        <div class="dst-card-body is-flush">
+          @if (claims.rejectionReasons.length === 0) { <p class="rp-none">Nothing was rejected.</p> }
+          @for (row of claims.rejectionReasons; track trackRow($index, row)) {
+            <div class="rp-rank">
+              <span class="rp-rank-name">{{ row.name }}</span>
+              <span class="rp-rank-bar is-bad"><i [style.width.%]="rowWidth(row, claims.rejectionReasons)"></i></span>
+              <span class="rp-rank-value">{{ row.quantity | number }}</span>
+            </div>
+          }
+        </div>
+      </section>
+    </div>
+  }
+
+  <!-- ── Stock ────────────────────────────────────────────────────────── -->
+  @if (!loading && report === 'stock' && stock) {
+    <div class="dst-stats">
+      <div class="dst-stat tone-brand">
+        <span class="dst-stat-label">Total stock</span>
+        <span class="dst-stat-value">{{ stock.totalStockValue | number:'1.0-0' }}</span>
+        <span class="dst-stat-foot">{{ stock.daysOfCover | number:'1.0-0' }} days of cover</span>
+      </div>
+      <div class="dst-stat tone-cyan">
+        <span class="dst-stat-label">Where it is</span>
+        <span class="dst-stat-value vs-split">{{ stock.warehouseStockValue | number:'1.0-0' }}</span>
+        <span class="dst-stat-foot">
+          warehouse · van {{ stock.vanStockValue | number:'1.0-0' }} ·
+          channel {{ stock.channelStockValue | number:'1.0-0' }} ·
+          transit {{ stock.inTransitValue | number:'1.0-0' }}
+        </span>
+      </div>
+      <div class="dst-stat" [class.tone-danger]="stock.nearExpiryValue > 0" [class.tone-success]="stock.nearExpiryValue === 0">
+        <span class="dst-stat-label">At risk</span>
+        <span class="dst-stat-value">{{ stock.nearExpiryValue | number:'1.0-0' }}</span>
+        <span class="dst-stat-foot">expired {{ stock.expiredValue | number:'1.0-0' }} · dead {{ stock.deadStockValue | number:'1.0-0' }}</span>
+      </div>
+      <div class="dst-stat" [class.tone-warning]="stock.stockOutSkuCount > 0" [class.tone-neutral]="stock.stockOutSkuCount === 0">
+        <span class="dst-stat-label">Out of stock</span>
+        <span class="dst-stat-value">{{ stock.stockOutSkuCount }}</span>
+        <span class="dst-stat-foot">SKUs with nothing anywhere</span>
+      </div>
+    </div>
+
+    <div class="dst-grid cols-2">
+      <section class="dst-card">
+        <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">warehouse</span>By location</div></div>
+        <div class="dst-card-body is-flush rp-scroll">
+          @for (row of stock.byLocation; track trackRow($index, row)) {
+            <div class="rp-rank">
+              <span class="rp-rank-name">{{ row.name }}</span>
+              <span class="rp-rank-bar"><i [style.width.%]="rowWidth(row, stock.byLocation)"></i></span>
+              <span class="rp-rank-value">{{ row.value | number:'1.0-0' }}</span>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="dst-card">
+        <div class="dst-card-head">
+          <div class="dst-card-title"><span class="material-symbols-outlined">schedule</span>Nearest expiry</div>
+        </div>
+        <div class="dst-card-body is-flush rp-scroll">
+          @if (stock.nearExpiryLines.length === 0) { <p class="rp-none">Nothing near expiry.</p> }
+          @for (n of stock.nearExpiryLines; track trackIndex($index)) {
+            <div class="rp-expiry">
+              <div class="dst-cell-stack">
+                <span class="top">{{ n.itemName }}</span>
+                <span class="sub">{{ n.batchNumber }} · {{ n.location }}</span>
+              </div>
+              <div class="rp-expiry-right">
+                <span class="rp-expiry-days" [class.is-bad]="n.daysToExpiry <= 30">{{ n.daysToExpiry }}d</span>
+                <span class="rp-expiry-value">{{ n.value | number:'1.0-0' }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+    </div>
+  }
+</div>
