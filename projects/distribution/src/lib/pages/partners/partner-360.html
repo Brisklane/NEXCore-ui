@@ -1,0 +1,407 @@
+<div class="page-container">
+  @if (loading && !partner) {
+    <div class="dst-skeleton" style="height: 180px; border-radius: 16px; margin-bottom: 16px"></div>
+    <div class="dst-skeleton" style="height: 340px; border-radius: 16px"></div>
+  }
+
+  @if (error && !partner) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">
+        {{ error }}
+        <div class="dst-banner-actions">
+          <button type="button" class="dst-btn is-sm" (click)="back()">Back to partners</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (partner; as p) {
+    <div class="p3-head">
+      <button type="button" class="dst-btn is-sm is-ghost p3-back" (click)="back()">
+        <span class="material-symbols-outlined">arrow_back</span>
+        Partners
+      </button>
+
+      <div class="p3-title-row">
+        <div>
+          <h2>{{ p.name }}</h2>
+          <div class="p3-title-meta">
+            @if (p.code) { <span class="dst-code">{{ p.code }}</span> }
+            <span class="dst-pill tone-neutral">{{ typeLabels[p.partnerType] }}</span>
+            <span class="dst-pill tone-neutral">{{ modelLabels[p.servicingModel] }}</span>
+            <dst-status [label]="statusLabels[p.status]" [tone]="statusTone[p.status]"></dst-status>
+            @if (p.parentPartnerName) {
+              <span class="p3-parent">
+                <span class="material-symbols-outlined">subdirectory_arrow_right</span>
+                under {{ p.parentPartnerName }}
+              </span>
+            }
+          </div>
+        </div>
+
+        <div class="p3-actions">
+          <button type="button" class="dst-btn" (click)="showCollection = true">
+            <span class="material-symbols-outlined">payments</span>
+            Record a receipt
+          </button>
+          <a class="dst-btn" [routerLink]="['/distribution/secondary']" [queryParams]="{ partnerId: p.id }">
+            <span class="material-symbols-outlined">upload_file</span>
+            Secondary sales
+          </a>
+        </div>
+      </div>
+
+      <div class="dst-stats p3-stats">
+        <div class="dst-stat tone-brand">
+          <span class="dst-stat-label">Bought this month</span>
+          <span class="dst-stat-value">{{ p.monthToDateSales | number:'1.0-0' }}</span>
+          <span class="dst-stat-foot">{{ p.outletCount | number }} outlets served · {{ p.childPartnerCount }} sub-partners</span>
+        </div>
+
+        @if (channelStock; as cs) {
+          <div class="dst-stat tone-cyan">
+            <span class="dst-stat-label">Sold onward</span>
+            <span class="dst-stat-value">{{ cs.secondarySalesValue | number:'1.0-0' }}</span>
+            <span class="dst-stat-foot">sell-through {{ cs.sellThroughPercent | number:'1.0-0' }}%</span>
+          </div>
+
+          <div class="dst-stat" [class.tone-warning]="sellThroughGap > 0" [class.tone-success]="sellThroughGap <= 0">
+            <span class="dst-stat-label">Stock in their hands</span>
+            <span class="dst-stat-value">{{ cs.channelStockValue | number:'1.0-0' }}</span>
+            <span class="dst-stat-foot">
+              {{ cs.channelStockDaysOfCover | number:'1.0-0' }} days of cover
+              @if (cs.nearExpiryValue > 0) { · <strong>{{ cs.nearExpiryValue | number:'1.0-0' }}</strong> near expiry }
+            </span>
+          </div>
+        }
+
+        <div class="dst-stat" [class.tone-danger]="p.overdueAmount > 0" [class.tone-neutral]="p.overdueAmount === 0">
+          <span class="dst-stat-label">Owing</span>
+          <span class="dst-stat-value">{{ p.outstandingAmount | number:'1.0-0' }}</span>
+          <span class="dst-stat-foot">
+            @if (p.overdueAmount > 0) { <strong>{{ p.overdueAmount | number:'1.0-0' }}</strong> overdue }
+            @else { nothing overdue }
+          </span>
+        </div>
+
+        <div class="dst-stat" [class.tone-warning]="p.openClaimCount > 0" [class.tone-neutral]="p.openClaimCount === 0">
+          <span class="dst-stat-label">Open claims</span>
+          <span class="dst-stat-value">{{ p.openClaimCount }}</span>
+          <span class="dst-stat-foot">{{ openClaimValue | number:'1.0-0' }} still to settle</span>
+        </div>
+
+        @if (dataQuality; as q) {
+          <div class="dst-stat" [class.tone-danger]="q.qualityScore < 60" [class.tone-success]="q.qualityScore >= 80" [class.tone-warning]="q.qualityScore >= 60 && q.qualityScore < 80">
+            <span class="dst-stat-label">Reporting quality</span>
+            <span class="dst-stat-value">{{ q.qualityScore | number:'1.0-0' }}</span>
+            <span class="dst-stat-foot">
+              {{ q.periodsSubmitted }}/{{ q.periodsExpected }} periods · {{ q.averageLatenessDays | number:'1.0-0' }}d late on average
+            </span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <dst-help key="partner360"></dst-help>
+
+    <div class="dst-tabs" role="tablist">
+      <button type="button" role="tab" [attr.aria-selected]="tab === 'trade'" [class.is-active]="tab === 'trade'" (click)="tab = 'trade'">
+        <span class="material-symbols-outlined">receipt_long</span>Trade
+      </button>
+      <button type="button" role="tab" [attr.aria-selected]="tab === 'credit'" [class.is-active]="tab === 'credit'" (click)="tab = 'credit'">
+        <span class="material-symbols-outlined">account_balance</span>Credit
+      </button>
+      <button type="button" role="tab" [attr.aria-selected]="tab === 'claims'" [class.is-active]="tab === 'claims'" (click)="tab = 'claims'">
+        <span class="material-symbols-outlined">gavel</span>Claims
+      </button>
+      <button type="button" role="tab" [attr.aria-selected]="tab === 'stock'" [class.is-active]="tab === 'stock'" (click)="tab = 'stock'">
+        <span class="material-symbols-outlined">inventory</span>Channel stock
+      </button>
+      <button type="button" role="tab" [attr.aria-selected]="tab === 'returns'" [class.is-active]="tab === 'returns'" (click)="tab = 'returns'">
+        <span class="material-symbols-outlined">assignment_return</span>Returns
+      </button>
+      <button type="button" role="tab" [attr.aria-selected]="tab === 'documents'" [class.is-active]="tab === 'documents'" (click)="tab = 'documents'">
+        <span class="material-symbols-outlined">badge</span>Documents
+      </button>
+      <button type="button" role="tab" [attr.aria-selected]="tab === 'details'" [class.is-active]="tab === 'details'" (click)="tab = 'details'">
+        <span class="material-symbols-outlined">info</span>Details
+      </button>
+    </div>
+
+    <!-- ── Trade ──────────────────────────────────────────────────────── -->
+    @if (tab === 'trade') {
+      <section class="dst-card">
+        <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">receipt_long</span>Recent orders</div></div>
+        <div class="dst-card-body is-flush">
+          @if (recentOrders.length === 0) { <p class="p3-none">No orders from this partner yet.</p> }
+          @if (recentOrders.length) {
+            <div class="dst-table-wrap">
+              <table class="dst-table">
+                <thead><tr><th>Order</th><th>Date</th><th>Status</th><th class="num">Lines</th><th class="num">Fill rate</th><th class="num">Value</th></tr></thead>
+                <tbody>
+                  @for (o of recentOrders; track trackId($index, o)) {
+                    <tr class="is-clickable" [routerLink]="['/distribution/orders', o.id]">
+                      <td><span class="dst-code">{{ o.orderNumber }}</span></td>
+                      <td class="nowrap">{{ o.orderDate | date:'d MMM y' }}</td>
+                      <td><dst-status [label]="orderStatusLabels[o.status]" [tone]="orderStatusTone[o.status]"></dst-status></td>
+                      <td class="num">{{ o.lineCount }}</td>
+                      <td class="num">{{ o.fillRatePercent | number:'1.0-0' }}%</td>
+                      <td class="num strong">{{ o.totalAmount | number:'1.2-2' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- ── Credit ─────────────────────────────────────────────────────── -->
+    @if (tab === 'credit' && snapshot) {
+      <div class="dst-grid cols-2">
+        <section class="dst-card">
+          <div class="dst-card-head">
+            <div class="dst-card-title"><span class="material-symbols-outlined">speed</span>Exposure</div>
+            @if (snapshot.isBlocked) { <span class="dst-pill tone-danger"><span class="material-symbols-outlined">block</span>Blocked</span> }
+          </div>
+          <div class="dst-card-body">
+            <div class="p3-exposure">
+              <span class="p3-exposure-value">{{ snapshot.outstandingAmount | number:'1.2-2' }}</span>
+              <span class="p3-exposure-of">of {{ snapshot.effectiveLimit | number:'1.0-0' }} limit</span>
+            </div>
+            <div class="dst-bar" [class.tone-danger]="creditUsedPercent > 95" [class.tone-warning]="creditUsedPercent > 80 && creditUsedPercent <= 95">
+              <div class="dst-bar-fill" [style.width.%]="creditUsedPercent"></div>
+            </div>
+            <p class="p3-exposure-foot">
+              {{ snapshot.availableCredit | number:'1.0-0' }} still available · {{ snapshot.creditDays }} day terms
+              @if (snapshot.temporaryLimit > 0) {
+                · temporary uplift of {{ snapshot.temporaryLimit | number:'1.0-0' }} until {{ snapshot.temporaryLimitExpiresOn | date:'d MMM' }}
+              }
+            </p>
+
+            @if (snapshot.isBlocked) {
+              <div class="dst-banner tone-danger p3-block">
+                <span class="material-symbols-outlined">credit_card_off</span>
+                <div class="dst-banner-body">{{ snapshot.blockReason }}</div>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="dst-card">
+          <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">hourglass_bottom</span>Ageing</div></div>
+          <div class="dst-card-body">
+            <div class="p3-ageing">
+              <div class="p3-age"><span>0–30</span><strong>{{ snapshot.bucket0To30 | number:'1.0-0' }}</strong></div>
+              <div class="p3-age"><span>31–60</span><strong>{{ snapshot.bucket31To60 | number:'1.0-0' }}</strong></div>
+              <div class="p3-age"><span>61–90</span><strong>{{ snapshot.bucket61To90 | number:'1.0-0' }}</strong></div>
+              <div class="p3-age is-worst"><span>90+</span><strong>{{ snapshot.bucket90Plus | number:'1.0-0' }}</strong></div>
+            </div>
+            <div class="dst-kv p3-kv">
+              <div class="dst-kv-item"><span class="dst-kv-key">Oldest invoice</span><span class="dst-kv-value">{{ snapshot.oldestInvoiceDays }} days</span></div>
+              <div class="dst-kv-item"><span class="dst-kv-key">Bounced cheques</span><span class="dst-kv-value">{{ snapshot.bouncedChequeCount }}</span></div>
+              <div class="dst-kv-item"><span class="dst-kv-key">Deposit held</span><span class="dst-kv-value">{{ snapshot.securityDeposit | number:'1.0-0' }}</span></div>
+              <div class="dst-kv-item"><span class="dst-kv-key">Unbilled orders</span><span class="dst-kv-value">{{ snapshot.unbilledOrderValue | number:'1.0-0' }}</span></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    }
+
+    <!-- ── Claims ─────────────────────────────────────────────────────── -->
+    @if (tab === 'claims') {
+      <section class="dst-card">
+        <div class="dst-card-head">
+          <div class="dst-card-title"><span class="material-symbols-outlined">gavel</span>Claims</div>
+          <span class="dst-card-sub">Claim ageing is the single number distributors judge you on</span>
+        </div>
+        <div class="dst-card-body is-flush">
+          @if (claims.length === 0) { <p class="p3-none">No claims from this partner.</p> }
+          @if (claims.length) {
+            <div class="dst-table-wrap">
+              <table class="dst-table">
+                <thead>
+                  <tr><th>Claim</th><th>Kind</th><th>Submitted</th><th class="num">Claimed</th><th class="num">Computed</th><th class="num">Approved</th><th>Status</th><th class="num">Age</th></tr>
+                </thead>
+                <tbody>
+                  @for (c of claims; track trackId($index, c)) {
+                    <tr [class.is-flagged]="c.isBreachingSla" [routerLink]="['/distribution/claims']" class="is-clickable">
+                      <td><span class="dst-code">{{ c.claimNumber }}</span></td>
+                      <td>{{ claimKindLabels[c.kind] }}</td>
+                      <td class="nowrap">{{ c.submittedOn | date:'d MMM y' }}</td>
+                      <td class="num">{{ c.claimedAmount | number:'1.2-2' }}</td>
+                      <td class="num">{{ c.computedAmount | number:'1.2-2' }}</td>
+                      <td class="num strong">{{ c.approvedAmount | number:'1.2-2' }}</td>
+                      <td><dst-status [label]="claimStatusLabels[c.status]" [tone]="claimStatusTone[c.status]"></dst-status></td>
+                      <td class="num">
+                        <span [class.p3-breach]="c.isBreachingSla">{{ c.ageingDays }}d</span>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- ── Channel stock ──────────────────────────────────────────────── -->
+    @if (tab === 'stock') {
+      @if (!channelStock) {
+        <div class="dst-card"><div class="dst-card-body"><p class="p3-none">No channel inventory has been declared for this partner.</p></div></div>
+      } @else {
+        <section class="dst-card">
+          <div class="dst-card-head">
+            <div class="dst-card-title"><span class="material-symbols-outlined">inventory</span>By brand</div>
+            <span class="dst-card-sub">{{ channelStock.periodStart | date:'d MMM' }} – {{ channelStock.periodEnd | date:'d MMM y' }}</span>
+          </div>
+          <div class="dst-card-body is-flush">
+            <div class="dst-table-wrap">
+              <table class="dst-table">
+                <thead>
+                  <tr><th>Brand</th><th class="num">Bought</th><th class="num">Sold on</th><th class="num">Stock</th><th class="num">Days cover</th><th class="num">Sell-through</th><th class="num">Near expiry</th></tr>
+                </thead>
+                <tbody>
+                  @for (row of channelStock.byBrand; track row.name) {
+                    <tr [class.is-flagged]="row.hasVariance">
+                      <td class="strong">{{ row.name }}</td>
+                      <td class="num">{{ row.primaryValue | number:'1.0-0' }}</td>
+                      <td class="num">{{ row.secondaryValue | number:'1.0-0' }}</td>
+                      <td class="num">{{ row.stockValue | number:'1.0-0' }}</td>
+                      <td class="num">{{ row.daysOfCover | number:'1.0-0' }}</td>
+                      <td class="num">{{ row.sellThroughPercent | number:'1.0-0' }}%</td>
+                      <td class="num" [class.p3-breach]="row.nearExpiryValue > 0">{{ row.nearExpiryValue | number:'1.0-0' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      }
+    }
+
+    <!-- ── Returns ────────────────────────────────────────────────────── -->
+    @if (tab === 'returns') {
+      <section class="dst-card">
+        <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">assignment_return</span>Returns</div></div>
+        <div class="dst-card-body is-flush">
+          @if (returnRows.length === 0) { <p class="p3-none">Nothing has come back from this partner.</p> }
+          @if (returnRows.length) {
+            <div class="dst-table-wrap">
+              <table class="dst-table">
+                <thead><tr><th>Return</th><th>Raised</th><th>Reason</th><th>Status</th><th class="num">Claimed</th><th class="num">Approved</th></tr></thead>
+                <tbody>
+                  @for (r of returnRows; track trackId($index, r)) {
+                    <tr>
+                      <td><span class="dst-code">{{ r.returnNumber }}</span></td>
+                      <td class="nowrap">{{ r.requestedOn | date:'d MMM y' }}</td>
+                      <td>{{ r.reasonCodeName }}</td>
+                      <td><dst-status [label]="returnStatusLabels[r.status]" [tone]="returnStatusTone[r.status]"></dst-status></td>
+                      <td class="num">{{ r.claimedValue | number:'1.2-2' }}</td>
+                      <td class="num strong">{{ r.approvedValue | number:'1.2-2' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- ── Documents ──────────────────────────────────────────────────── -->
+    @if (tab === 'documents') {
+      <section class="dst-card">
+        <div class="dst-card-head">
+          <div class="dst-card-title"><span class="material-symbols-outlined">badge</span>Documents</div>
+          <span class="dst-card-sub">Licences, registrations and agreements, with what expires when</span>
+        </div>
+        <div class="dst-card-body is-flush">
+          @if (documents.length === 0) { <p class="p3-none">No documents on file. A partner trading without a verified licence is a risk worth closing.</p> }
+          @for (doc of documents; track trackId($index, doc)) {
+            <div class="p3-doc">
+              <div class="dst-cell-stack">
+                <span class="top">{{ doc.documentType }}</span>
+                <span class="sub">
+                  {{ doc.documentNumber }}
+                  @if (doc.issuedOn) { · issued {{ doc.issuedOn | date:'d MMM y' }} }
+                  @if (doc.expiresOn) { · expires {{ doc.expiresOn | date:'d MMM y' }} }
+                </span>
+              </div>
+              <div class="p3-doc-actions">
+                <dst-status [label]="documentLabel(doc)" [tone]="documentTone(doc)"></dst-status>
+                @if (doc.fileUrl) {
+                  <a class="dst-icon-btn" [href]="doc.fileUrl" target="_blank" rel="noopener" aria-label="Open the document" title="Open">
+                    <span class="material-symbols-outlined">open_in_new</span>
+                  </a>
+                }
+                @if (!doc.isVerified) {
+                  <button type="button" class="dst-btn is-sm" (click)="verifyDocument(doc)">Mark verified</button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- ── Details ────────────────────────────────────────────────────── -->
+    @if (tab === 'details') {
+      <section class="dst-card">
+        <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">info</span>Details</div></div>
+        <div class="dst-card-body">
+          <div class="dst-kv">
+            <div class="dst-kv-item"><span class="dst-kv-key">Contact</span><span class="dst-kv-value">{{ p.contactPerson || '—' }}</span></div>
+            <div class="dst-kv-item"><span class="dst-kv-key">Phone</span><span class="dst-kv-value">{{ p.phone || '—' }}</span></div>
+            <div class="dst-kv-item"><span class="dst-kv-key">Email</span><span class="dst-kv-value is-quiet">{{ p.email || '—' }}</span></div>
+            <div class="dst-kv-item"><span class="dst-kv-key">Address</span><span class="dst-kv-value is-quiet">{{ p.addressLine }}, {{ p.city }}</span></div>
+            <div class="dst-kv-item"><span class="dst-kv-key">Territory</span><span class="dst-kv-value">{{ p.territoryName || '—' }}</span></div>
+            <div class="dst-kv-item"><span class="dst-kv-key">Tax registration</span><span class="dst-kv-value is-quiet">{{ p.taxRegistrationNumber || '—' }}</span></div>
+            <div class="dst-kv-item"><span class="dst-kv-key">Margin</span><span class="dst-kv-value">{{ p.marginPercent | number:'1.1-1' }}%</span></div>
+            <div class="dst-kv-item"><span class="dst-kv-key">Minimum offtake</span><span class="dst-kv-value">{{ p.minimumMonthlyOfftake | number:'1.0-0' }} / month</span></div>
+            <div class="dst-kv-item"><span class="dst-kv-key">Appointed</span><span class="dst-kv-value is-quiet">{{ p.appointedOn | date:'d MMM y' }}</span></div>
+            <div class="dst-kv-item"><span class="dst-kv-key">Agreement expires</span><span class="dst-kv-value is-quiet">{{ p.agreementExpiresOn | date:'d MMM y' }}</span></div>
+            <div class="dst-kv-item"><span class="dst-kv-key">Secondary capture</span><span class="dst-kv-value">{{ captureLabels[p.secondaryCaptureMode] }}</span></div>
+            <div class="dst-kv-item"><span class="dst-kv-key">Sub-partners</span><span class="dst-kv-value">{{ p.childPartnerCount }}</span></div>
+          </div>
+
+          @if (p.contacts.length) {
+            <div class="dst-section-label">People</div>
+            <div class="dst-table-wrap">
+              <table class="dst-table">
+                <thead><tr><th>Name</th><th>Role</th><th>Phone</th><th>Email</th><th>Handles</th></tr></thead>
+                <tbody>
+                  @for (c of p.contacts; track trackId($index, c)) {
+                    <tr>
+                      <td class="strong">{{ c.fullName }}@if (c.isPrimary) { <span class="dst-pill tone-brand p3-primary">Primary</span> }</td>
+                      <td>{{ c.designation }}</td>
+                      <td>{{ c.phone }}</td>
+                      <td class="muted">{{ c.email }}</td>
+                      <td>
+                        @if (c.handlesClaims) { <span class="dst-pill tone-neutral">Claims</span> }
+                        @if (c.handlesPayments) { <span class="dst-pill tone-neutral">Payments</span> }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      </section>
+    }
+  }
+</div>
+
+@if (showCollection && partner) {
+  <dst-collection-sheet
+    [partnerId]="partner.id"
+    [partyName]="partner.name"
+    (recorded)="onCollectionRecorded()"
+    (closed)="showCollection = false"
+  ></dst-collection-sheet>
+}

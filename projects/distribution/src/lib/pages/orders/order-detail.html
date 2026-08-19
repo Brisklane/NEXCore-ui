@@ -1,0 +1,488 @@
+<div class="page-container">
+  @if (loading && !order) {
+    <div class="dst-skeleton" style="height: 170px; border-radius: 16px; margin-bottom: 16px"></div>
+    <div class="dst-skeleton" style="height: 380px; border-radius: 16px"></div>
+  }
+
+  @if (error && !order) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">
+        {{ error }}
+        <div class="dst-banner-actions">
+          <button type="button" class="dst-btn is-sm" (click)="back()">Back to orders</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (order; as o) {
+    <div class="od-head">
+      <button type="button" class="dst-btn is-sm is-ghost od-back" (click)="back()">
+        <span class="material-symbols-outlined">arrow_back</span>
+        Orders
+      </button>
+
+      <div class="od-title-row">
+        <div>
+          <h2>{{ o.orderNumber }}</h2>
+          <div class="od-title-meta">
+            <dst-status [label]="statusLabels[o.status]" [tone]="statusTone[o.status]" [large]="true"></dst-status>
+            <span class="dst-pill tone-neutral">{{ kindLabels[o.kind] }}</span>
+            <span class="dst-pill tone-neutral">{{ sourceLabels[o.source] }}</span>
+            @if (o.hasCreditOverride) {
+              <span class="dst-pill tone-warning"><span class="material-symbols-outlined">key</span>Credit override used</span>
+            }
+            @if (o.isBackorderParent) {
+              <span class="dst-pill tone-info">Has a backorder</span>
+            }
+          </div>
+        </div>
+
+        <div class="od-actions">
+          @if (canSubmit) {
+            <button type="button" class="dst-btn is-primary" (click)="submit()" [disabled]="busy">
+              <span class="material-symbols-outlined">send</span>Submit
+            </button>
+          }
+          @if (canApprove) {
+            <button type="button" class="dst-btn is-danger" (click)="decide(false)" [disabled]="busy">Reject</button>
+            <button type="button" class="dst-btn is-success" (click)="decide(true)" [disabled]="busy">
+              <span class="material-symbols-outlined">check</span>Approve
+            </button>
+          }
+          @if (canAllocate) {
+            <button type="button" class="dst-btn is-primary" (click)="showAllocate = true" [disabled]="busy">
+              <span class="material-symbols-outlined">inventory</span>Allocate stock
+            </button>
+          }
+        </div>
+      </div>
+
+      @if (notice) {
+        <div class="dst-banner tone-success" role="status">
+          <span class="material-symbols-outlined">check_circle</span>
+          <div class="dst-banner-body">{{ notice }}</div>
+        </div>
+      }
+
+      @if (error) {
+        <div class="dst-banner tone-danger" role="alert">
+          <span class="material-symbols-outlined">error</span>
+          <div class="dst-banner-body">{{ error }}</div>
+        </div>
+      }
+
+      @if (o.holdReason) {
+        <div class="dst-banner tone-warning">
+          <span class="material-symbols-outlined">pause_circle</span>
+          <div class="dst-banner-body"><strong>On hold.</strong> {{ o.holdReason }}</div>
+        </div>
+      }
+
+      @if (o.rejectionReason) {
+        <div class="dst-banner tone-danger">
+          <span class="material-symbols-outlined">block</span>
+          <div class="dst-banner-body"><strong>Rejected.</strong> {{ o.rejectionReason }}</div>
+        </div>
+      }
+
+      <div class="dst-kv od-facts">
+        <div class="dst-kv-item">
+          <span class="dst-kv-key">Buyer</span>
+          <span class="dst-kv-value">
+            @if (o.outletId) {
+              <a [routerLink]="['/distribution/outlets', o.outletId]">{{ o.outletName }}</a>
+            } @else if (o.partnerId) {
+              <a [routerLink]="['/distribution/partners', o.partnerId]">{{ o.partnerName }}</a>
+            } @else { {{ o.customerName || '—' }} }
+          </span>
+        </div>
+        <div class="dst-kv-item"><span class="dst-kv-key">Taken by</span><span class="dst-kv-value">{{ o.fieldRepName || '—' }}</span></div>
+        <div class="dst-kv-item"><span class="dst-kv-key">Route</span><span class="dst-kv-value">{{ o.routeName || '—' }}</span></div>
+        <div class="dst-kv-item"><span class="dst-kv-key">Ordered</span><span class="dst-kv-value">{{ o.orderDate | date:'d MMM y' }}</span></div>
+        <div class="dst-kv-item">
+          <span class="dst-kv-key">Promised</span>
+          <span class="dst-kv-value">{{ (o.promisedDeliveryDate | date:'d MMM y') || 'not promised' }}</span>
+        </div>
+        <div class="dst-kv-item">
+          <span class="dst-kv-key">Delivered</span>
+          <span class="dst-kv-value">{{ (o.deliveredAt | date:'d MMM y') || '—' }}</span>
+        </div>
+        <div class="dst-kv-item"><span class="dst-kv-key">Fill rate</span><span class="dst-kv-value">{{ o.fillRatePercent | number:'1.0-0' }}%</span></div>
+        <div class="dst-kv-item"><span class="dst-kv-key">Margin</span><span class="dst-kv-value">{{ o.marginAmount | number:'1.2-2' }} ({{ o.marginPercent | number:'1.1-1' }}%)</span></div>
+      </div>
+    </div>
+
+    <dst-help key="orderDetail"></dst-help>
+
+    <div class="od-layout">
+      <div class="od-main">
+        <!-- ── Lines ────────────────────────────────────────────────── -->
+        <section class="dst-card">
+          <div class="dst-card-head">
+            <div class="dst-card-title">
+              <span class="material-symbols-outlined">list</span>
+              Lines
+              <div class="dst-card-sub">{{ o.lineCount }} lines · {{ o.totalQuantity | number }} units</div>
+            </div>
+          </div>
+
+          <div class="dst-card-body is-flush">
+            <div class="dst-table-wrap">
+              <table class="dst-table od-lines">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th class="num">Ordered</th>
+                    <th class="num">Delivered</th>
+                    <th class="num">MRP</th>
+                    <th class="num">Price</th>
+                    <th class="num">Discount</th>
+                    <th class="num">Tax</th>
+                    <th class="num">Total</th>
+                    <th>Why</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (l of sellingLines; track trackLine($index, l)) {
+                    <tr [class.is-flagged]="l.isShortPicked">
+                      <td>
+                        <div class="dst-cell-stack">
+                          <span class="top">{{ l.itemName }}</span>
+                          <span class="sub">
+                            @if (l.itemCode) { <span class="dst-code is-plain">{{ l.itemCode }}</span> · }
+                            {{ l.uom }}
+                            @if (l.batchNumber) { · batch {{ l.batchNumber }} }
+                            @if (l.expiryDate) { · exp {{ l.expiryDate | date:'MMM y' }} }
+                          </span>
+                        </div>
+                      </td>
+                      <td class="num">{{ l.quantity | number }}</td>
+                      <td class="num">
+                        <span [class]="'dst-pill ' + fillTone(l)">
+                          {{ l.deliveredQuantity | number }}
+                        </span>
+                        @if (l.backorderedQuantity > 0) {
+                          <span class="od-back">{{ l.backorderedQuantity | number }} on backorder</span>
+                        }
+                      </td>
+                      <td class="num muted">{{ l.mrp | number:'1.2-2' }}</td>
+                      <td class="num">
+                        {{ l.unitPrice | number:'1.2-2' }}
+                        @if (l.isPriceOverridden) {
+                          <span class="od-override" [title]="l.priceOverrideReason || 'Price overridden'">
+                            <span class="material-symbols-outlined">edit</span>
+                          </span>
+                        }
+                      </td>
+                      <td class="num">
+                        @if (l.discountAmount + l.schemeDiscountAmount > 0) {
+                          <span class="od-discount">−{{ (l.discountAmount + l.schemeDiscountAmount) | number:'1.2-2' }}</span>
+                        } @else { <span class="muted">—</span> }
+                      </td>
+                      <td class="num muted">{{ l.taxAmount | number:'1.2-2' }}</td>
+                      <td class="num strong">{{ l.lineTotal | number:'1.2-2' }}</td>
+                      <td>
+                        <button type="button" class="dst-btn is-sm is-ghost" (click)="explainPrice(l)">
+                          <span class="material-symbols-outlined">help</span>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+
+                  @for (l of freeLines; track trackLine($index, l)) {
+                    <tr class="od-free">
+                      <td>
+                        <div class="dst-cell-stack">
+                          <span class="top">
+                            {{ l.itemName }}
+                            <span class="dst-pill tone-success"><span class="material-symbols-outlined">redeem</span>Free goods</span>
+                          </span>
+                          <span class="sub">from {{ l.schemeName }}</span>
+                        </div>
+                      </td>
+                      <td class="num">{{ l.quantity | number }}</td>
+                      <td class="num">{{ l.deliveredQuantity | number }}</td>
+                      <td class="num muted">{{ l.mrp | number:'1.2-2' }}</td>
+                      <td class="num muted">0.00</td>
+                      <td class="num muted">—</td>
+                      <td class="num muted">{{ l.taxAmount | number:'1.2-2' }}</td>
+                      <td class="num strong">{{ l.lineTotal | number:'1.2-2' }}</td>
+                      <td></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ── Schemes ──────────────────────────────────────────────── -->
+        @if (o.appliedSchemes.length) {
+          <section class="dst-card">
+            <div class="dst-card-head">
+              <div class="dst-card-title"><span class="material-symbols-outlined">redeem</span>Schemes that fired</div>
+              <span class="dst-card-sub">Exactly what a claim will be audited against</span>
+            </div>
+            <div class="dst-card-body is-flush">
+              @for (s of o.appliedSchemes; track s.id) {
+                <div class="od-scheme" [class.is-reversed]="s.isReversed">
+                  <div class="od-scheme-body">
+                    <div class="od-scheme-name">
+                      {{ s.schemeName }}
+                      <span class="dst-pill tone-neutral">{{ schemeKindLabels[s.schemeKind] }}</span>
+                      @if (s.slabNumber) { <span class="dst-pill tone-info">Slab {{ s.slabNumber }}</span> }
+                      @if (s.isReversed) { <span class="dst-pill tone-danger">Reversed</span> }
+                    </div>
+                    <div class="od-scheme-detail">
+                      {{ s.benefitDescription }}
+                      · qualified on {{ s.qualifyingQuantity | number }} units / {{ s.qualifyingValue | number:'1.2-2' }}
+                      · settles {{ settlementLabels[s.settlementMode] }}
+                      @if (s.claimId) { · claim raised }
+                    </div>
+                  </div>
+                  <span class="od-scheme-value">{{ s.benefitValue | number:'1.2-2' }}</span>
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+        @if (o.nextSlabHints.length) {
+          <section class="dst-card">
+            <div class="dst-card-head">
+              <div class="dst-card-title"><span class="material-symbols-outlined">trending_up</span>Left on the table</div>
+              <span class="dst-card-sub">What another few units would have earned</span>
+            </div>
+            <div class="dst-card-body is-flush">
+              @for (h of o.nextSlabHints; track h.schemeId + (h.itemId ?? '')) {
+                <div class="od-hint">
+                  <span class="material-symbols-outlined">lightbulb</span>
+                  <div>
+                    <div class="od-hint-msg">{{ h.message }}</div>
+                    <div class="od-hint-sub">
+                      {{ h.shortfallQuantity | number }} {{ h.uom }} short of slab —
+                      worth {{ h.extraBenefit | number:'1.2-2' }} more
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+        <!-- ── Approvals ────────────────────────────────────────────── -->
+        @if (o.approvals.length) {
+          <section class="dst-card">
+            <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">approval</span>Approvals</div></div>
+            <div class="dst-card-body is-flush">
+              <div class="dst-table-wrap">
+                <table class="dst-table">
+                  <thead><tr><th>Step</th><th>Why it was needed</th><th>Approver</th><th>Decision</th><th>Comment</th></tr></thead>
+                  <tbody>
+                    @for (a of o.approvals; track a.id) {
+                      <tr>
+                        <td class="strong">{{ a.stepNumber }}. {{ a.stepName }}</td>
+                        <td class="muted">{{ a.triggerReason }}</td>
+                        <td>{{ a.approverName || '—' }}</td>
+                        <td>
+                          @if (a.isApproved === true) { <span class="dst-pill tone-success">Approved</span> }
+                          @else if (a.isApproved === false) { <span class="dst-pill tone-danger">Rejected</span> }
+                          @else { <span class="dst-pill tone-warning">Waiting</span> }
+                          @if (a.isEscalated) { <span class="dst-pill tone-warning">Escalated</span> }
+                        </td>
+                        <td class="muted">{{ a.comment }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        }
+      </div>
+
+      <!-- ── Side: totals and trail ──────────────────────────────────── -->
+      <aside class="od-side">
+        <section class="dst-card">
+          <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">calculate</span>Totals</div></div>
+          <div class="dst-card-body">
+            <div class="od-total"><span>Subtotal</span><span class="dst-money">{{ o.subTotal | number:'1.2-2' }}</span></div>
+            @if (o.discountAmount > 0) {
+              <div class="od-total"><span>Discount</span><span class="dst-money is-negative">−{{ o.discountAmount | number:'1.2-2' }}</span></div>
+            }
+            @if (o.schemeDiscountAmount > 0) {
+              <div class="od-total"><span>Scheme discount</span><span class="dst-money is-negative">−{{ o.schemeDiscountAmount | number:'1.2-2' }}</span></div>
+            }
+            @if (o.freeGoodsValue > 0) {
+              <div class="od-total"><span>Free goods at cost</span><span class="dst-money">{{ o.freeGoodsValue | number:'1.2-2' }}</span></div>
+            }
+            @if (o.taxAmount > 0) {
+              <div class="od-total"><span>Tax</span><span class="dst-money">{{ o.taxAmount | number:'1.2-2' }}</span></div>
+            }
+            @if (o.freightAmount > 0) {
+              <div class="od-total"><span>Freight</span><span class="dst-money">{{ o.freightAmount | number:'1.2-2' }}</span></div>
+            }
+            @if (o.roundingAmount !== 0) {
+              <div class="od-total"><span>Rounding</span><span class="dst-money">{{ o.roundingAmount | number:'1.2-2' }}</span></div>
+            }
+            <div class="od-total is-grand">
+              <span>Total</span>
+              <span class="dst-money is-total"><span class="cur">{{ o.currencyCode }}</span>{{ o.totalAmount | number:'1.2-2' }}</span>
+            </div>
+            @if (o.paidAmount > 0) {
+              <div class="od-total is-paid">
+                <span>Paid</span>
+                <span class="dst-money is-positive">{{ o.paidAmount | number:'1.2-2' }}</span>
+              </div>
+              <div class="od-total">
+                <span>Outstanding</span>
+                <span class="dst-money">{{ (o.totalAmount - o.paidAmount) | number:'1.2-2' }}</span>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="dst-card">
+          <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">history</span>What happened</div></div>
+          <div class="dst-card-body">
+            @if (o.statusEvents.length === 0) { <p class="od-none">Nothing recorded yet.</p> }
+            <div class="dst-timeline">
+              @for (e of o.statusEvents; track trackIndex($index)) {
+                <div class="dst-timeline-item">
+                  <span class="dst-timeline-dot" [class]="'dst-timeline-dot ' + statusEventTone(e.toStatus)">
+                    <span class="material-symbols-outlined">{{ statusEventIcon(e.toStatus) }}</span>
+                  </span>
+                  <div class="dst-timeline-body">
+                    <div class="dst-timeline-title">{{ statusLabels[e.toStatus] }}</div>
+                    <div class="dst-timeline-meta">
+                      {{ e.occurredAt | date:'d MMM y, HH:mm' }}
+                      @if (e.actorName) { · {{ e.actorName }} }
+                    </div>
+                    @if (e.note) { <div class="dst-timeline-note">{{ e.note }}</div> }
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        </section>
+      </aside>
+    </div>
+  }
+</div>
+
+<!-- ── Why this price ───────────────────────────────────────────────────── -->
+@if (priceLine) {
+  <div class="dst-modal-backdrop" (click)="priceLine = null">
+    <div class="dst-modal" role="dialog" aria-modal="true" aria-label="Why this price" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Why {{ priceLine.itemName }} cost {{ priceLine.unitPrice | number:'1.2-2' }}</div>
+          <div class="dst-modal-sub">
+            Every price list that could have applied, in the order they were considered. The
+            narrowest live list wins.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="priceLine = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        @if (loadingPrice) {
+          <div class="dst-skeleton" style="height: 200px"></div>
+        } @else if (!priceResolution) {
+          <p class="od-none">The pricing service could not be reached. The price on the order is unaffected.</p>
+        } @else {
+          <div class="od-price-head">
+            <div>
+              <span class="od-price-label">Resolved price</span>
+              <span class="od-price-value">{{ priceResolution.resolvedPrice | number:'1.2-2' }}</span>
+            </div>
+            <div class="od-price-meta">
+              won by <strong>{{ scopeLabels[priceResolution.winningScope] }}</strong>
+              @if (priceResolution.winningPriceListName) { — {{ priceResolution.winningPriceListName }} }
+              @if (priceResolution.appliedSlabIndex != null) { · slab {{ priceResolution.appliedSlabIndex + 1 }} }
+            </div>
+          </div>
+
+          <div class="dst-kv od-price-kv">
+            <div class="dst-kv-item"><span class="dst-kv-key">MRP</span><span class="dst-kv-value">{{ priceResolution.mrp | number:'1.2-2' }}</span></div>
+            <div class="dst-kv-item"><span class="dst-kv-key">Tax</span><span class="dst-kv-value">{{ priceResolution.taxPercent | number:'1.1-1' }}%</span></div>
+            <div class="dst-kv-item"><span class="dst-kv-key">Floor price</span><span class="dst-kv-value">{{ priceResolution.minimumPrice | number:'1.2-2' }}</span></div>
+          </div>
+
+          <div class="dst-section-label">Everything considered</div>
+          <div class="dst-table-wrap">
+            <table class="dst-table">
+              <thead><tr><th>Scope</th><th>Price list</th><th class="num">Price</th><th class="num">Priority</th><th>Outcome</th></tr></thead>
+              <tbody>
+                @for (c of priceResolution.considered; track c.priceListId + c.scope) {
+                  <tr [class.is-selected]="c.isWinner">
+                    <td class="strong">{{ scopeLabels[c.scope] }}</td>
+                    <td>{{ c.priceListName }}</td>
+                    <td class="num">{{ c.unitPrice | number:'1.2-2' }}</td>
+                    <td class="num muted">{{ c.priority }}</td>
+                    <td>
+                      @if (c.isWinner) { <span class="dst-pill tone-success">Applied</span> }
+                      @else { <span class="muted">{{ c.skipReason || 'Outranked' }}</span> }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="priceLine = null">Close</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Allocate ─────────────────────────────────────────────────────────── -->
+@if (showAllocate && order) {
+  <div class="dst-modal-backdrop" (click)="showAllocate = false">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Allocate stock" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Allocate stock to {{ order.orderNumber }}</div>
+          <div class="dst-modal-sub">
+            FEFO is the default because stock that expires on a shelf is a total loss, not a
+            discount.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="showAllocate = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-field">
+          <label for="od-strategy">Strategy</label>
+          <select id="od-strategy" [(ngModel)]="allocateStrategy">
+            @for (k of [1,2,3,4,5]; track k) { <option [value]="k">{{ allocationLabels[k] }}</option> }
+          </select>
+        </div>
+
+        <label class="dst-check">
+          <input type="checkbox" [(ngModel)]="allocateHard" />
+          <span>
+            Hard allocation
+            <span class="dst-check-sub">Reserves the specific batches so nothing else can take them. A soft allocation only reserves quantity.</span>
+          </span>
+        </label>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showAllocate = false" [disabled]="busy">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="allocate()" [disabled]="busy">
+          @if (busy) { Allocating… } @else { Allocate }
+        </button>
+      </div>
+    </div>
+  </div>
+}

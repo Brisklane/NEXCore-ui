@@ -1,0 +1,375 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Field team &amp; devices</h2>
+      <p class="subtitle">Who is out there, what they carry, and whether their device is trusted.</p>
+    </div>
+    <div class="ft-head-actions">
+      <dst-scope-bar (scopeChange)="onScope($event)"></dst-scope-bar>
+      @if (tab === 'people') {
+        <button type="button" class="dst-btn is-primary" (click)="create()">
+          <span class="material-symbols-outlined">person_add</span>Add a rep
+        </button>
+      }
+    </div>
+  </div>
+
+  <dst-help key="team"></dst-help>
+
+  @if (error) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">{{ error }}</div>
+      <button type="button" class="dst-icon-btn" (click)="error = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  @if (notice) {
+    <div class="dst-banner tone-success" role="status">
+      <span class="material-symbols-outlined">check_circle</span>
+      <div class="dst-banner-body">{{ notice }}</div>
+      <button type="button" class="dst-icon-btn" (click)="notice = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  <div class="dst-tabs" role="tablist">
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'people'" [class.is-active]="tab === 'people'" (click)="setTab('people')">
+      <span class="material-symbols-outlined">groups</span>People
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'devices'" [class.is-active]="tab === 'devices'" (click)="setTab('devices')">
+      <span class="material-symbols-outlined">phone_android</span>Devices
+      @if (staleDevices > 0) { <span class="dst-seg-count">{{ staleDevices }}</span> }
+    </button>
+  </div>
+
+  <div class="dst-toolbar">
+    <div class="dst-search">
+      <span class="material-symbols-outlined">search</span>
+      <input
+        type="search"
+        [(ngModel)]="search"
+        (ngModelChange)="onSearch()"
+        [placeholder]="tab === 'people' ? 'Name, code or phone' : 'Device name or identifier'"
+        aria-label="Search"
+      />
+    </div>
+
+    @if (tab === 'people') {
+      <select class="dst-filter-select" [(ngModel)]="roleFilter" (ngModelChange)="load()" aria-label="Role">
+        <option value="">Every role</option>
+        @for (o of roleOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+      </select>
+    }
+  </div>
+
+  <!-- ── People ───────────────────────────────────────────────────────── -->
+  @if (tab === 'people') {
+    <div class="dst-card">
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="ft-loading">
+            @for (i of [1,2,3,4,5]; track i) { <div class="dst-skeleton" style="height: 56px"></div> }
+          </div>
+        } @else if (reps.length === 0) {
+          <dst-empty
+            icon="groups"
+            title="No field team yet"
+            text="A rep needs a PIN to log into the field terminal, and a role that decides what they are allowed to do out there."
+            actionLabel="Add a rep"
+            actionIcon="person_add"
+            (action)="create()"
+          ></dst-empty>
+        } @else {
+          <div class="dst-table-wrap">
+            <table class="dst-table ft-table">
+              <thead>
+                <tr>
+                  <th>Rep</th><th>Role</th><th>Territory</th>
+                  <th class="num">Routes</th><th class="num">Outlets</th>
+                  <th class="num">This month</th><th class="num">Coverage</th><th class="num">Strike rate</th>
+                  <th>Today</th><th>Can</th><th class="actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of reps; track trackRep($index, r)) {
+                  <tr [class.is-flagged]="!r.isActive">
+                    <td>
+                      <div class="dst-cell-stack">
+                        <span class="top">{{ r.fullName }}</span>
+                        <span class="sub">
+                          @if (r.code) { <span class="dst-code is-plain">{{ r.code }}</span> · }
+                          {{ r.phone }}
+                          @if (!r.hasPin) { · <span class="ft-nopin">no PIN set</span> }
+                        </span>
+                      </div>
+                    </td>
+                    <td>{{ roleLabels[r.role] }}</td>
+                    <td>{{ r.territoryName || '—' }}</td>
+                    <td class="num">{{ r.routeCount }}</td>
+                    <td class="num">{{ r.outletCount | number }}</td>
+                    <td class="num strong">{{ r.monthToDateSales | number:'1.0-0' }}</td>
+                    <td class="num">{{ r.coveragePercent | number:'1.0-0' }}%</td>
+                    <td class="num">{{ r.strikeRatePercent | number:'1.0-0' }}%</td>
+                    <td>
+                      @if (r.todayStatus != null) {
+                        <dst-status [label]="dayStatusLabels[r.todayStatus]" [tone]="dayStatusTone[r.todayStatus]"></dst-status>
+                      } @else {
+                        <span class="dst-pill tone-neutral">No day</span>
+                      }
+                    </td>
+                    <td>
+                      <div class="ft-permissions">
+                        @if (r.canOnboardOutlets) { <span class="ft-perm" title="Can add new shops">shops</span> }
+                        @if (r.canCollectPayments) { <span class="ft-perm" title="Can collect money">cash</span> }
+                        @if (r.canAcceptReturns) { <span class="ft-perm" title="Can accept returns">returns</span> }
+                        @if (r.cashHoldingLimit > 0) { <span class="ft-perm is-limit">≤{{ r.cashHoldingLimit | number:'1.0-0' }}</span> }
+                      </div>
+                    </td>
+                    <td class="actions">
+                      <button type="button" class="dst-icon-btn" (click)="edit(r)" aria-label="Edit the rep" title="Edit">
+                        <span class="material-symbols-outlined">edit</span>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+
+    <dst-pager [meta]="meta" noun="people" (pageChange)="changePage($event)" (sizeChange)="changeSize($event)"></dst-pager>
+  }
+
+  <!-- ── Devices ──────────────────────────────────────────────────────── -->
+  @if (tab === 'devices') {
+    @if (staleDevices > 0 || queuedRecords > 0) {
+      <div class="dst-banner tone-warning">
+        <span class="material-symbols-outlined">cloud_off</span>
+        <div class="dst-banner-body">
+          @if (staleDevices > 0) {
+            <strong>{{ staleDevices }} devices have not synced in over 12 hours.</strong>
+          }
+          @if (queuedRecords > 0) {
+            {{ queuedRecords }} records are queued on devices and have not reached the server.
+          }
+        </div>
+      </div>
+    }
+
+    <div class="dst-card">
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="ft-loading">
+            @for (i of [1,2,3,4]; track i) { <div class="dst-skeleton" style="height: 56px"></div> }
+          </div>
+        } @else if (devices.length === 0) {
+          <dst-empty icon="phone_android" title="No devices registered" text="A device binds to a rep the first time they log into the field terminal."></dst-empty>
+        } @else {
+          <div class="dst-table-wrap">
+            <table class="dst-table ft-devices">
+              <thead>
+                <tr>
+                  <th>Device</th><th>Rep</th><th>Platform</th><th>App</th>
+                  <th>Last seen</th><th>Last sync</th><th class="num">Queued</th>
+                  <th>State</th><th class="actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (d of devices; track trackDevice($index, d)) {
+                  <tr [class.is-flagged]="d.isBlocked || (d.minutesSinceSync ?? 0) > 1440">
+                    <td>
+                      <div class="dst-cell-stack">
+                        <span class="top">{{ d.deviceName || 'Unnamed device' }}</span>
+                        <span class="sub"><span class="dst-code is-plain">{{ d.deviceIdentifier }}</span></span>
+                      </div>
+                    </td>
+                    <td class="strong">{{ d.fieldRepName || '—' }}</td>
+                    <td>{{ d.platform }} <span class="muted">{{ d.osVersion }}</span></td>
+                    <td class="muted">{{ d.appVersion }}</td>
+                    <td class="nowrap muted">{{ (d.lastSeenAt | date:'d MMM, HH:mm') || 'never' }}</td>
+                    <td><dst-status [label]="syncLabel(d)" [tone]="syncTone(d)"></dst-status></td>
+                    <td class="num">
+                      @if (d.pendingOutboxCount > 0) {
+                        <span class="ft-queued">{{ d.pendingOutboxCount }}</span>
+                      } @else { <span class="muted">—</span> }
+                    </td>
+                    <td>
+                      @if (d.wipedAt) { <span class="dst-pill tone-neutral">Wiped {{ d.wipedAt | date:'d MMM' }}</span> }
+                      @else if (d.wipeRequested) { <span class="dst-pill tone-warning">Wipe pending</span> }
+                      @else if (d.isBlocked) {
+                        <span class="dst-pill tone-danger">Blocked</span>
+                        @if (d.blockReason) { <span class="ft-reason">{{ d.blockReason }}</span> }
+                      }
+                      @else { <span class="dst-pill tone-success">Trusted</span> }
+                    </td>
+                    <td class="actions">
+                      @if (d.isBlocked) {
+                        <button type="button" class="dst-btn is-sm" (click)="block(d, false)" [disabled]="busy">Unblock</button>
+                      } @else {
+                        <button type="button" class="dst-btn is-sm" (click)="block(d, true)" [disabled]="busy">Block</button>
+                      }
+                      @if (!d.wipedAt && !d.wipeRequested) {
+                        <button type="button" class="dst-icon-btn is-danger" (click)="wipeTarget = d" aria-label="Wipe the device" title="Wipe">
+                          <span class="material-symbols-outlined">delete_forever</span>
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>
+
+<!-- ── Rep editor ───────────────────────────────────────────────────────── -->
+@if (showEditor) {
+  <div class="dst-modal-backdrop" (click)="showEditor = false">
+    <div class="dst-modal" role="dialog" aria-modal="true" aria-label="Field rep" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">@if (editing.id) { Edit rep } @else { Add a rep }</div>
+          <div class="dst-modal-sub">
+            The PIN is what they type into the field terminal. The permissions decide what they can
+            do once they are in a shop.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="showEditor = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <fieldset class="dst-fieldset">
+          <legend>Identity</legend>
+          <div class="dst-form-grid">
+            <div class="dst-field is-full">
+              <label for="ft-name">Name <span class="req">*</span></label>
+              <input id="ft-name" type="text" [(ngModel)]="editing.fullName" [class.is-invalid]="!!editorErrors['fullName']" />
+              <dst-field-error [message]="editorErrors['fullName']" for="ft-name"></dst-field-error>
+            </div>
+
+            <div class="dst-field">
+              <label for="ft-role">Role</label>
+              <select id="ft-role" [(ngModel)]="editing.role">
+                @for (o of roleOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+              </select>
+            </div>
+
+            <div class="dst-field">
+              <label for="ft-territory">Territory</label>
+              <select id="ft-territory" [(ngModel)]="editing.territoryId">
+                <option value="">Unassigned</option>
+                @for (t of territories; track t.id) { <option [value]="t.id">{{ t.name }}</option> }
+              </select>
+            </div>
+
+            <div class="dst-field">
+              <label for="ft-phone">Phone</label>
+              <input id="ft-phone" type="tel" [(ngModel)]="editing.phone" [class.is-invalid]="!!editorErrors['phone']" />
+              <dst-field-error [message]="editorErrors['phone']" for="ft-phone"></dst-field-error>
+            </div>
+
+            <div class="dst-field">
+              <label for="ft-email">Email</label>
+              <input id="ft-email" type="email" [(ngModel)]="editing.email" [class.is-invalid]="!!editorErrors['email']" />
+              <dst-field-error [message]="editorErrors['email']" for="ft-email"></dst-field-error>
+            </div>
+
+            <div class="dst-field">
+              <label for="ft-employee">Employee id</label>
+              <input id="ft-employee" type="text" [(ngModel)]="editing.employeeId" />
+            </div>
+
+            <div class="dst-field">
+              <label for="ft-pin">PIN</label>
+              <input id="ft-pin" type="text" inputmode="numeric" maxlength="6" [(ngModel)]="editing.pin" [class.is-invalid]="!!editorErrors['pin']" [placeholder]="editing.hasPin ? 'Set — leave blank to keep' : '4 to 6 digits'" />
+              <dst-field-error [message]="editorErrors['pin']" for="ft-pin"></dst-field-error>
+            </div>
+
+            <div class="dst-field">
+              <label for="ft-joined">Joined</label>
+              <input id="ft-joined" type="date" [(ngModel)]="editing.joinedOn" />
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="dst-fieldset ft-fieldset">
+          <legend>What they can do in the field</legend>
+          <div class="dst-form-grid">
+            <div class="dst-field">
+              <label for="ft-cash">Cash holding limit</label>
+              <input id="ft-cash" type="number" step="0.01" min="0" [(ngModel)]="editing.cashHoldingLimit" [class.is-invalid]="!!editorErrors['cashHoldingLimit']" />
+              <span class="dst-hint">Above this, they are prompted to bank before collecting more.</span>
+              <dst-field-error [message]="editorErrors['cashHoldingLimit']" for="ft-cash"></dst-field-error>
+            </div>
+
+            <div class="dst-field">
+              <label for="ft-discount">Discount authority (%)</label>
+              <input id="ft-discount" type="number" step="0.1" min="0" max="100" [(ngModel)]="editing.discountAuthorityPercent" />
+              <span class="dst-hint">Anything above this sends the order for approval.</span>
+            </div>
+
+            <div class="dst-field is-full">
+              <label class="dst-check">
+                <input type="checkbox" [(ngModel)]="editing.canOnboardOutlets" />
+                <span>
+                  Can add new shops
+                  <span class="dst-check-sub">New shops still land as pending approval.</span>
+                </span>
+              </label>
+              <label class="dst-check">
+                <input type="checkbox" [(ngModel)]="editing.canCollectPayments" />
+                <span>
+                  Can collect money
+                  <span class="dst-check-sub">Turns on the collect action on the field terminal.</span>
+                </span>
+              </label>
+              <label class="dst-check">
+                <input type="checkbox" [(ngModel)]="editing.canAcceptReturns" />
+                <span>
+                  Can accept returns
+                  <span class="dst-check-sub">Usually reserved for van salesmen, who can physically carry them back.</span>
+                </span>
+              </label>
+              <label class="dst-check">
+                <input type="checkbox" [(ngModel)]="editing.isActive" />
+                <span>Active</span>
+              </label>
+            </div>
+          </div>
+        </fieldset>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showEditor = false" [disabled]="busy">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="save()" [disabled]="busy">Save</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Wipe ─────────────────────────────────────────────────────────────── -->
+@if (wipeTarget) {
+  <dst-confirm
+    title="Wipe this device?"
+    [message]="'This clears the app and everything queued on it. ' +
+      (wipeTarget.pendingOutboxCount > 0
+        ? wipeTarget.pendingOutboxCount + ' records have not reached the server yet and will be lost.'
+        : 'Nothing is currently queued.')"
+    confirmLabel="Wipe it"
+    cancelLabel="Keep it"
+    [destructive]="true"
+    (confirm)="confirmWipe()"
+    (cancel)="wipeTarget = null"
+  ></dst-confirm>
+}

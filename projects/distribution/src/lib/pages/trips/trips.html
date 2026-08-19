@@ -1,0 +1,520 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Delivery trips</h2>
+      <p class="subtitle">Vehicle, driver, stops in order, and where each one has got to.</p>
+    </div>
+    <div class="tr-head-actions">
+      <dst-scope-bar [showPeriod]="true" (scopeChange)="onScope($event)"></dst-scope-bar>
+      <button type="button" class="dst-btn is-primary" (click)="openBuild()">
+        <span class="material-symbols-outlined">add_road</span>
+        Build a trip
+      </button>
+    </div>
+  </div>
+
+  <dst-help key="trips"></dst-help>
+
+  @if (error) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">{{ error }}</div>
+      <button type="button" class="dst-icon-btn" (click)="error = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  @if (notice) {
+    <div class="dst-banner tone-success" role="status">
+      <span class="material-symbols-outlined">check_circle</span>
+      <div class="dst-banner-body">{{ notice }}</div>
+      <button type="button" class="dst-icon-btn" (click)="notice = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  <div class="dst-toolbar">
+    <select class="dst-filter-select" [(ngModel)]="statusFilter" (ngModelChange)="load()" aria-label="Trip status">
+      <option value="">All statuses</option>
+      @for (o of statusOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+    </select>
+  </div>
+
+  <div class="dst-split tr-split">
+    <!-- ── Trip list ──────────────────────────────────────────────────── -->
+    <aside class="dst-card tr-list" aria-label="Trips">
+      <div class="dst-card-body is-flush tr-list-body">
+        @if (loading) {
+          <div class="tr-loading">
+            @for (i of [1,2,3,4,5]; track i) { <div class="dst-skeleton" style="height: 82px"></div> }
+          </div>
+        } @else if (rows.length === 0) {
+          <dst-empty
+            icon="local_shipping"
+            title="No trips"
+            text="A trip is built from staged loads. It carries the vehicle, the driver and the stops in the order they will be driven."
+            actionLabel="Build a trip"
+            actionIcon="add_road"
+            (action)="openBuild()"
+          ></dst-empty>
+        } @else {
+          @for (t of rows; track trackTrip($index, t)) {
+            <button type="button" class="tr-item" [class.is-selected]="detail?.id === t.id" (click)="open(t.id)">
+              <div class="tr-item-top">
+                <span class="dst-code">{{ t.tripNumber }}</span>
+                <dst-status [label]="statusLabels[t.status]" [tone]="statusTone[t.status]"></dst-status>
+              </div>
+              <div class="tr-item-meta">
+                {{ t.tripDate | date:'d MMM' }} · {{ t.vehicleRegistration || 'no vehicle' }}
+                @if (t.driverName) { · {{ t.driverName }} }
+              </div>
+              <div class="dst-bar-row">
+                <span class="dst-bar" [class.tone-danger]="t.failedStops > 0" [class.tone-success]="t.progressPercent >= 100 && t.failedStops === 0">
+                  <span class="dst-bar-fill" [style.width.%]="t.progressPercent"></span>
+                </span>
+                <span class="dst-bar-value">{{ t.completedStops }}/{{ t.plannedStops }}</span>
+              </div>
+              <div class="tr-item-foot">
+                <span>{{ t.deliveredValue | number:'1.0-0' }} delivered</span>
+                @if (t.failedStops > 0) { <span class="tr-failed">{{ t.failedStops }} failed</span> }
+              </div>
+            </button>
+          }
+        }
+      </div>
+
+      <dst-pager [meta]="meta" noun="trips" (pageChange)="changePage($event)" (sizeChange)="changeSize($event)"></dst-pager>
+    </aside>
+
+    <!-- ── Trip detail ────────────────────────────────────────────────── -->
+    <section class="tr-detail" aria-label="Trip detail">
+      @if (loadingDetail) {
+        <div class="dst-skeleton" style="height: 420px; border-radius: 16px"></div>
+      } @else if (!detail) {
+        <div class="dst-card">
+          <dst-empty icon="local_shipping" title="Pick a trip" text="Choose a trip on the left to see its stops, expenses and progress."></dst-empty>
+        </div>
+      } @else {
+        <div class="dst-card">
+          <div class="dst-card-head">
+            <div class="dst-card-title">
+              <span class="material-symbols-outlined">local_shipping</span>
+              <div>
+                {{ detail.tripNumber }}
+                <div class="dst-card-sub">
+                  {{ detail.tripDate | date:'EEEE d MMMM' }} ·
+                  {{ detail.vehicleRegistration || 'no vehicle' }} ·
+                  {{ detail.driverName || 'no driver' }}
+                  @if (detail.helperName) { + {{ detail.helperName }} }
+                </div>
+              </div>
+            </div>
+            <div class="dst-card-actions">
+              <dst-status [label]="statusLabels[detail.status]" [tone]="statusTone[detail.status]" [large]="true"></dst-status>
+              @if (canStart) {
+                <button type="button" class="dst-btn is-primary" (click)="showStart = true">
+                  <span class="material-symbols-outlined">play_arrow</span>Start
+                </button>
+              }
+              @if (canEnd) {
+                <button type="button" class="dst-btn is-success" (click)="showEnd = true">
+                  <span class="material-symbols-outlined">flag</span>Close the trip
+                </button>
+              }
+            </div>
+          </div>
+
+          <div class="dst-card-body">
+            <div class="tr-stats">
+              <div class="tr-stat">
+                <span class="tr-stat-label">Stops</span>
+                <span class="tr-stat-value">{{ detail.completedStops }}<small>/{{ detail.plannedStops }}</small></span>
+                <span class="tr-stat-foot">
+                  @if (detail.failedStops > 0) { <strong>{{ detail.failedStops }} failed</strong> }
+                  @else { none failed }
+                </span>
+              </div>
+              <div class="tr-stat">
+                <span class="tr-stat-label">Delivered</span>
+                <span class="tr-stat-value">{{ detail.deliveredValue | number:'1.0-0' }}</span>
+                <span class="tr-stat-foot">of {{ detail.plannedValue | number:'1.0-0' }} planned · fill {{ detail.fillRatePercent | number:'1.0-0' }}%</span>
+              </div>
+              <div class="tr-stat">
+                <span class="tr-stat-label">Collected</span>
+                <span class="tr-stat-value">{{ detail.collectedAmount | number:'1.0-0' }}</span>
+                <span class="tr-stat-foot">returns {{ detail.returnValue | number:'1.0-0' }}</span>
+              </div>
+              <div class="tr-stat">
+                <span class="tr-stat-label">Distance</span>
+                <span class="tr-stat-value">{{ detail.distanceKm | number:'1.0-0' }} km</span>
+                <span class="tr-stat-foot">
+                  planned {{ detail.plannedDistanceKm | number:'1.0-0' }} · fuel {{ detail.fuelIssued | number:'1.1-1' }}
+                </span>
+              </div>
+              <div class="tr-stat">
+                <span class="tr-stat-label">Cost per drop</span>
+                <span class="tr-stat-value">{{ detail.costPerDrop | number:'1.2-2' }}</span>
+                <span class="tr-stat-foot">{{ detail.totalExpense | number:'1.0-0' }} of expenses</span>
+              </div>
+              <div class="tr-stat" [class.is-good]="netSettlement >= 0" [class.is-bad]="netSettlement < 0">
+                <span class="tr-stat-label">Net to settle</span>
+                <span class="tr-stat-value">{{ netSettlement | number:'1.0-0' }}</span>
+                <span class="tr-stat-foot">collected less expenses</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stops -->
+        <div class="dst-card">
+          <div class="dst-card-head">
+            <div class="dst-card-title"><span class="material-symbols-outlined">pin_drop</span>Stops in order</div>
+            <span class="dst-card-sub">On-time {{ detail.onTimePercent | number:'1.0-0' }}%</span>
+          </div>
+
+          <div class="dst-card-body is-flush">
+            @for (s of detail.stops; track trackStop($index, s)) {
+              <div class="tr-stop" [class.is-failed]="s.status === TripStopStatus.Failed" [class.is-late]="s.isLate">
+                <span class="tr-stop-no">{{ s.stopSequence }}</span>
+
+                <div class="tr-stop-body">
+                  <div class="tr-stop-name">
+                    {{ s.outletName || s.destinationName }}
+                    @if (s.orderNumber) { <span class="dst-code is-plain">{{ s.orderNumber }}</span> }
+                    @if (s.attemptNumber > 1) { <span class="dst-pill tone-warning">Attempt {{ s.attemptNumber }}</span> }
+                  </div>
+                  <div class="tr-stop-meta">
+                    @if (s.addressLine) { <span>{{ s.addressLine }}</span> }
+                    @if (s.plannedArrivalAt) { <span>due {{ s.plannedArrivalAt | date:'HH:mm' }}</span> }
+                    @if (s.arrivedAt) { <span>arrived {{ s.arrivedAt | date:'HH:mm' }}</span> }
+                    <span>{{ s.plannedValue | number:'1.0-0' }} planned</span>
+                    @if (s.deliveredValue > 0) { <span>{{ s.deliveredValue | number:'1.0-0' }} delivered</span> }
+                    @if (s.collectedAmount > 0) { <span>{{ s.collectedAmount | number:'1.0-0' }} collected</span> }
+                  </div>
+                  @if (s.failureReasonName) {
+                    <div class="tr-stop-fail">
+                      <span class="material-symbols-outlined">error</span>
+                      {{ s.failureReasonName }}
+                      @if (s.failureNote) { — {{ s.failureNote }} }
+                      @if (s.rescheduledFor) { · rescheduled for {{ s.rescheduledFor | date:'d MMM' }} }
+                    </div>
+                  }
+                </div>
+
+                <div class="tr-stop-right">
+                  <dst-status [label]="stopStatusLabels[s.status]" [tone]="stopStatusTone[s.status]"></dst-status>
+                  @if (detail.status === TripStatus.InProgress && s.status === TripStopStatus.Pending) {
+                    <div class="tr-stop-actions">
+                      <button type="button" class="dst-btn is-sm" (click)="arrive(s)" [disabled]="busy">Arrived</button>
+                      <button type="button" class="dst-btn is-sm is-danger" (click)="startFail(s)" [disabled]="busy">Failed</button>
+                    </div>
+                  }
+                  @if (s.proofOfDeliveryId) {
+                    <a class="dst-btn is-sm is-ghost" routerLink="/distribution/pod" [queryParams]="{ podId: s.proofOfDeliveryId }">POD</a>
+                  }
+                </div>
+              </div>
+            }
+
+            @if (detail.stops.length === 0) {
+              <p class="tr-none">This trip has no stops.</p>
+            }
+          </div>
+        </div>
+
+        <!-- Expenses -->
+        <div class="dst-card">
+          <div class="dst-card-head">
+            <div class="dst-card-title"><span class="material-symbols-outlined">receipt</span>Expenses</div>
+            <button type="button" class="dst-btn is-sm" (click)="showExpense = true">
+              <span class="material-symbols-outlined">add</span>Record an expense
+            </button>
+          </div>
+          <div class="dst-card-body is-flush">
+            @if (detail.expenses.length === 0) {
+              <p class="tr-none">No expenses recorded. Fuel and tolls booked here are what make cost-per-drop real.</p>
+            }
+            @for (e of detail.expenses; track trackExpense($index, e)) {
+              <div class="tr-expense">
+                <div class="dst-cell-stack">
+                  <span class="top">{{ expenseLabels[e.kind] }}</span>
+                  <span class="sub">
+                    {{ e.incurredAt | date:'d MMM, HH:mm' }}
+                    @if (e.reference) { · {{ e.reference }} }
+                    @if (e.note) { · {{ e.note }} }
+                  </span>
+                </div>
+                <div class="tr-expense-right">
+                  <span class="tr-expense-amount">{{ e.amount | number:'1.2-2' }}</span>
+                  @if (e.isApproved) {
+                    <span class="dst-pill tone-success">Approved</span>
+                  } @else if (e.rejectionReason) {
+                    <span class="dst-pill tone-danger">Rejected</span>
+                  } @else {
+                    <button type="button" class="dst-icon-btn" (click)="decideExpense(e, true)" aria-label="Approve the expense" title="Approve">
+                      <span class="material-symbols-outlined">check</span>
+                    </button>
+                    <button type="button" class="dst-icon-btn is-danger" (click)="decideExpense(e, false)" aria-label="Reject the expense" title="Reject">
+                      <span class="material-symbols-outlined">close</span>
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </section>
+  </div>
+</div>
+
+<!-- ── Build a trip ─────────────────────────────────────────────────────── -->
+@if (showBuild) {
+  <div class="dst-modal-backdrop" (click)="showBuild = false">
+    <div class="dst-modal" role="dialog" aria-modal="true" aria-label="Build a trip" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Build a trip</div>
+          <div class="dst-modal-sub">
+            Only vehicles with current compliance are offered — a lapsed permit is found at a
+            roadside check, not in a report.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="showBuild = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-form-grid">
+          <div class="dst-field">
+            <label for="tr-date">Trip date</label>
+            <input id="tr-date" type="date" [(ngModel)]="build.tripDate" />
+          </div>
+          <div class="dst-field">
+            <label for="tr-vehicle">Vehicle</label>
+            <select id="tr-vehicle" [(ngModel)]="build.vehicleId">
+              <option value="">Choose a vehicle</option>
+              @for (v of usableVehicles; track v.id) {
+                <option [value]="v.id">{{ v.registrationNumber }} — {{ v.capacityWeightKg | number }} kg</option>
+              }
+            </select>
+            @if (vehicles.length > usableVehicles.length) {
+              <span class="dst-hint">
+                {{ vehicles.length - usableVehicles.length }} vehicles are hidden because their
+                compliance has expired.
+              </span>
+            }
+          </div>
+          <div class="dst-field">
+            <label for="tr-driver">Driver</label>
+            <select id="tr-driver" [(ngModel)]="build.driverId">
+              <option value="">Choose a driver</option>
+              @for (d of drivers; track d.id) { <option [value]="d.id">{{ d.fullName }}</option> }
+            </select>
+          </div>
+          <div class="dst-field">
+            <label for="tr-helper">Helper</label>
+            <input id="tr-helper" type="text" [(ngModel)]="build.helperName" />
+          </div>
+          <div class="dst-field is-full">
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="build.useRouteSequence" />
+              <span>
+                Sequence stops by the route
+                <span class="dst-check-sub">Uses the beat order the rep already walks rather than the order the orders arrived in.</span>
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <div class="dst-section-label">Orders to load</div>
+        <div class="tr-orders">
+          @for (o of readyOrders; track trackOrder($index, o)) {
+            <label class="tr-order" [class.is-selected]="buildSelection.has(o.id)">
+              <input type="checkbox" [checked]="buildSelection.has(o.id)" (change)="toggleBuild(o.id)" />
+              <span class="tr-order-body">
+                <span class="tr-order-top">
+                  <span class="dst-code">{{ o.orderNumber }}</span>
+                  <span class="tr-order-value">{{ o.totalAmount | number:'1.0-0' }}</span>
+                </span>
+                <span class="tr-order-meta">
+                  {{ o.outletName || o.partnerName }}
+                  @if (o.routeName) { · {{ o.routeName }} }
+                  @if (o.promisedDeliveryDate) { · promised {{ o.promisedDeliveryDate | date:'d MMM' }} }
+                </span>
+              </span>
+            </label>
+          }
+          @if (readyOrders.length === 0) {
+            <p class="tr-none">Nothing is staged and ready to load.</p>
+          }
+        </div>
+      </div>
+
+      <div class="dst-modal-foot">
+        <span class="dst-muted tr-count">{{ buildSelection.size }} orders selected</span>
+        <span class="dst-foot-spacer"></span>
+        <button type="button" class="dst-btn" (click)="showBuild = false" [disabled]="busy">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="createTrip()" [disabled]="busy || buildSelection.size === 0">
+          @if (busy) { Building… } @else { Build the trip }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Start ────────────────────────────────────────────────────────────── -->
+@if (showStart && detail) {
+  <div class="dst-modal-backdrop" (click)="showStart = false">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Start the trip" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Start {{ detail.tripNumber }}</div>
+          <div class="dst-modal-sub">The opening odometer and fuel are what distance and cost-per-drop are measured from.</div>
+        </div>
+        <button type="button" class="dst-close" (click)="showStart = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="dst-modal-body">
+        <div class="dst-form-grid">
+          <div class="dst-field">
+            <label for="tr-odo-out">Odometer out (km)</label>
+            <input id="tr-odo-out" type="number" min="0" [(ngModel)]="start.odometerOutKm" />
+          </div>
+          <div class="dst-field">
+            <label for="tr-fuel">Fuel issued</label>
+            <input id="tr-fuel" type="number" step="0.01" min="0" [(ngModel)]="start.fuelIssued" />
+          </div>
+        </div>
+      </div>
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showStart = false" [disabled]="busy">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="startTrip()" [disabled]="busy">Start the trip</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── End ──────────────────────────────────────────────────────────────── -->
+@if (showEnd && detail) {
+  <div class="dst-modal-backdrop" (click)="showEnd = false">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Close the trip" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Close {{ detail.tripNumber }}</div>
+          <div class="dst-modal-sub">
+            {{ detail.completedStops }} of {{ detail.plannedStops }} stops done.
+            @if (detail.failedStops > 0) { {{ detail.failedStops }} failed and will need rescheduling. }
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="showEnd = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="dst-modal-body">
+        <div class="dst-field">
+          <label for="tr-odo-in">Odometer in (km)</label>
+          <input id="tr-odo-in" type="number" min="0" [(ngModel)]="end.odometerInKm" />
+          <span class="dst-hint">Went out at {{ detail.odometerOutKm | number }} km.</span>
+        </div>
+        <div class="dst-field">
+          <label for="tr-end-note">Note</label>
+          <textarea id="tr-end-note" [(ngModel)]="end.note" placeholder="Anything worth recording about the run"></textarea>
+        </div>
+      </div>
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showEnd = false" [disabled]="busy">Cancel</button>
+        <button type="button" class="dst-btn is-success" (click)="endTrip()" [disabled]="busy">Close the trip</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Fail a stop ──────────────────────────────────────────────────────── -->
+@if (failTarget) {
+  <div class="dst-modal-backdrop" (click)="failTarget = null">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Record a failed stop" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">{{ failTarget.outletName || failTarget.destinationName }} was not delivered</div>
+          <div class="dst-modal-sub">
+            A failure with no reschedule date is a delivery that quietly never happens.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="failTarget = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="dst-modal-body">
+        <div class="dst-field">
+          <label for="tr-fail-reason">Reason <span class="req">*</span></label>
+          <select id="tr-fail-reason" [(ngModel)]="fail.reasonCodeId">
+            <option value="">Pick a reason</option>
+            @for (r of failureReasons; track r.id) { <option [value]="r.id">{{ r.name }}</option> }
+          </select>
+        </div>
+        <div class="dst-field">
+          <label for="tr-fail-reschedule">Reschedule for</label>
+          <input id="tr-fail-reschedule" type="date" [(ngModel)]="fail.rescheduleFor" />
+        </div>
+        <div class="dst-field">
+          <label for="tr-fail-note">Note</label>
+          <input id="tr-fail-note" type="text" [(ngModel)]="fail.note" placeholder="Shop closed, no cash, refused the load" />
+        </div>
+      </div>
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="failTarget = null">Cancel</button>
+        <button type="button" class="dst-btn is-danger" (click)="confirmFail()" [disabled]="!fail.reasonCodeId || busy">
+          Record the failure
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Expense ──────────────────────────────────────────────────────────── -->
+@if (showExpense && detail) {
+  <div class="dst-modal-backdrop" (click)="showExpense = false">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Record an expense" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Expense on {{ detail.tripNumber }}</div>
+          <div class="dst-modal-sub">Expenses here flow into route profitability, not just a fuel total.</div>
+        </div>
+        <button type="button" class="dst-close" (click)="showExpense = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="dst-modal-body">
+        <div class="dst-form-grid">
+          <div class="dst-field">
+            <label for="tr-exp-kind">Kind</label>
+            <select id="tr-exp-kind" [(ngModel)]="expense.kind">
+              @for (o of expenseOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+            </select>
+          </div>
+          <div class="dst-field">
+            <label for="tr-exp-amount">Amount</label>
+            <input id="tr-exp-amount" type="number" step="0.01" min="0" [(ngModel)]="expense.amount" />
+          </div>
+          <div class="dst-field is-full">
+            <label for="tr-exp-ref">Receipt reference</label>
+            <input id="tr-exp-ref" type="text" [(ngModel)]="expense.reference" />
+          </div>
+          <div class="dst-field is-full">
+            <label for="tr-exp-note">Note</label>
+            <input id="tr-exp-note" type="text" [(ngModel)]="expense.note" />
+          </div>
+        </div>
+      </div>
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showExpense = false" [disabled]="busy">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="addExpense()" [disabled]="busy || expense.amount === null">Record</button>
+      </div>
+    </div>
+  </div>
+}

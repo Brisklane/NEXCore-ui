@@ -1,0 +1,574 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Trade schemes</h2>
+      <p class="subtitle">The discounts, free goods and slabs that drive the trade — with budgets.</p>
+    </div>
+    <div class="sc-head-actions">
+      <dst-scope-bar (scopeChange)="onScope($event)"></dst-scope-bar>
+      <button type="button" class="dst-btn is-primary" (click)="create()">
+        <span class="material-symbols-outlined">redeem</span>
+        New scheme
+      </button>
+    </div>
+  </div>
+
+  <dst-help key="schemes"></dst-help>
+
+  @if (error) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">{{ error }}</div>
+      <button type="button" class="dst-icon-btn" (click)="error = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  @if (notice) {
+    <div class="dst-banner tone-success" role="status">
+      <span class="material-symbols-outlined">check_circle</span>
+      <div class="dst-banner-body">{{ notice }}</div>
+      <button type="button" class="dst-icon-btn" (click)="notice = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  <div class="dst-toolbar">
+    <div class="dst-search">
+      <span class="material-symbols-outlined">search</span>
+      <input type="search" [(ngModel)]="search" (ngModelChange)="onSearch()" placeholder="Scheme name or number" aria-label="Search schemes" />
+    </div>
+
+    <select class="dst-filter-select" [(ngModel)]="statusFilter" (ngModelChange)="load()" aria-label="Status">
+      <option value="">All statuses</option>
+      @for (o of statusOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+    </select>
+
+    <select class="dst-filter-select" [(ngModel)]="kindFilter" (ngModelChange)="load()" aria-label="Kind">
+      <option value="">All kinds</option>
+      @for (o of kindOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+    </select>
+  </div>
+
+  <div class="dst-card">
+    <div class="dst-card-body is-flush">
+      @if (loading) {
+        <div class="sc-loading">
+          @for (i of [1,2,3,4,5,6]; track i) { <div class="dst-skeleton" style="height: 60px"></div> }
+        </div>
+      } @else if (rows.length === 0) {
+        <dst-empty
+          icon="redeem"
+          title="No schemes here"
+          text="A scheme is a slab table, the products it applies to and the scope it runs in. Simulate before you launch."
+          actionLabel="New scheme"
+          actionIcon="redeem"
+          (action)="create()"
+        ></dst-empty>
+      } @else {
+        <div class="dst-table-wrap">
+          <table class="dst-table sc-table">
+            <thead>
+              <tr>
+                <th>Scheme</th>
+                <th>Kind</th>
+                <th>Runs</th>
+                <th>Stacking</th>
+                <th class="num">Spend vs budget</th>
+                <th class="num">Outlets</th>
+                <th>Status</th>
+                <th class="actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of rows; track trackRow($index, row)) {
+                <tr>
+                  <td>
+                    <div class="dst-cell-stack">
+                      <span class="top">{{ row.name }}</span>
+                      <span class="sub"><span class="dst-code is-plain">{{ row.schemeNumber }}</span> · settles {{ settlementLabels[row.settlementMode] }}</span>
+                    </div>
+                  </td>
+                  <td>{{ kindLabels[row.kind] }}</td>
+                  <td class="nowrap">
+                    <div class="dst-cell-stack">
+                      <span class="top">{{ row.validFrom | date:'d MMM' }} – {{ row.validTo | date:'d MMM y' }}</span>
+                      @if (row.slabs.length) { <span class="sub">{{ row.slabs.length }} slabs</span> }
+                    </div>
+                  </td>
+                  <td>
+                    <span class="dst-pill tone-neutral">{{ stackingLabels[row.stacking] }}</span>
+                    @if (row.stackingGroup) { <span class="sc-group">{{ row.stackingGroup }}</span> }
+                  </td>
+                  <td class="num">
+                    @if (row.budgetAmount > 0) {
+                      <div class="sc-budget">
+                        <span class="sc-budget-nums">
+                          {{ row.consumedAmount | number:'1.0-0' }} / {{ row.budgetAmount | number:'1.0-0' }}
+                        </span>
+                        <span class="dst-bar" [class]="'dst-bar ' + budgetTone(row)">
+                          <span class="dst-bar-fill" [style.width.%]="row.budgetUsedPercent > 100 ? 100 : row.budgetUsedPercent"></span>
+                        </span>
+                        @if (row.budgetUsedPercent >= 100) {
+                          <span class="sc-exhausted">
+                            @if (row.stopWhenBudgetExhausted) { exhausted — scheme stopped }
+                            @else { over budget }
+                          </span>
+                        }
+                      </div>
+                    } @else {
+                      <span class="muted">no budget set</span>
+                    }
+                  </td>
+                  <td class="num">{{ row.beneficiaryOutletCount | number }}</td>
+                  <td><dst-status [label]="statusLabels[row.status]" [tone]="statusTone[row.status]"></dst-status></td>
+                  <td class="actions">
+                    @if (row.status === SchemeStatus.PendingApproval) {
+                      <button type="button" class="dst-icon-btn" (click)="decide(row, true)" aria-label="Approve" title="Approve">
+                        <span class="material-symbols-outlined">check</span>
+                      </button>
+                      <button type="button" class="dst-icon-btn is-danger" (click)="decide(row, false)" aria-label="Reject" title="Reject">
+                        <span class="material-symbols-outlined">close</span>
+                      </button>
+                    }
+                    @if (row.status === SchemeStatus.Active) {
+                      <button type="button" class="dst-icon-btn" (click)="openPerformance(row)" aria-label="Performance" title="Performance">
+                        <span class="material-symbols-outlined">insights</span>
+                      </button>
+                      <button type="button" class="dst-icon-btn" (click)="startBudget(row)" aria-label="Adjust the budget" title="Budget">
+                        <span class="material-symbols-outlined">account_balance_wallet</span>
+                      </button>
+                      <button type="button" class="dst-icon-btn is-danger" (click)="changeStatus(row, SchemeStatus.Suspended)" aria-label="Suspend" title="Suspend">
+                        <span class="material-symbols-outlined">pause</span>
+                      </button>
+                    }
+                    @if (row.status === SchemeStatus.Approved) {
+                      <button type="button" class="dst-btn is-sm is-success" (click)="changeStatus(row, SchemeStatus.Active)">Activate</button>
+                    }
+                    <button type="button" class="dst-icon-btn" (click)="edit(row)" aria-label="Edit" title="Edit">
+                      <span class="material-symbols-outlined">edit</span>
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  </div>
+
+  <dst-pager [meta]="meta" noun="schemes" (pageChange)="changePage($event)" (sizeChange)="changeSize($event)"></dst-pager>
+</div>
+
+<!-- ── Editor ───────────────────────────────────────────────────────────── -->
+@if (showEditor) {
+  <div class="dst-modal-backdrop" (click)="showEditor = false">
+    <div class="dst-modal is-sheet" role="dialog" aria-modal="true" aria-label="Scheme" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">@if (editing.id) { Edit scheme } @else { New scheme }</div>
+          <div class="dst-modal-sub">
+            Simulate before approving. The estimate replays last period's real orders through these
+            rules — it is not a projection.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="showEditor = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-tabs sc-tabs" role="tablist">
+        <button type="button" role="tab" [attr.aria-selected]="editorTab === 'setup'" [class.is-active]="editorTab === 'setup'" (click)="editorTab = 'setup'">
+          <span class="material-symbols-outlined">tune</span>Setup
+        </button>
+        <button type="button" role="tab" [attr.aria-selected]="editorTab === 'slabs'" [class.is-active]="editorTab === 'slabs'" (click)="editorTab = 'slabs'">
+          <span class="material-symbols-outlined">stairs</span>Slabs
+          @if (editing.slabs.length) { <span class="dst-seg-count">{{ editing.slabs.length }}</span> }
+        </button>
+        <button type="button" role="tab" [attr.aria-selected]="editorTab === 'budget'" [class.is-active]="editorTab === 'budget'" (click)="editorTab = 'budget'">
+          <span class="material-symbols-outlined">savings</span>Budget &amp; simulation
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <!-- Setup -->
+        @if (editorTab === 'setup') {
+          <div class="dst-form-grid">
+            <div class="dst-field is-full">
+              <label for="sc-name">Scheme name <span class="req">*</span></label>
+              <input id="sc-name" type="text" [(ngModel)]="editing.name" [class.is-invalid]="!!editorErrors['name']" placeholder="Buy 10 get 1 — October" />
+              <dst-field-error [message]="editorErrors['name']" for="sc-name"></dst-field-error>
+            </div>
+
+            <div class="dst-field">
+              <label for="sc-kind">Kind</label>
+              <select id="sc-kind" [(ngModel)]="editing.kind">
+                @for (o of kindOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+              </select>
+            </div>
+
+            <div class="dst-field">
+              <label for="sc-settlement">How it settles</label>
+              <select id="sc-settlement" [(ngModel)]="editing.settlementMode">
+                @for (o of settlementOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+              </select>
+              <span class="dst-hint">Deferred settlement raises a claim rather than discounting the invoice.</span>
+            </div>
+
+            <div class="dst-field">
+              <label for="sc-from">Valid from <span class="req">*</span></label>
+              <input id="sc-from" type="date" [(ngModel)]="editing.validFrom" [class.is-invalid]="!!editorErrors['validFrom']" />
+              <dst-field-error [message]="editorErrors['validFrom']" for="sc-from"></dst-field-error>
+            </div>
+
+            <div class="dst-field">
+              <label for="sc-to">Valid to <span class="req">*</span></label>
+              <input id="sc-to" type="date" [(ngModel)]="editing.validTo" [class.is-invalid]="!!editorErrors['validTo']" />
+              <dst-field-error [message]="editorErrors['validTo']" for="sc-to"></dst-field-error>
+            </div>
+
+            <div class="dst-field">
+              <label for="sc-stacking">Stacking</label>
+              <select id="sc-stacking" [(ngModel)]="editing.stacking">
+                @for (o of stackingOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+              </select>
+              <span class="dst-hint">Exclusive only wins when it beats everything else combined.</span>
+            </div>
+
+            <div class="dst-field">
+              <label for="sc-group">Stacking group</label>
+              <input id="sc-group" type="text" [(ngModel)]="editing.stackingGroup" placeholder="Optional — only one scheme per group applies" />
+            </div>
+
+            <div class="dst-field">
+              <label for="sc-priority">Priority</label>
+              <input id="sc-priority" type="number" [(ngModel)]="editing.priority" />
+              <span class="dst-hint">Lower runs first. Ties are broken by scheme number, never by row order.</span>
+            </div>
+
+            <div class="dst-field">
+              <label for="sc-minqty">Minimum quantity</label>
+              <input id="sc-minqty" type="number" min="0" [(ngModel)]="editing.minQuantity" />
+            </div>
+
+            <div class="dst-field">
+              <label for="sc-minval">Minimum value</label>
+              <input id="sc-minval" type="number" min="0" step="0.01" [(ngModel)]="editing.minValue" />
+            </div>
+
+            <div class="dst-field">
+              <label for="sc-cap-order">Cap per order</label>
+              <input id="sc-cap-order" type="number" min="0" step="0.01" [(ngModel)]="editing.maxBenefitPerOrder" />
+              <span class="dst-hint">Zero means no cap.</span>
+            </div>
+
+            <div class="dst-field">
+              <label for="sc-cap-outlet">Cap per outlet</label>
+              <input id="sc-cap-outlet" type="number" min="0" step="0.01" [(ngModel)]="editing.maxBenefitPerOutlet" />
+              <span class="dst-hint">Counted across the whole scheme period, not per order.</span>
+            </div>
+
+            <div class="dst-field is-full">
+              <label class="dst-check">
+                <input type="checkbox" [(ngModel)]="editing.isRecurringPerBlock" />
+                <span>
+                  Repeats per block
+                  <span class="dst-check-sub">A "buy 10 get 1" that gives 3 free on 30, rather than 1.</span>
+                </span>
+              </label>
+              <label class="dst-check">
+                <input type="checkbox" [(ngModel)]="editing.isPeriodScheme" />
+                <span>
+                  Measured over the period
+                  <span class="dst-check-sub">Qualification is total offtake across the scheme window, not one order.</span>
+                </span>
+              </label>
+              <label class="dst-check">
+                <input type="checkbox" [(ngModel)]="editing.requiresPhotoEvidence" />
+                <span>
+                  Needs photo evidence
+                  <span class="dst-check-sub">Display and visibility schemes cannot be claimed without it.</span>
+                </span>
+              </label>
+            </div>
+
+            <div class="dst-field is-full">
+              <label for="sc-terms">Terms and conditions</label>
+              <textarea id="sc-terms" [(ngModel)]="editing.termsAndConditions" placeholder="What the trade is told, word for word"></textarea>
+            </div>
+          </div>
+        }
+
+        <!-- Slabs -->
+        @if (editorTab === 'slabs') {
+          @if (slabProblems.length) {
+            <div class="dst-banner tone-danger">
+              <span class="material-symbols-outlined">rule</span>
+              <div class="dst-banner-body">
+                <strong>These slabs have gaps or overlaps.</strong>
+                <ul class="sc-problems">@for (p of slabProblems; track p) { <li>{{ p }}</li> }</ul>
+              </div>
+            </div>
+          }
+
+          @if (editing.slabs.length === 0) {
+            <div class="dst-empty">
+              <div class="dst-empty-icon"><span class="material-symbols-outlined">stairs</span></div>
+              <div class="dst-empty-title">No slabs yet</div>
+              <p class="dst-empty-text">A slab is a quantity or value band and what it earns. Without one, the scheme applies a flat benefit.</p>
+              <button type="button" class="dst-btn is-primary" (click)="addSlab()">
+                <span class="material-symbols-outlined">add</span>Add the first slab
+              </button>
+            </div>
+          } @else {
+            <div class="dst-table-wrap">
+              <table class="dst-table sc-slabs">
+                <thead>
+                  <tr>
+                    <th>#</th><th class="num">From qty</th><th class="num">To qty</th>
+                    <th class="num">Free qty</th><th class="num">Discount %</th>
+                    <th class="num">Discount amt</th><th class="num">Payout</th><th>Label</th><th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (s of editing.slabs; track trackSlab($index, s)) {
+                    <tr>
+                      <td class="strong">{{ s.slabNumber }}</td>
+                      <td class="num"><input type="number" class="sc-cell" min="0" [(ngModel)]="s.fromQuantity" [attr.aria-label]="'Slab ' + s.slabNumber + ' from quantity'" /></td>
+                      <td class="num"><input type="number" class="sc-cell" min="0" [(ngModel)]="s.toQuantity" placeholder="∞" [attr.aria-label]="'Slab ' + s.slabNumber + ' to quantity'" /></td>
+                      <td class="num"><input type="number" class="sc-cell" min="0" [(ngModel)]="s.freeQuantity" [attr.aria-label]="'Slab ' + s.slabNumber + ' free quantity'" /></td>
+                      <td class="num"><input type="number" class="sc-cell" min="0" step="0.01" [(ngModel)]="s.discountPercent" [attr.aria-label]="'Slab ' + s.slabNumber + ' discount percent'" /></td>
+                      <td class="num"><input type="number" class="sc-cell" min="0" step="0.01" [(ngModel)]="s.discountAmount" [attr.aria-label]="'Slab ' + s.slabNumber + ' discount amount'" /></td>
+                      <td class="num"><input type="number" class="sc-cell" min="0" step="0.01" [(ngModel)]="s.payoutAmount" [attr.aria-label]="'Slab ' + s.slabNumber + ' payout'" /></td>
+                      <td><input type="text" class="sc-cell is-wide" [(ngModel)]="s.label" placeholder="Shown to the trade" [attr.aria-label]="'Slab ' + s.slabNumber + ' label'" /></td>
+                      <td class="actions">
+                        <button type="button" class="dst-icon-btn is-danger" (click)="removeSlab(s)" [attr.aria-label]="'Remove slab ' + s.slabNumber">
+                          <span class="material-symbols-outlined">delete</span>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            <button type="button" class="dst-btn sc-add-slab" (click)="addSlab()">
+              <span class="material-symbols-outlined">add</span>Add a slab
+            </button>
+          }
+        }
+
+        <!-- Budget and simulation -->
+        @if (editorTab === 'budget') {
+          <div class="dst-form-grid">
+            <div class="dst-field">
+              <label for="sc-budget">Budget</label>
+              <input id="sc-budget" type="number" min="0" step="0.01" [(ngModel)]="editing.budgetAmount" [class.is-invalid]="!!editorErrors['budgetAmount']" />
+              <dst-field-error [message]="editorErrors['budgetAmount']" for="sc-budget"></dst-field-error>
+            </div>
+
+            <div class="dst-field">
+              <label class="dst-check">
+                <input type="checkbox" [(ngModel)]="editing.stopWhenBudgetExhausted" />
+                <span>
+                  Stop when the budget runs out
+                  <span class="dst-check-sub">Off means the scheme keeps paying and the overspend shows on the dashboard.</span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div class="sc-sim-head">
+            <div>
+              <div class="dst-section-label">Simulation</div>
+              <p class="sc-sim-blurb">
+                Replays the month before this scheme starts through these rules and reports what it
+                would have cost.
+              </p>
+            </div>
+            <button type="button" class="dst-btn is-primary" (click)="simulate()" [disabled]="simulating">
+              <span class="material-symbols-outlined">science</span>
+              @if (simulating) { Running… } @else { Run simulation }
+            </button>
+          </div>
+
+          @if (simulating) {
+            <div class="dst-skeleton" style="height: 180px"></div>
+          }
+
+          @if (simulation; as sim) {
+            <div class="sc-sim">
+              <div class="dst-stats">
+                <div class="dst-stat tone-brand">
+                  <span class="dst-stat-label">Would have cost</span>
+                  <span class="dst-stat-value">{{ sim.totalEstimatedCost | number:'1.0-0' }}</span>
+                  <span class="dst-stat-foot">{{ sim.costAsPercentOfSales | number:'1.1-1' }}% of qualifying sales</span>
+                </div>
+                <div class="dst-stat tone-cyan">
+                  <span class="dst-stat-label">Qualifying sales</span>
+                  <span class="dst-stat-value">{{ sim.qualifyingSalesValue | number:'1.0-0' }}</span>
+                  <span class="dst-stat-foot">{{ sim.qualifyingOrderCount | number }} orders · {{ sim.qualifyingQuantity | number }} units</span>
+                </div>
+                <div class="dst-stat tone-violet">
+                  <span class="dst-stat-label">Outlets that benefit</span>
+                  <span class="dst-stat-value">{{ sim.beneficiaryOutletCount | number }}</span>
+                  <span class="dst-stat-foot">free goods {{ sim.estimatedFreeGoodsCost | number:'1.0-0' }} · discount {{ sim.estimatedDiscountCost | number:'1.0-0' }}</span>
+                </div>
+                <div class="dst-stat tone-warning">
+                  <span class="dst-stat-label">Suggested budget</span>
+                  <span class="dst-stat-value">{{ sim.suggestedBudget | number:'1.0-0' }}</span>
+                  <span class="dst-stat-foot">
+                    <button type="button" class="dst-btn is-sm" (click)="applySuggestedBudget()">Use this</button>
+                  </span>
+                </div>
+              </div>
+
+              @if (sim.slabBreakdown.length) {
+                <div class="dst-section-label">Where orders would have landed</div>
+                <div class="dst-table-wrap">
+                  <table class="dst-table">
+                    <thead><tr><th>Slab</th><th class="num">Orders</th><th class="num">Qualifying units</th><th class="num">Benefit</th></tr></thead>
+                    <tbody>
+                      @for (b of sim.slabBreakdown; track b.slabNumber) {
+                        <tr>
+                          <td class="strong">{{ b.slabNumber }}. {{ b.label }}</td>
+                          <td class="num">{{ b.orderCount | number }}</td>
+                          <td class="num">{{ b.qualifyingQuantity | number }}</td>
+                          <td class="num strong">{{ b.benefitValue | number:'1.2-2' }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+            </div>
+          }
+        }
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showEditor = false" [disabled]="busy">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="save()" [disabled]="busy">
+          @if (busy) { Saving… } @else { Save as draft }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Performance ──────────────────────────────────────────────────────── -->
+@if (performanceFor) {
+  <div class="dst-modal-backdrop" (click)="performanceFor = null">
+    <div class="dst-modal" role="dialog" aria-modal="true" aria-label="Scheme performance" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">{{ performanceFor.name }}</div>
+          <div class="dst-modal-sub">Uplift is measured against the same length of time immediately before the scheme started.</div>
+        </div>
+        <button type="button" class="dst-close" (click)="performanceFor = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        @if (!performance) {
+          <div class="dst-skeleton" style="height: 200px"></div>
+        } @else {
+          <div class="dst-stats">
+            <div class="dst-stat" [class.tone-success]="performance.upliftPercent > 0" [class.tone-danger]="performance.upliftPercent <= 0">
+              <span class="dst-stat-label">Uplift</span>
+              <span class="dst-stat-value">{{ performance.upliftPercent | number:'1.1-1' }}%</span>
+              <span class="dst-stat-foot">{{ performance.upliftValue | number:'1.0-0' }} above a baseline of {{ performance.baselineSalesValue | number:'1.0-0' }}</span>
+            </div>
+            <div class="dst-stat tone-brand">
+              <span class="dst-stat-label">Redemption</span>
+              <span class="dst-stat-value">{{ performance.redemptionRatePercent | number:'1.0-0' }}%</span>
+              <span class="dst-stat-foot">{{ performance.beneficiaryOutletCount }} of {{ performance.eligibleOutletCount }} eligible outlets</span>
+            </div>
+            <div class="dst-stat tone-warning">
+              <span class="dst-stat-label">Spent</span>
+              <span class="dst-stat-value">{{ performance.consumedAmount | number:'1.0-0' }}</span>
+              <span class="dst-stat-foot">{{ performance.remainingBudget | number:'1.0-0' }} left of {{ performance.budgetAmount | number:'1.0-0' }}</span>
+            </div>
+            <div class="dst-stat tone-violet">
+              <span class="dst-stat-label">Cost per extra unit</span>
+              <span class="dst-stat-value">{{ performance.costPerIncrementalUnit | number:'1.2-2' }}</span>
+              <span class="dst-stat-foot">{{ performance.incrementalQuantity | number }} extra units moved</span>
+            </div>
+          </div>
+
+          @if (performance.byItem.length) {
+            <div class="dst-section-label">By item</div>
+            <div class="dst-table-wrap">
+              <table class="dst-table">
+                <thead><tr><th>Item</th><th class="num">Qualifying</th><th class="num">Baseline</th><th class="num">Uplift</th><th class="num">Benefit</th></tr></thead>
+                <tbody>
+                  @for (i of performance.byItem; track i.itemId) {
+                    <tr>
+                      <td class="strong">{{ i.itemName }}</td>
+                      <td class="num">{{ i.qualifyingQuantity | number }}</td>
+                      <td class="num muted">{{ i.baselineQuantity | number }}</td>
+                      <td class="num" [class.sc-up]="i.upliftPercent > 0" [class.sc-down]="i.upliftPercent < 0">
+                        {{ i.upliftPercent >= 0 ? '+' : '' }}{{ i.upliftPercent | number:'1.0-0' }}%
+                      </td>
+                      <td class="num">{{ i.benefitValue | number:'1.2-2' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        }
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="performanceFor = null">Close</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Budget adjustment ────────────────────────────────────────────────── -->
+@if (budgetTarget) {
+  <div class="dst-modal-backdrop" (click)="budgetTarget = null">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Adjust the budget" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Adjust the budget for {{ budgetTarget.name }}</div>
+          <div class="dst-modal-sub">
+            Currently {{ budgetTarget.consumedAmount | number:'1.0-0' }} spent of
+            {{ budgetTarget.budgetAmount | number:'1.0-0' }}. A positive number adds to the budget.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="budgetTarget = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-field">
+          <label for="sc-budget-amt">Change by <span class="req">*</span></label>
+          <input id="sc-budget-amt" type="number" step="0.01" [(ngModel)]="budgetAmount" />
+        </div>
+        <div class="dst-field">
+          <label for="sc-budget-reason">Reason <span class="req">*</span></label>
+          <textarea id="sc-budget-reason" [(ngModel)]="budgetReason" placeholder="Who approved this and why"></textarea>
+          <span class="dst-hint">Budget changes are on the record. A scheme that quietly doubled is a question at year end.</span>
+        </div>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="budgetTarget = null">Cancel</button>
+        <button
+          type="button"
+          class="dst-btn is-primary"
+          (click)="confirmBudget()"
+          [disabled]="budgetAmount === null || !budgetReason.trim()"
+        >Apply</button>
+      </div>
+    </div>
+  </div>
+}

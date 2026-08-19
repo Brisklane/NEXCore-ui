@@ -168,6 +168,18 @@ export const APP_REGISTRY: AppDefinition[] = [
     sidebarLabel: 'Restaurant',
   },
 
+  {
+    key: 'distribution',
+    name: 'Distribution',
+    tagline: 'Field force, van sales, trade schemes and route settlement',
+    icon: 'local_shipping',
+    accent: 'linear-gradient(135deg, #34d399, #0d9488)',
+    status: 'available',
+    prefixes: ['/distribution'],
+    home: '/distribution/dashboard',
+    sidebarLabel: 'Distribution',
+  },
+
   // ── Not built yet ────────────────────────────────────────────────────────────
   {
     key: 'ecommerce',

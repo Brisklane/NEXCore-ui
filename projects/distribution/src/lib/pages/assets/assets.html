@@ -1,0 +1,322 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Trade assets</h2>
+      <p class="subtitle">Coolers, freezers, racks and branded units you own but do not hold.</p>
+    </div>
+    <div class="as-head-actions">
+      <dst-scope-bar (scopeChange)="onScope($event)"></dst-scope-bar>
+      <button type="button" class="dst-btn is-primary" (click)="create()">
+        <span class="material-symbols-outlined">add</span>
+        Place an asset
+      </button>
+    </div>
+  </div>
+
+  <dst-help key="assets"></dst-help>
+
+  @if (error) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">{{ error }}</div>
+      <button type="button" class="dst-icon-btn" (click)="error = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  @if (notice) {
+    <div class="dst-banner tone-success" role="status">
+      <span class="material-symbols-outlined">check_circle</span>
+      <div class="dst-banner-body">{{ notice }}</div>
+      <button type="button" class="dst-icon-btn" (click)="notice = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  <div class="dst-stats">
+    <div class="dst-stat tone-brand">
+      <span class="dst-stat-label">Assets placed</span>
+      <span class="dst-stat-value">{{ rows.length | number }}</span>
+      <span class="dst-stat-foot">{{ totalValue | number:'1.0-0' }} of book value in the trade</span>
+    </div>
+    <div class="dst-stat" [class.tone-danger]="staleCount > 0" [class.tone-success]="staleCount === 0">
+      <span class="dst-stat-label">Not seen in 6 months</span>
+      <span class="dst-stat-value">{{ staleCount | number }}</span>
+      <span class="dst-stat-foot">
+        @if (staleCount > 0) { the usual way a cooler quietly disappears }
+        @else { every asset physically verified this half }
+      </span>
+    </div>
+    <div class="dst-stat" [class.tone-warning]="faultyCount > 0" [class.tone-neutral]="faultyCount === 0">
+      <span class="dst-stat-label">Faulty or missing</span>
+      <span class="dst-stat-value">{{ faultyCount | number }}</span>
+      <span class="dst-stat-foot">needing repair, service or recovery</span>
+    </div>
+    <div class="dst-stat tone-violet">
+      <span class="dst-stat-label">Deposits held</span>
+      <span class="dst-stat-value">{{ depositHeld | number:'1.0-0' }}</span>
+      <span class="dst-stat-foot">against the assets in the trade</span>
+    </div>
+  </div>
+
+  <div class="dst-toolbar">
+    <div class="dst-search">
+      <span class="material-symbols-outlined">search</span>
+      <input type="search" [(ngModel)]="search" (ngModelChange)="onSearch()" placeholder="Asset tag, serial or shop" aria-label="Search assets" />
+    </div>
+
+    <select class="dst-filter-select" [(ngModel)]="kindFilter" (ngModelChange)="load()" aria-label="Asset kind">
+      <option value="">Every kind</option>
+      @for (o of kindOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+    </select>
+
+    <select class="dst-filter-select" [(ngModel)]="conditionFilter" (ngModelChange)="load()" aria-label="Condition">
+      <option value="">Any condition</option>
+      @for (o of conditionOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+    </select>
+
+    <span class="dst-spacer"></span>
+
+    <label class="dst-check as-quick">
+      <input type="checkbox" [(ngModel)]="staleOnly" (ngModelChange)="load()" />
+      Overdue verification only
+    </label>
+  </div>
+
+  <div class="dst-card">
+    <div class="dst-card-body is-flush">
+      @if (loading) {
+        <div class="as-loading">
+          @for (i of [1,2,3,4,5,6]; track i) { <div class="dst-skeleton" style="height: 52px"></div> }
+        </div>
+      } @else if (rows.length === 0) {
+        <dst-empty
+          icon="kitchen"
+          title="No assets match"
+          text="Every cooler, rack and branded unit placed in the trade belongs here with a serial and a verification history."
+          actionLabel="Place an asset"
+          actionIcon="add"
+          (action)="create()"
+        ></dst-empty>
+      } @else {
+        <div class="dst-table-wrap">
+          <table class="dst-table as-table">
+            <thead>
+              <tr>
+                <th>Asset</th><th>Where</th><th>Serial</th><th>Placed</th>
+                <th>Condition</th><th>Last verified</th><th>Service</th>
+                <th class="num">Value</th><th class="num">Deposit</th><th class="actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (a of rows; track trackAsset($index, a)) {
+                <tr [class.is-flagged]="isStale(a)">
+                  <td>
+                    <div class="dst-cell-stack">
+                      <span class="top">{{ kindLabels[a.kind] }}</span>
+                      <span class="sub">{{ a.manufacturer }} {{ a.model }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    @if (a.outletId) {
+                      <a [routerLink]="['/distribution/outlets', a.outletId]">{{ a.outletName }}</a>
+                    } @else { <span class="muted">unassigned</span> }
+                  </td>
+                  <td>
+                    <div class="dst-cell-stack">
+                      <span class="dst-code is-plain">{{ a.assetTag }}</span>
+                      @if (a.serialNumber) { <span class="sub">{{ a.serialNumber }}</span> }
+                    </div>
+                  </td>
+                  <td class="nowrap muted">{{ a.placedOn | date:'MMM y' }}</td>
+                  <td><dst-status [label]="conditionLabels[a.condition]" [tone]="conditionTone[a.condition]"></dst-status></td>
+                  <td class="nowrap">
+                    @if (a.lastVerifiedAt) {
+                      <span [class.as-stale]="isStale(a)">
+                        {{ a.lastVerifiedAt | date:'d MMM y' }}
+                        <small>({{ a.daysSinceVerified }}d)</small>
+                      </span>
+                    } @else {
+                      <span class="as-stale">never</span>
+                    }
+                  </td>
+                  <td class="nowrap">
+                    @if (a.serviceDueOn) {
+                      <span [class.as-stale]="serviceDue(a)">{{ a.serviceDueOn | date:'d MMM y' }}</span>
+                    } @else { <span class="muted">—</span> }
+                  </td>
+                  <td class="num">{{ a.assetValue | number:'1.0-0' }}</td>
+                  <td class="num muted">{{ a.depositTaken | number:'1.0-0' }}</td>
+                  <td class="actions">
+                    <button type="button" class="dst-btn is-sm" (click)="startVerify(a)">Verify</button>
+                    <button type="button" class="dst-icon-btn" (click)="edit(a)" aria-label="Edit the asset" title="Edit">
+                      <span class="material-symbols-outlined">edit</span>
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+<!-- ── Editor ───────────────────────────────────────────────────────────── -->
+@if (showEditor) {
+  <div class="dst-modal-backdrop" (click)="showEditor = false">
+    <div class="dst-modal" role="dialog" aria-modal="true" aria-label="Asset" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">@if (editing.id) { Edit asset } @else { Place an asset }</div>
+          <div class="dst-modal-sub">
+            The asset tag is how it gets found again. A unit with no tag is a unit nobody can verify.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="showEditor = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-form-grid">
+          <div class="dst-field is-full">
+            <label for="as-outlet">Outlet <span class="req">*</span></label>
+            <input
+              id="as-outlet"
+              type="search"
+              [(ngModel)]="outletSearch"
+              (ngModelChange)="searchOutlets()"
+              placeholder="Search for the shop"
+              [class.is-invalid]="!!editorErrors['outletId']"
+            />
+            @if (outletOptions.length) {
+              <div class="as-outlet-results">
+                @for (o of outletOptions; track o.id) {
+                  <button type="button" class="as-outlet" (click)="pickOutlet(o)">
+                    <span>{{ o.name }}</span>
+                    <span class="as-outlet-meta">{{ o.code }} · {{ o.area }}</span>
+                  </button>
+                }
+              </div>
+            }
+            <dst-field-error [message]="editorErrors['outletId']" for="as-outlet"></dst-field-error>
+          </div>
+
+          <div class="dst-field">
+            <label for="as-kind">Kind</label>
+            <select id="as-kind" [(ngModel)]="editing.kind">
+              @for (o of kindOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+            </select>
+          </div>
+
+          <div class="dst-field">
+            <label for="as-tag">Asset tag <span class="req">*</span></label>
+            <input id="as-tag" type="text" [(ngModel)]="editing.assetTag" [class.is-invalid]="!!editorErrors['assetTag']" />
+            <dst-field-error [message]="editorErrors['assetTag']" for="as-tag"></dst-field-error>
+          </div>
+
+          <div class="dst-field">
+            <label for="as-serial">Serial number</label>
+            <input id="as-serial" type="text" [(ngModel)]="editing.serialNumber" />
+          </div>
+
+          <div class="dst-field">
+            <label for="as-manufacturer">Manufacturer</label>
+            <input id="as-manufacturer" type="text" [(ngModel)]="editing.manufacturer" />
+          </div>
+
+          <div class="dst-field">
+            <label for="as-model">Model</label>
+            <input id="as-model" type="text" [(ngModel)]="editing.model" />
+          </div>
+
+          <div class="dst-field">
+            <label for="as-placed">Placed on</label>
+            <input id="as-placed" type="date" [(ngModel)]="editing.placedOn" />
+          </div>
+
+          <div class="dst-field">
+            <label for="as-value">Book value</label>
+            <input id="as-value" type="number" step="0.01" min="0" [(ngModel)]="editing.assetValue" [class.is-invalid]="!!editorErrors['assetValue']" />
+            <dst-field-error [message]="editorErrors['assetValue']" for="as-value"></dst-field-error>
+          </div>
+
+          <div class="dst-field">
+            <label for="as-deposit">Deposit taken</label>
+            <input id="as-deposit" type="number" step="0.01" min="0" [(ngModel)]="editing.depositTaken" />
+          </div>
+
+          <div class="dst-field">
+            <label for="as-condition">Condition</label>
+            <select id="as-condition" [(ngModel)]="editing.condition">
+              @for (o of conditionOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+            </select>
+          </div>
+
+          <div class="dst-field">
+            <label for="as-service">Service due</label>
+            <input id="as-service" type="date" [(ngModel)]="editing.serviceDueOn" />
+          </div>
+
+          <div class="dst-field is-full">
+            <label for="as-note">Note</label>
+            <textarea id="as-note" [(ngModel)]="editing.note"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showEditor = false" [disabled]="busy">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="save()" [disabled]="busy">
+          @if (busy) { Saving… } @else { Save }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Verify ───────────────────────────────────────────────────────────── -->
+@if (verifyTarget) {
+  <div class="dst-modal-backdrop" (click)="verifyTarget = null">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Verify the asset" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Verify {{ kindLabels[verifyTarget.kind] }} {{ verifyTarget.assetTag }}</div>
+          <div class="dst-modal-sub">
+            At {{ verifyTarget.outletName }}.
+            @if (verifyTarget.lastVerifiedAt) {
+              Last seen {{ verifyTarget.lastVerifiedAt | date:'d MMM y' }} ({{ verifyTarget.daysSinceVerified }} days ago).
+            } @else {
+              This asset has never been physically verified.
+            }
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="verifyTarget = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-field">
+          <label for="as-verify-condition">Condition as found</label>
+          <select id="as-verify-condition" [(ngModel)]="verify.condition">
+            @for (o of conditionOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+          </select>
+        </div>
+        <div class="dst-field">
+          <label for="as-verify-note">Note</label>
+          <textarea id="as-verify-note" [(ngModel)]="verify.note" placeholder="Anything worth recording — a broken door, a moved position"></textarea>
+        </div>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="verifyTarget = null" [disabled]="busy">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="confirmVerify()" [disabled]="busy">Record the verification</button>
+      </div>
+    </div>
+  </div>
+}

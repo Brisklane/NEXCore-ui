@@ -1,0 +1,171 @@
+/* Journey plan — a calendar, because "who covers Thursday" is a spatial question. */
+
+.jp-month { display: flex; align-items: center; gap: 4px; }
+
+.jp-month-label {
+  min-width: 150px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 750;
+  color: var(--text-heading, #0f172a);
+}
+
+.jp-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 1080px) {
+  .jp-layout { grid-template-columns: 1fr; }
+}
+
+.jp-side { display: flex; flex-direction: column; gap: 16px; }
+
+.jp-legend { display: flex; gap: 13px; flex-wrap: wrap; font-size: 11.5px; color: var(--text-muted, #94a3b8); }
+.jp-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.jp-legend .k-planned { background: var(--accent-soft, rgba(43,127,255,.28)); }
+.jp-legend .k-done { background: var(--success, #16a34a); }
+.jp-legend .k-skipped { background: var(--danger-soft, #fecaca); }
+.jp-legend .k-reassigned { background: var(--violet-soft, #ddd6fe); }
+
+/* ── Grid ──────────────────────────────────────────────────────────── */
+.jp-weekdays,
+.jp-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.jp-weekdays {
+  margin-bottom: 7px;
+  font-size: 10.5px;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted, #94a3b8);
+  text-align: center;
+}
+
+.jp-cell {
+  min-height: 88px;
+  padding: 8px 9px;
+  border-radius: 11px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-surface, #fff);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  overflow: hidden;
+}
+
+.jp-cell:hover { border-color: var(--accent, #2b7fff); }
+.jp-cell:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.jp-cell.is-pad { background: transparent; border: none; cursor: default; }
+
+.jp-cell-date {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.jp-cell-route {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--text-primary, #1e293b);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jp-cell-route .material-symbols-outlined { font-size: 14px; flex-shrink: 0; }
+.jp-cell-route.is-empty { color: var(--text-muted, #94a3b8); font-weight: 500; font-style: italic; }
+.jp-cell-nums { font-size: 10.5px; color: var(--text-muted, #94a3b8); line-height: 1.35; }
+
+/* Status is carried by a left bar and by the words in the cell, never by fill alone. */
+.jp-cell.is-planned { border-left: 3px solid var(--accent, #2b7fff); }
+.jp-cell.is-live { border-left: 3px solid var(--warning, #f59e0b); background: var(--warning-soft, #fef3c7); }
+.jp-cell.is-done { border-left: 3px solid var(--success, #16a34a); background: color-mix(in srgb, var(--success, #16a34a) 7%, transparent); }
+.jp-cell.is-skipped { border-left: 3px solid var(--danger, #ef4444); background: var(--danger-soft, #fef2f2); }
+.jp-cell.is-reassigned { border-left: 3px solid var(--brand-violet, #7c5cff); background: var(--violet-soft, #ede9fe); }
+
+/* ── Coverage list ─────────────────────────────────────────────────── */
+.jp-coverage {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-light, #eef1f5);
+}
+
+.jp-coverage:last-child { border-bottom: none; }
+.jp-coverage.is-zero { background: var(--danger-soft, #fef2f2); }
+
+.jp-coverage-name {
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--text-heading, #0f172a);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jp-coverage-days { font-size: 12px; font-weight: 750; color: var(--text-secondary, #64748b); white-space: nowrap; }
+.jp-bad { color: var(--danger-text, #b91c1c); }
+
+/* ── Generator ─────────────────────────────────────────────────────── */
+.jp-route-picker { display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow-y: auto; }
+
+.jp-route-option {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 13px;
+  border-radius: 11px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-surface, #fff);
+  cursor: pointer;
+  min-height: 50px;
+}
+
+.jp-route-option:hover { border-color: var(--accent, #2b7fff); }
+.jp-route-option input { width: 17px; height: 17px; accent-color: var(--accent, #2b7fff); cursor: pointer; }
+.jp-route-name { display: block; font-size: 13px; font-weight: 650; color: var(--text-heading, #0f172a); }
+.jp-route-meta { display: block; font-size: 11.5px; color: var(--text-muted, #94a3b8); }
+
+.jp-days { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.jp-day {
+  min-width: 46px;
+  min-height: 40px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-surface, #fff);
+  color: var(--text-secondary, #64748b);
+  font-size: 12.5px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.jp-day.is-off {
+  background: var(--danger-soft, #fef2f2);
+  border-color: var(--danger-border, #fecaca);
+  color: var(--danger-text, #b91c1c);
+}
+
+.jp-day:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.jp-hint { display: block; margin-top: 7px; }
+.jp-overwrite { margin-top: 14px; }
+.jp-none { padding: 24px 16px; text-align: center; font-size: 12.5px; color: var(--text-muted, #94a3b8); margin: 0; }

@@ -1,0 +1,316 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Distribution</h2>
+      <p class="subtitle">Today's trade, this month's pace, and what needs you now.</p>
+    </div>
+    <dst-scope-bar (scopeChange)="onScope($event)"></dst-scope-bar>
+  </div>
+
+  <dst-help key="dashboard"></dst-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  @if (loading && !data) {
+    <div class="dst-stats">
+      @for (i of [1,2,3,4,5,6]; track i) { <div class="dst-stat dst-skeleton" style="height: 94px"></div> }
+    </div>
+    <div class="dst-skeleton" style="height: 280px; border-radius: 16px"></div>
+  }
+
+  @if (data; as d) {
+    <!-- ── Today ─────────────────────────────────────────────────────────── -->
+    <section aria-label="Today">
+      <header class="dash-band-head">
+        <span class="dst-live-dot" aria-hidden="true"></span>
+        <h3>Today</h3>
+        <span class="dash-band-time">as at {{ d.asOf | date:'HH:mm' }}</span>
+      </header>
+
+      <div class="dst-stats">
+        <button type="button" class="dst-stat tone-brand" (click)="go('/distribution/orders')">
+          <span class="dst-stat-label">Sales today</span>
+          <span class="dst-stat-value">{{ d.todaySales | number:'1.0-0' }} <small>{{ d.currencyCode }}</small></span>
+          <span class="dst-stat-foot">{{ d.todayOrders | number }} orders · {{ d.openOrderValue | number:'1.0-0' }} still open</span>
+        </button>
+
+        <button type="button" class="dst-stat tone-cyan" (click)="go('/distribution/credit')">
+          <span class="dst-stat-label">Collected today</span>
+          <span class="dst-stat-value">{{ d.todayCollections | number:'1.0-0' }} <small>{{ d.currencyCode }}</small></span>
+          <span class="dst-stat-foot">
+            @if (d.undepositedCash > 0) { <strong>{{ d.undepositedCash | number:'1.0-0' }}</strong> not yet banked }
+            @else { all banked }
+          </span>
+        </button>
+
+        <button type="button" class="dst-stat tone-violet" (click)="go('/distribution/terminal')">
+          <span class="dst-stat-label">Calls made</span>
+          <span class="dst-stat-value">{{ d.todayVisits | number }}</span>
+          <span class="dst-stat-foot">{{ d.todayProductiveVisits | number }} productive · strike rate {{ d.todayStrikeRatePercent | number:'1.0-0' }}%</span>
+        </button>
+
+        <button
+          type="button"
+          class="dst-stat"
+          [class.tone-danger]="d.repsNotStarted > 0"
+          [class.tone-success]="d.repsNotStarted === 0"
+          (click)="go('/distribution/team')"
+        >
+          <span class="dst-stat-label">Reps out</span>
+          <span class="dst-stat-value">{{ d.repsStartedToday }}<small>/{{ d.activeFieldReps }}</small></span>
+          <span class="dst-stat-foot">
+            @if (d.repsNotStarted > 0) { <strong>{{ d.repsNotStarted }}</strong> have not started the day }
+            @else { everybody is on the road }
+          </span>
+        </button>
+
+        <button
+          type="button"
+          class="dst-stat"
+          [class.tone-warning]="d.ordersAwaitingDispatch > 0"
+          [class.tone-neutral]="d.ordersAwaitingDispatch === 0"
+          (click)="go('/distribution/dispatch')"
+        >
+          <span class="dst-stat-label">Awaiting dispatch</span>
+          <span class="dst-stat-value">{{ d.ordersAwaitingDispatch | number }}</span>
+          <span class="dst-stat-foot">{{ d.tripsInProgress | number }} trips on the road</span>
+        </button>
+
+        <button
+          type="button"
+          class="dst-stat"
+          [class.tone-danger]="d.unsettledRoutes > 0"
+          [class.tone-success]="d.unsettledRoutes === 0"
+          (click)="go('/distribution/settlement')"
+        >
+          <span class="dst-stat-label">Unsettled routes</span>
+          <span class="dst-stat-value">{{ d.unsettledRoutes | number }}</span>
+          <span class="dst-stat-foot">
+            @if (d.unsettledRoutes > 0) { cash and stock still unreconciled }
+            @else { every day closed }
+          </span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ── This month ────────────────────────────────────────────────────── -->
+    <div class="dash-grid">
+      <section class="dst-card dash-month" aria-label="This month">
+        <div class="dst-card-head">
+          <div class="dst-card-title">
+            <span class="material-symbols-outlined">trending_up</span>
+            This month
+          </div>
+          <span class="dst-pill" [class]="'dst-pill ' + paceTone">{{ paceLabel }}</span>
+        </div>
+
+        <div class="dst-card-body">
+          <div class="dash-month-top">
+            <div>
+              <div class="dash-big">{{ d.monthToDateSales | number:'1.0-0' }} <small>{{ d.currencyCode }}</small></div>
+              <div class="dash-big-sub">
+                against a target of {{ d.monthTarget | number:'1.0-0' }} ·
+                projected {{ d.monthProjectedSales | number:'1.0-0' }}
+              </div>
+            </div>
+            <div class="dash-growth" [class.is-up]="d.growthPercent >= 0" [class.is-down]="d.growthPercent < 0">
+              <span class="material-symbols-outlined">{{ d.growthPercent >= 0 ? 'north_east' : 'south_east' }}</span>
+              {{ d.growthPercent | number:'1.1-1' }}%
+              <small>vs last month ({{ d.lastMonthSales | number:'1.0-0' }})</small>
+            </div>
+          </div>
+
+          <div class="dash-target">
+            <div class="dash-target-bar">
+              <div
+                class="dash-target-fill"
+                [class]="'dash-target-fill ' + paceTone"
+                [style.width.%]="d.monthAchievementPercent > 100 ? 100 : d.monthAchievementPercent"
+              ></div>
+              <div class="dash-target-pace" [style.left.%]="monthElapsedPercent" [attr.aria-label]="'Month is ' + monthElapsedPercent + '% elapsed'"></div>
+            </div>
+            <div class="dash-target-legend">
+              <span>{{ d.monthAchievementPercent | number:'1.0-0' }}% of target</span>
+              <span class="dst-muted">{{ monthElapsedPercent }}% of the month gone</span>
+            </div>
+          </div>
+
+          @if (d.salesTrend.length) {
+            <div class="dash-chart" role="img" aria-label="Daily sales this period against the previous period">
+              @for (p of d.salesTrend; track trackBucket($index, p)) {
+                <div class="dash-chart-col" [attr.title]="p.label + ': ' + (p.value | number:'1.0-0')">
+                  <div class="dash-chart-stack">
+                    <div class="dash-chart-cmp" [style.height.%]="comparisonHeight(p)"></div>
+                    <div class="dash-chart-bar" [style.height.%]="barHeight(p)"></div>
+                  </div>
+                  <span class="dash-chart-label">{{ p.label }}</span>
+                </div>
+              }
+            </div>
+            <div class="dash-chart-key">
+              <span><i class="k-bar"></i> this period</span>
+              <span><i class="k-cmp"></i> previous</span>
+            </div>
+          }
+        </div>
+      </section>
+
+      <!-- ── Exceptions ──────────────────────────────────────────────────── -->
+      <section class="dst-card dash-exceptions" aria-label="Needs attention">
+        <div class="dst-card-head">
+          <div class="dst-card-title">
+            <span class="material-symbols-outlined">priority_high</span>
+            Needs attention
+          </div>
+          <button type="button" class="dst-btn is-sm is-ghost" (click)="go('/distribution/reports')">
+            See all
+            <span class="material-symbols-outlined">arrow_forward</span>
+          </button>
+        </div>
+
+        <div class="dst-card-body is-flush">
+          @if (d.exceptions.length === 0) {
+            <div class="dst-empty">
+              <div class="dst-empty-icon"><span class="material-symbols-outlined">task_alt</span></div>
+              <div class="dst-empty-title">Nothing is waiting</div>
+              <p class="dst-empty-text">No unsettled routes, breached credit, overdue claims or expiring stock in this territory.</p>
+            </div>
+          } @else {
+            @for (row of d.exceptions; track trackException($index, row)) {
+              <button type="button" class="dst-exception" [class]="'dst-exception ' + severityClass(row.severity)" (click)="openException(row)">
+                <span class="dst-exception-icon">
+                  <span class="material-symbols-outlined">{{ exceptionIcons[row.kind] || 'warning' }}</span>
+                </span>
+                <span class="dst-exception-body">
+                  <span class="dst-exception-title">{{ row.title }}</span>
+                  <span class="dst-exception-meta">
+                    {{ row.detail }}
+                    @if (row.amount) { · {{ row.amount | number:'1.0-0' }} {{ d.currencyCode }} }
+                  </span>
+                </span>
+                @if (row.ageingDays) {
+                  <span class="dst-exception-age">{{ row.ageingDays }}d</span>
+                }
+                <span class="material-symbols-outlined dash-chevron">chevron_right</span>
+              </button>
+            }
+          }
+        </div>
+      </section>
+    </div>
+
+    <!-- ── Coverage, money, stock ────────────────────────────────────────── -->
+    <div class="dst-stats dash-second">
+      <div class="dst-stat tone-violet">
+        <span class="dst-stat-label">Coverage</span>
+        <span class="dst-stat-value">{{ d.coveragePercent | number:'1.0-0' }}%</span>
+        <span class="dst-stat-foot">{{ d.activeOutlets | number }} of {{ d.totalOutlets | number }} outlets billed · {{ d.newOutletsThisMonth }} new</span>
+      </div>
+
+      <div class="dst-stat tone-brand">
+        <span class="dst-stat-label">Fill rate</span>
+        <span class="dst-stat-value">{{ d.fillRatePercent | number:'1.0-0' }}%</span>
+        <span class="dst-stat-foot">on-time delivery {{ d.onTimeDeliveryPercent | number:'1.0-0' }}%</span>
+      </div>
+
+      <div class="dst-stat" [class.tone-danger]="d.overdue > 0" [class.tone-success]="d.overdue === 0">
+        <span class="dst-stat-label">Receivables</span>
+        <span class="dst-stat-value">{{ d.receivables | number:'1.0-0' }}</span>
+        <span class="dst-stat-foot">
+          @if (d.overdue > 0) { <strong>{{ d.overdue | number:'1.0-0' }}</strong> overdue }
+          @else { none overdue }
+          · efficiency {{ d.collectionEfficiencyPercent | number:'1.0-0' }}%
+        </span>
+      </div>
+
+      <div class="dst-stat tone-warning">
+        <span class="dst-stat-label">Scheme spend</span>
+        <span class="dst-stat-value">{{ d.schemeSpendMonthToDate | number:'1.0-0' }}</span>
+        <span class="dst-stat-foot">{{ d.schemeBudgetRemaining | number:'1.0-0' }} budget left</span>
+      </div>
+
+      <div class="dst-stat" [class.tone-danger]="d.claimsBreachingSla > 0" [class.tone-neutral]="d.claimsBreachingSla === 0">
+        <span class="dst-stat-label">Open claims</span>
+        <span class="dst-stat-value">{{ d.openClaims | number }}</span>
+        <span class="dst-stat-foot">
+          {{ d.openClaimValue | number:'1.0-0' }} {{ d.currencyCode }}
+          @if (d.claimsBreachingSla > 0) { · <strong>{{ d.claimsBreachingSla }}</strong> past SLA }
+        </span>
+      </div>
+
+      <div class="dst-stat tone-cyan">
+        <span class="dst-stat-label">Channel stock</span>
+        <span class="dst-stat-value">{{ d.channelStockValue | number:'1.0-0' }}</span>
+        <span class="dst-stat-foot">
+          sell-through {{ d.sellThroughPercent | number:'1.0-0' }}%
+          @if (d.nearExpiryValue > 0) { · <strong>{{ d.nearExpiryValue | number:'1.0-0' }}</strong> near expiry }
+        </span>
+      </div>
+    </div>
+
+    <!-- ── Leaderboards ──────────────────────────────────────────────────── -->
+    <div class="dst-grid cols-3 dash-boards">
+      <section class="dst-card">
+        <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">map</span>Top territories</div></div>
+        <div class="dst-card-body is-flush">
+          @if (d.topTerritories.length === 0) {
+            <p class="dash-none">No sales recorded in this period.</p>
+          }
+          @for (row of d.topTerritories; track trackRank($index, row)) {
+            <div class="dash-rank">
+              <span class="dash-rank-no">{{ row.rank }}</span>
+              <span class="dash-rank-body">
+                <span class="dash-rank-name">{{ row.name }}</span>
+                <span class="dash-rank-bar"><i [style.width.%]="shareWidth(row, d.topTerritories)"></i></span>
+              </span>
+              <span class="dash-rank-value">
+                {{ row.value | number:'1.0-0' }}
+                <small [class.is-up]="row.growthPercent >= 0" [class.is-down]="row.growthPercent < 0">
+                  {{ row.growthPercent >= 0 ? '+' : '' }}{{ row.growthPercent | number:'1.0-0' }}%
+                </small>
+              </span>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="dst-card">
+        <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">badge</span>Top reps</div></div>
+        <div class="dst-card-body is-flush">
+          @if (d.topReps.length === 0) {
+            <p class="dash-none">Nobody has billed yet today.</p>
+          }
+          @for (row of d.topReps; track trackRank($index, row)) {
+            <div class="dash-rank">
+              <span class="dash-rank-no">{{ row.rank }}</span>
+              <span class="dash-rank-body">
+                <span class="dash-rank-name">{{ row.name }}</span>
+                <span class="dash-rank-sub">{{ row.subLabel }}</span>
+              </span>
+              <span class="dash-rank-value">{{ row.value | number:'1.0-0' }}</span>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="dst-card">
+        <div class="dst-card-head"><div class="dst-card-title"><span class="material-symbols-outlined">inventory_2</span>Top lines</div></div>
+        <div class="dst-card-body is-flush">
+          @if (d.topItems.length === 0) {
+            <p class="dash-none">No lines sold in this period.</p>
+          }
+          @for (row of d.topItems; track trackRank($index, row)) {
+            <div class="dash-rank">
+              <span class="dash-rank-no">{{ row.rank }}</span>
+              <span class="dash-rank-body">
+                <span class="dash-rank-name">{{ row.name }}</span>
+                <span class="dash-rank-sub">{{ row.quantity | number }} units · {{ row.sharePercent | number:'1.1-1' }}% of mix</span>
+              </span>
+              <span class="dash-rank-value">{{ row.value | number:'1.0-0' }}</span>
+            </div>
+          }
+        </div>
+      </section>
+    </div>
+  }
+</div>

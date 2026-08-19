@@ -1,0 +1,167 @@
+<div class="dst-modal-backdrop" (click)="closed.emit()">
+  <div
+    class="dst-modal cs"
+    [class.is-touch]="touch"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Record a receipt"
+    (click)="$event.stopPropagation()"
+  >
+    <div class="dst-modal-head">
+      <div>
+        <div class="dst-modal-title">Record a receipt</div>
+        <div class="dst-modal-sub">
+          {{ partyName || 'This account' }} — money is recorded here, never processed.
+        </div>
+      </div>
+      <button type="button" class="dst-close" (click)="closed.emit()" aria-label="Close">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <div class="dst-modal-body">
+      @if (loading) {
+        <div class="dst-skeleton" style="height: 74px; margin-bottom: 16px"></div>
+      } @else if (snapshot; as s) {
+        <div class="cs-position" [class.is-blocked]="s.isBlocked">
+          <div class="cs-position-main">
+            <span class="cs-position-label">Outstanding</span>
+            <span class="cs-position-value">
+              <span class="cur">{{ s.currencyCode }}</span>{{ s.outstandingAmount | number:'1.2-2' }}
+            </span>
+            @if (s.overdueAmount > 0) {
+              <span class="cs-overdue">
+                <span class="material-symbols-outlined">schedule</span>
+                {{ s.overdueAmount | number:'1.2-2' }} overdue · oldest {{ s.oldestInvoiceDays }} days
+              </span>
+            }
+          </div>
+
+          <div class="cs-buckets" role="img" aria-label="Ageing of the outstanding balance">
+            <div class="cs-bucket"><span>0–30</span><strong>{{ s.bucket0To30 | number:'1.0-0' }}</strong></div>
+            <div class="cs-bucket"><span>31–60</span><strong>{{ s.bucket31To60 | number:'1.0-0' }}</strong></div>
+            <div class="cs-bucket"><span>61–90</span><strong>{{ s.bucket61To90 | number:'1.0-0' }}</strong></div>
+            <div class="cs-bucket is-worst"><span>90+</span><strong>{{ s.bucket90Plus | number:'1.0-0' }}</strong></div>
+          </div>
+
+          @if (s.isBlocked) {
+            <div class="cs-blocked">
+              <span class="material-symbols-outlined">credit_card_off</span>
+              Account is blocked — {{ s.blockReason }}. A receipt still goes through and may clear the block.
+            </div>
+          }
+        </div>
+      }
+
+      <!-- ── Tender ───────────────────────────────────────────────────── -->
+      <div class="dst-section-label" id="cs-tender-label">How was it paid?</div>
+      <div class="cs-tenders" role="radiogroup" aria-labelledby="cs-tender-label">
+        @for (t of tenders; track t) {
+          <button
+            type="button"
+            role="radio"
+            [attr.aria-checked]="model.tender === t"
+            class="cs-tender"
+            [class.is-active]="model.tender === t"
+            (click)="model.tender = t"
+          >
+            <span class="material-symbols-outlined">{{ tenderIcons[t] }}</span>
+            {{ tenderLabels[t] }}
+          </button>
+        }
+      </div>
+
+      <!-- ── Amount ───────────────────────────────────────────────────── -->
+      <div class="dst-form-grid cs-form">
+        <div class="dst-field">
+          <label for="cs-amount">Amount <span class="req">*</span></label>
+          <div class="cs-amount-row">
+            <input
+              id="cs-amount"
+              type="number"
+              inputmode="decimal"
+              step="0.01"
+              min="0"
+              [(ngModel)]="model.amount"
+              [class.is-invalid]="!!errors['amount']"
+              [attr.aria-describedby]="errors['amount'] ? 'cs-amount-error' : null"
+            />
+            @if (outstanding > 0) {
+              <button type="button" class="dst-btn is-sm" (click)="payAll()">All {{ outstanding | number:'1.0-0' }}</button>
+            }
+          </div>
+          <dst-field-error [message]="errors['amount']" for="cs-amount"></dst-field-error>
+        </div>
+
+        @if (isCheque) {
+          <div class="dst-field">
+            <label for="cs-cheque-no">Cheque number <span class="req">*</span></label>
+            <input
+              id="cs-cheque-no"
+              type="text"
+              [(ngModel)]="model.chequeNumber"
+              [class.is-invalid]="!!errors['chequeNumber']"
+            />
+            <dst-field-error [message]="errors['chequeNumber']" for="cs-cheque-no"></dst-field-error>
+          </div>
+
+          <div class="dst-field">
+            <label for="cs-cheque-date">Cheque date <span class="req">*</span></label>
+            <input
+              id="cs-cheque-date"
+              type="date"
+              [(ngModel)]="model.chequeDate"
+              [class.is-invalid]="!!errors['chequeDate']"
+            />
+            <span class="dst-hint">A future date is fine — it is recorded as post-dated.</span>
+            <dst-field-error [message]="errors['chequeDate']" for="cs-cheque-date"></dst-field-error>
+          </div>
+
+          <div class="dst-field">
+            <label for="cs-bank">Bank</label>
+            <input id="cs-bank" type="text" [(ngModel)]="model.bankName" />
+          </div>
+        }
+
+        @if (requiresReference) {
+          <div class="dst-field">
+            <label for="cs-ref">Reference <span class="req">*</span></label>
+            <input
+              id="cs-ref"
+              type="text"
+              [(ngModel)]="model.reference"
+              [class.is-invalid]="!!errors['reference']"
+              placeholder="Transaction id from the receipt"
+            />
+            <dst-field-error [message]="errors['reference']" for="cs-ref"></dst-field-error>
+          </div>
+        }
+
+        @if (model.tender === PaymentTender.Card) {
+          <div class="dst-field">
+            <label for="cs-last4">Last 4 digits</label>
+            <input id="cs-last4" type="text" maxlength="4" inputmode="numeric" [(ngModel)]="model.cardLast4" />
+            <span class="dst-hint">For matching a statement line only. No card number is ever accepted or stored.</span>
+          </div>
+        }
+
+        <div class="dst-field is-full">
+          <label for="cs-note">Note</label>
+          <input id="cs-note" type="text" [(ngModel)]="model.note" placeholder="Optional — what this payment settles" />
+        </div>
+      </div>
+    </div>
+
+    <div class="dst-modal-foot">
+      @if (error) {
+        <span class="cs-error" role="alert"><span class="material-symbols-outlined">error</span>{{ error }}</span>
+      }
+      <span class="dst-foot-spacer"></span>
+      <button type="button" class="dst-btn" (click)="closed.emit()" [disabled]="saving">Cancel</button>
+      <button type="button" class="dst-btn is-primary" (click)="save()" [disabled]="saving">
+        <span class="material-symbols-outlined">check</span>
+        @if (saving) { Recording… } @else { Record receipt }
+      </button>
+    </div>
+  </div>
+</div>

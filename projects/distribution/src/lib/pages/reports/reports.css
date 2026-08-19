@@ -1,0 +1,170 @@
+/* Reports — one period, one scope, applied across every tab. */
+
+.rp-picker { margin-bottom: 16px; }
+.rp-table { min-width: 1180px; }
+.rp-scroll { max-height: 380px; overflow-y: auto; }
+.rp-none { padding: 26px 16px; text-align: center; font-size: 12.5px; color: var(--text-muted, #94a3b8); margin: 0; }
+
+/* ── Trend chart ───────────────────────────────────────────────────── */
+.rp-chart-card { margin-bottom: 16px; }
+.rp-key { display: flex; gap: 14px; font-size: 11.5px; color: var(--text-muted, #94a3b8); }
+.rp-key i { display: inline-block; width: 11px; height: 8px; border-radius: 2px; margin-right: 5px; }
+.rp-key .k-bar { background: var(--accent, #2b7fff); }
+.rp-key .k-cmp { background: var(--bg-inset, #e9eef5); }
+
+.rp-chart { display: flex; align-items: flex-end; gap: 4px; height: 160px; }
+.rp-chart-col { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 5px; height: 100%; }
+.rp-chart-stack { flex: 1; width: 100%; position: relative; display: flex; align-items: flex-end; justify-content: center; }
+.rp-chart-cmp { position: absolute; bottom: 0; width: 100%; border-radius: 4px 4px 0 0; background: var(--bg-inset, #e9eef5); }
+.rp-chart-bar { position: relative; width: 62%; border-radius: 4px 4px 0 0; background: var(--accent, #2b7fff); transition: height 0.3s ease; }
+
+.rp-chart-label {
+  font-size: 9.5px;
+  color: var(--text-muted, #94a3b8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* ── Ranked rows ───────────────────────────────────────────────────── */
+.rp-rank {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-light, #eef1f5);
+}
+
+.rp-rank:last-child { border-bottom: none; }
+
+.rp-rank-name {
+  flex: 0 0 34%;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--text-heading, #0f172a);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rp-rank-bar { flex: 1; height: 8px; border-radius: 999px; background: var(--bg-inset, #e9eef5); overflow: hidden; }
+.rp-rank-bar i { display: block; height: 100%; border-radius: 999px; background: var(--accent, #2b7fff); }
+.rp-rank-bar.is-bad i { background: var(--danger, #ef4444); }
+
+.rp-rank-value {
+  min-width: 80px;
+  text-align: right;
+  font-size: 12.5px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-heading, #0f172a);
+}
+
+.rp-share-cell { display: flex; align-items: center; gap: 8px; min-width: 140px; }
+.rp-share { flex: 1; height: 6px; border-radius: 999px; background: var(--bg-inset, #e9eef5); overflow: hidden; }
+.rp-share i { display: block; height: 100%; border-radius: 999px; background: var(--accent, #2b7fff); }
+.rp-share-pct { font-size: 11px; color: var(--text-muted, #94a3b8); font-variant-numeric: tabular-nums; min-width: 42px; text-align: right; }
+
+/* ── Coverage heatmap ──────────────────────────────────────────────── */
+.rp-heatmap {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(30px, 1fr));
+  gap: 4px;
+}
+
+.rp-heat-cell {
+  aspect-ratio: 1;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  font-size: 9.5px;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.rp-heat-cell.is-none { background: var(--bg-muted, #f1f5f9); color: var(--text-muted, #94a3b8); }
+.rp-heat-cell.is-low { background: var(--danger-soft, #fef2f2); color: var(--danger-text, #b91c1c); border-color: var(--danger-border, #fecaca); }
+.rp-heat-cell.is-mid { background: var(--warning-soft, #fef3c7); color: var(--warning-text, #92400e); border-color: var(--warning-border, #fde68a); }
+.rp-heat-cell.is-high { background: var(--success-soft, #dcfce7); color: var(--success-text, #15803d); border-color: var(--success-border, #bbf7d0); }
+.rp-heat-cell.is-holiday { opacity: 0.4; }
+.rp-heat-date { opacity: 0.8; }
+
+.rp-heat-key { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-muted, #94a3b8); }
+.rp-heat-key i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; }
+.rp-heat-key .is-none { background: var(--bg-muted, #f1f5f9); }
+.rp-heat-key .is-low { background: var(--danger-soft, #fef2f2); }
+.rp-heat-key .is-mid { background: var(--warning-soft, #fef3c7); }
+.rp-heat-key .is-high { background: var(--success-soft, #dcfce7); }
+
+/* ── Ageing ────────────────────────────────────────────────────────── */
+.rp-ageing { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 11px; }
+
+.rp-age {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 13px 15px;
+  border-radius: 12px;
+  background: var(--bg-subtle, #f8fafc);
+  border: 1px solid var(--border-light, #eef1f5);
+}
+
+.rp-age span {
+  font-size: 10.5px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted, #94a3b8);
+}
+
+.rp-age strong { font-size: 19px; font-weight: 800; color: var(--text-heading, #0f172a); font-variant-numeric: tabular-nums; }
+
+.rp-age.is-worst {
+  background: var(--danger-soft, #fef2f2);
+  border-color: var(--danger-border, #fecaca);
+}
+
+.rp-age.is-worst strong { color: var(--danger-text, #b91c1c); }
+
+/* ── Lists ─────────────────────────────────────────────────────────── */
+.rp-dormant, .rp-expiry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-light, #eef1f5);
+}
+
+.rp-dormant:last-child, .rp-expiry:last-child { border-bottom: none; }
+
+.rp-dormant-value {
+  font-size: 13px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-heading, #0f172a);
+}
+
+.rp-expiry-right { display: flex; align-items: center; gap: 12px; }
+
+.rp-expiry-days {
+  font-size: 12.5px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary, #64748b);
+}
+
+.rp-expiry-days.is-bad { color: var(--danger-text, #b91c1c); }
+
+.rp-expiry-value {
+  min-width: 70px;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-heading, #0f172a);
+}
+
+.vs-split { font-size: 18px; }

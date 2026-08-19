@@ -1,0 +1,163 @@
+/* Route settlement — both sides recomputed, every variance reasoned. */
+
+.st-head-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.st-table { min-width: 1120px; }
+.st-variances { min-width: 1080px; }
+.st-bad { color: var(--danger-text, #b91c1c); font-weight: 750; }
+.st-unsettled { margin-bottom: 16px; }
+
+/* ── Unsettled days ────────────────────────────────────────────────── */
+.st-day {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--border-light, #eef1f5);
+  border-left: 3px solid var(--warning, #f59e0b);
+  flex-wrap: wrap;
+}
+
+.st-day:last-child { border-bottom: none; }
+.st-day > .dst-cell-stack { flex: 1 1 200px; min-width: 0; }
+
+.st-day-nums {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  font-size: 11.5px;
+  color: var(--text-muted, #94a3b8);
+  font-variant-numeric: tabular-nums;
+}
+
+.st-day-nums b { display: block; font-size: 14px; font-weight: 780; color: var(--text-heading, #0f172a); }
+
+/* ── The two sides ─────────────────────────────────────────────────── */
+.st-sides {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.st-side {
+  border-radius: 14px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-subtle, #f8fafc);
+  overflow: hidden;
+}
+
+.st-side-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 15px;
+  background: var(--bg-surface, #fff);
+  border-bottom: 1px solid var(--border-default, #e6eaf0);
+  font-size: 12.5px;
+  font-weight: 750;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-secondary, #64748b);
+}
+
+.st-side-head .material-symbols-outlined { font-size: 18px; }
+.st-rows { padding: 8px 15px 14px; }
+
+.st-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  font-size: 12.5px;
+  color: var(--text-secondary, #64748b);
+  font-variant-numeric: tabular-nums;
+}
+
+.st-row span:last-child { font-weight: 650; color: var(--text-primary, #1e293b); }
+.st-row .is-negative { color: var(--danger-text, #b91c1c); }
+
+.st-row.is-sum {
+  margin-top: 5px;
+  padding-top: 9px;
+  border-top: 1px solid var(--border-default, #e6eaf0);
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+}
+
+.st-row.is-sum span:last-child { font-weight: 780; }
+
+.st-row.is-variance {
+  margin-top: 7px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: var(--success-soft, #dcfce7);
+  color: var(--success-text, #15803d);
+  font-weight: 750;
+}
+
+.st-row.is-variance span:last-child { color: inherit; font-weight: 800; font-size: 14px; }
+.st-row.is-variance.is-bad { background: var(--danger-soft, #fef2f2); color: var(--danger-text, #b91c1c); }
+
+.st-blockers { margin: 6px 0 0; padding-left: 18px; }
+.st-blockers li { font-size: 12.5px; line-height: 1.6; }
+
+.st-batch {
+  display: block;
+  font-size: 10.5px;
+  color: var(--text-muted, #94a3b8);
+  margin-top: 2px;
+}
+
+/* ── Supporting documents ──────────────────────────────────────────── */
+.st-scroll { max-height: 320px; overflow-y: auto; }
+
+.st-doc {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-light, #eef1f5);
+}
+
+.st-doc:last-child { border-bottom: none; }
+
+.st-doc-amount {
+  font-size: 13px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-heading, #0f172a);
+  white-space: nowrap;
+}
+
+/* ── Actions ───────────────────────────────────────────────────────── */
+.st-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  border-radius: 14px;
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-default, #e6eaf0);
+  position: sticky;
+  bottom: 12px;
+  margin-top: 16px;
+  box-shadow: var(--shadow-sm, 0 2px 10px rgba(15, 23, 42, 0.07));
+}
+
+.st-warn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: var(--danger-soft, #fef2f2);
+  border: 1px solid var(--danger-border, #fecaca);
+  color: var(--danger-text, #b91c1c);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.st-warn .material-symbols-outlined { font-size: 16px; }
+.st-none { padding: 24px 16px; text-align: center; font-size: 12.5px; color: var(--text-muted, #94a3b8); margin: 0; }

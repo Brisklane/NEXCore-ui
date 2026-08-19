@@ -1,0 +1,426 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Targets &amp; incentives</h2>
+      <p class="subtitle">What everybody is carrying, and what they have earned.</p>
+    </div>
+    <div class="tg-head-actions">
+      <dst-scope-bar [showPeriod]="true" (scopeChange)="onScope($event)"></dst-scope-bar>
+      @if (tab === 'targets') {
+        <button type="button" class="dst-btn" (click)="recompute()" [disabled]="busy">
+          <span class="material-symbols-outlined">refresh</span>Recompute
+        </button>
+        <button type="button" class="dst-btn is-primary" (click)="create()">
+          <span class="material-symbols-outlined">flag</span>New target
+        </button>
+      }
+    </div>
+  </div>
+
+  <dst-help key="targets"></dst-help>
+
+  @if (error) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">{{ error }}</div>
+      <button type="button" class="dst-icon-btn" (click)="error = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  @if (notice) {
+    <div class="dst-banner tone-success" role="status">
+      <span class="material-symbols-outlined">check_circle</span>
+      <div class="dst-banner-body">{{ notice }}</div>
+      <button type="button" class="dst-icon-btn" (click)="notice = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  <div class="dst-tabs" role="tablist">
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'targets'" [class.is-active]="tab === 'targets'" (click)="setTab('targets')">
+      <span class="material-symbols-outlined">flag</span>Targets
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'incentives'" [class.is-active]="tab === 'incentives'" (click)="setTab('incentives')">
+      <span class="material-symbols-outlined">redeem</span>Incentive schemes
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'payouts'" [class.is-active]="tab === 'payouts'" (click)="setTab('payouts')">
+      <span class="material-symbols-outlined">payments</span>Payouts
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'leaderboard'" [class.is-active]="tab === 'leaderboard'" (click)="setTab('leaderboard')">
+      <span class="material-symbols-outlined">leaderboard</span>Leaderboard
+    </button>
+  </div>
+
+  <!-- ── Targets ──────────────────────────────────────────────────────── -->
+  @if (tab === 'targets') {
+    <div class="dst-toolbar">
+      <select class="dst-filter-select" [(ngModel)]="metricFilter" (ngModelChange)="load()" aria-label="Metric">
+        <option value="">Every metric</option>
+        @for (o of metricOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+      </select>
+    </div>
+
+    <div class="dst-card">
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="tg-loading">
+            @for (i of [1,2,3,4,5]; track i) { <div class="dst-skeleton" style="height: 60px"></div> }
+          </div>
+        } @else if (targets.length === 0) {
+          <dst-empty
+            icon="flag"
+            title="No targets set"
+            text="Set a target by metric and period, then break it down to route and rep. Pace is what tells you whether it will be hit."
+            actionLabel="New target"
+            actionIcon="flag"
+            (action)="create()"
+          ></dst-empty>
+        } @else {
+          <div class="dst-table-wrap">
+            <table class="dst-table tg-table">
+              <thead>
+                <tr>
+                  <th>Target</th><th>Who</th><th>Period</th>
+                  <th class="num">Target</th><th class="num">Achieved</th>
+                  <th class="num">Pro rata</th><th>Pace</th><th class="num">Projected</th>
+                  <th>State</th><th class="actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (t of targets; track trackTarget($index, t)) {
+                  <tr [class.is-flagged]="paceGap(t) < -10">
+                    <td>
+                      <div class="dst-cell-stack">
+                        <span class="top">{{ t.name }}</span>
+                        <span class="sub">{{ metricLabels[t.metric] }} · {{ periodLabels[t.period] }}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="dst-cell-stack">
+                        <span class="top">{{ scopeNameFor(t) }}</span>
+                        <span class="sub">{{ scopeLabels[t.scope] }}</span>
+                      </div>
+                    </td>
+                    <td class="nowrap">{{ t.periodStart | date:'d MMM' }} – {{ t.periodEnd | date:'d MMM' }}</td>
+                    <td class="num strong">{{ t.targetValue | number:'1.0-0' }}</td>
+                    <td class="num">
+                      <div class="tg-achieved">
+                        <span>{{ t.achievedValue | number:'1.0-0' }}</span>
+                        <span class="dst-bar" [class.tone-success]="paceGap(t) >= 0" [class.tone-warning]="paceGap(t) < 0 && paceGap(t) > -10" [class.tone-danger]="paceGap(t) <= -10">
+                          <span class="dst-bar-fill" [style.width.%]="t.achievementPercent > 100 ? 100 : t.achievementPercent"></span>
+                        </span>
+                        <span class="tg-pct">{{ t.achievementPercent | number:'1.0-0' }}%</span>
+                      </div>
+                    </td>
+                    <td class="num muted">{{ t.proRataTarget | number:'1.0-0' }}</td>
+                    <td><dst-status [label]="paceLabel(t)" [tone]="paceTone(t)"></dst-status></td>
+                    <td class="num">
+                      {{ t.projectedValue | number:'1.0-0' }}
+                      @if (t.lastPeriodValue > 0) {
+                        <span class="tg-vs">vs {{ t.lastPeriodValue | number:'1.0-0' }} last</span>
+                      }
+                    </td>
+                    <td>
+                      @if (t.isPublished) { <span class="dst-pill tone-success">Published</span> }
+                      @else { <span class="dst-pill tone-warning">Draft</span> }
+                    </td>
+                    <td class="actions">
+                      @if (!t.isPublished) {
+                        <button type="button" class="dst-btn is-sm is-success" (click)="publish(t)">Publish</button>
+                      }
+                      <button type="button" class="dst-icon-btn" (click)="edit(t)" aria-label="Edit" title="Edit">
+                        <span class="material-symbols-outlined">edit</span>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ── Incentive schemes ────────────────────────────────────────────── -->
+  @if (tab === 'incentives') {
+    <div class="dst-card">
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="tg-loading">
+            @for (i of [1,2,3]; track i) { <div class="dst-skeleton" style="height: 90px"></div> }
+          </div>
+        } @else if (incentives.length === 0) {
+          <dst-empty icon="redeem" title="No incentive schemes" text="An incentive scheme turns target achievement into a payout, on a slab, a linear rate, or a gate."></dst-empty>
+        } @else {
+          @for (s of incentives; track trackIncentive($index, s)) {
+            <div class="tg-scheme">
+              <div class="tg-scheme-body">
+                <div class="tg-scheme-name">
+                  {{ s.name }}
+                  <span class="dst-pill tone-neutral">{{ basisLabels[s.basis] }}</span>
+                  <span class="dst-pill tone-neutral">{{ metricLabels[s.metric] }}</span>
+                  @if (!s.isApproved) { <span class="dst-pill tone-warning">Not approved</span> }
+                </div>
+                <div class="tg-scheme-meta">
+                  {{ s.validFrom | date:'d MMM' }} – {{ s.validTo | date:'d MMM y' }} ·
+                  {{ periodLabels[s.period] }}
+                  @if (s.minimumAchievementPercent > 0) { · pays from {{ s.minimumAchievementPercent }}% }
+                  @if (s.gateThresholdPercent > 0) { · gated at {{ s.gateThresholdPercent }}% }
+                  @if (s.maxPayout > 0) { · capped at {{ s.maxPayout | number:'1.0-0' }} }
+                </div>
+
+                @if (s.slabs.length) {
+                  <div class="tg-slabs">
+                    @for (slab of s.slabs; track slab.id) {
+                      <span class="tg-slab">
+                        <b>{{ slab.fromAchievementPercent }}%@if (slab.toAchievementPercent) { –{{ slab.toAchievementPercent }}% }</b>
+                        @if (slab.payoutAmount > 0) { {{ slab.payoutAmount | number:'1.0-0' }} }
+                        @if (slab.payoutPercent > 0) { {{ slab.payoutPercent }}% }
+                      </span>
+                    }
+                  </div>
+                }
+              </div>
+
+              <button type="button" class="dst-btn is-primary" (click)="computePayouts(s)" [disabled]="busy">
+                @if (computingFor?.id === s.id) { Computing… } @else { Compute payouts }
+              </button>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ── Payouts ──────────────────────────────────────────────────────── -->
+  @if (tab === 'payouts') {
+    <div class="dst-card">
+      <div class="dst-card-head">
+        <div class="dst-card-title"><span class="material-symbols-outlined">payments</span>Payouts</div>
+        <span class="dst-card-sub">{{ payoutTotal | number:'1.2-2' }} on this page · nothing reaches payroll until it is approved</span>
+      </div>
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="tg-loading">
+            @for (i of [1,2,3,4]; track i) { <div class="dst-skeleton" style="height: 52px"></div> }
+          </div>
+        } @else if (payouts.length === 0) {
+          <dst-empty icon="payments" title="No payouts computed" text="Compute payouts from an incentive scheme for this period."></dst-empty>
+        } @else {
+          <div class="dst-table-wrap">
+            <table class="dst-table tg-payouts">
+              <thead>
+                <tr>
+                  <th>Who</th><th>Scheme</th><th>Period</th>
+                  <th class="num">Target</th><th class="num">Achieved</th><th class="num">%</th>
+                  <th>Gate</th><th class="num">Payout</th><th class="num">Net</th>
+                  <th>State</th><th class="actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (p of payouts; track trackPayout($index, p)) {
+                  <tr [class.is-flagged]="!p.gatePassed">
+                    <td class="strong">{{ p.fieldRepName || p.partnerName }}</td>
+                    <td>{{ p.schemeName }}</td>
+                    <td class="nowrap muted">{{ p.periodStart | date:'d MMM' }} – {{ p.periodEnd | date:'d MMM' }}</td>
+                    <td class="num muted">{{ p.targetValue | number:'1.0-0' }}</td>
+                    <td class="num">{{ p.achievedValue | number:'1.0-0' }}</td>
+                    <td class="num strong">{{ p.achievementPercent | number:'1.0-0' }}%</td>
+                    <td>
+                      @if (p.gatePassed) { <span class="dst-pill tone-success">Passed</span> }
+                      @else {
+                        <span class="dst-pill tone-danger">Failed</span>
+                        @if (p.gateFailureReason) { <span class="tg-gate-reason">{{ p.gateFailureReason }}</span> }
+                      }
+                    </td>
+                    <td class="num">
+                      {{ p.payoutAmount | number:'1.2-2' }}
+                      @if (p.spiffAmount > 0) { <span class="tg-spiff">+{{ p.spiffAmount | number:'1.0-0' }} spiff</span> }
+                    </td>
+                    <td class="num strong">
+                      {{ p.netPayout | number:'1.2-2' }}
+                      @if (p.deductionAmount > 0) { <span class="tg-deduct">−{{ p.deductionAmount | number:'1.0-0' }}</span> }
+                    </td>
+                    <td>
+                      @if (p.isPaid) { <span class="dst-pill tone-success">Paid</span> }
+                      @else if (p.isApproved) { <span class="dst-pill tone-info">Approved</span> }
+                      @else { <span class="dst-pill tone-warning">Waiting</span> }
+                    </td>
+                    <td class="actions">
+                      @if (!p.isApproved && !p.isPaid) {
+                        <button type="button" class="dst-icon-btn" (click)="approvePayout(p, true)" aria-label="Approve" title="Approve">
+                          <span class="material-symbols-outlined">check</span>
+                        </button>
+                        <button type="button" class="dst-icon-btn is-danger" (click)="approvePayout(p, false)" aria-label="Reject" title="Reject">
+                          <span class="material-symbols-outlined">close</span>
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ── Leaderboard ──────────────────────────────────────────────────── -->
+  @if (tab === 'leaderboard') {
+    <div class="dst-toolbar">
+      <select class="dst-filter-select" [(ngModel)]="leaderboardMetric" (ngModelChange)="load()" aria-label="Leaderboard metric">
+        @for (o of metricOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+      </select>
+    </div>
+
+    <div class="dst-card">
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="tg-loading">
+            @for (i of [1,2,3,4,5,6]; track i) { <div class="dst-skeleton" style="height: 52px"></div> }
+          </div>
+        } @else if (leaderboard.length === 0) {
+          <dst-empty icon="leaderboard" title="Nothing to rank yet" text="The leaderboard fills in once there is activity in the selected period."></dst-empty>
+        } @else {
+          @for (row of leaderboard; track trackRank($index, row)) {
+            <div class="tg-rank" [class.is-top]="row.rank <= 3">
+              <span class="tg-rank-no">{{ row.rank }}</span>
+              <div class="tg-rank-body">
+                <div class="tg-rank-name">{{ row.name }}</div>
+                <div class="tg-rank-sub">{{ row.subLabel }}</div>
+                <span class="tg-rank-bar"><i [style.width.%]="barWidth(row)"></i></span>
+              </div>
+              <div class="tg-rank-values">
+                <span class="tg-rank-value">{{ row.value | number:'1.0-0' }}</span>
+                <span class="dst-delta" [class.is-up]="row.growthPercent >= 0" [class.is-down]="row.growthPercent < 0">
+                  <span class="material-symbols-outlined">{{ row.growthPercent >= 0 ? 'north_east' : 'south_east' }}</span>
+                  {{ row.growthPercent | number:'1.0-0' }}%
+                </span>
+              </div>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  }
+
+  @if (tab === 'targets' || tab === 'payouts') {
+    <dst-pager [meta]="meta" noun="rows" (pageChange)="changePage($event)" (sizeChange)="changeSize($event)"></dst-pager>
+  }
+</div>
+
+<!-- ── Target editor ────────────────────────────────────────────────────── -->
+@if (showEditor) {
+  <div class="dst-modal-backdrop" (click)="showEditor = false">
+    <div class="dst-modal" role="dialog" aria-modal="true" aria-label="Target" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">@if (editing.id) { Edit target } @else { New target }</div>
+          <div class="dst-modal-sub">
+            Publishing freezes the target. Changing it afterwards creates a revision, so the
+            original commitment stays on the record.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="showEditor = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-form-grid">
+          <div class="dst-field is-full">
+            <label for="tg-name">Name <span class="req">*</span></label>
+            <input id="tg-name" type="text" [(ngModel)]="editing.name" [class.is-invalid]="!!editorErrors['name']" placeholder="October sales — North" />
+            <dst-field-error [message]="editorErrors['name']" for="tg-name"></dst-field-error>
+          </div>
+
+          <div class="dst-field">
+            <label for="tg-metric">Metric</label>
+            <select id="tg-metric" [(ngModel)]="editing.metric">
+              @for (o of metricOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+            </select>
+          </div>
+
+          <div class="dst-field">
+            <label for="tg-period">Period</label>
+            <select id="tg-period" [(ngModel)]="editing.period">
+              @for (o of periodOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+            </select>
+          </div>
+
+          <div class="dst-field">
+            <label for="tg-scope">Applies to</label>
+            <select id="tg-scope" [(ngModel)]="editing.scope">
+              @for (o of scopeOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+            </select>
+          </div>
+
+          <div class="dst-field">
+            <label for="tg-value">Target <span class="req">*</span></label>
+            <input id="tg-value" type="number" step="0.01" min="0" [(ngModel)]="editing.targetValue" [class.is-invalid]="!!editorErrors['targetValue']" />
+            <dst-field-error [message]="editorErrors['targetValue']" for="tg-value"></dst-field-error>
+          </div>
+
+          <div class="dst-field">
+            <label for="tg-start">From <span class="req">*</span></label>
+            <input id="tg-start" type="date" [(ngModel)]="editing.periodStart" [class.is-invalid]="!!editorErrors['periodStart']" />
+            <dst-field-error [message]="editorErrors['periodStart']" for="tg-start"></dst-field-error>
+          </div>
+
+          <div class="dst-field">
+            <label for="tg-end">To <span class="req">*</span></label>
+            <input id="tg-end" type="date" [(ngModel)]="editing.periodEnd" [class.is-invalid]="!!editorErrors['periodEnd']" />
+            <dst-field-error [message]="editorErrors['periodEnd']" for="tg-end"></dst-field-error>
+          </div>
+
+          @if (editing.scope === TargetScope.Territory) {
+            <div class="dst-field">
+              <label for="tg-territory">Territory</label>
+              <select id="tg-territory" [(ngModel)]="editing.territoryId">
+                <option value="">Choose a territory</option>
+                @for (t of territories; track t.id) { <option [value]="t.id">{{ t.name }}</option> }
+              </select>
+            </div>
+          }
+
+          @if (editing.scope === TargetScope.Route) {
+            <div class="dst-field">
+              <label for="tg-route">Route</label>
+              <select id="tg-route" [(ngModel)]="editing.routeId">
+                <option value="">Choose a route</option>
+                @for (r of routes; track r.id) { <option [value]="r.id">{{ r.name }}</option> }
+              </select>
+            </div>
+          }
+
+          @if (editing.scope === TargetScope.FieldRep) {
+            <div class="dst-field">
+              <label for="tg-rep">Rep</label>
+              <select id="tg-rep" [(ngModel)]="editing.fieldRepId">
+                <option value="">Choose a rep</option>
+                @for (r of reps; track r.id) { <option [value]="r.id">{{ r.fullName }}</option> }
+              </select>
+            </div>
+          }
+
+          <div class="dst-field is-full">
+            <label for="tg-note">Note</label>
+            <textarea id="tg-note" [(ngModel)]="editing.note"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showEditor = false" [disabled]="busy">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="save()" [disabled]="busy">
+          @if (busy) { Saving… } @else { Save as draft }
+        </button>
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,133 @@
+/* Recording a receipt — the position first, then how it was paid, then the amount. */
+
+.cs { width: min(620px, 100%); }
+
+.cs-position {
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--bg-subtle, #f8fafc);
+  border: 1px solid var(--border-default, #e6eaf0);
+  margin-bottom: 4px;
+}
+
+.cs-position.is-blocked { border-color: var(--danger-border, #fecaca); background: var(--danger-soft, #fef2f2); }
+.cs-position-main { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+
+.cs-position-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted, #94a3b8);
+}
+
+.cs-position-value {
+  font-size: 24px;
+  font-weight: 820;
+  letter-spacing: -0.02em;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.cs-position-value .cur { font-size: 13px; font-weight: 650; color: var(--text-muted, #94a3b8); margin-right: 4px; }
+
+.cs-overdue {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--danger-soft, #fef2f2);
+  color: var(--danger-text, #b91c1c);
+  border: 1px solid var(--danger-border, #fecaca);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.cs-overdue .material-symbols-outlined { font-size: 14px; }
+
+.cs-buckets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+
+.cs-bucket {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-light, #eef1f5);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cs-bucket span { font-size: 10.5px; font-weight: 700; color: var(--text-muted, #94a3b8); }
+.cs-bucket strong { font-size: 13px; font-weight: 750; color: var(--text-heading, #0f172a); font-variant-numeric: tabular-nums; }
+.cs-bucket.is-worst strong { color: var(--danger-text, #b91c1c); }
+
+.cs-blocked {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin-top: 12px;
+  padding-top: 11px;
+  border-top: 1px solid var(--danger-border, #fecaca);
+  font-size: 12.5px;
+  font-weight: 650;
+  line-height: 1.5;
+  color: var(--danger-text, #b91c1c);
+}
+
+.cs-blocked .material-symbols-outlined { font-size: 17px; flex-shrink: 0; }
+
+/* ── Tender picker ─────────────────────────────────────────────────── */
+.cs-tenders { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+
+.cs-tender {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 72px;
+  padding: 11px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-surface, #fff);
+  color: var(--text-secondary, #64748b);
+  font-size: 12.5px;
+  font-weight: 650;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.13s ease, background 0.13s ease, color 0.13s ease;
+}
+
+.cs-tender:hover { border-color: var(--accent, #2b7fff); color: var(--text-heading, #0f172a); }
+
+.cs-tender.is-active {
+  border-color: var(--accent, #2b7fff);
+  background: var(--accent-soft, rgba(43, 127, 255, 0.1));
+  color: var(--accent, #2b7fff);
+  box-shadow: inset 0 0 0 1px var(--accent, #2b7fff);
+}
+
+.cs-tender:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.cs-tender .material-symbols-outlined { font-size: 22px; }
+
+.cs-form { margin-top: 16px; }
+.cs-amount-row { display: flex; align-items: center; gap: 8px; }
+.cs-amount-row input { flex: 1; font-size: 17px; font-weight: 750; font-variant-numeric: tabular-nums; }
+
+.cs-error {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--danger-text, #b91c1c);
+}
+
+.cs-error .material-symbols-outlined { font-size: 16px; }
+
+/* ── Touch variant ─────────────────────────────────────────────────── */
+.cs.is-touch { width: 100%; max-height: 100vh; border-radius: 0; }
+.cs.is-touch .cs-tender { min-height: 84px; font-size: 13.5px; }
+.cs.is-touch .dst-field input { min-height: 48px; font-size: 15px; }
+.cs.is-touch .dst-btn { min-height: 48px; font-size: 14.5px; }

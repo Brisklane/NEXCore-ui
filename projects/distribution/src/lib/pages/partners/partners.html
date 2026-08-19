@@ -1,0 +1,395 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Channel partners</h2>
+      <p class="subtitle">Distributors, super-stockists, wholesalers and the tiers between them.</p>
+    </div>
+    <div class="pt-head-actions">
+      <dst-scope-bar (scopeChange)="onScope($event)"></dst-scope-bar>
+      <button type="button" class="dst-btn is-primary" (click)="create()">
+        <span class="material-symbols-outlined">add</span>
+        New partner
+      </button>
+    </div>
+  </div>
+
+  <dst-help key="partners"></dst-help>
+
+  @if (error) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">{{ error }}</div>
+    </div>
+  }
+
+  @if (expiring.length) {
+    <div class="dst-banner tone-warning">
+      <span class="material-symbols-outlined">badge</span>
+      <div class="dst-banner-body">
+        <strong>{{ expiring.length }} partner documents expire within 45 days.</strong>
+        A partner trading on a lapsed licence is a problem that surfaces during an inspection.
+        <ul class="pt-expiring">
+          @for (doc of expiring.slice(0, 5); track trackDoc($index, doc)) {
+            <li>{{ doc.documentType }} {{ doc.documentNumber }} — expires {{ doc.expiresOn | date:'d MMM y' }} ({{ doc.daysToExpiry }} days)</li>
+          }
+        </ul>
+      </div>
+    </div>
+  }
+
+  <div class="dst-toolbar">
+    <div class="dst-segment" role="tablist" aria-label="View">
+      <button type="button" role="tab" [attr.aria-selected]="view === 'tree'" [class.is-active]="view === 'tree'" (click)="setView('tree')">
+        <span class="material-symbols-outlined">account_tree</span>Network
+      </button>
+      <button type="button" role="tab" [attr.aria-selected]="view === 'list'" [class.is-active]="view === 'list'" (click)="setView('list')">
+        <span class="material-symbols-outlined">list</span>List
+      </button>
+    </div>
+
+    @if (view === 'list') {
+      <div class="dst-search">
+        <span class="material-symbols-outlined">search</span>
+        <input type="search" [(ngModel)]="filters.search" (ngModelChange)="onSearch()" placeholder="Partner name, code or phone" aria-label="Search partners" />
+      </div>
+
+      <select class="dst-filter-select" [(ngModel)]="filters.partnerType" (ngModelChange)="load()" aria-label="Partner type">
+        <option value="">All types</option>
+        @for (o of typeOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+      </select>
+
+      <select class="dst-filter-select" [(ngModel)]="filters.status" (ngModelChange)="load()" aria-label="Status">
+        <option value="">All statuses</option>
+        @for (o of statusOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+      </select>
+    }
+  </div>
+
+  <!-- ── Network tree ─────────────────────────────────────────────────── -->
+  @if (view === 'tree') {
+    <div class="dst-card">
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="pt-loading">
+            @for (i of [1,2,3,4,5,6]; track i) { <div class="dst-skeleton" style="height: 48px"></div> }
+          </div>
+        } @else if (flat.length === 0) {
+          <dst-empty
+            icon="account_tree"
+            title="No partners yet"
+            text="A distributor, super-stockist or wholesaler you sell to. The tier structure below them is what secondary sales flows through."
+            actionLabel="Add the first partner"
+            actionIcon="add"
+            (action)="create()"
+          ></dst-empty>
+        } @else {
+          <div class="pt-tree-head">
+            <span class="pt-col-name">Partner</span>
+            <span class="pt-col-num">Outlets</span>
+            <span class="pt-col-num">This month</span>
+            <span class="pt-col-num">Outstanding</span>
+            <span class="pt-col-status">Status</span>
+          </div>
+
+          @for (f of flat; track trackFlat($index, f)) {
+            <div class="pt-node" [style.padding-left.px]="14 + f.depth * 22">
+              @if (f.hasChildren) {
+                <button
+                  type="button"
+                  class="pt-toggle"
+                  (click)="toggle(f.node.id)"
+                  [attr.aria-expanded]="f.expanded"
+                  [attr.aria-label]="(f.expanded ? 'Collapse ' : 'Expand ') + f.node.name"
+                >
+                  <span class="material-symbols-outlined">{{ f.expanded ? 'expand_more' : 'chevron_right' }}</span>
+                </button>
+              } @else {
+                <span class="pt-toggle is-leaf" aria-hidden="true"></span>
+              }
+
+              <button type="button" class="pt-node-name" (click)="open(f.node.id)">
+                <span class="pt-node-title">{{ f.node.name }}</span>
+                <span class="pt-node-type">
+                  @if (f.node.code) { <span class="dst-code is-plain">{{ f.node.code }}</span> · }
+                  {{ typeLabels[f.node.partnerType] }}
+                </span>
+              </button>
+
+              <span class="pt-col-num">{{ f.node.outletCount | number }}</span>
+              <span class="pt-col-num">{{ f.node.monthToDateSales | number:'1.0-0' }}</span>
+              <span class="pt-col-num" [class.pt-owing]="f.node.outstandingAmount > 0">
+                {{ f.node.outstandingAmount | number:'1.0-0' }}
+              </span>
+              <span class="pt-col-status">
+                <dst-status [label]="statusLabels[f.node.status]" [tone]="statusTone[f.node.status]"></dst-status>
+              </span>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ── List ─────────────────────────────────────────────────────────── -->
+  @if (view === 'list') {
+    <div class="dst-card">
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="pt-loading">
+            @for (i of [1,2,3,4,5,6]; track i) { <div class="dst-skeleton" style="height: 52px"></div> }
+          </div>
+        } @else if (rows.length === 0) {
+          <dst-empty icon="handshake" title="No partners match" text="Widen the filters, or add a partner."></dst-empty>
+        } @else {
+          <div class="dst-table-wrap">
+            <table class="dst-table pt-table">
+              <thead>
+                <tr>
+                  <th>Partner</th>
+                  <th>Type &amp; model</th>
+                  <th>Territory</th>
+                  <th class="num">Outlets</th>
+                  <th class="num">This month</th>
+                  <th class="num">Outstanding</th>
+                  <th>Status</th>
+                  <th class="actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of rows; track trackRow($index, row)) {
+                  <tr class="is-clickable" (click)="open(row.id)">
+                    <td>
+                      <div class="dst-cell-stack">
+                        <span class="top">{{ row.name }}</span>
+                        <span class="sub">
+                          @if (row.code) { <span class="dst-code is-plain">{{ row.code }}</span> · }
+                          {{ row.contactPerson }}
+                          @if (row.phone) { · {{ row.phone }} }
+                        </span>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="dst-cell-stack">
+                        <span class="top">{{ typeLabels[row.partnerType] }}</span>
+                        <span class="sub">{{ modelLabels[row.servicingModel] }} · {{ captureLabels[row.secondaryCaptureMode] }}</span>
+                      </div>
+                    </td>
+                    <td>{{ row.territoryName || '—' }}</td>
+                    <td class="num">{{ row.outletCount | number }}</td>
+                    <td class="num">{{ row.monthToDateSales | number:'1.0-0' }}</td>
+                    <td class="num">
+                      <span [class.pt-owing]="row.overdueAmount > 0">{{ row.outstandingAmount | number:'1.0-0' }}</span>
+                      @if (row.overdueAmount > 0) {
+                        <span class="pt-overdue">{{ row.overdueAmount | number:'1.0-0' }} overdue</span>
+                      }
+                    </td>
+                    <td>
+                      <dst-status [label]="statusLabels[row.status]" [tone]="statusTone[row.status]"></dst-status>
+                      @if (row.expiringDocumentCount > 0) {
+                        <span class="dst-pill tone-warning pt-docs">
+                          <span class="material-symbols-outlined">badge</span>{{ row.expiringDocumentCount }} expiring
+                        </span>
+                      }
+                    </td>
+                    <td class="actions" (click)="$event.stopPropagation()">
+                      <button type="button" class="dst-icon-btn" (click)="edit(row)" aria-label="Edit this partner" title="Edit">
+                        <span class="material-symbols-outlined">edit</span>
+                      </button>
+                      <button type="button" class="dst-icon-btn" (click)="startStatus(row)" aria-label="Change status" title="Change status">
+                        <span class="material-symbols-outlined">toggle_on</span>
+                      </button>
+                      <button type="button" class="dst-icon-btn" (click)="open(row.id)" aria-label="Open this partner" title="Open">
+                        <span class="material-symbols-outlined">chevron_right</span>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+
+    <dst-pager [meta]="meta" noun="partners" (pageChange)="changePage($event)" (sizeChange)="changeSize($event)"></dst-pager>
+  }
+</div>
+
+<!-- ── Editor ───────────────────────────────────────────────────────────── -->
+@if (showEditor) {
+  <div class="dst-modal-backdrop" (click)="showEditor = false">
+    <div class="dst-modal" role="dialog" aria-modal="true" aria-label="Partner" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">@if (editing.id) { Edit partner } @else { New partner }</div>
+          <div class="dst-modal-sub">
+            The servicing model decides which screens apply to them — a van-sales distributor and a
+            drop-ship account are run completely differently.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="showEditor = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <fieldset class="dst-fieldset">
+          <legend>Identity</legend>
+          <div class="dst-form-grid">
+            <div class="dst-field is-full">
+              <label for="pt-name">Name <span class="req">*</span></label>
+              <input id="pt-name" type="text" [(ngModel)]="editing.name" [class.is-invalid]="!!editorErrors['name']" />
+              <dst-field-error [message]="editorErrors['name']" for="pt-name"></dst-field-error>
+            </div>
+
+            <div class="dst-field">
+              <label for="pt-trade">Trading name</label>
+              <input id="pt-trade" type="text" [(ngModel)]="editing.tradeName" />
+            </div>
+
+            <div class="dst-field">
+              <label for="pt-type">Type</label>
+              <select id="pt-type" [(ngModel)]="editing.partnerType">
+                @for (o of typeOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+              </select>
+            </div>
+
+            <div class="dst-field">
+              <label for="pt-model">Servicing model</label>
+              <select id="pt-model" [(ngModel)]="editing.servicingModel">
+                @for (o of modelOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+              </select>
+            </div>
+
+            <div class="dst-field">
+              <label for="pt-capture">Secondary sales come in as</label>
+              <select id="pt-capture" [(ngModel)]="editing.secondaryCaptureMode">
+                @for (o of captureOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+              </select>
+              <span class="dst-hint">How this partner reports what they sold onward.</span>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="dst-fieldset pt-fieldset">
+          <legend>Contact</legend>
+          <div class="dst-form-grid">
+            <div class="dst-field">
+              <label for="pt-contact">Contact person</label>
+              <input id="pt-contact" type="text" [(ngModel)]="editing.contactPerson" />
+            </div>
+            <div class="dst-field">
+              <label for="pt-phone">Phone</label>
+              <input id="pt-phone" type="tel" [(ngModel)]="editing.phone" [class.is-invalid]="!!editorErrors['phone']" />
+              <dst-field-error [message]="editorErrors['phone']" for="pt-phone"></dst-field-error>
+            </div>
+            <div class="dst-field">
+              <label for="pt-email">Email</label>
+              <input id="pt-email" type="email" [(ngModel)]="editing.email" [class.is-invalid]="!!editorErrors['email']" />
+              <dst-field-error [message]="editorErrors['email']" for="pt-email"></dst-field-error>
+            </div>
+            <div class="dst-field is-full">
+              <label for="pt-address">Address</label>
+              <input id="pt-address" type="text" [(ngModel)]="editing.addressLine" />
+            </div>
+            <div class="dst-field">
+              <label for="pt-city">City</label>
+              <input id="pt-city" type="text" [(ngModel)]="editing.city" />
+            </div>
+            <div class="dst-field">
+              <label for="pt-tax">Tax registration</label>
+              <input id="pt-tax" type="text" [(ngModel)]="editing.taxRegistrationNumber" />
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="dst-fieldset pt-fieldset">
+          <legend>Commercial terms</legend>
+          <div class="dst-form-grid">
+            <div class="dst-field">
+              <label for="pt-limit">Credit limit</label>
+              <input id="pt-limit" type="number" step="0.01" min="0" [(ngModel)]="editing.creditLimit" [class.is-invalid]="!!editorErrors['creditLimit']" />
+              <dst-field-error [message]="editorErrors['creditLimit']" for="pt-limit"></dst-field-error>
+            </div>
+            <div class="dst-field">
+              <label for="pt-days">Credit days</label>
+              <input id="pt-days" type="number" min="0" [(ngModel)]="editing.creditDays" [class.is-invalid]="!!editorErrors['creditDays']" />
+              <dst-field-error [message]="editorErrors['creditDays']" for="pt-days"></dst-field-error>
+            </div>
+            <div class="dst-field">
+              <label for="pt-margin">Margin %</label>
+              <input id="pt-margin" type="number" step="0.01" min="0" [(ngModel)]="editing.marginPercent" />
+            </div>
+            <div class="dst-field">
+              <label for="pt-deposit">Security deposit</label>
+              <input id="pt-deposit" type="number" step="0.01" min="0" [(ngModel)]="editing.securityDeposit" />
+            </div>
+            <div class="dst-field">
+              <label for="pt-min">Minimum monthly offtake</label>
+              <input id="pt-min" type="number" step="0.01" min="0" [(ngModel)]="editing.minimumMonthlyOfftake" />
+            </div>
+            <div class="dst-field">
+              <label for="pt-agreement">Agreement expires</label>
+              <input id="pt-agreement" type="date" [(ngModel)]="editing.agreementExpiresOn" />
+            </div>
+          </div>
+        </fieldset>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showEditor = false" [disabled]="saving">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="save()" [disabled]="saving">
+          @if (saving) { Saving… } @else { Save partner }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Status change ────────────────────────────────────────────────────── -->
+@if (statusTarget) {
+  <div class="dst-modal-backdrop" (click)="statusTarget = null">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Change partner status" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">{{ statusTarget.name }}</div>
+          <div class="dst-modal-sub">
+            Suspending blocks new orders immediately. Open orders, claims and settlements carry on.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="statusTarget = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-field">
+          <label for="pt-status">Status</label>
+          <select id="pt-status" [(ngModel)]="statusChoice">
+            @for (o of statusOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+          </select>
+        </div>
+
+        @if (statusNeedsReason) {
+          <div class="dst-field">
+            <label for="pt-status-reason">Reason <span class="req">*</span></label>
+            <textarea id="pt-status-reason" [(ngModel)]="statusReason" placeholder="Why is this partner being suspended or terminated?"></textarea>
+            <span class="dst-hint">Goes on the record and shows on their portal.</span>
+          </div>
+        }
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="statusTarget = null">Cancel</button>
+        <button
+          type="button"
+          class="dst-btn"
+          [class.is-danger]="statusNeedsReason"
+          [class.is-primary]="!statusNeedsReason"
+          (click)="applyStatus()"
+          [disabled]="statusNeedsReason && !statusReason.trim()"
+        >Apply</button>
+      </div>
+    </div>
+  </div>
+}

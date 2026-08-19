@@ -1,0 +1,291 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Orders</h2>
+      <p class="subtitle">Captured in the field, taken on the phone, or uploaded by a partner.</p>
+    </div>
+    <div class="or-head-actions">
+      <dst-scope-bar [showPeriod]="true" (scopeChange)="onScope($event)"></dst-scope-bar>
+      <button type="button" class="dst-btn is-primary" (click)="showOrderSheet = true">
+        <span class="material-symbols-outlined">add_shopping_cart</span>
+        New order
+      </button>
+    </div>
+  </div>
+
+  <dst-help key="orders"></dst-help>
+
+  @if (error) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">{{ error }}</div>
+      <button type="button" class="dst-icon-btn" (click)="error = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  @if (notice) {
+    <div class="dst-banner tone-success" role="status">
+      <span class="material-symbols-outlined">check_circle</span>
+      <div class="dst-banner-body">{{ notice }}</div>
+      <button type="button" class="dst-icon-btn" (click)="notice = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  <!-- ── Queues ───────────────────────────────────────────────────────── -->
+  <div class="dst-segment or-queues" role="tablist" aria-label="Order queues">
+    @for (q of queues; track q.key) {
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="queue === q.key"
+        [class.is-active]="queue === q.key"
+        (click)="setQueue(q.key)"
+      >
+        <span class="material-symbols-outlined">{{ q.icon }}</span>
+        {{ q.label }}
+      </button>
+    }
+  </div>
+
+  <div class="dst-toolbar">
+    <div class="dst-search">
+      <span class="material-symbols-outlined">search</span>
+      <input type="search" [(ngModel)]="search" (ngModelChange)="onSearch()" placeholder="Order number, shop or partner" aria-label="Search orders" />
+    </div>
+
+    <select class="dst-filter-select" [(ngModel)]="sourceFilter" (ngModelChange)="load()" aria-label="Source">
+      <option value="">Any source</option>
+      @for (o of sourceOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+    </select>
+
+    <span class="dst-spacer"></span>
+
+    @if (selection.size > 0) {
+      <span class="or-selected">{{ selection.size }} selected</span>
+      <button type="button" class="dst-btn is-sm" (click)="selection.clear()">Clear</button>
+      @if (canBulkApprove) {
+        <button type="button" class="dst-btn is-sm is-success" (click)="bulkApprove()" [disabled]="busy">
+          <span class="material-symbols-outlined">done_all</span>
+          Approve {{ selection.size }}
+        </button>
+      }
+    }
+  </div>
+
+  <!-- ── The list ─────────────────────────────────────────────────────── -->
+  <div class="dst-card">
+    <div class="dst-card-body is-flush">
+      @if (loading) {
+        <div class="or-loading">
+          @for (i of [1,2,3,4,5,6,7,8]; track i) { <div class="dst-skeleton" style="height: 52px"></div> }
+        </div>
+      } @else if (rows.length === 0) {
+        <dst-empty
+          icon="receipt_long"
+          title="Nothing in this queue"
+          [text]="queue === 'approval'
+            ? 'No orders are waiting for a decision. That is the state to aim for.'
+            : 'No orders match the current filters and period.'"
+        ></dst-empty>
+      } @else {
+        <div class="dst-table-wrap">
+          <table class="dst-table or-table">
+            <thead>
+              <tr>
+                <th class="or-check">
+                  <input
+                    type="checkbox"
+                    [checked]="allSelected"
+                    (change)="toggleAll()"
+                    aria-label="Select every order on this page"
+                  />
+                </th>
+                <th>Order</th>
+                <th>Buyer</th>
+                <th>Taken by</th>
+                <th class="num">Lines</th>
+                <th class="num">Fill rate</th>
+                <th class="num">Value</th>
+                <th>Delivery</th>
+                <th>Status</th>
+                <th class="actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of rows; track trackRow($index, row)) {
+                <tr
+                  class="is-clickable"
+                  [class.is-selected]="selection.has(row.id)"
+                  [class.is-flagged]="row.isOverdueForDelivery"
+                  (click)="open(row)"
+                >
+                  <td class="or-check" (click)="$event.stopPropagation()">
+                    <input
+                      type="checkbox"
+                      [checked]="selection.has(row.id)"
+                      (change)="toggle(row.id)"
+                      [attr.aria-label]="'Select order ' + row.orderNumber"
+                    />
+                  </td>
+                  <td>
+                    <div class="dst-cell-stack">
+                      <span class="dst-code">{{ row.orderNumber }}</span>
+                      <span class="sub">{{ row.orderDate | date:'d MMM y' }} · {{ kindLabels[row.kind] }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="dst-cell-stack">
+                      <span class="top">{{ row.outletName || row.partnerName }}</span>
+                      <span class="sub">{{ row.routeName }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="dst-cell-stack">
+                      <span class="top">{{ row.fieldRepName || '—' }}</span>
+                      <span class="sub">{{ sourceLabels[row.source] }}</span>
+                    </div>
+                  </td>
+                  <td class="num">{{ row.lineCount }}</td>
+                  <td class="num">
+                    <span [class.or-short]="row.fillRatePercent < 95 && row.fillRatePercent > 0">
+                      @if (row.fillRatePercent > 0) { {{ row.fillRatePercent | number:'1.0-0' }}% } @else { — }
+                    </span>
+                  </td>
+                  <td class="num strong">
+                    {{ row.totalAmount | number:'1.2-2' }}
+                    @if (row.paidAmount > 0 && row.paidAmount < row.totalAmount) {
+                      <span class="or-part-paid">{{ row.paidAmount | number:'1.0-0' }} paid</span>
+                    }
+                  </td>
+                  <td class="nowrap">
+                    @if (row.promisedDeliveryDate) {
+                      <span [class.or-late]="row.isOverdueForDelivery">
+                        {{ row.promisedDeliveryDate | date:'d MMM' }}
+                        @if (row.isOverdueForDelivery) { <span class="or-late-tag">late</span> }
+                      </span>
+                    } @else { <span class="muted">not promised</span> }
+                  </td>
+                  <td>
+                    <dst-status [label]="statusLabels[row.status]" [tone]="statusTone[row.status]"></dst-status>
+                    @if (row.requiresApproval) {
+                      <span class="dst-pill tone-warning or-flag">
+                        <span class="material-symbols-outlined">approval</span>Needs approval
+                      </span>
+                    }
+                  </td>
+                  <td class="actions" (click)="$event.stopPropagation()">
+                    @if (row.requiresApproval) {
+                      <button type="button" class="dst-icon-btn" (click)="decide(row, true)" [disabled]="busy" aria-label="Approve" title="Approve">
+                        <span class="material-symbols-outlined">check</span>
+                      </button>
+                      <button type="button" class="dst-icon-btn is-danger" (click)="decide(row, false)" [disabled]="busy" aria-label="Reject" title="Reject">
+                        <span class="material-symbols-outlined">close</span>
+                      </button>
+                    }
+                    @if (queue === 'held') {
+                      <button type="button" class="dst-icon-btn" (click)="release(row)" aria-label="Release the hold" title="Release">
+                        <span class="material-symbols-outlined">play_arrow</span>
+                      </button>
+                    } @else {
+                      <button type="button" class="dst-icon-btn" (click)="startHold(row)" aria-label="Put on hold" title="Hold">
+                        <span class="material-symbols-outlined">pause</span>
+                      </button>
+                    }
+                    <button type="button" class="dst-icon-btn is-danger" (click)="startCancel(row)" aria-label="Cancel this order" title="Cancel">
+                      <span class="material-symbols-outlined">block</span>
+                    </button>
+                    <button type="button" class="dst-icon-btn" (click)="open(row)" aria-label="Open this order" title="Open">
+                      <span class="material-symbols-outlined">chevron_right</span>
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="6">This page</td>
+                <td class="num">{{ pageValue | number:'1.2-2' }}</td>
+                <td colspan="3"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      }
+    </div>
+  </div>
+
+  <dst-pager [meta]="meta" noun="orders" (pageChange)="changePage($event)" (sizeChange)="changeSize($event)"></dst-pager>
+</div>
+
+<!-- ── Hold ─────────────────────────────────────────────────────────────── -->
+@if (holdTarget) {
+  <div class="dst-modal-backdrop" (click)="holdTarget = null">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Hold the order" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Hold {{ holdTarget.orderNumber }}</div>
+          <div class="dst-modal-sub">A held order keeps its allocation but will not be picked until it is released.</div>
+        </div>
+        <button type="button" class="dst-close" (click)="holdTarget = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="dst-modal-body">
+        <div class="dst-field">
+          <label for="or-hold">Reason <span class="req">*</span></label>
+          <textarea id="or-hold" [(ngModel)]="holdReason" placeholder="Why is this order being held?"></textarea>
+        </div>
+      </div>
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="holdTarget = null">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="confirmHold()" [disabled]="!holdReason.trim()">Hold it</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Cancel ───────────────────────────────────────────────────────────── -->
+@if (cancelTarget) {
+  <div class="dst-modal-backdrop" (click)="cancelTarget = null">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Cancel the order" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Cancel {{ cancelTarget.orderNumber }}</div>
+          <div class="dst-modal-sub">
+            Any allocated stock goes back to free. The order stays on the record as cancelled —
+            it is never deleted.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="cancelTarget = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="dst-modal-body">
+        <div class="dst-field">
+          <label for="or-cancel-reason">Reason <span class="req">*</span></label>
+          <select id="or-cancel-reason" [(ngModel)]="cancelReasonId">
+            <option value="">Pick a reason</option>
+            @for (r of cancelReasons; track r.id) { <option [value]="r.id">{{ r.name }}</option> }
+          </select>
+          <span class="dst-hint">Cancellation reasons are what the demand plan learns from.</span>
+        </div>
+        <div class="dst-field">
+          <label for="or-cancel-note">Note</label>
+          <input id="or-cancel-note" type="text" [(ngModel)]="cancelNote" placeholder="Optional" />
+        </div>
+      </div>
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="cancelTarget = null">Keep the order</button>
+        <button type="button" class="dst-btn is-danger" (click)="confirmCancel()" [disabled]="!cancelReasonId">Cancel the order</button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showOrderSheet) {
+  <dst-order-sheet (placed)="onOrderPlaced($event)" (closed)="showOrderSheet = false"></dst-order-sheet>
+}

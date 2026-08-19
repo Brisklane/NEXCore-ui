@@ -1,0 +1,504 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Credit &amp; collections</h2>
+      <p class="subtitle">Exposure, the ageing behind it, and money coming in.</p>
+    </div>
+    <dst-scope-bar [showPeriod]="true" (scopeChange)="onScope($event)"></dst-scope-bar>
+  </div>
+
+  <dst-help key="credit"></dst-help>
+
+  @if (error) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">{{ error }}</div>
+      <button type="button" class="dst-icon-btn" (click)="error = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  @if (notice) {
+    <div class="dst-banner tone-success" role="status">
+      <span class="material-symbols-outlined">check_circle</span>
+      <div class="dst-banner-body">{{ notice }}</div>
+      <button type="button" class="dst-icon-btn" (click)="notice = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  <div class="dst-tabs" role="tablist">
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'exposure'" [class.is-active]="tab === 'exposure'" (click)="setTab('exposure')">
+      <span class="material-symbols-outlined">speed</span>Exposure
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'collections'" [class.is-active]="tab === 'collections'" (click)="setTab('collections')">
+      <span class="material-symbols-outlined">payments</span>Receipts
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'cheques'" [class.is-active]="tab === 'cheques'" (click)="setTab('cheques')">
+      <span class="material-symbols-outlined">receipt_long</span>Cheques
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'overrides'" [class.is-active]="tab === 'overrides'" (click)="setTab('overrides')">
+      <span class="material-symbols-outlined">key</span>Override requests
+      @if (overrides.length) { <span class="dst-seg-count">{{ overrides.length }}</span> }
+    </button>
+  </div>
+
+  <!-- ── Exposure ─────────────────────────────────────────────────────── -->
+  @if (tab === 'exposure') {
+    <div class="cr-buckets" role="group" aria-label="Filter by ageing bucket">
+      <button type="button" class="cr-bucket" [class.is-active]="bucket === ''" (click)="setBucket('')">
+        <span class="cr-bucket-label">Everything</span>
+        <span class="cr-bucket-value">{{ totals.outstanding | number:'1.0-0' }}</span>
+        <span class="cr-bucket-foot">{{ profiles.length }} accounts on this page</span>
+      </button>
+      <button type="button" class="cr-bucket" [class.is-active]="bucket === 'b0'" (click)="setBucket('b0')">
+        <span class="cr-bucket-label">0–30 days</span>
+        <span class="cr-bucket-value">{{ totals.b0 | number:'1.0-0' }}</span>
+        <span class="cr-bucket-foot">within terms</span>
+      </button>
+      <button type="button" class="cr-bucket is-warn" [class.is-active]="bucket === 'b30'" (click)="setBucket('b30')">
+        <span class="cr-bucket-label">31–60 days</span>
+        <span class="cr-bucket-value">{{ totals.b30 | number:'1.0-0' }}</span>
+        <span class="cr-bucket-foot">chasing</span>
+      </button>
+      <button type="button" class="cr-bucket is-warn" [class.is-active]="bucket === 'b60'" (click)="setBucket('b60')">
+        <span class="cr-bucket-label">61–90 days</span>
+        <span class="cr-bucket-value">{{ totals.b60 | number:'1.0-0' }}</span>
+        <span class="cr-bucket-foot">escalate</span>
+      </button>
+      <button type="button" class="cr-bucket is-bad" [class.is-active]="bucket === 'b90'" (click)="setBucket('b90')">
+        <span class="cr-bucket-label">90+ days</span>
+        <span class="cr-bucket-value">{{ totals.b90 | number:'1.0-0' }}</span>
+        <span class="cr-bucket-foot">provision or recover</span>
+      </button>
+    </div>
+
+    <div class="dst-toolbar">
+      <div class="dst-search">
+        <span class="material-symbols-outlined">search</span>
+        <input type="search" [(ngModel)]="search" (ngModelChange)="onSearch()" placeholder="Shop or partner" aria-label="Search accounts" />
+      </div>
+
+      <label class="dst-check cr-quick">
+        <input type="checkbox" [(ngModel)]="blockedOnly" (ngModelChange)="load()" />
+        Blocked only
+      </label>
+
+      <span class="dst-spacer"></span>
+
+      @if (totals.blocked > 0) {
+        <span class="dst-pill tone-danger is-lg">
+          <span class="material-symbols-outlined">credit_card_off</span>
+          {{ totals.blocked }} blocked on this page
+        </span>
+      }
+    </div>
+
+    <div class="dst-card">
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="cr-loading">
+            @for (i of [1,2,3,4,5,6]; track i) { <div class="dst-skeleton" style="height: 56px"></div> }
+          </div>
+        } @else if (profiles.length === 0) {
+          <dst-empty icon="account_balance" title="Nothing outstanding" text="No accounts match this bucket and filter — which is the state to aim for." ></dst-empty>
+        } @else {
+          <div class="dst-table-wrap">
+            <table class="dst-table cr-table">
+              <thead>
+                <tr>
+                  <th>Account</th><th>Terms</th><th class="num">Limit used</th>
+                  <th class="num">Outstanding</th><th class="num">Overdue</th>
+                  <th class="num">Oldest</th><th>State</th><th class="actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (p of profiles; track trackProfile($index, p)) {
+                  <tr [class.is-flagged]="p.isBlocked">
+                    <td>
+                      <div class="dst-cell-stack">
+                        <span class="top">
+                          @if (p.outletId) {
+                            <a [routerLink]="['/distribution/outlets', p.outletId]">{{ p.outletName }}</a>
+                          } @else if (p.partnerId) {
+                            <a [routerLink]="['/distribution/partners', p.partnerId]">{{ p.partnerName }}</a>
+                          }
+                        </span>
+                        <span class="sub">
+                          @if (p.outletCode) { <span class="dst-code is-plain">{{ p.outletCode }}</span> · }
+                          {{ p.routeName || p.territoryName }}
+                        </span>
+                      </div>
+                    </td>
+                    <td class="nowrap">
+                      {{ p.creditDays }} days
+                      <span class="cr-enforce">{{ enforcementLabels[p.enforcement] }}</span>
+                    </td>
+                    <td class="num">
+                      <div class="cr-used">
+                        <span class="cr-used-nums">{{ usedPercent(p) }}%</span>
+                        <span class="dst-bar" [class]="'dst-bar ' + usedTone(p)">
+                          <span class="dst-bar-fill" [style.width.%]="usedPercent(p)"></span>
+                        </span>
+                        <span class="cr-used-limit">of {{ p.effectiveLimit | number:'1.0-0' }}</span>
+                      </div>
+                    </td>
+                    <td class="num strong">{{ p.outstandingAmount | number:'1.2-2' }}</td>
+                    <td class="num" [class.cr-overdue]="p.overdueAmount > 0">
+                      @if (p.overdueAmount > 0) { {{ p.overdueAmount | number:'1.2-2' }} } @else { <span class="muted">—</span> }
+                    </td>
+                    <td class="num">
+                      @if (p.oldestInvoiceDays > 0) {
+                        <span [class.cr-overdue]="p.oldestInvoiceDays > p.creditDays">{{ p.oldestInvoiceDays }}d</span>
+                      } @else { <span class="muted">—</span> }
+                    </td>
+                    <td>
+                      @if (p.isBlocked) {
+                        <dst-status label="Blocked" tone="bad" icon="credit_card_off"></dst-status>
+                        @if (p.blockReason) { <span class="cr-block-reason">{{ p.blockReason }}</span> }
+                      } @else if (p.bouncedChequeCount > 0) {
+                        <dst-status [label]="p.bouncedChequeCount + ' bounced'" tone="warn"></dst-status>
+                      } @else {
+                        <dst-status label="Good" tone="good"></dst-status>
+                      }
+                    </td>
+                    <td class="actions">
+                      <button type="button" class="dst-btn is-sm is-primary" (click)="collectFor = p">Collect</button>
+                      <button type="button" class="dst-icon-btn" (click)="startLimit(p)" aria-label="Change the limit" title="Limit">
+                        <span class="material-symbols-outlined">tune</span>
+                      </button>
+                      <button type="button" class="dst-icon-btn" (click)="recalculate(p)" aria-label="Recalculate from invoices" title="Recalculate">
+                        <span class="material-symbols-outlined">refresh</span>
+                      </button>
+                      @if (p.isBlocked) {
+                        <button type="button" class="dst-icon-btn" (click)="block(p, false)" aria-label="Unblock" title="Unblock">
+                          <span class="material-symbols-outlined">lock_open</span>
+                        </button>
+                      } @else {
+                        <button type="button" class="dst-icon-btn is-danger" (click)="block(p, true)" aria-label="Block" title="Block">
+                          <span class="material-symbols-outlined">lock</span>
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ── Receipts ─────────────────────────────────────────────────────── -->
+  @if (tab === 'collections') {
+    <div class="dst-toolbar">
+      <div class="dst-search">
+        <span class="material-symbols-outlined">search</span>
+        <input type="search" [(ngModel)]="search" (ngModelChange)="onSearch()" placeholder="Receipt number, shop or reference" aria-label="Search receipts" />
+      </div>
+    </div>
+
+    <div class="dst-card">
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="cr-loading">
+            @for (i of [1,2,3,4,5]; track i) { <div class="dst-skeleton" style="height: 52px"></div> }
+          </div>
+        } @else if (collections.length === 0) {
+          <dst-empty icon="payments" title="No receipts in this period" text="Receipts recorded in the field and at the desk both land here."></dst-empty>
+        } @else {
+          <div class="dst-table-wrap">
+            <table class="dst-table">
+              <thead>
+                <tr><th>Receipt</th><th>When</th><th>From</th><th>Taken by</th><th>Tender</th><th class="num">Amount</th><th>Banked</th><th class="actions"></th></tr>
+              </thead>
+              <tbody>
+                @for (c of collections; track trackCollection($index, c)) {
+                  <tr>
+                    <td><span class="dst-code">{{ c.receiptNumber }}</span></td>
+                    <td class="nowrap">{{ c.collectedAt | date:'d MMM y, HH:mm' }}</td>
+                    <td class="strong">{{ c.outletName }}</td>
+                    <td>{{ c.fieldRepName }}</td>
+                    <td>
+                      <span class="cr-tender">
+                        <span class="material-symbols-outlined">{{ tenderIcons[c.tender] }}</span>
+                        {{ tenderLabels[c.tender] }}
+                      </span>
+                      @if (c.reference) { <span class="cr-ref">{{ c.reference }}</span> }
+                      @if (c.chequeStatus != null) {
+                        <dst-status [label]="chequeLabels[c.chequeStatus]" [tone]="chequeTone[c.chequeStatus]"></dst-status>
+                      }
+                    </td>
+                    <td class="num strong">{{ c.amount | number:'1.2-2' }}</td>
+                    <td>
+                      @if (c.isDeposited) { <span class="dst-pill tone-success">Banked</span> }
+                      @else { <span class="dst-pill tone-warning">With the rep</span> }
+                    </td>
+                    <td class="actions">
+                      <button type="button" class="dst-icon-btn is-danger" (click)="reverseCollection(c)" aria-label="Reverse this receipt" title="Reverse">
+                        <span class="material-symbols-outlined">undo</span>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ── Cheques ──────────────────────────────────────────────────────── -->
+  @if (tab === 'cheques') {
+    <div class="dst-toolbar">
+      <div class="dst-search">
+        <span class="material-symbols-outlined">search</span>
+        <input type="search" [(ngModel)]="search" (ngModelChange)="onSearch()" placeholder="Cheque number or bank" aria-label="Search cheques" />
+      </div>
+    </div>
+
+    <div class="dst-card">
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="cr-loading">
+            @for (i of [1,2,3,4]; track i) { <div class="dst-skeleton" style="height: 52px"></div> }
+          </div>
+        } @else if (cheques.length === 0) {
+          <dst-empty icon="receipt_long" title="No cheques on hand" text="Cheques recorded against a receipt appear here from received through to cleared or bounced."></dst-empty>
+        } @else {
+          <div class="dst-table-wrap">
+            <table class="dst-table">
+              <thead>
+                <tr><th>Cheque</th><th>From</th><th>Bank</th><th>Dated</th><th class="num">Amount</th><th>Status</th><th class="actions">Actions</th></tr>
+              </thead>
+              <tbody>
+                @for (c of cheques; track trackCheque($index, c)) {
+                  <tr [class.is-flagged]="c.status === ChequeStatus.Bounced">
+                    <td><span class="dst-code">{{ c.chequeNumber }}</span></td>
+                    <td class="strong">{{ c.outletName || c.partnerName }}</td>
+                    <td class="muted">{{ c.bankName }}</td>
+                    <td class="nowrap">
+                      {{ c.chequeDate | date:'d MMM y' }}
+                      @if (c.isPostDated) {
+                        <span class="cr-pdc">post-dated@if (c.daysToMaturity) { , {{ c.daysToMaturity }}d }</span>
+                      }
+                    </td>
+                    <td class="num strong">{{ c.amount | number:'1.2-2' }}</td>
+                    <td>
+                      <dst-status [label]="chequeLabels[c.status]" [tone]="chequeTone[c.status]"></dst-status>
+                      @if (c.bounceReason) { <span class="cr-block-reason">{{ c.bounceReason }}</span> }
+                      @if (c.triggeredCreditBlock) { <span class="dst-pill tone-danger">Blocked the account</span> }
+                    </td>
+                    <td class="actions">
+                      @if (c.status !== ChequeStatus.Cleared && c.status !== ChequeStatus.Cancelled) {
+                        <button type="button" class="dst-btn is-sm" (click)="startCheque(c)">Update</button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ── Overrides ────────────────────────────────────────────────────── -->
+  @if (tab === 'overrides') {
+    <div class="dst-card">
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="cr-loading">
+            @for (i of [1,2,3]; track i) { <div class="dst-skeleton" style="height: 72px"></div> }
+          </div>
+        } @else if (overrides.length === 0) {
+          <dst-empty icon="key" title="No override requests" text="A rep whose order breaches a credit limit can ask for a one-off uplift. Requests appear here for a decision."></dst-empty>
+        } @else {
+          @for (o of overrides; track trackOverride($index, o)) {
+            <div class="cr-override">
+              <div class="cr-override-body">
+                <div class="cr-override-name">
+                  {{ o.outletName || o.partnerName }}
+                  @if (o.orderNumber) { <span class="dst-code">{{ o.orderNumber }}</span> }
+                </div>
+                <div class="cr-override-meta">
+                  Asked for {{ o.requestedAmount | number:'1.2-2' }} on {{ o.requestedAt | date:'d MMM y, HH:mm' }}
+                  @if (o.reasonCodeName) { · {{ o.reasonCodeName }} }
+                </div>
+                @if (o.justification) { <div class="cr-override-note">{{ o.justification }}</div> }
+              </div>
+              <button type="button" class="dst-btn is-primary" (click)="startOverride(o)">Decide</button>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  }
+
+  @if (tab !== 'overrides') {
+    <dst-pager [meta]="meta" noun="rows" (pageChange)="changePage($event)" (sizeChange)="changeSize($event)"></dst-pager>
+  }
+</div>
+
+<!-- ── Limit editor ─────────────────────────────────────────────────────── -->
+@if (limitTarget) {
+  <div class="dst-modal-backdrop" (click)="limitTarget = null">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Credit limit" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Credit terms for {{ partyName(limitTarget) }}</div>
+          <div class="dst-modal-sub">
+            Enforcement decides what happens when an order would breach the limit: nothing, a
+            warning, or a block that needs an override.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="limitTarget = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="dst-modal-body">
+        <div class="dst-form-grid">
+          <div class="dst-field">
+            <label for="cr-limit">Credit limit</label>
+            <input id="cr-limit" type="number" step="0.01" min="0" [(ngModel)]="limit.creditLimit" />
+          </div>
+          <div class="dst-field">
+            <label for="cr-days">Credit days</label>
+            <input id="cr-days" type="number" min="0" [(ngModel)]="limit.creditDays" />
+          </div>
+          <div class="dst-field is-full">
+            <label for="cr-enforce">Enforcement</label>
+            <select id="cr-enforce" [(ngModel)]="limit.enforcement">
+              @for (o of enforcementOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+            </select>
+          </div>
+          <div class="dst-field is-full">
+            <label for="cr-limit-reason">Reason <span class="req">*</span></label>
+            <textarea id="cr-limit-reason" [(ngModel)]="limit.reason" placeholder="Who approved this change and why"></textarea>
+            <span class="dst-hint">Limit changes are audited. A limit that quietly doubled is a question at year end.</span>
+          </div>
+        </div>
+      </div>
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="limitTarget = null">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="saveLimit()" [disabled]="!limit.reason.trim()">Save</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Cheque update ────────────────────────────────────────────────────── -->
+@if (chequeTarget) {
+  <div class="dst-modal-backdrop" (click)="chequeTarget = null">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Update the cheque" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Cheque {{ chequeTarget.chequeNumber }}</div>
+          <div class="dst-modal-sub">
+            {{ chequeTarget.amount | number:'1.2-2' }} from {{ chequeTarget.outletName || chequeTarget.partnerName }}.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="chequeTarget = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="dst-modal-body">
+        <div class="dst-field">
+          <label for="cr-cheque-status">New status</label>
+          <select id="cr-cheque-status" [(ngModel)]="chequeUpdate.status">
+            <option [value]="ChequeStatus.Deposited">Deposited</option>
+            <option [value]="ChequeStatus.Cleared">Cleared</option>
+            <option [value]="ChequeStatus.Bounced">Bounced</option>
+            <option [value]="ChequeStatus.Cancelled">Cancelled</option>
+          </select>
+        </div>
+
+        @if (chequeNeedsBounceReason) {
+          <div class="dst-field">
+            <label for="cr-bounce">Why did it bounce? <span class="req">*</span></label>
+            <input id="cr-bounce" type="text" [(ngModel)]="chequeUpdate.bounceReason" placeholder="Insufficient funds, signature mismatch" />
+          </div>
+          <div class="dst-field">
+            <label for="cr-charges">Bank charges</label>
+            <input id="cr-charges" type="number" step="0.01" min="0" [(ngModel)]="chequeUpdate.bounceCharges" />
+            <span class="dst-hint">Recharged to the account along with the reversal.</span>
+          </div>
+        } @else {
+          <div class="dst-field">
+            <label for="cr-bank-account">Deposited into</label>
+            <input id="cr-bank-account" type="text" [(ngModel)]="chequeUpdate.depositBankAccount" placeholder="Bank account" />
+          </div>
+        }
+
+        <div class="dst-field">
+          <label for="cr-cheque-note">Note</label>
+          <input id="cr-cheque-note" type="text" [(ngModel)]="chequeUpdate.note" />
+        </div>
+      </div>
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="chequeTarget = null">Cancel</button>
+        <button
+          type="button"
+          class="dst-btn is-primary"
+          (click)="saveCheque()"
+          [disabled]="chequeNeedsBounceReason && !chequeUpdate.bounceReason.trim()"
+        >Update</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Override decision ────────────────────────────────────────────────── -->
+@if (overrideTarget) {
+  <div class="dst-modal-backdrop" (click)="overrideTarget = null">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Credit override" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Override for {{ overrideTarget.outletName || overrideTarget.partnerName }}</div>
+          <div class="dst-modal-sub">{{ overrideTarget.justification }}</div>
+        </div>
+        <button type="button" class="dst-close" (click)="overrideTarget = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="dst-modal-body">
+        <div class="dst-form-grid">
+          <div class="dst-field">
+            <label for="cr-ov-amount">Approve up to</label>
+            <input id="cr-ov-amount" type="number" step="0.01" min="0" [(ngModel)]="overrideDecision.approvedAmount" />
+            <span class="dst-hint">Asked for {{ overrideTarget.requestedAmount | number:'1.2-2' }}.</span>
+          </div>
+          <div class="dst-field">
+            <label for="cr-ov-expiry">Expires</label>
+            <input id="cr-ov-expiry" type="date" [(ngModel)]="overrideDecision.expiresOn" />
+            <span class="dst-hint">An override with no end date is a permanent limit increase by another name.</span>
+          </div>
+          <div class="dst-field is-full">
+            <label for="cr-ov-note">Note</label>
+            <textarea id="cr-ov-note" [(ngModel)]="overrideDecision.decisionNote"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="overrideTarget = null">Cancel</button>
+        <button type="button" class="dst-btn is-danger" (click)="overrideDecision.isApproved = false; decideOverride()">Refuse</button>
+        <button type="button" class="dst-btn is-success" (click)="overrideDecision.isApproved = true; decideOverride()">Approve</button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (collectFor) {
+  <dst-collection-sheet
+    [outletId]="collectFor.outletId"
+    [partnerId]="collectFor.partnerId"
+    [partyName]="partyName(collectFor)"
+    (recorded)="onCollectionRecorded()"
+    (closed)="collectFor = null"
+  ></dst-collection-sheet>
+}

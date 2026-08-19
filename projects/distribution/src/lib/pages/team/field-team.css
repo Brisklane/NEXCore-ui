@@ -1,0 +1,50 @@
+/* Field team — last sync is the operational column, not the roster. */
+
+.ft-head-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ft-loading { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.ft-table { min-width: 1280px; }
+.ft-devices { min-width: 1180px; }
+.ft-fieldset { margin-top: 14px; }
+.ft-nopin { color: var(--warning-text, #92400e); font-weight: 700; }
+
+.ft-permissions { display: flex; gap: 4px; flex-wrap: wrap; }
+
+.ft-perm {
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--bg-muted, #f1f5f9);
+  border: 1px solid var(--border-default, #e6eaf0);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-secondary, #64748b);
+}
+
+.ft-perm.is-limit {
+  background: var(--warning-soft, #fef3c7);
+  border-color: var(--warning-border, #fde68a);
+  color: var(--warning-text, #92400e);
+  font-variant-numeric: tabular-nums;
+  text-transform: none;
+}
+
+.ft-queued {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--warning-soft, #fef3c7);
+  color: var(--warning-text, #92400e);
+  font-size: 11.5px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.ft-reason {
+  display: block;
+  font-size: 10.5px;
+  color: var(--danger-text, #b91c1c);
+  margin-top: 3px;
+  max-width: 180px;
+  line-height: 1.4;
+}

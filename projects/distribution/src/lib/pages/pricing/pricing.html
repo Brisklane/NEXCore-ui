@@ -1,0 +1,484 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Pricing &amp; margin ladder</h2>
+      <p class="subtitle">What each tier pays, and what each tier makes.</p>
+    </div>
+    <div class="pr-head-actions">
+      <dst-scope-bar (scopeChange)="onScope($event)"></dst-scope-bar>
+      <button type="button" class="dst-btn" (click)="openTest()">
+        <span class="material-symbols-outlined">science</span>
+        Test a price
+      </button>
+      @if (tab === 'lists') {
+        <button type="button" class="dst-btn is-primary" (click)="create()">
+          <span class="material-symbols-outlined">add</span>
+          New price list
+        </button>
+      }
+    </div>
+  </div>
+
+  <dst-help key="pricing"></dst-help>
+
+  @if (error) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">{{ error }}</div>
+      <button type="button" class="dst-icon-btn" (click)="error = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  @if (notice) {
+    <div class="dst-banner tone-success" role="status">
+      <span class="material-symbols-outlined">check_circle</span>
+      <div class="dst-banner-body">{{ notice }}</div>
+      <button type="button" class="dst-icon-btn" (click)="notice = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  <div class="dst-tabs" role="tablist">
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'lists'" [class.is-active]="tab === 'lists'" (click)="setTab('lists')">
+      <span class="material-symbols-outlined">sell</span>Price lists
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'ladder'" [class.is-active]="tab === 'ladder'" (click)="setTab('ladder')">
+      <span class="material-symbols-outlined">stacked_bar_chart</span>Margin ladder
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'mrp'" [class.is-active]="tab === 'mrp'" (click)="setTab('mrp')">
+      <span class="material-symbols-outlined">local_offer</span>MRP revisions
+    </button>
+  </div>
+
+  <div class="dst-toolbar">
+    <div class="dst-search">
+      <span class="material-symbols-outlined">search</span>
+      <input type="search" [(ngModel)]="search" (ngModelChange)="onSearch()" placeholder="Name, code or item" aria-label="Search" />
+    </div>
+
+    @if (tab === 'lists') {
+      <select class="dst-filter-select" [(ngModel)]="scopeFilter" (ngModelChange)="load()" aria-label="Scope">
+        <option value="">Every scope</option>
+        @for (o of scopeOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+      </select>
+    }
+  </div>
+
+  <!-- ── Price lists ──────────────────────────────────────────────────── -->
+  @if (tab === 'lists') {
+    <div class="dst-card">
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="pr-loading">
+            @for (i of [1,2,3,4,5,6]; track i) { <div class="dst-skeleton" style="height: 52px"></div> }
+          </div>
+        } @else if (lists.length === 0) {
+          <dst-empty
+            icon="sell"
+            title="No price lists"
+            text="Lists are scoped — company, channel, territory, tier, partner, contract, outlet — and the narrowest live one wins."
+            actionLabel="New price list"
+            actionIcon="add"
+            (action)="create()"
+          ></dst-empty>
+        } @else {
+          <div class="dst-table-wrap">
+            <table class="dst-table pr-table">
+              <thead>
+                <tr>
+                  <th>List</th><th>Scope</th><th>Applies to</th><th>Effective</th>
+                  <th class="num">Priority</th><th class="num">Lines</th><th>State</th><th class="actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of lists; track trackList($index, row)) {
+                  <tr [class.pr-draft]="!row.isApproved">
+                    <td>
+                      <div class="dst-cell-stack">
+                        <span class="top">{{ row.name }}</span>
+                        @if (row.code) { <span class="sub"><span class="dst-code is-plain">{{ row.code }}</span></span> }
+                      </div>
+                    </td>
+                    <td><span class="dst-pill tone-neutral">{{ scopeLabels[row.scope] }}</span></td>
+                    <td>{{ scopeLabelFor(row) }}</td>
+                    <td class="nowrap">
+                      {{ row.effectiveFrom | date:'d MMM y' }}
+                      @if (row.effectiveTo) { – {{ row.effectiveTo | date:'d MMM y' }} }
+                      @else { <span class="muted">onwards</span> }
+                    </td>
+                    <td class="num muted">{{ row.priority }}</td>
+                    <td class="num">{{ row.lineCount }}</td>
+                    <td>
+                      @if (row.isApproved) {
+                        <dst-status label="Live" tone="good"></dst-status>
+                      } @else {
+                        <dst-status label="Draft — not pricing anything" tone="warn"></dst-status>
+                      }
+                    </td>
+                    <td class="actions">
+                      @if (!row.isApproved) {
+                        <button type="button" class="dst-btn is-sm is-success" (click)="approve(row)">Approve</button>
+                      }
+                      <button type="button" class="dst-icon-btn" (click)="edit(row)" aria-label="Edit" title="Edit">
+                        <span class="material-symbols-outlined">edit</span>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ── Margin ladder ────────────────────────────────────────────────── -->
+  @if (tab === 'ladder') {
+    <div class="dst-card">
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="pr-loading">
+            @for (i of [1,2,3,4,5]; track i) { <div class="dst-skeleton" style="height: 74px"></div> }
+          </div>
+        } @else if (ladder.length === 0) {
+          <dst-empty
+            icon="stacked_bar_chart"
+            title="No ladder defined"
+            text="The ladder shows factory cost through to consumer MRP, with the margin at every hop. It is what settles the 'there is no margin in this' conversation."
+          ></dst-empty>
+        } @else {
+          @for (row of ladder; track trackLadder($index, row)) {
+            <div class="pr-ladder">
+              <div class="pr-ladder-head">
+                <div class="dst-cell-stack">
+                  <span class="top">{{ row.itemName }}</span>
+                  <span class="sub">
+                    @if (row.itemCode) { <span class="dst-code is-plain">{{ row.itemCode }}</span> · }
+                    per {{ row.uom }}
+                    @if (row.partnerName) { · {{ row.partnerName }} }
+                    @if (row.channel != null) { · {{ channelLabels[row.channel] }} }
+                  </span>
+                </div>
+                <span class="pr-ladder-mrp">MRP {{ row.mrp | number:'1.2-2' }}</span>
+              </div>
+
+              <div class="pr-ladder-bar" role="img" [attr.aria-label]="'Margin split for ' + row.itemName">
+                @for (seg of ladderSegments(row); track seg.label) {
+                  <span class="pr-seg" [class]="'pr-seg ' + seg.tone" [style.width.%]="seg.percent">
+                    <span class="pr-seg-label">{{ seg.label }}</span>
+                  </span>
+                }
+              </div>
+
+              <div class="pr-ladder-nums">
+                <span><b>Landed cost</b> {{ row.landedCost | number:'1.2-2' }}</span>
+                <span><b>To distributor</b> {{ row.priceToDistributor | number:'1.2-2' }} <i>({{ row.companyMarginPercent | number:'1.1-1' }}% us)</i></span>
+                <span><b>To wholesaler</b> {{ row.priceToWholesaler | number:'1.2-2' }} <i>({{ row.distributorMarginPercent | number:'1.1-1' }}%)</i></span>
+                <span><b>To retailer</b> {{ row.priceToRetailer | number:'1.2-2' }} <i>({{ row.wholesalerMarginPercent | number:'1.1-1' }}%)</i></span>
+                <span><b>Retailer makes</b> {{ row.retailerMarginPercent | number:'1.1-1' }}%</span>
+              </div>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ── MRP revisions ────────────────────────────────────────────────── -->
+  @if (tab === 'mrp') {
+    <div class="dst-card">
+      <div class="dst-card-head">
+        <div class="dst-card-title"><span class="material-symbols-outlined">local_offer</span>MRP revisions</div>
+        <span class="dst-card-sub">A price drop on stock the trade already holds is a price-protection claim</span>
+      </div>
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="pr-loading">
+            @for (i of [1,2,3,4]; track i) { <div class="dst-skeleton" style="height: 52px"></div> }
+          </div>
+        } @else if (revisions.length === 0) {
+          <dst-empty icon="local_offer" title="No MRP changes recorded" text="Recording a revision here is what makes price protection calculable rather than negotiated."></dst-empty>
+        } @else {
+          <div class="dst-table-wrap">
+            <table class="dst-table">
+              <thead>
+                <tr>
+                  <th>Item</th><th>Batch</th><th class="num">Old MRP</th><th class="num">New MRP</th>
+                  <th>Effective</th><th>Protection</th><th>Approved</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of revisions; track trackRevision($index, row)) {
+                  <tr [class.is-flagged]="row.triggersPriceProtection">
+                    <td class="strong">{{ row.itemName }}</td>
+                    <td class="muted">{{ row.batchNumber || 'all batches' }}</td>
+                    <td class="num muted">{{ row.oldMrp | number:'1.2-2' }}</td>
+                    <td class="num strong" [class.pr-down]="row.newMrp < row.oldMrp">{{ row.newMrp | number:'1.2-2' }}</td>
+                    <td class="nowrap">{{ row.effectiveFrom | date:'d MMM y' }}</td>
+                    <td>
+                      @if (row.triggersPriceProtection) {
+                        <span class="dst-pill tone-warning">
+                          {{ row.protectionPerUnit | number:'1.2-2' }} per unit
+                        </span>
+                        @if (row.protectionClaimWindowEnds) {
+                          <span class="pr-window">claims close {{ row.protectionClaimWindowEnds | date:'d MMM' }}</span>
+                        }
+                      } @else { <span class="muted">none</span> }
+                    </td>
+                    <td>
+                      @if (row.approvedAt) { <span class="dst-pill tone-success">{{ row.approvedAt | date:'d MMM' }}</span> }
+                      @else { <span class="dst-pill tone-warning">Waiting</span> }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <dst-pager [meta]="meta" noun="rows" (pageChange)="changePage($event)" (sizeChange)="changeSize($event)"></dst-pager>
+</div>
+
+<!-- ── Price list editor ────────────────────────────────────────────────── -->
+@if (showEditor) {
+  <div class="dst-modal-backdrop" (click)="showEditor = false">
+    <div class="dst-modal is-sheet" role="dialog" aria-modal="true" aria-label="Price list" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">@if (editing.id) { Edit price list } @else { New price list }</div>
+          <div class="dst-modal-sub">
+            Scope decides who it applies to. The narrowest live list wins, and ties break on priority.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="showEditor = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-form-grid">
+          <div class="dst-field is-full">
+            <label for="pr-name">Name <span class="req">*</span></label>
+            <input id="pr-name" type="text" [(ngModel)]="editing.name" [class.is-invalid]="!!editorErrors['name']" placeholder="Modern trade — H2" />
+            <dst-field-error [message]="editorErrors['name']" for="pr-name"></dst-field-error>
+          </div>
+
+          <div class="dst-field">
+            <label for="pr-scope">Scope</label>
+            <select id="pr-scope" [(ngModel)]="editing.scope">
+              @for (o of scopeOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+            </select>
+          </div>
+
+          <div class="dst-field">
+            <label for="pr-priority">Priority</label>
+            <input id="pr-priority" type="number" [(ngModel)]="editing.priority" />
+            <span class="dst-hint">Only used when two lists share a scope. Lower wins.</span>
+          </div>
+
+          <div class="dst-field">
+            <label for="pr-from">Effective from <span class="req">*</span></label>
+            <input id="pr-from" type="date" [(ngModel)]="editing.effectiveFrom" [class.is-invalid]="!!editorErrors['effectiveFrom']" />
+            <dst-field-error [message]="editorErrors['effectiveFrom']" for="pr-from"></dst-field-error>
+          </div>
+
+          <div class="dst-field">
+            <label for="pr-to">Effective to</label>
+            <input id="pr-to" type="date" [(ngModel)]="editing.effectiveTo" />
+            <span class="dst-hint">Leave blank for open-ended.</span>
+          </div>
+
+          <div class="dst-field is-full">
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="editing.isTaxInclusive" />
+              <span>
+                Prices include tax
+                <span class="dst-check-sub">Changes how the line total is derived — get it wrong and every invoice is out by the tax rate.</span>
+              </span>
+            </label>
+          </div>
+        </div>
+
+        @if (lineProblems.length) {
+          <div class="dst-banner tone-warning pr-problems">
+            <span class="material-symbols-outlined">warning</span>
+            <div class="dst-banner-body">
+              <ul>@for (p of lineProblems; track p) { <li>{{ p }}</li> }</ul>
+            </div>
+          </div>
+        }
+
+        <div class="dst-section-label">Lines</div>
+
+        @if (editing.lines.length === 0) {
+          <div class="dst-empty">
+            <div class="dst-empty-icon"><span class="material-symbols-outlined">list</span></div>
+            <div class="dst-empty-title">No lines yet</div>
+            <p class="dst-empty-text">A list with no lines prices nothing and is silently skipped in the ladder.</p>
+            <button type="button" class="dst-btn is-primary" (click)="addLine()">
+              <span class="material-symbols-outlined">add</span>Add a line
+            </button>
+          </div>
+        } @else {
+          <div class="dst-table-wrap">
+            <table class="dst-table pr-lines">
+              <thead>
+                <tr>
+                  <th>Item id</th><th>Name</th><th>UoM</th>
+                  <th class="num">Price</th><th class="num">MRP</th>
+                  <th class="num">Floor</th><th class="num">Max disc %</th><th class="num">Tax %</th><th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (l of editing.lines; track trackLine($index, l)) {
+                  <tr [class.is-flagged]="l.minimumPrice > 0 && l.unitPrice < l.minimumPrice">
+                    <td><input type="text" class="pr-cell is-wide" [(ngModel)]="l.itemId" placeholder="Inventory item id" aria-label="Item id" /></td>
+                    <td><input type="text" class="pr-cell is-wide" [(ngModel)]="l.itemName" aria-label="Item name" /></td>
+                    <td><input type="text" class="pr-cell is-narrow" [(ngModel)]="l.uom" aria-label="Unit of measure" /></td>
+                    <td class="num"><input type="number" class="pr-cell" step="0.01" min="0" [(ngModel)]="l.unitPrice" aria-label="Unit price" /></td>
+                    <td class="num"><input type="number" class="pr-cell" step="0.01" min="0" [(ngModel)]="l.mrp" aria-label="MRP" /></td>
+                    <td class="num"><input type="number" class="pr-cell" step="0.01" min="0" [(ngModel)]="l.minimumPrice" aria-label="Floor price" /></td>
+                    <td class="num"><input type="number" class="pr-cell" step="0.01" min="0" [(ngModel)]="l.maxDiscountPercent" aria-label="Maximum discount percent" /></td>
+                    <td class="num"><input type="number" class="pr-cell" step="0.01" min="0" [(ngModel)]="l.taxPercent" aria-label="Tax percent" /></td>
+                    <td class="actions">
+                      <button type="button" class="dst-icon-btn is-danger" (click)="removeLine(l)" aria-label="Remove this line">
+                        <span class="material-symbols-outlined">delete</span>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <button type="button" class="dst-btn pr-add-line" (click)="addLine()">
+            <span class="material-symbols-outlined">add</span>Add a line
+          </button>
+        }
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showEditor = false" [disabled]="busy">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="save()" [disabled]="busy">
+          @if (busy) { Saving… } @else { Save }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Price test ───────────────────────────────────────────────────────── -->
+@if (showTest) {
+  <div class="dst-modal-backdrop" (click)="showTest = false">
+    <div class="dst-modal" role="dialog" aria-modal="true" aria-label="Test a price" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">What would this outlet pay?</div>
+          <div class="dst-modal-sub">
+            Asks the server the same question an order asks, and shows every candidate it rejected.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="showTest = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-form-grid">
+          <div class="dst-field is-full">
+            <label for="pr-test-outlet">Outlet</label>
+            <input
+              id="pr-test-outlet"
+              type="search"
+              [(ngModel)]="testOutletSearch"
+              (ngModelChange)="searchTestOutlets()"
+              placeholder="Search for a shop"
+            />
+            @if (testOutlets.length) {
+              <div class="pr-test-results">
+                @for (o of testOutlets; track o.id) {
+                  <button
+                    type="button"
+                    class="pr-test-outlet"
+                    [class.is-picked]="test.outletId === o.id"
+                    (click)="test.outletId = o.id; testOutletSearch = o.name; testOutlets = []"
+                  >
+                    <span>{{ o.name }}</span>
+                    <span class="pr-test-outlet-meta">{{ o.code }} · {{ o.territoryName }}</span>
+                  </button>
+                }
+              </div>
+            }
+            <span class="dst-hint">Leave blank to see the company-wide price.</span>
+          </div>
+
+          <div class="dst-field">
+            <label for="pr-test-item">Item id <span class="req">*</span></label>
+            <input id="pr-test-item" type="text" [(ngModel)]="test.itemId" placeholder="Inventory item id" />
+          </div>
+
+          <div class="dst-field">
+            <label for="pr-test-uom">UoM</label>
+            <input id="pr-test-uom" type="text" [(ngModel)]="test.uom" />
+          </div>
+
+          <div class="dst-field">
+            <label for="pr-test-qty">Quantity</label>
+            <input id="pr-test-qty" type="number" min="1" [(ngModel)]="test.quantity" />
+            <span class="dst-hint">Slab prices depend on it.</span>
+          </div>
+        </div>
+
+        @if (testing) { <div class="dst-skeleton pr-test-skel"></div> }
+
+        @if (testResult; as r) {
+          <div class="pr-test-result">
+            <div class="pr-test-head">
+              <div>
+                <span class="pr-test-label">Resolved price</span>
+                <span class="pr-test-value">{{ r.resolvedPrice | number:'1.2-2' }}</span>
+              </div>
+              <div class="pr-test-meta">
+                won by <strong>{{ scopeLabels[r.winningScope] }}</strong>
+                @if (r.winningPriceListName) { — {{ r.winningPriceListName }} }
+              </div>
+            </div>
+
+            <div class="dst-table-wrap">
+              <table class="dst-table">
+                <thead><tr><th>Scope</th><th>Price list</th><th class="num">Price</th><th>Outcome</th></tr></thead>
+                <tbody>
+                  @for (c of r.considered; track c.priceListId + c.scope) {
+                    <tr [class.is-selected]="c.isWinner">
+                      <td class="strong">{{ scopeLabels[c.scope] }}</td>
+                      <td>{{ c.priceListName }}</td>
+                      <td class="num">{{ c.unitPrice | number:'1.2-2' }}</td>
+                      <td>
+                        @if (c.isWinner) { <span class="dst-pill tone-success">Applied</span> }
+                        @else { <span class="muted">{{ c.skipReason || 'Outranked' }}</span> }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showTest = false">Close</button>
+        <button type="button" class="dst-btn is-primary" (click)="runTest()" [disabled]="!test.itemId || testing">
+          @if (testing) { Resolving… } @else { Resolve }
+        </button>
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,193 @@
+/* Traceability — the trace is the point; everything else keeps it fed. */
+
+.tc-loading { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.tc-table { min-width: 980px; }
+.tc-scroll { max-height: 420px; overflow-y: auto; }
+.tc-good { color: var(--success-text, #15803d); font-weight: 750; }
+.tc-bad { color: var(--danger-text, #b91c1c); font-weight: 750; }
+.tc-none { padding: 26px 16px; text-align: center; font-size: 12.5px; color: var(--text-muted, #94a3b8); margin: 0; }
+
+/* ── Trace ─────────────────────────────────────────────────────────── */
+.tc-trace-form { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.tc-trace-form .dst-field { flex: 1 1 220px; }
+.tc-result { margin-top: 16px; }
+.tc-grid { margin-top: 16px; }
+
+.tc-quantities { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 11px; }
+
+.tc-qty {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: var(--bg-subtle, #f8fafc);
+  border: 1px solid var(--border-light, #eef1f5);
+}
+
+.tc-qty span {
+  font-size: 10.5px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted, #94a3b8);
+}
+
+.tc-qty strong { font-size: 18px; font-weight: 800; color: var(--text-heading, #0f172a); font-variant-numeric: tabular-nums; }
+
+.tc-qty.is-total {
+  background: var(--warning-soft, #fef3c7);
+  border-color: var(--warning-border, #fde68a);
+}
+
+.tc-qty.is-total strong { color: var(--warning-text, #92400e); }
+
+.tc-destination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border-light, #eef1f5);
+}
+
+.tc-destination:last-child { border-bottom: none; }
+.tc-destination a { color: var(--accent, #2b7fff); text-decoration: none; font-weight: 700; }
+.tc-destination a:hover { text-decoration: underline; }
+.tc-destination-qty { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+
+.tc-destination-value {
+  font-size: 14px;
+  font-weight: 780;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-heading, #0f172a);
+}
+
+.tc-destination-money { font-size: 11px; color: var(--text-muted, #94a3b8); font-variant-numeric: tabular-nums; }
+
+/* ── Recalls ───────────────────────────────────────────────────────── */
+.tc-recall { margin-bottom: 16px; border-color: var(--danger-border, #fecaca); }
+.tc-recall-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-top: 14px; }
+
+.tc-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--bg-subtle, #f8fafc);
+  border: 1px solid var(--border-light, #eef1f5);
+}
+
+.tc-stat-label {
+  font-size: 10.5px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted, #94a3b8);
+}
+
+.tc-stat-value {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.tc-stat-value small { font-size: 13px; font-weight: 700; color: var(--text-muted, #94a3b8); }
+.tc-stat-value.tc-date { font-size: 16px; }
+.tc-stat-foot { font-size: 11px; color: var(--text-muted, #94a3b8); line-height: 1.4; }
+
+.tc-channel {
+  display: block;
+  font-size: 10px;
+  color: var(--text-muted, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Cold chain ────────────────────────────────────────────────────── */
+.tc-checkpoint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--border-light, #eef1f5);
+  border-left: 3px solid transparent;
+  flex-wrap: wrap;
+}
+
+.tc-checkpoint:last-child { border-bottom: none; }
+.tc-checkpoint.is-overdue { border-left-color: var(--warning, #f59e0b); }
+.tc-checkpoint.is-breach { border-left-color: var(--danger, #ef4444); background: color-mix(in srgb, var(--danger, #ef4444) 4%, transparent); }
+.tc-checkpoint-body { flex: 1; min-width: 0; }
+
+.tc-checkpoint-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+}
+
+.tc-checkpoint-meta { font-size: 11.5px; color: var(--text-muted, #94a3b8); margin-top: 4px; }
+
+.tc-checkpoint-alert {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--danger-text, #b91c1c);
+  margin-top: 5px;
+}
+
+.tc-checkpoint-right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+
+.tc-temp {
+  font-size: 20px;
+  font-weight: 820;
+  font-variant-numeric: tabular-nums;
+  color: var(--success-text, #15803d);
+}
+
+.tc-temp.is-breach { color: var(--danger-text, #b91c1c); }
+.tc-temp-when { font-size: 10.5px; color: var(--text-muted, #94a3b8); }
+.tc-temp-when.is-overdue { color: var(--warning-text, #92400e); font-weight: 700; }
+.tc-temp-none { font-size: 12px; color: var(--text-muted, #94a3b8); font-style: italic; }
+
+.tc-excursion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-light, #eef1f5);
+  border-left: 3px solid var(--danger, #ef4444);
+}
+
+.tc-excursion:last-child { border-bottom: none; }
+.tc-excursion.is-resolved { border-left-color: var(--success, #16a34a); opacity: 0.75; }
+.tc-excursion-body { flex: 1; min-width: 0; }
+.tc-excursion-head { display: flex; align-items: baseline; gap: 9px; }
+
+.tc-excursion-temp {
+  font-size: 16px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--danger-text, #b91c1c);
+}
+
+.tc-excursion-name { font-size: 13px; font-weight: 700; color: var(--text-heading, #0f172a); }
+.tc-excursion-meta { font-size: 11.5px; color: var(--text-muted, #94a3b8); margin-top: 4px; }
+.tc-excursion-meta strong { color: var(--danger-text, #b91c1c); }
+
+.tc-excursion-action {
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+  margin-top: 6px;
+  line-height: 1.5;
+}
+
+.tc-reading-input { font-size: 20px; font-weight: 780; text-align: center; min-height: 52px; }

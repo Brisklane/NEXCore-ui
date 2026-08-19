@@ -1,0 +1,505 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Routes &amp; beats</h2>
+      <p class="subtitle">The ordered walk a rep does, and who owns it.</p>
+    </div>
+    <div class="rb-head-actions">
+      <dst-scope-bar (scopeChange)="onScope($event)"></dst-scope-bar>
+      <button type="button" class="dst-btn is-primary" (click)="create()">
+        <span class="material-symbols-outlined">add_road</span>
+        New route
+      </button>
+    </div>
+  </div>
+
+  <dst-help key="routes"></dst-help>
+
+  @if (error) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">{{ error }}</div>
+      <button type="button" class="dst-icon-btn" (click)="error = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  @if (unrouted.length) {
+    <div class="dst-banner tone-warning">
+      <span class="material-symbols-outlined">link_off</span>
+      <div class="dst-banner-body">
+        <strong>{{ unrouted.length }} shops are on no route at all.</strong>
+        Nobody is scheduled to visit them, so they will quietly stop ordering.
+        @if (selected) {
+          <div class="dst-banner-actions">
+            <button type="button" class="dst-btn is-sm" (click)="openAddOutlets()">Put them on a route</button>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <div class="dst-split">
+    <!-- ── Route list ─────────────────────────────────────────────────── -->
+    <aside class="dst-card rb-list" aria-label="Routes">
+      <div class="dst-card-head">
+        <div class="dst-search rb-search">
+          <span class="material-symbols-outlined">search</span>
+          <input type="search" [(ngModel)]="search" (ngModelChange)="load()" placeholder="Find a route" aria-label="Search routes" />
+        </div>
+      </div>
+
+      <div class="dst-card-body is-flush rb-list-body">
+        @if (loading) {
+          <div class="rb-loading">
+            @for (i of [1,2,3,4,5,6]; track i) { <div class="dst-skeleton" style="height: 62px"></div> }
+          </div>
+        } @else if (routes.length === 0) {
+          <dst-empty
+            icon="alt_route"
+            title="No routes here"
+            text="A route is the ordered list of shops a rep walks. Start with one and add shops to it."
+            actionLabel="New route"
+            actionIcon="add_road"
+            (action)="create()"
+          ></dst-empty>
+        } @else {
+          @for (r of routes; track trackRoute($index, r)) {
+            <button
+              type="button"
+              class="rb-route"
+              [class.is-selected]="selected?.id === r.id"
+              (click)="select(r)"
+            >
+              <span class="rb-route-icon"><span class="material-symbols-outlined">{{ kindIcons[r.kind] }}</span></span>
+              <span class="rb-route-body">
+                <span class="rb-route-name">{{ r.name }}</span>
+                <span class="rb-route-meta">
+                  {{ r.outletCount }} shops · {{ frequencyLabels[r.frequency] }} · {{ activeDayLabel(r) }}
+                </span>
+                <span class="rb-route-rep">
+                  @if (r.fieldRepName) {
+                    <span class="material-symbols-outlined">person</span>{{ r.fieldRepName }}
+                  } @else {
+                    <span class="rb-unassigned"><span class="material-symbols-outlined">person_off</span>Unassigned</span>
+                  }
+                </span>
+              </span>
+              @if (!r.isActive) { <span class="dst-pill tone-neutral">Inactive</span> }
+            </button>
+          }
+        }
+      </div>
+    </aside>
+
+    <!-- ── Route detail ───────────────────────────────────────────────── -->
+    <section class="rb-detail" aria-label="Route detail">
+      @if (!selected) {
+        <div class="dst-card">
+          <dst-empty icon="alt_route" title="Pick a route" text="Choose a route on the left to see and reorder its stops."></dst-empty>
+        </div>
+      } @else {
+        <div class="dst-card">
+          <div class="dst-card-head">
+            <div class="dst-card-title">
+              <span class="material-symbols-outlined">{{ kindIcons[selected.kind] }}</span>
+              <div>
+                {{ selected.name }}
+                <div class="dst-card-sub">
+                  {{ kindLabels[selected.kind] }} · {{ selected.territoryName }}
+                  @if (selected.partnerName) { · serviced by {{ selected.partnerName }} }
+                </div>
+              </div>
+            </div>
+            <div class="dst-card-actions">
+              <button type="button" class="dst-btn is-sm" (click)="openAssign()">
+                <span class="material-symbols-outlined">person_add</span>Assign
+              </button>
+              <button type="button" class="dst-btn is-sm" (click)="openSplit()" [disabled]="selected.stops.length < 4">
+                <span class="material-symbols-outlined">call_split</span>Split
+              </button>
+              <button type="button" class="dst-btn is-sm" (click)="edit()">
+                <span class="material-symbols-outlined">edit</span>Edit
+              </button>
+              <button type="button" class="dst-btn is-sm is-primary" (click)="openAddOutlets()">
+                <span class="material-symbols-outlined">add</span>Add shops
+              </button>
+            </div>
+          </div>
+
+          <div class="dst-card-body">
+            <div class="rb-stats">
+              <div class="rb-stat">
+                <span class="rb-stat-label">Stops</span>
+                <span class="rb-stat-value">{{ selected.stops.length }}</span>
+                <span class="rb-stat-foot">target {{ selected.targetCallsPerDay }} a day</span>
+              </div>
+              <div class="rb-stat">
+                <span class="rb-stat-label">Distance</span>
+                <span class="rb-stat-value">{{ totalDistance | number:'1.1-1' }} km</span>
+                <span class="rb-stat-foot">straight-line estimate</span>
+              </div>
+              <div class="rb-stat" [class.is-warn]="isOverloaded">
+                <span class="rb-stat-label">Service time</span>
+                <span class="rb-stat-value">{{ (totalServiceMinutes / 60) | number:'1.1-1' }} h</span>
+                <span class="rb-stat-foot">
+                  @if (isOverloaded) { longer than a working day } @else { fits a working day }
+                </span>
+              </div>
+              <div class="rb-stat">
+                <span class="rb-stat-label">Coverage</span>
+                <span class="rb-stat-value">{{ selected.coveragePercent | number:'1.0-0' }}%</span>
+                <span class="rb-stat-foot">strike rate {{ selected.strikeRatePercent | number:'1.0-0' }}%</span>
+              </div>
+              <div class="rb-stat">
+                <span class="rb-stat-label">This month</span>
+                <span class="rb-stat-value">{{ selected.monthToDateSales | number:'1.0-0' }}</span>
+                <span class="rb-stat-foot">
+                  @if (selected.lastRunAt) { last run {{ selected.lastRunAt | date:'d MMM' }} }
+                  @else { never run }
+                </span>
+              </div>
+            </div>
+
+            @if (isOverloaded) {
+              <div class="dst-banner tone-warning rb-overload">
+                <span class="material-symbols-outlined">schedule</span>
+                <div class="dst-banner-body">
+                  <strong>This beat does not fit in a day.</strong>
+                  {{ (totalServiceMinutes / 60) | number:'1.1-1' }} hours of service time before travel.
+                  Splitting it is usually better than hoping the rep goes faster.
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Stops -->
+        <div class="dst-card rb-stops-card">
+          <div class="dst-card-head">
+            <div class="dst-card-title"><span class="material-symbols-outlined">format_list_numbered</span>Stops in order</div>
+            <span class="dst-card-sub">The sequence is what the rep's day follows</span>
+          </div>
+
+          <div class="dst-card-body is-flush">
+            @if (loadingDetail) {
+              <div class="rb-loading">
+                @for (i of [1,2,3,4,5]; track i) { <div class="dst-skeleton" style="height: 52px"></div> }
+              </div>
+            } @else if (selected.stops.length === 0) {
+              <dst-empty
+                icon="add_location"
+                title="No shops on this route"
+                text="A route with no stops is never worked. Add shops to give the rep a beat."
+                actionLabel="Add shops"
+                actionIcon="add"
+                (action)="openAddOutlets()"
+              ></dst-empty>
+            } @else {
+              @for (stop of selected.stops; track trackStop($index, stop); let i = $index; let last = $last) {
+                <div class="rb-stop">
+                  <span class="rb-stop-no">{{ stop.stopSequence }}</span>
+
+                  <div class="rb-stop-body">
+                    <div class="rb-stop-name">
+                      {{ stop.outletName }}
+                      @if (stop.isMustVisit) { <span class="dst-pill tone-violet">Must visit</span> }
+                      @if (stop.outstandingAmount > 0) {
+                        <span class="dst-pill tone-warning">{{ stop.outstandingAmount | number:'1.0-0' }} owing</span>
+                      }
+                    </div>
+                    <div class="rb-stop-meta">
+                      @if (stop.outletCode) { <span class="dst-code is-plain">{{ stop.outletCode }}</span> }
+                      @if (stop.addressLine) { <span>{{ stop.addressLine }}</span> }
+                      <span>{{ stop.serviceMinutes }} min</span>
+                      @if (stop.distanceFromPreviousKm > 0) { <span>{{ stop.distanceFromPreviousKm | number:'1.1-1' }} km from the last</span> }
+                      @if (stop.lastVisitAt) { <span>last seen {{ stop.lastVisitAt | date:'d MMM' }}</span> }
+                    </div>
+                  </div>
+
+                  <div class="rb-stop-actions">
+                    <button type="button" class="dst-icon-btn" (click)="move(stop, -1)" [disabled]="i === 0" aria-label="Move earlier in the beat" title="Move up">
+                      <span class="material-symbols-outlined">arrow_upward</span>
+                    </button>
+                    <button type="button" class="dst-icon-btn" (click)="move(stop, 1)" [disabled]="last" aria-label="Move later in the beat" title="Move down">
+                      <span class="material-symbols-outlined">arrow_downward</span>
+                    </button>
+                    <button type="button" class="dst-icon-btn is-danger" (click)="removeStop(stop)" aria-label="Take off this route" title="Remove">
+                      <span class="material-symbols-outlined">link_off</span>
+                    </button>
+                  </div>
+                </div>
+              }
+            }
+          </div>
+        </div>
+      }
+    </section>
+  </div>
+</div>
+
+<!-- ── Route editor ─────────────────────────────────────────────────────── -->
+@if (showEditor) {
+  <div class="dst-modal-backdrop" (click)="showEditor = false">
+    <div class="dst-modal" role="dialog" aria-modal="true" aria-label="Route" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">@if (editing.id) { Edit route } @else { New route }</div>
+          <div class="dst-modal-sub">Frequency and active days are what the journey planner builds a cycle from.</div>
+        </div>
+        <button type="button" class="dst-close" (click)="showEditor = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-form-grid">
+          <div class="dst-field is-full">
+            <label for="rb-name">Route name <span class="req">*</span></label>
+            <input id="rb-name" type="text" [(ngModel)]="editing.name" [class.is-invalid]="!!editorErrors['name']" placeholder="Market Road — Monday beat" />
+            <dst-field-error [message]="editorErrors['name']" for="rb-name"></dst-field-error>
+          </div>
+
+          <div class="dst-field">
+            <label for="rb-territory">Territory <span class="req">*</span></label>
+            <select id="rb-territory" [(ngModel)]="editing.territoryId" [class.is-invalid]="!!editorErrors['territoryId']">
+              <option value="">Choose a territory</option>
+              @for (t of territories; track t.id) { <option [value]="t.id">{{ t.name }}</option> }
+            </select>
+            <dst-field-error [message]="editorErrors['territoryId']" for="rb-territory"></dst-field-error>
+          </div>
+
+          <div class="dst-field">
+            <label for="rb-kind">Kind</label>
+            <select id="rb-kind" [(ngModel)]="editing.kind">
+              @for (o of kindOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+            </select>
+            <span class="dst-hint">Van sales carries stock; pre-sales books orders for later delivery.</span>
+          </div>
+
+          <div class="dst-field">
+            <label for="rb-freq">Visit frequency</label>
+            <select id="rb-freq" [(ngModel)]="editing.frequency">
+              @for (o of frequencyOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+            </select>
+          </div>
+
+          <div class="dst-field">
+            <label for="rb-rep">Assigned rep</label>
+            <select id="rb-rep" [(ngModel)]="editing.fieldRepId">
+              <option value="">Unassigned</option>
+              @for (r of reps; track r.id) { <option [value]="r.id">{{ r.fullName }}</option> }
+            </select>
+          </div>
+
+          <div class="dst-field is-full">
+            <label>Days it runs</label>
+            <div class="rb-days" role="group" aria-label="Days this route runs">
+              @for (d of weekdays; track d.value) {
+                <button
+                  type="button"
+                  class="rb-day"
+                  [class.is-on]="activeDays.includes(d.value)"
+                  [attr.aria-pressed]="activeDays.includes(d.value)"
+                  (click)="toggleDay(d.value)"
+                >{{ d.short }}</button>
+              }
+            </div>
+          </div>
+
+          <div class="dst-field">
+            <label for="rb-target">Target calls a day</label>
+            <input id="rb-target" type="number" min="0" [(ngModel)]="editing.targetCallsPerDay" />
+          </div>
+
+          <div class="dst-field">
+            <label for="rb-min">Minimum productive calls</label>
+            <input id="rb-min" type="number" min="0" [(ngModel)]="editing.minimumProductiveCalls" />
+          </div>
+
+          <div class="dst-field">
+            <label for="rb-start">Starts at</label>
+            <input id="rb-start" type="time" [(ngModel)]="editing.startTime" />
+          </div>
+
+          <div class="dst-field">
+            <label for="rb-end">Ends at</label>
+            <input id="rb-end" type="time" [(ngModel)]="editing.endTime" />
+          </div>
+
+          <div class="dst-field is-full">
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="editing.isActive" />
+              <span>
+                Active
+                <span class="dst-check-sub">An inactive route stays in the history but is not planned or worked.</span>
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showEditor = false" [disabled]="saving">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="save()" [disabled]="saving">
+          @if (saving) { Saving… } @else { Save route }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Add outlets ──────────────────────────────────────────────────────── -->
+@if (showAddOutlets && selected) {
+  <div class="dst-modal-backdrop" (click)="showAddOutlets = false">
+    <div class="dst-modal" role="dialog" aria-modal="true" aria-label="Add shops to the route" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Add shops to {{ selected.name }}</div>
+          <div class="dst-modal-sub">Shops on no route are listed first — they are the ones nobody is visiting.</div>
+        </div>
+        <button type="button" class="dst-close" (click)="showAddOutlets = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-search">
+          <span class="material-symbols-outlined">search</span>
+          <input type="search" [(ngModel)]="outletSearch" (ngModelChange)="searchOutlets()" placeholder="Shop name or code" aria-label="Search shops" />
+        </div>
+
+        <div class="rb-candidates">
+          @for (o of addCandidates; track trackOutlet($index, o)) {
+            <label class="rb-candidate">
+              <input type="checkbox" [checked]="selectedToAdd.has(o.id)" (change)="toggleAdd(o.id)" />
+              <span class="rb-candidate-body">
+                <span class="rb-candidate-name">{{ o.name }}</span>
+                <span class="rb-candidate-meta">
+                  @if (o.code) { <span class="dst-code is-plain">{{ o.code }}</span> · }
+                  {{ o.addressLine || o.area }}
+                  @if (o.averageMonthlyOfftake > 0) { · usually {{ o.averageMonthlyOfftake | number:'1.0-0' }} a month }
+                </span>
+              </span>
+            </label>
+          }
+          @if (addCandidates.length === 0) {
+            <p class="rb-none">Nothing unrouted matches. Every shop in this territory is already on a route.</p>
+          }
+        </div>
+      </div>
+
+      <div class="dst-modal-foot">
+        <span class="dst-muted rb-count">{{ selectedToAdd.size }} selected</span>
+        <span class="dst-foot-spacer"></span>
+        <button type="button" class="dst-btn" (click)="showAddOutlets = false">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="confirmAdd()" [disabled]="selectedToAdd.size === 0">
+          Add to the route
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Assign ───────────────────────────────────────────────────────────── -->
+@if (showAssign && selected) {
+  <div class="dst-modal-backdrop" (click)="showAssign = false">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Assign the route" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Assign {{ selected.name }}</div>
+          <div class="dst-modal-sub">A temporary assignment covers leave without losing who normally owns the beat.</div>
+        </div>
+        <button type="button" class="dst-close" (click)="showAssign = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-form-grid">
+          <div class="dst-field is-full">
+            <label for="rb-assign-rep">Rep</label>
+            <select id="rb-assign-rep" [(ngModel)]="assignRepId">
+              <option value="">Choose a rep</option>
+              @for (r of reps; track r.id) { <option [value]="r.id">{{ r.fullName }}</option> }
+            </select>
+          </div>
+
+          <div class="dst-field">
+            <label for="rb-assign-from">From</label>
+            <input id="rb-assign-from" type="date" [(ngModel)]="assignFrom" />
+          </div>
+
+          <div class="dst-field is-full">
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="assignTemporary" />
+              <span>
+                Temporary cover
+                <span class="dst-check-sub">The permanent owner keeps the route and the targets that go with it.</span>
+              </span>
+            </label>
+          </div>
+
+          <div class="dst-field is-full">
+            <label for="rb-assign-reason">Reason</label>
+            <input id="rb-assign-reason" type="text" [(ngModel)]="assignReason" placeholder="Optional" />
+          </div>
+        </div>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showAssign = false">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="confirmAssign()" [disabled]="!assignRepId">Assign</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Split ────────────────────────────────────────────────────────────── -->
+@if (showSplit && selected) {
+  <div class="dst-modal-backdrop" (click)="showSplit = false">
+    <div class="dst-modal" role="dialog" aria-modal="true" aria-label="Split the route" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Split {{ selected.name }}</div>
+          <div class="dst-modal-sub">
+            Pick the stops that move to a new route. Both routes keep their history; nothing is deleted.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="showSplit = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-field">
+          <label for="rb-split-name">New route name <span class="req">*</span></label>
+          <input id="rb-split-name" type="text" [(ngModel)]="splitName" placeholder="Market Road — north end" />
+        </div>
+
+        <div class="dst-section-label">Stops moving across</div>
+        <div class="rb-candidates">
+          @for (stop of selected.stops; track trackStop($index, stop)) {
+            <label class="rb-candidate">
+              <input type="checkbox" [checked]="splitStops.has(stop.outletId)" (change)="toggleSplit(stop.outletId)" />
+              <span class="rb-candidate-body">
+                <span class="rb-candidate-name">{{ stop.stopSequence }}. {{ stop.outletName }}</span>
+                <span class="rb-candidate-meta">{{ stop.addressLine }}</span>
+              </span>
+            </label>
+          }
+        </div>
+      </div>
+
+      <div class="dst-modal-foot">
+        <span class="dst-muted rb-count">{{ splitStops.size }} of {{ selected.stops.length }} moving</span>
+        <span class="dst-foot-spacer"></span>
+        <button type="button" class="dst-btn" (click)="showSplit = false">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="confirmSplit()" [disabled]="!splitName.trim() || splitStops.size === 0">
+          Split the route
+        </button>
+      </div>
+    </div>
+  </div>
+}

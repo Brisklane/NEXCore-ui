@@ -1,0 +1,499 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Demand &amp; replenishment</h2>
+      <p class="subtitle">What the network will need, and where stock should move.</p>
+    </div>
+    <dst-scope-bar [showPeriod]="true" (scopeChange)="onScope($event)"></dst-scope-bar>
+  </div>
+
+  <dst-help key="planning"></dst-help>
+
+  @if (error) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">{{ error }}</div>
+      <button type="button" class="dst-icon-btn" (click)="error = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  @if (notice) {
+    <div class="dst-banner tone-success" role="status">
+      <span class="material-symbols-outlined">check_circle</span>
+      <div class="dst-banner-body">{{ notice }}</div>
+      <button type="button" class="dst-icon-btn" (click)="notice = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  <div class="dst-tabs" role="tablist">
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'suggestions'" [class.is-active]="tab === 'suggestions'" (click)="setTab('suggestions')">
+      <span class="material-symbols-outlined">refresh</span>Replenishment
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'forecasts'" [class.is-active]="tab === 'forecasts'" (click)="setTab('forecasts')">
+      <span class="material-symbols-outlined">insights</span>Forecasts
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'transfers'" [class.is-active]="tab === 'transfers'" (click)="setTab('transfers')">
+      <span class="material-symbols-outlined">swap_horiz</span>Transfers
+    </button>
+  </div>
+
+  <!-- ── Replenishment ────────────────────────────────────────────────── -->
+  @if (tab === 'suggestions') {
+    <div class="dst-toolbar">
+      <div class="dst-segment" role="group" aria-label="Replenish what">
+        @for (o of targetOptions; track o.value) {
+          <button type="button" [class.is-active]="targetKind === o.value" (click)="targetKind = o.value; load()">
+            {{ o.label }}
+          </button>
+        }
+      </div>
+
+      <span class="dst-spacer"></span>
+
+      @if (selection.size > 0) {
+        <span class="pl-selected">{{ selection.size }} selected · {{ selectedValue | number:'1.0-0' }}</span>
+        <button type="button" class="dst-btn is-sm" (click)="selection.clear()">Clear</button>
+        <button type="button" class="dst-btn is-primary" (click)="createTransfer()" [disabled]="busy">
+          <span class="material-symbols-outlined">swap_horiz</span>
+          Raise a transfer
+        </button>
+      } @else {
+        <button type="button" class="dst-btn" (click)="regenerate()" [disabled]="busy">
+          <span class="material-symbols-outlined">refresh</span>
+          Recalculate
+        </button>
+      }
+    </div>
+
+    <div class="dst-card">
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="pl-loading">
+            @for (i of [1,2,3,4,5,6]; track i) { <div class="dst-skeleton" style="height: 52px"></div> }
+          </div>
+        } @else if (suggestions.length === 0) {
+          <dst-empty
+            icon="task_alt"
+            title="Nothing needs replenishing"
+            text="Every stocking point is above its norm for the lead time. Recalculate if stock has moved since this was last run."
+            actionLabel="Recalculate"
+            actionIcon="refresh"
+            (action)="regenerate()"
+          ></dst-empty>
+        } @else {
+          <div class="dst-table-wrap">
+            <table class="dst-table pl-table">
+              <thead>
+                <tr>
+                  <th class="pl-check">
+                    <input type="checkbox" [checked]="allSelected" (change)="toggleAll()" aria-label="Select every suggestion" />
+                  </th>
+                  <th>Where</th><th>Item</th>
+                  <th class="num">On hand</th><th class="num">In transit</th>
+                  <th class="num">Reorder at</th><th class="num">Target</th>
+                  <th class="num">Suggest</th><th>Cover</th><th class="num">Value</th>
+                  <th class="actions"></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (s of suggestions; track trackSuggestion($index, s)) {
+                  <tr [class.is-selected]="selection.has(s.id)" [class.is-flagged]="s.daysOfCover <= s.leadTimeDays">
+                    <td class="pl-check">
+                      <input
+                        type="checkbox"
+                        [checked]="selection.has(s.id)"
+                        (change)="toggle(s.id)"
+                        [attr.aria-label]="'Select ' + s.itemName + ' for ' + targetNameFor(s)"
+                      />
+                    </td>
+                    <td>
+                      <div class="dst-cell-stack">
+                        <span class="top">{{ targetNameFor(s) }}</span>
+                        <span class="sub">{{ targetLabels[s.targetKind] }}</span>
+                      </div>
+                    </td>
+                    <td class="strong">{{ s.itemName }}</td>
+                    <td class="num">{{ s.currentStock | number }} {{ s.uom }}</td>
+                    <td class="num muted">{{ s.inTransitStock | number }}</td>
+                    <td class="num muted">{{ s.reorderPoint | number }}</td>
+                    <td class="num muted">{{ s.targetStock | number }}</td>
+                    <td class="num strong">{{ s.suggestedQuantity | number }}</td>
+                    <td>
+                      <dst-status [label]="urgencyLabel(s)" [tone]="urgencyTone(s)"></dst-status>
+                      <span class="pl-lead">lead time {{ s.leadTimeDays }}d</span>
+                    </td>
+                    <td class="num">{{ s.estimatedValue | number:'1.0-0' }}</td>
+                    <td class="actions">
+                      <button type="button" class="dst-icon-btn" (click)="startDismiss(s)" aria-label="Dismiss this suggestion" title="Dismiss">
+                        <span class="material-symbols-outlined">close</span>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ── Forecasts ────────────────────────────────────────────────────── -->
+  @if (tab === 'forecasts') {
+    <div class="dst-toolbar">
+      <span class="dst-spacer"></span>
+      <button type="button" class="dst-btn is-primary" (click)="openGenerate()">
+        <span class="material-symbols-outlined">auto_awesome</span>
+        Generate a forecast
+      </button>
+    </div>
+
+    @if (openForecast; as f) {
+      <div class="dst-card">
+        <div class="dst-card-head">
+          <div class="dst-card-title">
+            <span class="material-symbols-outlined">insights</span>
+            <div>
+              {{ f.name }}
+              <div class="dst-card-sub">
+                {{ basisLabels[f.basis] }} ·
+                {{ f.periodStart | date:'d MMM' }} – {{ f.periodEnd | date:'d MMM y' }} ·
+                {{ f.historyMonths }} months of history
+              </div>
+            </div>
+          </div>
+          <div class="dst-card-actions">
+            @if (f.isApproved) {
+              <span class="dst-pill tone-success is-lg">Approved</span>
+            } @else {
+              <button type="button" class="dst-btn is-success" (click)="approveForecast()" [disabled]="busy">
+                <span class="material-symbols-outlined">check</span>Approve
+              </button>
+            }
+            <button type="button" class="dst-btn is-sm is-ghost" (click)="openForecast = null">Close</button>
+          </div>
+        </div>
+
+        <div class="dst-card-body is-flush">
+          <div class="dst-table-wrap">
+            <table class="dst-table pl-forecast">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th class="num">Historic average</th><th class="num">Computed</th>
+                  <th class="num">Override</th><th class="num">Final</th>
+                  <th class="num">Actual</th><th class="num">Accuracy</th>
+                  <th>Override reason</th><th class="actions"></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (l of f.lines; track trackForecastLine($index, l)) {
+                  <tr [class.is-flagged]="l.overrideQuantity != null">
+                    <td class="strong">{{ l.itemName }}</td>
+                    <td class="num muted">{{ l.historicAverage | number:'1.0-0' }}</td>
+                    <td class="num">{{ l.computedQuantity | number:'1.0-0' }}</td>
+                    <td class="num">
+                      @if (l.overrideQuantity != null) {
+                        {{ l.overrideQuantity | number:'1.0-0' }}
+                        <span class="pl-delta" [class.is-up]="overrideDelta(l) > 0" [class.is-down]="overrideDelta(l) < 0">
+                          {{ overrideDelta(l) > 0 ? '+' : '' }}{{ overrideDelta(l) }}%
+                        </span>
+                      } @else { <span class="muted">—</span> }
+                    </td>
+                    <td class="num strong">{{ l.finalQuantity | number:'1.0-0' }} {{ l.uom }}</td>
+                    <td class="num muted">{{ l.actualQuantity | number:'1.0-0' }}</td>
+                    <td class="num">
+                      @if (l.actualQuantity > 0) {
+                        <span [class.pl-good]="l.accuracyPercent >= 85" [class.pl-bad]="l.accuracyPercent < 70">
+                          {{ l.accuracyPercent | number:'1.0-0' }}%
+                        </span>
+                      } @else { <span class="muted">—</span> }
+                    </td>
+                    <td class="muted">{{ l.overrideReason }}</td>
+                    <td class="actions">
+                      @if (!f.isApproved) {
+                        <button type="button" class="dst-btn is-sm" (click)="startOverride(l)">Override</button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="4">Total</td>
+                  <td class="num">{{ f.totalForecastQuantity | number:'1.0-0' }}</td>
+                  <td class="num">{{ f.totalActualQuantity | number:'1.0-0' }}</td>
+                  <td class="num">{{ f.accuracyPercent | number:'1.0-0' }}%</td>
+                  <td colspan="2"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+    }
+
+    <div class="dst-card">
+      <div class="dst-card-head">
+        <div class="dst-card-title"><span class="material-symbols-outlined">history</span>Forecasts</div>
+      </div>
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="pl-loading">
+            @for (i of [1,2,3]; track i) { <div class="dst-skeleton" style="height: 52px"></div> }
+          </div>
+        } @else if (forecasts.length === 0) {
+          <dst-empty
+            icon="insights"
+            title="No forecasts"
+            text="A forecast built from secondary sales predicts real consumption. One built from primary predicts your own past shipping decisions."
+            actionLabel="Generate a forecast"
+            actionIcon="auto_awesome"
+            (action)="openGenerate()"
+          ></dst-empty>
+        } @else {
+          <div class="dst-table-wrap">
+            <table class="dst-table">
+              <thead>
+                <tr>
+                  <th>Forecast</th><th>Basis</th><th>Period</th>
+                  <th class="num">Quantity</th><th class="num">Value</th>
+                  <th class="num">Accuracy</th><th>State</th><th class="actions"></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (f of forecasts; track trackForecast($index, f)) {
+                  <tr class="is-clickable" (click)="viewForecast(f)">
+                    <td class="strong">{{ f.name }}</td>
+                    <td>{{ basisLabels[f.basis] }}</td>
+                    <td class="nowrap">{{ f.periodStart | date:'d MMM' }} – {{ f.periodEnd | date:'d MMM y' }}</td>
+                    <td class="num">{{ f.totalForecastQuantity | number:'1.0-0' }}</td>
+                    <td class="num">{{ f.totalForecastValue | number:'1.0-0' }}</td>
+                    <td class="num">
+                      @if (f.totalActualQuantity > 0) { {{ f.accuracyPercent | number:'1.0-0' }}% }
+                      @else { <span class="muted">not yet</span> }
+                    </td>
+                    <td>
+                      @if (f.isApproved) { <span class="dst-pill tone-success">Approved</span> }
+                      @else { <span class="dst-pill tone-warning">Draft</span> }
+                    </td>
+                    <td class="actions">
+                      <button type="button" class="dst-icon-btn" (click)="$event.stopPropagation(); viewForecast(f)" aria-label="Open the forecast">
+                        <span class="material-symbols-outlined">chevron_right</span>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ── Transfers ────────────────────────────────────────────────────── -->
+  @if (tab === 'transfers') {
+    <div class="dst-card">
+      <div class="dst-card-head">
+        <div class="dst-card-title"><span class="material-symbols-outlined">swap_horiz</span>Transfer requests</div>
+        <span class="dst-card-sub">Approving one hands it to Inventory to execute</span>
+      </div>
+      <div class="dst-card-body is-flush">
+        @if (loading) {
+          <div class="pl-loading">
+            @for (i of [1,2,3,4]; track i) { <div class="dst-skeleton" style="height: 52px"></div> }
+          </div>
+        } @else if (transfers.length === 0) {
+          <dst-empty icon="swap_horiz" title="No transfer requests" text="Turn replenishment suggestions into transfers to raise them here."></dst-empty>
+        } @else {
+          <div class="dst-table-wrap">
+            <table class="dst-table">
+              <thead>
+                <tr>
+                  <th>Transfer</th><th>To</th><th>Raised</th><th>Needed by</th>
+                  <th class="num">Lines</th><th class="num">Quantity</th><th class="num">Value</th>
+                  <th>Status</th><th class="actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (t of transfers; track trackTransfer($index, t)) {
+                  <tr>
+                    <td><span class="dst-code">{{ t.transferNumber }}</span></td>
+                    <td class="strong">{{ t.destinationPartnerName || 'Warehouse' }}</td>
+                    <td class="nowrap muted">{{ t.requestedOn | date:'d MMM y' }}</td>
+                    <td class="nowrap">{{ (t.requiredBy | date:'d MMM y') || '—' }}</td>
+                    <td class="num">{{ t.lineCount }}</td>
+                    <td class="num">{{ t.totalQuantity | number }}</td>
+                    <td class="num strong">{{ t.totalValue | number:'1.0-0' }}</td>
+                    <td>
+                      <span class="dst-pill tone-neutral">{{ transferLabels[t.status] }}</span>
+                      @if (t.rejectionReason) { <span class="pl-reject">{{ t.rejectionReason }}</span> }
+                    </td>
+                    <td class="actions">
+                      @if (t.status === TransferRequestStatus.Requested) {
+                        <button type="button" class="dst-icon-btn" (click)="decideTransfer(t, true)" aria-label="Approve" title="Approve">
+                          <span class="material-symbols-outlined">check</span>
+                        </button>
+                        <button type="button" class="dst-icon-btn is-danger" (click)="decideTransfer(t, false)" aria-label="Reject" title="Reject">
+                          <span class="material-symbols-outlined">close</span>
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <dst-pager [meta]="meta" noun="rows" (pageChange)="changePage($event)" (sizeChange)="changeSize($event)"></dst-pager>
+</div>
+
+<!-- ── Generate a forecast ──────────────────────────────────────────────── -->
+@if (showGenerate) {
+  <div class="dst-modal-backdrop" (click)="showGenerate = false">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Generate a forecast" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Generate a forecast</div>
+          <div class="dst-modal-sub">
+            Secondary sales is the honest basis — it is what the market consumed, not what you
+            shipped.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="showGenerate = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-form-grid">
+          <div class="dst-field is-full">
+            <label for="pl-name">Name</label>
+            <input id="pl-name" type="text" [(ngModel)]="generate.name" />
+          </div>
+
+          <div class="dst-field is-full">
+            <label for="pl-basis">Basis</label>
+            <select id="pl-basis" [(ngModel)]="generate.basis">
+              @for (o of basisOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+            </select>
+          </div>
+
+          <div class="dst-field">
+            <label for="pl-start">From</label>
+            <input id="pl-start" type="date" [(ngModel)]="generate.periodStart" />
+          </div>
+
+          <div class="dst-field">
+            <label for="pl-end">To</label>
+            <input id="pl-end" type="date" [(ngModel)]="generate.periodEnd" />
+          </div>
+
+          <div class="dst-field">
+            <label for="pl-history">Months of history</label>
+            <input id="pl-history" type="number" min="1" max="36" [(ngModel)]="generate.historyMonths" />
+          </div>
+
+          <div class="dst-field">
+            <label for="pl-partner">Partner</label>
+            <select id="pl-partner" [(ngModel)]="generate.partnerId">
+              <option value="">All partners</option>
+              @for (p of partnerList; track p.id) { <option [value]="p.id">{{ p.name }}</option> }
+            </select>
+          </div>
+
+          <div class="dst-field">
+            <label for="pl-seasonality">Seasonality factor</label>
+            <input id="pl-seasonality" type="number" step="0.05" min="0" [(ngModel)]="generate.seasonalityFactor" />
+            <span class="dst-hint">1.0 is no adjustment. 1.2 assumes a fifth more than the base period.</span>
+          </div>
+
+          <div class="dst-field">
+            <label for="pl-trend">Trend factor</label>
+            <input id="pl-trend" type="number" step="0.05" min="0" [(ngModel)]="generate.trendFactor" />
+          </div>
+        </div>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showGenerate = false" [disabled]="busy">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="runGenerate()" [disabled]="busy">
+          @if (busy) { Generating… } @else { Generate }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Override a line ──────────────────────────────────────────────────── -->
+@if (overriding) {
+  <div class="dst-modal-backdrop" (click)="overriding = null">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Override the forecast" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Override {{ overriding.itemName }}</div>
+          <div class="dst-modal-sub">
+            The statistical number was {{ overriding.computedQuantity | number:'1.0-0' }}
+            {{ overriding.uom }}. It stays on the record beside your figure.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="overriding = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-field">
+          <label for="pl-override-qty">Your number</label>
+          <input id="pl-override-qty" type="number" min="0" [(ngModel)]="override.quantity" />
+        </div>
+        <div class="dst-field">
+          <label for="pl-override-reason">Why? <span class="req">*</span></label>
+          <textarea id="pl-override-reason" [(ngModel)]="override.reason" placeholder="New listing in modern trade from the 15th; history does not cover it."></textarea>
+          <span class="dst-hint">Overrides without reasons become a habit nobody can audit.</span>
+        </div>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="overriding = null" [disabled]="busy">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="confirmOverride()" [disabled]="busy || !override.reason.trim()">Save</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Dismiss a suggestion ─────────────────────────────────────────────── -->
+@if (dismissTarget) {
+  <div class="dst-modal-backdrop" (click)="dismissTarget = null">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Dismiss the suggestion" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Dismiss {{ dismissTarget.itemName }}</div>
+          <div class="dst-modal-sub">For {{ targetNameFor(dismissTarget) }}. The reason feeds back into how norms are set.</div>
+        </div>
+        <button type="button" class="dst-close" (click)="dismissTarget = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="dst-modal-body">
+        <div class="dst-field">
+          <label for="pl-dismiss">Reason <span class="req">*</span></label>
+          <textarea id="pl-dismiss" [(ngModel)]="dismissReason" placeholder="Being delisted at this partner from next month."></textarea>
+        </div>
+      </div>
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="dismissTarget = null">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="confirmDismiss()" [disabled]="!dismissReason.trim()">Dismiss</button>
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,655 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Route settlement</h2>
+      <p class="subtitle">Stock out against stock back, sales against cash.</p>
+    </div>
+    <div class="st-head-actions">
+      <dst-scope-bar (scopeChange)="onScope($event)"></dst-scope-bar>
+      <div class="dst-context-group">
+        <label for="st-date">Date</label>
+        <input id="st-date" type="date" [(ngModel)]="settlementDate" (ngModelChange)="load()" />
+      </div>
+    </div>
+  </div>
+
+  <dst-help key="settlement"></dst-help>
+
+  @if (error) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">{{ error }}</div>
+      <button type="button" class="dst-icon-btn" (click)="error = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  @if (notice) {
+    <div class="dst-banner tone-success" role="status">
+      <span class="material-symbols-outlined">check_circle</span>
+      <div class="dst-banner-body">{{ notice }}</div>
+      <button type="button" class="dst-icon-btn" (click)="notice = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  <div class="dst-tabs" role="tablist">
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'board'" [class.is-active]="tab === 'board'" (click)="setTab('board')">
+      <span class="material-symbols-outlined">dashboard</span>Board
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'detail'" [class.is-active]="tab === 'detail'" (click)="setTab('detail')" [disabled]="!detail">
+      <span class="material-symbols-outlined">receipt_long</span>
+      @if (detail) { {{ detail.settlementNumber }} } @else { Settlement }
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="tab === 'deposits'" [class.is-active]="tab === 'deposits'" (click)="setTab('deposits')">
+      <span class="material-symbols-outlined">account_balance</span>Bank deposits
+    </button>
+  </div>
+
+  <!-- ── Board ────────────────────────────────────────────────────────── -->
+  @if (tab === 'board') {
+    @if (loading) {
+      <div class="dst-stats">
+        @for (i of [1,2,3,4,5]; track i) { <div class="dst-stat dst-skeleton" style="height: 90px"></div> }
+      </div>
+      <div class="dst-skeleton" style="height: 320px; border-radius: 16px"></div>
+    }
+
+    @if (board; as b) {
+      <div class="dst-stats">
+        <div class="dst-stat" [class.tone-danger]="b.unsettledDayCount > 0" [class.tone-success]="b.unsettledDayCount === 0">
+          <span class="dst-stat-label">Unsettled days</span>
+          <span class="dst-stat-value">{{ b.unsettledDayCount }}</span>
+          <span class="dst-stat-foot">
+            @if (b.unsettledDayCount > 0) { cash and stock still unreconciled }
+            @else { every day accounted for }
+          </span>
+        </div>
+        <div class="dst-stat tone-brand">
+          <span class="dst-stat-label">Sales</span>
+          <span class="dst-stat-value">{{ b.totalSales | number:'1.0-0' }}</span>
+          <span class="dst-stat-foot">{{ b.totalCollected | number:'1.0-0' }} collected</span>
+        </div>
+        <div class="dst-stat" [class.tone-danger]="b.totalCashVariance !== 0" [class.tone-success]="b.totalCashVariance === 0">
+          <span class="dst-stat-label">Cash variance</span>
+          <span class="dst-stat-value">{{ b.totalCashVariance | number:'1.2-2' }}</span>
+          <span class="dst-stat-foot">across every settlement today</span>
+        </div>
+        <div class="dst-stat" [class.tone-warning]="b.totalStockVariance !== 0" [class.tone-success]="b.totalStockVariance === 0">
+          <span class="dst-stat-label">Stock variance</span>
+          <span class="dst-stat-value">{{ b.totalStockVariance | number:'1.2-2' }}</span>
+          <span class="dst-stat-foot">counted against expected</span>
+        </div>
+        <div class="dst-stat" [class.tone-warning]="b.undepositedCash > 0" [class.tone-neutral]="b.undepositedCash === 0">
+          <span class="dst-stat-label">Not yet banked</span>
+          <span class="dst-stat-value">{{ b.undepositedCash | number:'1.0-0' }}</span>
+          <span class="dst-stat-foot">{{ b.cashToDeposit | number:'1.0-0' }} due to be deposited</span>
+        </div>
+      </div>
+
+      @if (b.unsettledDays.length) {
+        <section class="dst-card st-unsettled">
+          <div class="dst-card-head">
+            <div class="dst-card-title">
+              <span class="material-symbols-outlined">pending_actions</span>
+              Days waiting to settle
+            </div>
+            <span class="dst-card-sub">Oldest first — a day left unsettled is cash nobody is chasing</span>
+          </div>
+          <div class="dst-card-body is-flush">
+            @for (d of b.unsettledDays; track trackDay($index, d)) {
+              <div class="st-day">
+                <div class="dst-cell-stack">
+                  <span class="top">{{ d.fieldRepName }}</span>
+                  <span class="sub">
+                    {{ d.workDate | date:'EEE d MMM' }} · {{ d.routeName || 'no route' }}
+                    @if (d.vanUnitName) { · {{ d.vanUnitName }} }
+                  </span>
+                </div>
+                <div class="st-day-nums">
+                  <span><b>{{ d.actualCalls }}</b> calls</span>
+                  <span><b>{{ d.invoicedValue | number:'1.0-0' }}</b> billed</span>
+                  <span><b>{{ d.collectedAmount | number:'1.0-0' }}</b> collected</span>
+                  <span><b>{{ d.cashDeclared | number:'1.0-0' }}</b> declared</span>
+                </div>
+                <button type="button" class="dst-btn is-primary" (click)="openDay(d)" [disabled]="busy">Settle it</button>
+              </div>
+            }
+          </div>
+        </section>
+      }
+
+      <section class="dst-card">
+        <div class="dst-card-head">
+          <div class="dst-card-title"><span class="material-symbols-outlined">receipt_long</span>Settlements</div>
+          <span class="dst-card-sub">
+            {{ b.openCount }} open · {{ b.submittedCount }} submitted ·
+            {{ b.pendingApprovalCount }} waiting on approval · {{ b.closedCount }} closed
+          </span>
+        </div>
+        <div class="dst-card-body is-flush">
+          @if (b.settlements.length === 0) {
+            <dst-empty icon="task_alt" title="Nothing to settle" text="No settlements have been opened for this date."></dst-empty>
+          } @else {
+            <div class="dst-table-wrap">
+              <table class="dst-table st-table">
+                <thead>
+                  <tr>
+                    <th>Settlement</th><th>Rep &amp; route</th>
+                    <th class="num">Sales</th><th class="num">Collected</th>
+                    <th class="num">Cash variance</th><th class="num">Stock variance</th>
+                    <th class="num">Unexplained</th><th>Status</th><th class="actions"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (s of b.settlements; track trackSettlement($index, s)) {
+                    <tr class="is-clickable" [class.is-flagged]="s.unexplainedVarianceCount > 0" (click)="view(s)">
+                      <td>
+                        <div class="dst-cell-stack">
+                          <span class="dst-code">{{ s.settlementNumber }}</span>
+                          <span class="sub">{{ s.settlementDate | date:'d MMM y' }}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="dst-cell-stack">
+                          <span class="top">{{ s.fieldRepName }}</span>
+                          <span class="sub">{{ s.routeName }}@if (s.vanUnitName) { · {{ s.vanUnitName }} }</span>
+                        </div>
+                      </td>
+                      <td class="num">{{ s.totalSalesValue | number:'1.0-0' }}</td>
+                      <td class="num">{{ s.totalCollected | number:'1.0-0' }}</td>
+                      <td class="num" [class.st-bad]="s.cashVariance !== 0">{{ s.cashVariance | number:'1.2-2' }}</td>
+                      <td class="num" [class.st-bad]="s.stockVarianceValue !== 0">{{ s.stockVarianceValue | number:'1.2-2' }}</td>
+                      <td class="num">
+                        @if (s.unexplainedVarianceCount > 0) {
+                          <span class="dst-pill tone-danger">{{ s.unexplainedVarianceCount }}</span>
+                        } @else { <span class="muted">—</span> }
+                      </td>
+                      <td><dst-status [label]="statusLabels[s.status]" [tone]="statusTone[s.status]"></dst-status></td>
+                      <td class="actions">
+                        <button type="button" class="dst-icon-btn" (click)="$event.stopPropagation(); view(s)" aria-label="Open the settlement">
+                          <span class="material-symbols-outlined">chevron_right</span>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      </section>
+    }
+  }
+
+  <!-- ── Detail ───────────────────────────────────────────────────────── -->
+  @if (tab === 'detail' && detail; as s) {
+    <div class="dst-card">
+      <div class="dst-card-head">
+        <div class="dst-card-title">
+          <span class="material-symbols-outlined">receipt_long</span>
+          <div>
+            {{ s.settlementNumber }}
+            <div class="dst-card-sub">
+              {{ s.fieldRepName }} · {{ s.routeName }} · {{ s.settlementDate | date:'EEEE d MMMM y' }}
+              @if (s.vanUnitName) { · {{ s.vanUnitName }} }
+            </div>
+          </div>
+        </div>
+        <div class="dst-card-actions">
+          <dst-status [label]="statusLabels[s.status]" [tone]="statusTone[s.status]" [large]="true"></dst-status>
+          <button type="button" class="dst-btn is-sm" (click)="recompute()" [disabled]="busy">
+            <span class="material-symbols-outlined">refresh</span>Recompute
+          </button>
+        </div>
+      </div>
+
+      <div class="dst-card-body">
+        @if (s.isReversed) {
+          <div class="dst-banner tone-danger">
+            <span class="material-symbols-outlined">undo</span>
+            <div class="dst-banner-body">
+              <strong>Reversed.</strong> {{ s.reversalReason }}
+              The original posting stays on the record — it was countered, not deleted.
+            </div>
+          </div>
+        }
+
+        @if (s.blockers.length) {
+          <div class="dst-banner tone-warning">
+            <span class="material-symbols-outlined">block</span>
+            <div class="dst-banner-body">
+              <strong>This cannot close yet.</strong>
+              <ul class="st-blockers">@for (b of s.blockers; track b) { <li>{{ b }}</li> }</ul>
+            </div>
+          </div>
+        }
+
+        <!-- Two sides, side by side -->
+        <div class="st-sides">
+          <div class="st-side">
+            <div class="st-side-head">
+              <span class="material-symbols-outlined">payments</span>
+              Cash
+            </div>
+            <div class="st-rows">
+              <div class="st-row"><span>Opening float</span><span>{{ s.openingFloat | number:'1.2-2' }}</span></div>
+              <div class="st-row"><span>Cash sales</span><span>{{ s.cashSalesValue | number:'1.2-2' }}</span></div>
+              <div class="st-row"><span>Cash collected</span><span>{{ s.cashCollected | number:'1.2-2' }}</span></div>
+              <div class="st-row"><span>Cheques</span><span>{{ s.chequeCollected | number:'1.2-2' }}</span></div>
+              <div class="st-row"><span>Digital</span><span>{{ s.digitalCollected | number:'1.2-2' }}</span></div>
+              <div class="st-row"><span>Expenses paid out</span><span class="is-negative">−{{ s.expenseAmount | number:'1.2-2' }}</span></div>
+              <div class="st-row is-sum"><span>Expected in hand</span><span>{{ s.expectedCash | number:'1.2-2' }}</span></div>
+              <div class="st-row is-sum"><span>Declared</span><span>{{ s.declaredCash | number:'1.2-2' }}</span></div>
+              <div class="st-row is-variance" [class.is-bad]="s.cashVariance !== 0">
+                <span>Variance</span>
+                <span>{{ s.cashVariance | number:'1.2-2' }}</span>
+              </div>
+              <div class="st-row"><span>To bank</span><span>{{ s.cashToDeposit | number:'1.2-2' }}</span></div>
+            </div>
+          </div>
+
+          <div class="st-side">
+            <div class="st-side-head">
+              <span class="material-symbols-outlined">inventory_2</span>
+              Stock
+            </div>
+            <div class="st-rows">
+              <div class="st-row"><span>Opening on the van</span><span>{{ s.openingStockValue | number:'1.2-2' }}</span></div>
+              <div class="st-row"><span>Loaded out</span><span>{{ s.loadedStockValue | number:'1.2-2' }}</span></div>
+              <div class="st-row"><span>Sold</span><span class="is-negative">−{{ s.soldStockValue | number:'1.2-2' }}</span></div>
+              <div class="st-row"><span>Returned in</span><span>{{ s.returnedStockValue | number:'1.2-2' }}</span></div>
+              <div class="st-row is-sum"><span>Expected back</span><span>{{ s.expectedClosingStockValue | number:'1.2-2' }}</span></div>
+              <div class="st-row is-sum"><span>Counted back</span><span>{{ s.countedClosingStockValue | number:'1.2-2' }}</span></div>
+              <div class="st-row is-variance" [class.is-bad]="s.stockVarianceValue !== 0">
+                <span>Variance</span>
+                <span>{{ s.stockVarianceValue | number:'1.2-2' }}</span>
+              </div>
+              <div class="st-row"><span>Free goods issued</span><span>{{ s.freeGoodsValue | number:'1.2-2' }}</span></div>
+              <div class="st-row"><span>Scheme value</span><span>{{ s.schemeValue | number:'1.2-2' }}</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Variances -->
+    <div class="dst-card">
+      <div class="dst-card-head">
+        <div class="dst-card-title"><span class="material-symbols-outlined">rule</span>Variances</div>
+        @if (s.unexplainedVarianceCount > 0) {
+          <span class="dst-pill tone-danger">{{ s.unexplainedVarianceCount }} still need a reason</span>
+        } @else if (s.varianceCount > 0) {
+          <span class="dst-pill tone-success">All explained</span>
+        }
+      </div>
+
+      <div class="dst-card-body is-flush">
+        @if (s.variances.length === 0) {
+          <dst-empty icon="check_circle" title="It balances" text="Cash and stock both reconcile to the source documents. Nothing to explain."></dst-empty>
+        } @else {
+          <div class="dst-table-wrap">
+            <table class="dst-table st-variances">
+              <thead>
+                <tr>
+                  <th>Kind</th><th>Item</th>
+                  <th class="num">Expected</th><th class="num">Actual</th><th class="num">Variance</th>
+                  <th>Reason</th><th>Recovery</th><th class="actions"></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (v of s.variances; track trackVariance($index, v)) {
+                  <tr [class.is-flagged]="!v.reasonCodeId">
+                    <td class="strong">{{ varianceLabels[v.kind] }}</td>
+                    <td>
+                      {{ v.itemName || '—' }}
+                      @if (v.batchNumber) { <span class="st-batch">{{ v.batchNumber }}</span> }
+                    </td>
+                    <td class="num muted">
+                      @if (v.itemId) { {{ v.expectedQuantity | number }} {{ v.uom }} }
+                      @else { {{ v.expectedAmount | number:'1.2-2' }} }
+                    </td>
+                    <td class="num">
+                      @if (v.itemId) { {{ v.actualQuantity | number }} }
+                      @else { {{ v.actualAmount | number:'1.2-2' }} }
+                    </td>
+                    <td class="num st-bad">{{ v.varianceAmount | number:'1.2-2' }}</td>
+                    <td>
+                      @if (v.reasonCodeName) {
+                        <div class="dst-cell-stack">
+                          <span class="top">{{ v.reasonCodeName }}</span>
+                          @if (v.reasonNote) { <span class="sub">{{ v.reasonNote }}</span> }
+                        </div>
+                      } @else {
+                        <span class="dst-pill tone-danger">Unexplained</span>
+                      }
+                    </td>
+                    <td>
+                      @if (v.isRecoverable) {
+                        <span class="dst-pill tone-warning">Recover {{ v.recoveredAmount | number:'1.2-2' }}</span>
+                      } @else { <span class="muted">—</span> }
+                    </td>
+                    <td class="actions">
+                      @if (s.status !== SettlementStatus.Closed) {
+                        <button type="button" class="dst-btn is-sm" (click)="startExplain(v)">
+                          @if (v.reasonCodeId) { Edit } @else { Explain }
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Supporting documents -->
+    <div class="dst-grid cols-2">
+      <section class="dst-card">
+        <div class="dst-card-head">
+          <div class="dst-card-title"><span class="material-symbols-outlined">receipt</span>Invoices</div>
+          <span class="dst-card-sub">{{ s.invoiceCount }} · {{ s.totalSalesValue | number:'1.0-0' }}</span>
+        </div>
+        <div class="dst-card-body is-flush st-scroll">
+          @if (s.invoices.length === 0) { <p class="st-none">No invoices on this settlement.</p> }
+          @for (o of s.invoices; track trackId($index, o)) {
+            <div class="st-doc">
+              <div class="dst-cell-stack">
+                <span class="top">{{ o.orderNumber }}</span>
+                <span class="sub">{{ o.outletName }}</span>
+              </div>
+              <span class="st-doc-amount">{{ o.totalAmount | number:'1.2-2' }}</span>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="dst-card">
+        <div class="dst-card-head">
+          <div class="dst-card-title"><span class="material-symbols-outlined">payments</span>Receipts</div>
+          <span class="dst-card-sub">{{ s.totalCollected | number:'1.0-0' }}</span>
+        </div>
+        <div class="dst-card-body is-flush st-scroll">
+          @if (s.collections.length === 0) { <p class="st-none">No receipts on this settlement.</p> }
+          @for (c of s.collections; track trackId($index, c)) {
+            <div class="st-doc">
+              <div class="dst-cell-stack">
+                <span class="top">{{ c.receiptNumber }}</span>
+                <span class="sub">{{ c.outletName }} · {{ c.collectedAt | date:'HH:mm' }}</span>
+              </div>
+              <span class="st-doc-amount">{{ c.amount | number:'1.2-2' }}</span>
+            </div>
+          }
+        </div>
+      </section>
+    </div>
+
+    <!-- Actions -->
+    <div class="st-actions">
+      @if (s.unexplainedVarianceCount > 0) {
+        <span class="st-warn">
+          <span class="material-symbols-outlined">warning</span>
+          {{ s.unexplainedVarianceCount }} variances still need a reason
+        </span>
+      }
+      <span class="dst-spacer"></span>
+
+      @if (canSubmit) {
+        <button type="button" class="dst-btn is-primary" (click)="openSubmit()" [disabled]="busy">
+          <span class="material-symbols-outlined">send</span>Submit
+        </button>
+      }
+      @if (canApprove) {
+        <button type="button" class="dst-btn is-danger" (click)="approve(false)" [disabled]="busy">Send back</button>
+        <button type="button" class="dst-btn is-success" (click)="approve(true)" [disabled]="busy">
+          <span class="material-symbols-outlined">check</span>Approve
+        </button>
+      }
+      @if (canClose) {
+        <button type="button" class="dst-btn is-primary" (click)="close()" [disabled]="busy">
+          <span class="material-symbols-outlined">lock</span>Close and post
+        </button>
+      }
+      @if (s.cashToDeposit > 0) {
+        <button type="button" class="dst-btn" (click)="openDeposit()">
+          <span class="material-symbols-outlined">account_balance</span>Record a bank deposit
+        </button>
+      }
+      @if (canReverse) {
+        <button type="button" class="dst-btn is-danger" (click)="showReverse = true" [disabled]="busy">
+          <span class="material-symbols-outlined">undo</span>Reverse
+        </button>
+      }
+    </div>
+  }
+
+  <!-- ── Deposits ─────────────────────────────────────────────────────── -->
+  @if (tab === 'deposits') {
+    <div class="dst-card">
+      <div class="dst-card-head">
+        <div class="dst-card-title"><span class="material-symbols-outlined">account_balance</span>Bank deposits</div>
+        <button type="button" class="dst-btn is-sm is-primary" (click)="openDeposit()">
+          <span class="material-symbols-outlined">add</span>Record a deposit
+        </button>
+      </div>
+      <div class="dst-card-body is-flush">
+        @if (deposits.length === 0) {
+          <dst-empty icon="account_balance" title="No deposits recorded" text="A deposit is what turns cash the rep is carrying into money in the bank. Until it is reconciled it is still exposure."></dst-empty>
+        } @else {
+          <div class="dst-table-wrap">
+            <table class="dst-table">
+              <thead>
+                <tr><th>Deposit</th><th>Who</th><th>Bank</th><th>Slip</th><th class="num">Amount</th><th class="num">Age</th><th>Reconciled</th><th class="actions"></th></tr>
+              </thead>
+              <tbody>
+                @for (d of deposits; track trackDeposit($index, d)) {
+                  <tr [class.is-flagged]="!d.isReconciled && d.ageingDays > 3">
+                    <td>
+                      <div class="dst-cell-stack">
+                        <span class="dst-code">{{ d.depositNumber }}</span>
+                        <span class="sub">{{ d.depositedOn | date:'d MMM y' }}</span>
+                      </div>
+                    </td>
+                    <td class="strong">{{ d.fieldRepName }}</td>
+                    <td>{{ d.bankName }} <span class="muted">{{ d.bankAccount }}</span></td>
+                    <td class="muted">{{ d.slipReference }}</td>
+                    <td class="num strong">{{ d.amount | number:'1.2-2' }}</td>
+                    <td class="num">
+                      <span [class.st-bad]="!d.isReconciled && d.ageingDays > 3">{{ d.ageingDays }}d</span>
+                    </td>
+                    <td>
+                      @if (d.isReconciled) {
+                        <span class="dst-pill tone-success">{{ d.reconciledAt | date:'d MMM' }}</span>
+                      } @else {
+                        <span class="dst-pill tone-warning">Not matched</span>
+                      }
+                    </td>
+                    <td class="actions">
+                      @if (!d.isReconciled) {
+                        <button type="button" class="dst-btn is-sm" (click)="reconcileDeposit(d)">Reconcile</button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>
+
+<!-- ── Submit ───────────────────────────────────────────────────────────── -->
+@if (showSubmit && detail) {
+  <div class="dst-modal-backdrop" (click)="showSubmit = false">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Submit the settlement" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Submit {{ detail.settlementNumber }}</div>
+          <div class="dst-modal-sub">
+            Expected in hand is {{ detail.expectedCash | number:'1.2-2' }}. Count the cash before
+            typing — the variance is what gets questioned.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="showSubmit = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="dst-modal-body">
+        <div class="dst-field">
+          <label for="st-declared">Cash declared</label>
+          <input id="st-declared" type="number" step="0.01" min="0" [(ngModel)]="submit.declaredCash" />
+        </div>
+        <div class="dst-field">
+          <label for="st-submit-note">Note</label>
+          <textarea id="st-submit-note" [(ngModel)]="submit.note"></textarea>
+        </div>
+      </div>
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showSubmit = false" [disabled]="busy">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="confirmSubmit()" [disabled]="busy">Submit</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Explain a variance ───────────────────────────────────────────────── -->
+@if (explaining) {
+  <div class="dst-modal-backdrop" (click)="explaining = null">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Explain the variance" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">{{ varianceLabels[explaining.kind] }}</div>
+          <div class="dst-modal-sub">
+            {{ explaining.itemName || 'Cash' }} ·
+            {{ explaining.varianceAmount | number:'1.2-2' }} out
+            @if (explaining.itemId) { ({{ explaining.varianceQuantity | number }} {{ explaining.uom }}) }
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="explaining = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-field">
+          <label for="st-reason">Reason <span class="req">*</span></label>
+          <select id="st-reason" [(ngModel)]="explain.reasonCodeId">
+            <option value="">Pick a reason</option>
+            @for (r of reasonsFor(explaining); track r.id) { <option [value]="r.id">{{ r.name }}</option> }
+          </select>
+          <span class="dst-hint">The reason is the useful part. The variance number alone tells you nothing.</span>
+        </div>
+
+        <div class="dst-field">
+          <label for="st-explain-note">Note</label>
+          <textarea id="st-explain-note" [(ngModel)]="explain.note" placeholder="What actually happened?"></textarea>
+        </div>
+
+        <label class="dst-check">
+          <input type="checkbox" [(ngModel)]="explain.isRecoverable" />
+          <span>
+            Recover this from the rep
+            <span class="dst-check-sub">Creates a deduction against them rather than writing it off.</span>
+          </span>
+        </label>
+
+        @if (explain.isRecoverable) {
+          <div class="dst-field">
+            <label for="st-recover">Amount to recover</label>
+            <input id="st-recover" type="number" step="0.01" min="0" [(ngModel)]="explain.recoveredAmount" />
+          </div>
+        }
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="explaining = null" [disabled]="busy">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="confirmExplain()" [disabled]="busy || !explain.reasonCodeId">Save</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Reverse ──────────────────────────────────────────────────────────── -->
+@if (showReverse && detail) {
+  <div class="dst-modal-backdrop" (click)="showReverse = false">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Reverse the settlement" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Reverse {{ detail.settlementNumber }}</div>
+          <div class="dst-modal-sub">
+            A reversal posts a counter-entry. The original posting stays exactly where it is — this
+            is not an edit and never will be.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="showReverse = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="dst-modal-body">
+        <div class="dst-field">
+          <label for="st-reverse">Why is this being reversed? <span class="req">*</span></label>
+          <textarea id="st-reverse" [(ngModel)]="reverseReason" placeholder="Duplicate settlement created for the same day."></textarea>
+        </div>
+      </div>
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showReverse = false" [disabled]="busy">Cancel</button>
+        <button type="button" class="dst-btn is-danger" (click)="reverse()" [disabled]="busy || !reverseReason.trim()">Reverse it</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Deposit ──────────────────────────────────────────────────────────── -->
+@if (showDeposit) {
+  <div class="dst-modal-backdrop" (click)="showDeposit = false">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Record a bank deposit" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Record a bank deposit</div>
+          <div class="dst-modal-sub">Cash stays as exposure until the slip is matched to a bank line.</div>
+        </div>
+        <button type="button" class="dst-close" (click)="showDeposit = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="dst-modal-body">
+        <div class="dst-form-grid">
+          <div class="dst-field">
+            <label for="st-dep-amount">Amount</label>
+            <input id="st-dep-amount" type="number" step="0.01" min="0" [(ngModel)]="deposit.amount" />
+          </div>
+          <div class="dst-field">
+            <label for="st-dep-date">Deposited on</label>
+            <input id="st-dep-date" type="date" [(ngModel)]="deposit.depositedOn" />
+          </div>
+          <div class="dst-field">
+            <label for="st-dep-bank">Bank</label>
+            <input id="st-dep-bank" type="text" [(ngModel)]="deposit.bankName" />
+          </div>
+          <div class="dst-field">
+            <label for="st-dep-account">Account</label>
+            <input id="st-dep-account" type="text" [(ngModel)]="deposit.bankAccount" />
+          </div>
+          <div class="dst-field is-full">
+            <label for="st-dep-slip">Slip reference</label>
+            <input id="st-dep-slip" type="text" [(ngModel)]="deposit.slipReference" />
+          </div>
+          <div class="dst-field is-full">
+            <label for="st-dep-note">Note</label>
+            <input id="st-dep-note" type="text" [(ngModel)]="deposit.note" />
+          </div>
+        </div>
+      </div>
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showDeposit = false" [disabled]="busy">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="recordDeposit()" [disabled]="busy || deposit.amount === null">Record</button>
+      </div>
+    </div>
+  </div>
+}

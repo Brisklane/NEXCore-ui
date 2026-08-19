@@ -1,0 +1,204 @@
+/* Routes and beats — list on the left, the ordered beat on the right. */
+
+.rb-head-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.rb-loading { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.rb-search { max-width: none; flex: 1; }
+.rb-list-body { max-height: 720px; overflow-y: auto; }
+
+.rb-route {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  border-bottom: 1px solid var(--border-light, #eef1f5);
+  border-left: 3px solid transparent;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.rb-route:last-child { border-bottom: none; }
+.rb-route:hover { background: var(--bg-subtle, #f8fafc); }
+.rb-route:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.rb-route.is-selected {
+  background: var(--accent-soft, rgba(43, 127, 255, 0.09));
+  border-left-color: var(--accent, #2b7fff);
+}
+
+.rb-route-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: var(--bg-muted, #f1f5f9);
+  color: var(--text-secondary, #64748b);
+  flex-shrink: 0;
+}
+
+.rb-route.is-selected .rb-route-icon { background: var(--accent, #2b7fff); color: var(--accent-contrast, #fff); }
+.rb-route-icon .material-symbols-outlined { font-size: 18px; }
+.rb-route-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+
+.rb-route-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rb-route-meta { font-size: 11.5px; color: var(--text-muted, #94a3b8); }
+
+.rb-route-rep {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--text-secondary, #64748b);
+}
+
+.rb-route-rep .material-symbols-outlined { font-size: 14px; }
+.rb-unassigned { display: inline-flex; align-items: center; gap: 4px; color: var(--warning-text, #92400e); }
+
+/* ── Detail ────────────────────────────────────────────────────────── */
+.rb-detail { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.rb-stops-card .dst-card-body { max-height: 640px; overflow-y: auto; }
+
+.rb-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 11px; }
+
+.rb-stat {
+  padding: 11px 13px;
+  border-radius: 12px;
+  background: var(--bg-subtle, #f8fafc);
+  border: 1px solid var(--border-light, #eef1f5);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.rb-stat.is-warn { background: var(--warning-soft, #fef3c7); border-color: var(--warning-border, #fde68a); }
+
+.rb-stat-label {
+  font-size: 10.5px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted, #94a3b8);
+}
+
+.rb-stat-value {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.rb-stat-foot { font-size: 11px; color: var(--text-muted, #94a3b8); line-height: 1.4; }
+.rb-overload { margin-top: 14px; margin-bottom: 0; }
+
+/* ── Stops ─────────────────────────────────────────────────────────── */
+.rb-stop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border-light, #eef1f5);
+}
+
+.rb-stop:last-child { border-bottom: none; }
+.rb-stop:hover { background: var(--bg-subtle, #f8fafc); }
+
+.rb-stop-no {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft, rgba(43, 127, 255, 0.1));
+  color: var(--accent, #2b7fff);
+  font-size: 12px;
+  font-weight: 800;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.rb-stop-body { flex: 1; min-width: 0; }
+
+.rb-stop-name {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--text-heading, #0f172a);
+}
+
+.rb-stop-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--text-muted, #94a3b8);
+}
+
+.rb-stop-actions { display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
+
+/* ── Day picker ────────────────────────────────────────────────────── */
+.rb-days { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.rb-day {
+  min-width: 46px;
+  min-height: 40px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-surface, #fff);
+  color: var(--text-secondary, #64748b);
+  font-size: 12.5px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.rb-day.is-on {
+  background: var(--accent, #2b7fff);
+  border-color: transparent;
+  color: var(--accent-contrast, #fff);
+}
+
+.rb-day:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* ── Candidate pickers ─────────────────────────────────────────────── */
+.rb-candidates { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; max-height: 400px; overflow-y: auto; }
+
+.rb-candidate {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 13px;
+  border-radius: 11px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-surface, #fff);
+  cursor: pointer;
+  min-height: 52px;
+}
+
+.rb-candidate:hover { border-color: var(--accent, #2b7fff); background: var(--bg-subtle, #f8fafc); }
+.rb-candidate input { width: 17px; height: 17px; accent-color: var(--accent, #2b7fff); cursor: pointer; flex-shrink: 0; }
+.rb-candidate-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.rb-candidate-name { font-size: 13px; font-weight: 650; color: var(--text-heading, #0f172a); }
+.rb-candidate-meta { font-size: 11.5px; color: var(--text-muted, #94a3b8); }
+
+.rb-none { padding: 26px 4px; text-align: center; font-size: 12.5px; color: var(--text-muted, #94a3b8); }
+.rb-count { font-size: 12.5px; font-weight: 650; }

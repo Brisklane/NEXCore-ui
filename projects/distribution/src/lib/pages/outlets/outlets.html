@@ -1,0 +1,364 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Outlets</h2>
+      <p class="subtitle">Every shop you sell to, whoever services it.</p>
+    </div>
+    <div class="ol-head-actions">
+      <dst-scope-bar (scopeChange)="onScope($event)"></dst-scope-bar>
+      <button type="button" class="dst-btn is-primary" (click)="startOnboard()">
+        <span class="material-symbols-outlined">add_business</span>
+        Add a shop
+      </button>
+    </div>
+  </div>
+
+  <dst-help key="outlets"></dst-help>
+
+  @if (error) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">{{ error }}</div>
+    </div>
+  }
+
+  <!-- ── Filters ──────────────────────────────────────────────────────── -->
+  <div class="dst-toolbar">
+    <div class="dst-search">
+      <span class="material-symbols-outlined">search</span>
+      <input
+        type="search"
+        [(ngModel)]="filters.search"
+        (ngModelChange)="onSearch()"
+        placeholder="Shop name, code, owner or phone"
+        aria-label="Search outlets"
+      />
+    </div>
+
+    <select class="dst-filter-select" [(ngModel)]="filters.channel" (ngModelChange)="applyFilters()" aria-label="Channel">
+      <option value="">All channels</option>
+      @for (o of channelOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+    </select>
+
+    <select class="dst-filter-select" [(ngModel)]="filters.grade" (ngModelChange)="applyFilters()" aria-label="Grade">
+      <option value="">All grades</option>
+      @for (o of gradeOptions; track o.value) { <option [value]="o.value">Grade {{ o.label }}</option> }
+    </select>
+
+    <select class="dst-filter-select" [(ngModel)]="filters.status" (ngModelChange)="applyFilters()" aria-label="Status">
+      <option value="">All statuses</option>
+      @for (o of statusOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+    </select>
+
+    <select class="dst-filter-select" [(ngModel)]="filters.routeId" (ngModelChange)="applyFilters()" aria-label="Route">
+      <option value="">All routes</option>
+      @for (r of routes; track r.id) { <option [value]="r.id">{{ r.name }}</option> }
+    </select>
+
+    <span class="dst-spacer"></span>
+
+    <label class="dst-check ol-quick">
+      <input type="checkbox" [(ngModel)]="filters.pendingOnly" (ngModelChange)="applyFilters()" />
+      Waiting for approval
+    </label>
+
+    <label class="dst-check ol-quick">
+      <input type="checkbox" [(ngModel)]="filters.unvisitedOnly" (ngModelChange)="applyFilters()" />
+      Not visited in 30 days
+    </label>
+  </div>
+
+  @if (activeFilterCount > 0) {
+    <div class="dst-chips">
+      <span class="dst-muted ol-chip-label">{{ activeFilterCount }} filters on</span>
+      <button type="button" class="dst-btn is-sm is-ghost" (click)="clearFilters()">Clear all</button>
+    </div>
+  }
+
+  <!-- ── The list ─────────────────────────────────────────────────────── -->
+  <div class="dst-card">
+    <div class="dst-card-body is-flush">
+      @if (loading) {
+        <div class="ol-loading">
+          @for (i of [1,2,3,4,5,6,7,8]; track i) { <div class="dst-skeleton" style="height: 52px"></div> }
+        </div>
+      } @else if (rows.length === 0) {
+        <dst-empty
+          icon="storefront"
+          title="No shops match"
+          text="Widen the filters, or add a shop. New shops captured in the field also land here for approval."
+          actionLabel="Add a shop"
+          actionIcon="add_business"
+          (action)="startOnboard()"
+        ></dst-empty>
+      } @else {
+        <div class="dst-table-wrap">
+          <table class="dst-table ol-table">
+            <thead>
+              <tr>
+                <th>Shop</th>
+                <th>Channel</th>
+                <th>Route</th>
+                <th class="num">Offtake / month</th>
+                <th class="num">Outstanding</th>
+                <th>Last visit</th>
+                <th>Status</th>
+                <th class="actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of rows; track trackRow($index, row)) {
+                <tr class="is-clickable" [class.is-flagged]="!row.isApproved" (click)="open(row)">
+                  <td>
+                    <div class="dst-cell-stack">
+                      <span class="top">{{ row.name }}</span>
+                      <span class="sub">
+                        @if (row.code) { <span class="dst-code is-plain">{{ row.code }}</span> · }
+                        {{ row.ownerName }}
+                        @if (row.ownerPhone) { · {{ row.ownerPhone }} }
+                      </span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="ol-channel">
+                      <span class="material-symbols-outlined">{{ channelIcons[row.channel] }}</span>
+                      {{ channelLabels[row.channel] }}
+                    </span>
+                    <span class="ol-grade">Grade {{ gradeLabels[row.grade] }}</span>
+                  </td>
+                  <td>
+                    @if (row.routes.length) {
+                      <div class="dst-cell-stack">
+                        <span class="top">{{ row.routes[0].routeName }}</span>
+                        @if (row.routes.length > 1) { <span class="sub">+{{ row.routes.length - 1 }} more</span> }
+                      </div>
+                    } @else {
+                      <span class="ol-unrouted">
+                        <span class="material-symbols-outlined">link_off</span>
+                        Unrouted
+                      </span>
+                    }
+                  </td>
+                  <td class="num">{{ row.averageMonthlyOfftake | number:'1.0-0' }}</td>
+                  <td class="num" [class.ol-owing]="row.outstandingAmount > 0">
+                    {{ row.outstandingAmount | number:'1.0-0' }}
+                  </td>
+                  <td class="nowrap">
+                    @if (row.lastVisitAt) {
+                      <span [class.ol-stale]="(row.daysSinceLastVisit ?? 0) > 30">
+                        {{ row.lastVisitAt | date:'d MMM' }}
+                        @if (row.daysSinceLastVisit) { <small>({{ row.daysSinceLastVisit }}d)</small> }
+                      </span>
+                    } @else {
+                      <span class="muted">never</span>
+                    }
+                  </td>
+                  <td>
+                    <dst-status [label]="statusLabels[row.status]" [tone]="statusTone[row.status]"></dst-status>
+                    @if (!row.isApproved) {
+                      <span class="dst-pill tone-warning ol-pending">
+                        <span class="material-symbols-outlined">pending</span>Awaiting approval
+                      </span>
+                    }
+                  </td>
+                  <td class="actions" (click)="$event.stopPropagation()">
+                    @if (!row.isApproved) {
+                      <button type="button" class="dst-icon-btn" (click)="approve(row, true)" aria-label="Approve this shop" title="Approve">
+                        <span class="material-symbols-outlined">check</span>
+                      </button>
+                      <button type="button" class="dst-icon-btn is-danger" (click)="approve(row, false)" aria-label="Reject this shop" title="Reject">
+                        <span class="material-symbols-outlined">close</span>
+                      </button>
+                    }
+                    <button type="button" class="dst-icon-btn" (click)="startMerge(row)" aria-label="Merge into another shop" title="Merge">
+                      <span class="material-symbols-outlined">merge</span>
+                    </button>
+                    <button type="button" class="dst-icon-btn" (click)="open(row)" aria-label="Open this shop" title="Open">
+                      <span class="material-symbols-outlined">chevron_right</span>
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  </div>
+
+  <dst-pager
+    [meta]="meta"
+    noun="shops"
+    (pageChange)="changePage($event)"
+    (sizeChange)="changeSize($event)"
+  ></dst-pager>
+</div>
+
+<!-- ── Onboard a shop ───────────────────────────────────────────────────── -->
+@if (showOnboard) {
+  <div class="dst-modal-backdrop" (click)="showOnboard = false">
+    <div class="dst-modal" role="dialog" aria-modal="true" aria-label="Add a shop" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Add a shop</div>
+          <div class="dst-modal-sub">
+            The minimum to start trading. Everything else can be filled in later from the shop's own page.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="showOnboard = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        @if (duplicates.length) {
+          <div class="dst-banner tone-warning">
+            <span class="material-symbols-outlined">content_copy</span>
+            <div class="dst-banner-body">
+              <strong>This might already exist.</strong>
+              <ul class="ol-dupes">
+                @for (d of duplicates; track d.outletId) {
+                  <li>
+                    <strong>{{ d.name }}</strong>
+                    @if (d.code) { ({{ d.code }}) }
+                    — {{ d.matchReason }}
+                    @if (d.distanceMetres != null) { · {{ d.distanceMetres }} m away }
+                  </li>
+                }
+              </ul>
+              You can still add it; the duplicate flag stays on the record so somebody can merge them later.
+            </div>
+          </div>
+        }
+
+        <div class="dst-form-grid">
+          <div class="dst-field is-full">
+            <label for="ob-name">Shop name <span class="req">*</span></label>
+            <input
+              id="ob-name"
+              type="text"
+              [(ngModel)]="onboard.name"
+              (ngModelChange)="checkDuplicates()"
+              [class.is-invalid]="!!onboardErrors['name']"
+            />
+            <dst-field-error [message]="onboardErrors['name']" for="ob-name"></dst-field-error>
+          </div>
+
+          <div class="dst-field">
+            <label for="ob-owner">Owner</label>
+            <input id="ob-owner" type="text" [(ngModel)]="onboard.ownerName" />
+          </div>
+
+          <div class="dst-field">
+            <label for="ob-phone">Owner's phone <span class="req">*</span></label>
+            <input
+              id="ob-phone"
+              type="tel"
+              [(ngModel)]="onboard.ownerPhone"
+              (ngModelChange)="checkDuplicates()"
+              [class.is-invalid]="!!onboardErrors['ownerPhone']"
+            />
+            <span class="dst-hint">The phone number is how duplicates get caught. It is worth getting right.</span>
+            <dst-field-error [message]="onboardErrors['ownerPhone']" for="ob-phone"></dst-field-error>
+          </div>
+
+          <div class="dst-field">
+            <label for="ob-channel">Channel</label>
+            <select id="ob-channel" [(ngModel)]="onboard.channel">
+              @for (o of channelOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+            </select>
+          </div>
+
+          <div class="dst-field">
+            <label for="ob-grade">Grade</label>
+            <select id="ob-grade" [(ngModel)]="onboard.grade">
+              @for (o of gradeOptions; track o.value) { <option [value]="o.value">Grade {{ o.label }}</option> }
+            </select>
+            <span class="dst-hint">A rough size band. It drives visit frequency and scheme eligibility.</span>
+          </div>
+
+          <div class="dst-field is-full">
+            <label for="ob-address">Address</label>
+            <input id="ob-address" type="text" [(ngModel)]="onboard.addressLine" />
+          </div>
+
+          <div class="dst-field">
+            <label for="ob-landmark">Landmark</label>
+            <input id="ob-landmark" type="text" [(ngModel)]="onboard.landmark" placeholder="Opposite the bus stand" />
+          </div>
+
+          <div class="dst-field">
+            <label for="ob-area">Area</label>
+            <input id="ob-area" type="text" [(ngModel)]="onboard.area" />
+          </div>
+
+          <div class="dst-field">
+            <label for="ob-city">City</label>
+            <input id="ob-city" type="text" [(ngModel)]="onboard.city" />
+          </div>
+
+          <div class="dst-field">
+            <label for="ob-route">Put on route</label>
+            <select id="ob-route" [(ngModel)]="onboard.routeId">
+              <option value="">Decide later</option>
+              @for (r of routes; track r.id) { <option [value]="r.id">{{ r.name }}</option> }
+            </select>
+            <span class="dst-hint">A shop with no route is never visited. It is the commonest reason a new shop goes quiet.</span>
+          </div>
+
+          <div class="dst-field is-full">
+            <label for="ob-note">Note</label>
+            <input id="ob-note" type="text" [(ngModel)]="onboard.note" placeholder="Optional" />
+          </div>
+        </div>
+      </div>
+
+      <div class="dst-modal-foot">
+        @if (checkingDuplicates) { <span class="dst-muted ol-checking">Checking for duplicates…</span> }
+        <span class="dst-foot-spacer"></span>
+        <button type="button" class="dst-btn" (click)="showOnboard = false" [disabled]="saving">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="saveOnboard()" [disabled]="saving">
+          @if (saving) { Adding… } @else { Add the shop }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Merge ────────────────────────────────────────────────────────────── -->
+@if (mergeSource) {
+  <div class="dst-modal-backdrop" (click)="mergeSource = null">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Merge shops" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Merge "{{ mergeSource.name }}" into another shop</div>
+          <div class="dst-modal-sub">
+            The surviving shop keeps its history. This one becomes an alias — its orders, visits and
+            receipts move across rather than being deleted.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="mergeSource = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-field">
+          <label for="ol-merge-target">Keep this shop</label>
+          <select id="ol-merge-target" [(ngModel)]="mergeTargetId">
+            <option value="">Choose the survivor</option>
+            @for (r of rows; track r.id) {
+              @if (r.id !== mergeSource.id) { <option [value]="r.id">{{ r.name }} @if (r.code) { ({{ r.code }}) }</option> }
+            }
+          </select>
+          <span class="dst-hint">Only shops on this page are listed. Search for the survivor first if it is not here.</span>
+        </div>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="mergeSource = null">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="confirmMerge()" [disabled]="!mergeTargetId">Merge</button>
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,546 @@
+<div class="page-container ft">
+  <div class="page-header">
+    <div>
+      <h2>Field terminal</h2>
+      <p class="subtitle">Start the day, work the beat, close the day.</p>
+    </div>
+
+    @if (reps.length > 1) {
+      <div class="dst-context">
+        <label for="ft-rep">Rep</label>
+        <select id="ft-rep" [ngModel]="repId" (ngModelChange)="onRep($event)">
+          @for (r of reps; track r.id) {
+            <option [value]="r.id">{{ r.fullName }}@if (r.territoryName) { — {{ r.territoryName }} }</option>
+          }
+        </select>
+      </div>
+    }
+  </div>
+
+  <dst-help key="terminal"></dst-help>
+
+  @if (positionError) {
+    <div class="dst-banner tone-warning">
+      <span class="material-symbols-outlined">location_off</span>
+      <div class="dst-banner-body">{{ positionError }}</div>
+    </div>
+  }
+
+  @if (error) {
+    <div class="dst-banner tone-danger" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <div class="dst-banner-body">{{ error }}</div>
+      <button type="button" class="dst-icon-btn" (click)="error = ''" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  @if (notice) {
+    <div class="dst-banner tone-success" role="status">
+      <span class="material-symbols-outlined">check_circle</span>
+      <div class="dst-banner-body">{{ notice }}</div>
+      <button type="button" class="dst-icon-btn" (click)="dismissNotice()" aria-label="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  }
+
+  @if (loading) {
+    <div class="dst-skeleton" style="height: 160px; border-radius: 16px; margin-bottom: 14px"></div>
+    <div class="dst-skeleton" style="height: 320px; border-radius: 16px"></div>
+  }
+
+  <!-- ── No day yet ─────────────────────────────────────────────────────── -->
+  @if (!loading && !day) {
+    <section class="ft-start">
+      <div class="ft-start-icon"><span class="material-symbols-outlined">wb_sunny</span></div>
+      <h3>The day has not started</h3>
+      <p>Starting the day stamps your opening odometer and location, and — if you are on a van — opens the load.</p>
+
+      <div class="ft-start-form">
+        @if (availableRoutes.length) {
+          <div class="dst-field">
+            <label for="ft-route">Route for today</label>
+            <select id="ft-route" [(ngModel)]="start.routeId">
+              <option value="">No fixed route</option>
+              @for (r of availableRoutes; track r.id) { <option [value]="r.id">{{ r.name }}</option> }
+            </select>
+          </div>
+        }
+
+        @if (availableVans.length) {
+          <div class="dst-field">
+            <label for="ft-van">Van</label>
+            <select id="ft-van" [(ngModel)]="start.vanUnitId">
+              <option value="">Not on a van today</option>
+              @for (v of availableVans; track v.id) { <option [value]="v.id">{{ v.name }}</option> }
+            </select>
+          </div>
+        }
+      </div>
+
+      <button type="button" class="dst-touch-btn is-primary is-block" (click)="startDay()" [disabled]="busy">
+        <span class="material-symbols-outlined">play_arrow</span>
+        @if (busy) { Starting… } @else { Start the day }
+      </button>
+    </section>
+  }
+
+  <!-- ── The day ────────────────────────────────────────────────────────── -->
+  @if (day && board; as b) {
+    <section class="ft-day">
+      <header class="ft-day-head">
+        <div class="ft-day-title">
+          <span class="ft-day-route">{{ day.routeName || 'Open day' }}</span>
+          <dst-status [label]="dayStatusLabels[day.status]" [tone]="dayStatusTone[day.status]"></dst-status>
+          @if (day.vanUnitName) {
+            <span class="dst-pill tone-info"><span class="material-symbols-outlined">local_shipping</span>{{ day.vanUnitName }}</span>
+          }
+          @if (day.unsyncedCount > 0) {
+            <span class="dst-pill tone-warning"><span class="material-symbols-outlined">cloud_off</span>{{ day.unsyncedCount }} waiting to sync</span>
+          }
+        </div>
+        <div class="ft-day-meta">Started {{ day.startedAt | date:'HH:mm' }}</div>
+      </header>
+
+      <div class="ft-progress">
+        <div class="ft-progress-track">
+          <div class="ft-progress-fill" [style.width.%]="progressPercent"></div>
+        </div>
+        <div class="ft-progress-legend">
+          <strong>{{ board.completedStops }}</strong> of {{ board.completedStops + board.pendingStops }} calls done
+          @if (day.productiveCalls > 0) { · {{ day.productiveCalls }} productive }
+        </div>
+      </div>
+
+      <div class="ft-scoreboard">
+        <div class="ft-score">
+          <span class="ft-score-label">Sold</span>
+          <span class="ft-score-value">{{ board.achievedValue | number:'1.0-0' }}</span>
+          @if (board.targetValue > 0) {
+            <span class="ft-score-bar"><i [style.width.%]="achievedPercent"></i></span>
+            <span class="ft-score-foot">{{ achievedPercent }}% of {{ board.targetValue | number:'1.0-0' }}</span>
+          }
+        </div>
+        <div class="ft-score">
+          <span class="ft-score-label">Collected</span>
+          <span class="ft-score-value">{{ board.collectedAmount | number:'1.0-0' }}</span>
+          @if (board.collectionTarget > 0) {
+            <span class="ft-score-bar"><i [style.width.%]="collectedPercent"></i></span>
+            <span class="ft-score-foot">{{ collectedPercent }}% of {{ board.collectionTarget | number:'1.0-0' }}</span>
+          }
+        </div>
+        <div class="ft-score">
+          <span class="ft-score-label">Strike rate</span>
+          <span class="ft-score-value">{{ day.strikeRatePercent | number:'1.0-0' }}%</span>
+          <span class="ft-score-foot">{{ day.linesPerCall | number:'1.1-1' }} lines per call</span>
+        </div>
+        @if (board.vanStock; as van) {
+          <div class="ft-score">
+            <span class="ft-score-label">On the van</span>
+            <span class="ft-score-value">{{ van.sellableValue | number:'1.0-0' }}</span>
+            <span class="ft-score-foot">
+              {{ van.lineCount }} lines
+              @if (van.nearExpiryLineCount > 0) { · {{ van.nearExpiryLineCount }} near expiry }
+            </span>
+          </div>
+        }
+      </div>
+
+      @if (board.mustSellItems.length) {
+        <div class="ft-focus">
+          <div class="ft-focus-head">
+            <span class="material-symbols-outlined">star</span>
+            Must-sell today
+          </div>
+          <div class="ft-focus-list">
+            @for (f of board.mustSellItems; track f.itemId) {
+              <div class="ft-focus-item">
+                <span class="ft-focus-name">{{ f.itemName }}</span>
+                <span class="ft-focus-meta">
+                  {{ f.targetQuantityPerOutlet }} per outlet
+                  @if (f.spiffRatePerUnit > 0) { · {{ f.spiffRatePerUnit | number:'1.2-2' }} per unit to you }
+                </span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </section>
+
+    <!-- ── The visit that is open ───────────────────────────────────────── -->
+    @if (activeVisit && activeCard; as card) {
+      <section class="ft-active" aria-label="Call in progress">
+        <header class="ft-active-head">
+          <div>
+            <div class="ft-active-badge"><span class="dst-live-dot"></span>In this shop now</div>
+            <h3>{{ activeCard.outletName }}</h3>
+            <p class="ft-active-sub">
+              Checked in {{ activeVisit.checkedInAt | date:'HH:mm' }}
+              @if (activeVisit.distanceFromOutletMetres != null) { · {{ activeVisit.distanceFromOutletMetres }} m from the shop }
+            </p>
+          </div>
+          @if (activeCard.ownerPhone) {
+            <a class="dst-touch-btn" [href]="'tel:' + activeCard.ownerPhone">
+              <span class="material-symbols-outlined">call</span>
+              Call
+            </a>
+          }
+        </header>
+
+        @if (activeCard.isCreditBlocked || activeCard.overdueAmount > 0) {
+          <div class="dst-banner tone-danger">
+            <span class="material-symbols-outlined">credit_card_off</span>
+            <div class="dst-banner-body">
+              @if (activeCard.isCreditBlocked) { <strong>Credit blocked.</strong> }
+              Outstanding {{ activeCard.outstandingAmount | number:'1.2-2' }}
+              @if (activeCard.overdueAmount > 0) { · <strong>{{ activeCard.overdueAmount | number:'1.2-2' }} overdue</strong> }
+            </div>
+          </div>
+        }
+
+        @if (activeCard.hasPinnedNote && activeCard.pinnedNote) {
+          <div class="dst-banner tone-info">
+            <span class="material-symbols-outlined">push_pin</span>
+            <div class="dst-banner-body">{{ activeCard.pinnedNote }}</div>
+          </div>
+        }
+
+        <div class="ft-actions">
+          <button type="button" class="dst-touch-btn is-primary" (click)="showOrderSheet = true">
+            <span class="material-symbols-outlined">shopping_cart</span>
+            @if (activeVisit.orderValue > 0) { Order — {{ activeVisit.orderValue | number:'1.0-0' }} } @else { Take order }
+          </button>
+          <button type="button" class="dst-touch-btn" (click)="showCollection = true">
+            <span class="material-symbols-outlined">payments</span>
+            @if (activeVisit.collectedAmount > 0) { Collected {{ activeVisit.collectedAmount | number:'1.0-0' }} } @else { Collect }
+          </button>
+        </div>
+
+        @if (tasksFor(activeCard.outletId).length) {
+          <div class="ft-tasks">
+            <div class="ft-tasks-head">Tasks here</div>
+            @for (t of tasksFor(activeCard.outletId); track trackTask($index, t)) {
+              <div class="ft-task" [class.is-overdue]="t.isOverdue">
+                <div class="ft-task-body">
+                  <div class="ft-task-title">
+                    {{ t.title }}
+                    @if (t.isMandatory) { <span class="dst-pill tone-danger">Must do</span> }
+                    @if (t.isOverdue) { <span class="dst-pill tone-warning">Overdue</span> }
+                  </div>
+                  @if (t.instructions) { <div class="ft-task-note">{{ t.instructions }}</div> }
+                </div>
+                <button type="button" class="dst-touch-btn" (click)="completeTask(t)" [disabled]="busy">
+                  <span class="material-symbols-outlined">check</span>
+                  Done
+                </button>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Check out -->
+        <div class="ft-checkout">
+          <div class="ft-checkout-head">Finish this call</div>
+
+          @if (needsNoOrderReason) {
+            <div class="dst-field">
+              <label for="ft-noorder">Why was there no order? <span class="req">*</span></label>
+              <select id="ft-noorder" [(ngModel)]="checkout.noOrderReasonId">
+                <option value="">Pick a reason</option>
+                @for (r of noOrderReasons; track r.id) { <option [value]="r.id">{{ r.name }}</option> }
+              </select>
+              <span class="dst-hint">This is the number the whole business improves on. It cannot be skipped.</span>
+            </div>
+
+            <div class="dst-field">
+              <label for="ft-noorder-note">Anything else worth recording?</label>
+              <input id="ft-noorder-note" type="text" [(ngModel)]="checkout.noOrderNote" placeholder="Optional" />
+            </div>
+          }
+
+          @if (activeCard.assetCount > 0) {
+            <label class="dst-check">
+              <input type="checkbox" [(ngModel)]="checkout.assetsVerified" />
+              <span>
+                I saw all {{ activeCard.assetCount }} of our assets here
+                <span class="dst-check-sub">Coolers, racks and branded units, present and working.</span>
+              </span>
+            </label>
+          }
+
+          <button type="button" class="dst-touch-btn is-success is-block" (click)="checkOut()" [disabled]="busy">
+            <span class="material-symbols-outlined">logout</span>
+            @if (busy) { Closing… } @else { Check out }
+          </button>
+        </div>
+      </section>
+    }
+
+    <!-- ── Next stop ────────────────────────────────────────────────────── -->
+    @if (!activeVisit && nextStop; as next) {
+      <section class="ft-next" aria-label="Next call">
+        <div class="ft-next-label">Next call · stop {{ next.stopSequence }}</div>
+        <h3 class="ft-next-name">{{ next.outletName }}</h3>
+        <div class="ft-next-meta">
+          <span class="material-symbols-outlined">{{ channelIcons[next.channel] }}</span>
+          Grade {{ gradeLabels[next.grade] }}
+          @if (next.addressLine) { · {{ next.addressLine }} }
+          @if (distanceLabel(next)) { · {{ distanceLabel(next) }} }
+        </div>
+
+        <div class="ft-next-facts">
+          @if (next.outstandingAmount > 0) {
+            <span class="dst-pill" [class.tone-danger]="next.overdueAmount > 0" [class.tone-neutral]="next.overdueAmount === 0">
+              <span class="material-symbols-outlined">account_balance_wallet</span>
+              {{ next.outstandingAmount | number:'1.0-0' }} outstanding
+            </span>
+          }
+          @if (next.averageMonthlyOfftake > 0) {
+            <span class="dst-pill tone-neutral">
+              <span class="material-symbols-outlined">insights</span>
+              usually {{ next.averageMonthlyOfftake | number:'1.0-0' }} a month
+            </span>
+          }
+          @if (next.openTaskCount > 0) {
+            <span class="dst-pill tone-warning">
+              <span class="material-symbols-outlined">task</span>
+              {{ next.openTaskCount }} tasks
+            </span>
+          }
+          @if (next.isMustVisit) {
+            <span class="dst-pill tone-violet"><span class="material-symbols-outlined">flag</span>Must visit</span>
+          }
+        </div>
+
+        <button type="button" class="dst-touch-btn is-primary is-block ft-checkin" (click)="checkIn(next)" [disabled]="busy">
+          <span class="material-symbols-outlined">where_to_vote</span>
+          @if (busy) { Checking in… } @else { Check in }
+        </button>
+      </section>
+    }
+
+    <!-- ── The rest of the beat ─────────────────────────────────────────── -->
+    @if (!activeVisit) {
+      <section class="dst-card ft-beat">
+        <div class="dst-card-head">
+          <div class="dst-card-title">
+            <span class="material-symbols-outlined">list_alt</span>
+            The rest of the beat
+          </div>
+          <button type="button" class="dst-btn is-sm" (click)="showUnplanned = true">
+            <span class="material-symbols-outlined">add_location_alt</span>
+            Unplanned call
+          </button>
+        </div>
+
+        <div class="dst-card-body is-flush">
+          @if (remainingStops.length === 0) {
+            <div class="dst-empty">
+              <div class="dst-empty-icon"><span class="material-symbols-outlined">done_all</span></div>
+              <div class="dst-empty-title">The beat is done</div>
+              <p class="dst-empty-text">Close the day to send it to route settlement.</p>
+            </div>
+          }
+
+          @for (stop of remainingStops; track trackStop($index, stop)) {
+            <div class="ft-stop" [class.is-done]="stop.status === VisitStatus.Completed">
+              <span class="ft-stop-no">{{ stop.stopSequence }}</span>
+              <div class="ft-stop-body">
+                <div class="ft-stop-name">{{ stop.outletName }}</div>
+                <div class="ft-stop-meta">
+                  <dst-status [label]="visitStatusLabels[stop.status]" [tone]="visitStatusTone[stop.status]"></dst-status>
+                  @if (stop.orderValue > 0) { <span>{{ stop.orderValue | number:'1.0-0' }} sold</span> }
+                  @if (stop.collectedAmount > 0) { <span>{{ stop.collectedAmount | number:'1.0-0' }} collected</span> }
+                  @if (stop.durationMinutes) { <span>{{ stop.durationMinutes }} min</span> }
+                </div>
+              </div>
+              @if (stop.status === VisitStatus.Planned) {
+                <button type="button" class="dst-btn is-sm" (click)="checkIn(stop)" [disabled]="busy">Check in</button>
+              }
+            </div>
+          }
+        </div>
+      </section>
+
+      @if (day.status === FieldDayStatus.Started) {
+        <button type="button" class="dst-touch-btn is-block ft-close-day" (click)="showCloseDay = true">
+          <span class="material-symbols-outlined">nights_stay</span>
+          Close the day
+        </button>
+      }
+    }
+  }
+</div>
+
+<!-- ── Geofence reason ──────────────────────────────────────────────────── -->
+@if (showGeoReason && pendingCard) {
+  <div class="dst-modal-backdrop" (click)="showGeoReason = false">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Check in away from the shop" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">You are {{ geoDistance }} m from the shop</div>
+          <div class="dst-modal-sub">
+            The check-in will go through. It is recorded with the distance and needs a reason a supervisor can read.
+          </div>
+        </div>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-field">
+          <label for="ft-geo">Reason <span class="req">*</span></label>
+          @if (geoReasons.length) {
+            <select id="ft-geo" [(ngModel)]="geoReason">
+              <option value="">Pick a reason</option>
+              @for (r of geoReasons; track r.id) { <option [value]="r.name">{{ r.name }}</option> }
+            </select>
+          } @else {
+            <input id="ft-geo" type="text" [(ngModel)]="geoReason" placeholder="Why are you not at the shop?" />
+          }
+        </div>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showGeoReason = false">Cancel</button>
+        <button type="button" class="dst-btn is-primary" (click)="confirmGeoReason()" [disabled]="!geoReason.trim() || busy">
+          Check in anyway
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Unplanned call ───────────────────────────────────────────────────── -->
+@if (showUnplanned) {
+  <div class="dst-modal-backdrop" (click)="showUnplanned = false">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Unplanned call" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Unplanned call</div>
+          <div class="dst-modal-sub">A call outside today's beat. It counts, and it is marked as unplanned.</div>
+        </div>
+        <button type="button" class="dst-close" (click)="showUnplanned = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        <div class="dst-search">
+          <span class="material-symbols-outlined">search</span>
+          <input
+            type="search"
+            [(ngModel)]="unplannedSearch"
+            (ngModelChange)="searchUnplanned()"
+            placeholder="Shop name, code or phone"
+            aria-label="Search outlets"
+          />
+        </div>
+
+        <div class="ft-unplanned-list">
+          @for (o of unplannedResults; track o.id) {
+            <button type="button" class="ft-unplanned" (click)="startUnplanned(o.id, o.name)">
+              <span class="ft-unplanned-name">{{ o.name }}</span>
+              <span class="ft-unplanned-meta">{{ o.code }}@if (o.addressLine) { · {{ o.addressLine }} }</span>
+            </button>
+          }
+          @if (unplannedSearch.length >= 2 && unplannedResults.length === 0) {
+            <p class="ft-unplanned-none">No shop matches that. A new shop is added from the Outlets screen.</p>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Close the day ────────────────────────────────────────────────────── -->
+@if (showCloseDay && day) {
+  <div class="dst-modal-backdrop" (click)="showCloseDay = false">
+    <div class="dst-modal is-narrow" role="dialog" aria-modal="true" aria-label="Close the day" (click)="$event.stopPropagation()">
+      <div class="dst-modal-head">
+        <div>
+          <div class="dst-modal-title">Close the day</div>
+          <div class="dst-modal-sub">
+            Declare the cash you are carrying and the distance covered. This is what settlement is measured against.
+          </div>
+        </div>
+        <button type="button" class="dst-close" (click)="showCloseDay = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="dst-modal-body">
+        @if (board && board.pendingStops > 0) {
+          <div class="dst-banner tone-warning">
+            <span class="material-symbols-outlined">warning</span>
+            <div class="dst-banner-body">
+              <strong>{{ board.pendingStops }} calls are still outstanding.</strong>
+              Closing now records the day as force-closed and asks for a reason.
+            </div>
+          </div>
+        }
+
+        <div class="dst-form-grid">
+          <div class="dst-field">
+            <label for="ft-cash">Cash on hand <span class="req">*</span></label>
+            <input id="ft-cash" type="number" inputmode="decimal" step="0.01" min="0" [(ngModel)]="close.cashDeclared" />
+            <span class="dst-hint">Count it before typing. The variance against collections is what gets questioned.</span>
+          </div>
+
+          <div class="dst-field">
+            <label for="ft-km">Distance covered (km)</label>
+            <input id="ft-km" type="number" inputmode="decimal" step="0.1" min="0" [(ngModel)]="close.distanceCoveredKm" />
+          </div>
+
+          <div class="dst-field is-full">
+            <label for="ft-close-note">Note</label>
+            <textarea id="ft-close-note" [(ngModel)]="close.note" placeholder="Anything the supervisor should know"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="dst-modal-foot">
+        <button type="button" class="dst-btn" (click)="showCloseDay = false" [disabled]="busy">Cancel</button>
+        @if (board && board.pendingStops > 0) {
+          <button type="button" class="dst-btn is-danger" (click)="closeDay(true)" [disabled]="busy || !close.note.trim()">
+            Force close
+          </button>
+        } @else {
+          <button type="button" class="dst-btn is-primary" (click)="closeDay(false)" [disabled]="busy">
+            @if (busy) { Closing… } @else { Close the day }
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Order and collection sheets ──────────────────────────────────────── -->
+@if (showOrderSheet && activeVisit && activeCard) {
+  <dst-order-sheet
+    [outletId]="activeCard.outletId"
+    [outletName]="activeCard.outletName"
+    [visitId]="activeVisit.id"
+    [fieldDayId]="day!.id"
+    [fieldRepId]="day!.fieldRepId"
+    [routeId]="day!.routeId"
+    [vanUnitId]="day!.vanUnitId"
+    [isVanSale]="!!day!.vanUnitId"
+    [touch]="true"
+    (placed)="onOrderPlaced($event)"
+    (closed)="showOrderSheet = false"
+  ></dst-order-sheet>
+}
+
+@if (showCollection && activeVisit && activeCard) {
+  <dst-collection-sheet
+    [outletId]="activeCard.outletId"
+    [partyName]="activeCard.outletName"
+    [visitId]="activeVisit.id"
+    [fieldDayId]="day!.id"
+    [fieldRepId]="day!.fieldRepId"
+    [touch]="true"
+    (recorded)="onCollectionRecorded($event)"
+    (closed)="showCollection = false"
+  ></dst-collection-sheet>
+}

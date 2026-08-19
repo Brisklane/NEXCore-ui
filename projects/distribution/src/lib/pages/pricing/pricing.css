@@ -1,0 +1,174 @@
+/* Pricing — lists, the margin ladder, and the price test that settles arguments. */
+
+.pr-head-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.pr-loading { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.pr-table { min-width: 1020px; }
+.pr-draft td { background: color-mix(in srgb, var(--warning, #f59e0b) 5%, transparent); }
+.pr-down { color: var(--danger-text, #b91c1c); }
+
+.pr-window {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--warning-text, #92400e);
+  margin-top: 3px;
+}
+
+/* ── Margin ladder ─────────────────────────────────────────────────── */
+.pr-ladder { padding: 16px 18px; border-bottom: 1px solid var(--border-light, #eef1f5); }
+.pr-ladder:last-child { border-bottom: none; }
+
+.pr-ladder-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 11px;
+}
+
+.pr-ladder-mrp {
+  font-size: 14px;
+  font-weight: 780;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-heading, #0f172a);
+  white-space: nowrap;
+}
+
+/* Where each unit of MRP goes, as one bar the width of the shelf price. */
+.pr-ladder-bar {
+  display: flex;
+  height: 30px;
+  border-radius: 9px;
+  overflow: hidden;
+  border: 1px solid var(--border-default, #e6eaf0);
+  margin-bottom: 11px;
+}
+
+.pr-seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  overflow: hidden;
+  transition: width 0.3s ease;
+}
+
+.pr-seg-label {
+  font-size: 10.5px;
+  font-weight: 750;
+  white-space: nowrap;
+  padding: 0 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pr-seg.seg-cost { background: var(--bg-inset, #e9eef5); color: var(--text-secondary, #64748b); }
+.pr-seg.seg-company { background: var(--accent, #2b7fff); color: var(--accent-contrast, #fff); }
+.pr-seg.seg-distributor { background: var(--brand-violet, #7c5cff); color: #fff; }
+.pr-seg.seg-wholesaler { background: var(--brand-cyan, #22c7e6); color: #06323b; }
+.pr-seg.seg-retailer { background: var(--success, #16a34a); color: #fff; }
+
+.pr-ladder-nums {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+  font-variant-numeric: tabular-nums;
+}
+
+.pr-ladder-nums b { font-weight: 700; color: var(--text-muted, #94a3b8); font-size: 11px; text-transform: uppercase; letter-spacing: .03em; margin-right: 4px; }
+.pr-ladder-nums i { font-style: normal; color: var(--text-muted, #94a3b8); }
+
+/* ── Editor ────────────────────────────────────────────────────────── */
+.pr-lines { min-width: 1000px; }
+
+.pr-cell {
+  width: 96px;
+  min-height: 34px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--input-border, #cbd5e1);
+  background: var(--input-bg, #fff);
+  color: var(--input-text, #1e293b);
+  font-size: 12.5px;
+  font-family: inherit;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.pr-cell.is-wide { width: 160px; text-align: left; }
+.pr-cell.is-narrow { width: 62px; text-align: left; }
+.pr-cell:focus { outline: none; border-color: var(--accent, #2b7fff); box-shadow: 0 0 0 3px var(--input-ring, rgba(43,127,255,.15)); }
+
+.pr-add-line { margin-top: 14px; }
+.pr-problems ul { margin: 4px 0 0; padding-left: 18px; }
+.pr-problems li { font-size: 12.5px; line-height: 1.6; }
+
+/* ── Price test ────────────────────────────────────────────────────── */
+.pr-test-results {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 7px;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--border-default, #e6eaf0);
+  border-radius: 10px;
+  padding: 5px;
+}
+
+.pr-test-outlet {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 11px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.pr-test-outlet:hover { background: var(--bg-subtle, #f8fafc); }
+.pr-test-outlet.is-picked { background: var(--accent-soft, rgba(43,127,255,.1)); }
+.pr-test-outlet:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.pr-test-outlet span:first-child { font-size: 13px; font-weight: 650; color: var(--text-heading, #0f172a); }
+.pr-test-outlet-meta { font-size: 11px; color: var(--text-muted, #94a3b8); }
+
+.pr-test-skel { height: 160px; margin-top: 16px; }
+.pr-test-result { margin-top: 18px; }
+
+.pr-test-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--bg-subtle, #f8fafc);
+  border: 1px solid var(--border-default, #e6eaf0);
+  margin-bottom: 14px;
+}
+
+.pr-test-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted, #94a3b8);
+}
+
+.pr-test-value {
+  font-size: 26px;
+  font-weight: 820;
+  letter-spacing: -0.025em;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.pr-test-meta { font-size: 12.5px; color: var(--text-secondary, #64748b); }
