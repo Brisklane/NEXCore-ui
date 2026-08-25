@@ -1,0 +1,163 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Members</h2>
+      <p class="subtitle">
+        @if (!loading) { {{ total | number }} member{{ total === 1 ? '' : 's' }} }
+        @else { Everybody on the books. }
+      </p>
+    </div>
+    <div class="page-header-actions">
+      <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+      <button type="button" class="btn-primary" (click)="newMember()">
+        <span class="material-symbols-outlined">person_add</span>
+        Join someone
+      </button>
+    </div>
+  </div>
+
+  <fit-page-help key="members"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <!-- Presets: named after the question a manager is asking, not the filter. -->
+  <div class="mem-presets" role="group" aria-label="Common lists">
+    <button type="button" class="mem-preset" (click)="applyPreset('all')">Everyone</button>
+    <button type="button" class="mem-preset" (click)="applyPreset('arrears')">In arrears</button>
+    <button type="button" class="mem-preset" (click)="applyPreset('risk')">About to leave</button>
+    <button type="button" class="mem-preset" (click)="applyPreset('lapsing')">Going quiet</button>
+    <button type="button" class="mem-preset" (click)="applyPreset('frozen')">Frozen</button>
+  </div>
+
+  <div class="fit-toolbar mem-filters">
+    <div class="fit-search">
+      <span class="material-symbols-outlined">search</span>
+      <input
+        type="text"
+        placeholder="Name, member number, phone or email"
+        aria-label="Search members"
+        [(ngModel)]="search"
+        (ngModelChange)="onSearchChange()"
+      />
+    </div>
+
+    <label class="fit-field fit-field-inline">
+      <span>Status</span>
+      <select [(ngModel)]="status" (ngModelChange)="page = 1; load()">
+        <option [ngValue]="null">Any</option>
+        @for (o of statusOptions; track o.value) {
+          <option [ngValue]="o.value">{{ o.label }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="fit-field fit-field-inline">
+      <span>Risk</span>
+      <select [(ngModel)]="riskBand" (ngModelChange)="page = 1; load()">
+        <option [ngValue]="null">Any</option>
+        @for (o of riskOptions; track o.value) {
+          <option [ngValue]="o.value">{{ o.label }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="fit-field fit-field-inline">
+      <span>Plan</span>
+      <select [(ngModel)]="planId" (ngModelChange)="page = 1; load()">
+        <option [ngValue]="null">Any</option>
+        @for (p of plans; track p.id) {
+          <option [ngValue]="p.id">{{ p.name }}</option>
+        }
+      </select>
+    </label>
+
+    @if (hasFilters) {
+      <button type="button" class="btn-link" (click)="clearFilters()">Clear filters</button>
+    }
+  </div>
+
+  @if (loading) {
+    <div class="mem-list">
+      @for (i of [1,2,3,4,5,6]; track i) { <div class="fit-skeleton" style="height: 68px"></div> }
+    </div>
+  } @else if (rows.length === 0) {
+    <div class="fit-empty">
+      <span class="material-symbols-outlined fit-empty-icon">group_off</span>
+      <h3 class="fit-empty-title">
+        @if (hasFilters) { Nobody matches those filters }
+        @else { No members yet }
+      </h3>
+      <p class="fit-empty-text">
+        @if (hasFilters) { Try widening the search, or clear the filters. }
+        @else { Sign your first member up and they will appear here. }
+      </p>
+      @if (hasFilters) {
+        <button type="button" class="btn-secondary" (click)="clearFilters()">Clear filters</button>
+      } @else {
+        <button type="button" class="btn-primary" (click)="newMember()">Join someone</button>
+      }
+    </div>
+  } @else {
+    <div class="mem-list">
+      @for (m of rows; track m.id) {
+        <button
+          type="button"
+          class="mem-row"
+          [class.is-blocked]="m.hasBlockingAlert || m.isBanned"
+          (click)="open(m)"
+        >
+          <span class="mem-avatar" [class.has-photo]="!!m.photoUrl">
+            @if (m.photoUrl) { <img [src]="m.photoUrl" [alt]="m.fullName" /> }
+            @else { {{ initials(m.fullName) }} }
+            @if (m.isCheckedIn) { <span class="mem-in-dot" title="In the club now"></span> }
+          </span>
+
+          <span class="mem-main">
+            <span class="mem-name">
+              {{ m.preferredName || m.fullName }}
+              @if (m.isBanned) { <span class="fit-status is-blocked">Banned</span> }
+            </span>
+            <span class="mem-sub">
+              {{ m.memberNumber }}@if (m.planName) { · {{ m.planName }} }
+              @if (m.homeClubName) { · {{ m.homeClubName }} }
+            </span>
+          </span>
+
+          <span class="mem-col mem-col-status">
+            <span class="fit-status" [class]="statusClass(m.status)">{{ statusLabels[m.status] }}</span>
+          </span>
+
+          <span class="mem-col mem-col-risk">
+            <span class="fit-risk" [class]="riskClass(m.riskBand)">
+              <span class="fit-risk-dot"></span>{{ riskLabels[m.riskBand] }}
+            </span>
+          </span>
+
+          <span class="mem-col mem-col-visit">
+            <span class="mem-col-label">Last in</span>
+            <span class="mem-col-value">{{ lastVisit(m) }}</span>
+          </span>
+
+          <span class="mem-col mem-col-money" [class.is-owed]="m.accountBalance > 0">
+            <span class="mem-col-label">Balance</span>
+            <span class="mem-col-value">{{ m.accountBalance | number:'1.2-2' }}</span>
+          </span>
+
+          <span class="material-symbols-outlined mem-go">chevron_right</span>
+        </button>
+      }
+    </div>
+
+    @if (totalPages > 1) {
+      <nav class="fit-pager" aria-label="Pages">
+        <button type="button" class="btn-secondary" [disabled]="page === 1" (click)="goPage(page - 1)">
+          Previous
+        </button>
+        <span class="fit-pager-count">Page {{ page }} of {{ totalPages }}</span>
+        <button type="button" class="btn-secondary" [disabled]="page === totalPages" (click)="goPage(page + 1)">
+          Next
+        </button>
+      </nav>
+    }
+  }
+</div>

@@ -1,0 +1,250 @@
+<div class="page-container">
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  @if (loading && !occurrence) {
+    <div class="fit-skeleton" style="height: 120px; margin-bottom: 14px"></div>
+    <div class="fit-skeleton" style="height: 380px"></div>
+  }
+
+  @if (occurrence; as o) {
+    <header class="cr-header" [style.border-left-color]="o.colourHex || 'var(--accent, #2b7fff)'">
+      <button type="button" class="cr-back" (click)="go('/fitness/timetable')" aria-label="Back to timetable">
+        <span class="material-symbols-outlined">arrow_back</span>
+      </button>
+
+      <div class="cr-identity">
+        <h2 class="cr-name">{{ o.classTypeName }}</h2>
+        <p class="cr-when">
+          {{ o.startsAt | date:'EEEE d MMMM' }} · {{ o.startsAt | date:'HH:mm' }}–{{ o.endsAt | date:'HH:mm' }}
+        </p>
+        <p class="cr-where">
+          @if (o.hasSubstitute) {
+            <span class="fit-pill">cover</span> {{ o.substituteName }} for {{ o.instructorName }}
+          } @else {
+            {{ o.instructorName || 'No instructor' }}
+          }
+          @if (o.roomName) { · {{ o.roomName }} }
+        </p>
+      </div>
+
+      <div class="cr-figures">
+        <div class="cr-figure">
+          <span class="cr-figure-value">{{ o.bookedCount }}<small>/{{ o.capacity }}</small></span>
+          <span class="cr-figure-label">Booked</span>
+        </div>
+        <div class="cr-figure">
+          <span class="cr-figure-value">{{ markedCount }}</span>
+          <span class="cr-figure-label">Marked in</span>
+        </div>
+        @if (o.waitlistCount > 0) {
+          <div class="cr-figure">
+            <span class="cr-figure-value">{{ o.waitlistCount }}</span>
+            <span class="cr-figure-label">Waiting</span>
+          </div>
+        }
+      </div>
+
+      @if (o.status !== ClassOccurrenceStatus.Cancelled) {
+        <div class="cr-actions">
+          <button type="button" class="btn-secondary" (click)="markAllHere()">Everyone is here</button>
+          <button type="button" class="btn-primary" [disabled]="saving" (click)="saveRegister(false)">
+            {{ saving ? 'Saving…' : 'Save register' }}
+          </button>
+          <button type="button" class="btn-warning" (click)="cancelling = true">Cancel class</button>
+        </div>
+      }
+    </header>
+
+    @if (o.status === ClassOccurrenceStatus.Cancelled) {
+      <div class="alert alert-error">
+        <strong>This class was cancelled.</strong> {{ o.cancellationReason }}
+        @if (o.cancellationNotified) { Everyone booked has been told. }
+      </div>
+    }
+
+    @if (o.note) { <div class="alert alert-warning">{{ o.note }}</div> }
+
+    <div class="cr-grid">
+      <!-- ── The register ───────────────────────────────────────────────
+           Large rows, whole-row hit target, one tap to cycle state.      -->
+      <section class="fit-card cr-roster">
+        <header class="fit-card-head">
+          <h3 class="fit-card-title">Who is booked</h3>
+          <span class="cr-hint">Tap a name: here → no-show → clear</span>
+        </header>
+
+        <div class="fit-card-body">
+          @if (liveBookings.length === 0) {
+            <div class="fit-empty">
+              <span class="material-symbols-outlined fit-empty-icon">group_off</span>
+              <h3 class="fit-empty-title">Nobody booked</h3>
+              <p class="fit-empty-text">
+                An empty class is worth knowing about while there is still time to fill it.
+              </p>
+            </div>
+          } @else {
+            <ul class="cr-list">
+              @for (b of liveBookings; track b.id) {
+                <li>
+                  <button
+                    type="button"
+                    class="cr-row"
+                    [class.is-here]="state(b) === 'here'"
+                    [class.is-noshow]="state(b) === 'noshow'"
+                    (click)="cycle(b)"
+                  >
+                    <span class="cr-mark">
+                      @if (state(b) === 'here') { <span class="material-symbols-outlined">check_circle</span> }
+                      @else if (state(b) === 'noshow') { <span class="material-symbols-outlined">cancel</span> }
+                      @else { <span class="material-symbols-outlined">radio_button_unchecked</span> }
+                    </span>
+
+                    <span class="cr-avatar" [class.has-photo]="!!b.photoUrl">
+                      @if (b.photoUrl) { <img [src]="b.photoUrl" [alt]="b.memberName || 'Member'" /> }
+                      @else { {{ initials(b.memberName || b.guestName) }} }
+                    </span>
+
+                    <span class="cr-body">
+                      <span class="cr-member">
+                        {{ b.memberName || b.guestName || 'Guest' }}
+                        @if (b.isFirstVisit) { <span class="fit-pill">first time</span> }
+                        @if (b.guestName && !b.memberId) { <span class="fit-pill">guest</span> }
+                      </span>
+
+                      @if (b.medicalFlags.length > 0) {
+                        <span class="cr-flags">
+                          @for (f of b.medicalFlags; track f.id) {
+                            <span class="fit-medical" [title]="f.detail">
+                              <span class="material-symbols-outlined">medical_information</span>{{ f.category }}
+                            </span>
+                          }
+                        </span>
+                      }
+                    </span>
+
+                    @if (spotFor(b)) { <span class="cr-spot">{{ spotFor(b) }}</span> }
+
+                    <span class="cr-state">
+                      @if (state(b) === 'here') { Here }
+                      @else if (state(b) === 'noshow') { No-show }
+                      @else { — }
+                    </span>
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+
+          @if (o.waitlist.length > 0) {
+            <h4 class="cr-subhead">Waiting for a space</h4>
+            <ul class="cr-list cr-waitlist">
+              @for (w of o.waitlist; track w.id) {
+                <li class="cr-waitrow">
+                  <span class="cr-waitpos">{{ w.waitlistPosition }}</span>
+                  <span class="cr-member">{{ w.memberName || w.guestName }}</span>
+                  <span class="cr-waitmeta">added {{ w.bookedAt | date:'d MMM, HH:mm' }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </section>
+
+      <!-- ── Room ─────────────────────────────────────────────────────── -->
+      @if (o.spotMap.length > 0) {
+        <section class="fit-card">
+          <header class="fit-card-head"><h3 class="fit-card-title">The room</h3></header>
+          <div class="fit-card-body">
+            <div class="fit-spots" [style.grid-template-columns]="'repeat(6, 44px)'">
+              @for (s of o.spotMap; track s.id) {
+                <span
+                  class="fit-spot"
+                  [class.is-taken]="!!s.bookedByMemberId"
+                  [class.is-out]="s.isOutOfService"
+                  [title]="s.bookedByName || (s.isOutOfService ? 'Out of service' : 'Free')"
+                >{{ s.label }}</span>
+              }
+            </div>
+
+            <div class="cr-legend">
+              <span><span class="cr-swatch"></span>Free</span>
+              <span><span class="cr-swatch is-taken"></span>Taken</span>
+              <span><span class="cr-swatch is-out"></span>Out of service</span>
+            </div>
+          </div>
+        </section>
+      }
+
+      @if (o.workoutName) {
+        <section class="fit-card">
+          <header class="fit-card-head"><h3 class="fit-card-title">Today's session</h3></header>
+          <div class="fit-card-body">
+            <p class="cr-workout">{{ o.workoutName }}</p>
+            <button type="button" class="btn-secondary" (click)="go('/fitness/programming')">
+              Open programming
+            </button>
+          </div>
+        </section>
+      }
+    </div>
+
+    @if (o.status !== ClassOccurrenceStatus.Cancelled && o.status !== ClassOccurrenceStatus.Completed) {
+      <div class="cr-close">
+        <button type="button" class="btn-primary" [disabled]="saving" (click)="saveRegister(true)">
+          {{ saving ? 'Closing…' : 'Close the class' }}
+        </button>
+        <p class="cr-close-note">
+          Closing marks anyone left unmarked as a no-show and issues strikes where the policy says so.
+        </p>
+      </div>
+    }
+  }
+
+  <!-- ── Cancel dialog ──────────────────────────────────────────────── -->
+  @if (cancelling) {
+    <div class="fit-modal-backdrop" (click)="cancelling = false"></div>
+    <div class="fit-modal" role="dialog" aria-modal="true" aria-labelledby="cr-cancel-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="cr-cancel-title">Cancel this class</h3>
+          <p class="fit-modal-sub">
+            {{ occurrence?.bookedCount }} people are booked in.
+          </p>
+        </div>
+        <button type="button" class="fit-close" (click)="cancelling = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        <label class="fit-field">
+          <span>Why? This is what members will be told.</span>
+          <textarea rows="3" [(ngModel)]="cancelReason" placeholder="e.g. Instructor unwell"></textarea>
+        </label>
+
+        <label class="fit-check">
+          <input type="checkbox" [(ngModel)]="notifyMembers" />
+          <span>Tell everyone who is booked</span>
+        </label>
+
+        <label class="fit-check">
+          <input type="checkbox" [(ngModel)]="refundCredits" />
+          <span>Give their credits back</span>
+        </label>
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="cancelling = false">Keep it</button>
+        <button
+          type="button"
+          class="btn-warning"
+          [disabled]="cancelReason.trim().length < 3 || saving"
+          (click)="confirmCancel()"
+        >
+          {{ saving ? 'Cancelling…' : 'Cancel the class' }}
+        </button>
+      </footer>
+    </div>
+  }
+</div>

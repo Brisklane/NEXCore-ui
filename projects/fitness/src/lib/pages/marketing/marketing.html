@@ -1,0 +1,325 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Marketing</h2>
+      <p class="subtitle">Campaigns, journeys and segments.</p>
+    </div>
+    <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+  </div>
+
+  <fit-page-help key="marketing"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <div class="fit-segment mk-tabs" role="tablist" aria-label="Marketing sections">
+    <button type="button" role="tab" [class.is-active]="tab === 'campaigns'" (click)="tab = 'campaigns'">
+      <span class="material-symbols-outlined">campaign</span>Campaigns
+    </button>
+    <button type="button" role="tab" [class.is-active]="tab === 'journeys'" (click)="tab = 'journeys'">
+      <span class="material-symbols-outlined">route</span>Journeys
+    </button>
+    <button type="button" role="tab" [class.is-active]="tab === 'segments'" (click)="tab = 'segments'">
+      <span class="material-symbols-outlined">filter_alt</span>Segments
+    </button>
+  </div>
+
+  <!-- ── Campaigns ────────────────────────────────────────────────────── -->
+  @if (tab === 'campaigns') {
+    @if (loading) {
+      <div class="fit-rows">
+        @for (i of [1,2,3]; track i) { <div class="fit-skeleton" style="height: 74px"></div> }
+      </div>
+    } @else if (campaigns.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">campaign</span>
+        <h3 class="fit-empty-title">No campaigns</h3>
+        <p class="fit-empty-text">
+          Build a segment, preview exactly who is in it, then send. That order matters.
+        </p>
+      </div>
+    } @else {
+      <div class="fit-rows">
+        @for (c of campaigns; track c.id) {
+          <div class="fit-row" [class]="campaignClass(c)">
+            <span class="fit-row-main">
+              <span class="fit-row-title">
+                {{ c.name }}
+                <span class="fit-pill">{{ channelLabels[c.channel] }}</span>
+                @if (c.isSent) { <span class="fit-pill mk-sent">sent</span> }
+                @else if (c.isCancelled) { <span class="fit-pill">cancelled</span> }
+                @else if (c.scheduledFor) { <span class="fit-pill">scheduled</span> }
+                @else { <span class="fit-pill">draft</span> }
+              </span>
+              <span class="fit-row-sub">
+                @if (c.segmentName) { {{ c.segmentName }} · }
+                {{ c.recipientCount | number }} recipients
+                @if (c.sentAt) { · sent {{ c.sentAt | date:'d MMM yyyy, HH:mm' }} }
+                @else if (c.scheduledFor) { · goes out {{ c.scheduledFor | date:'d MMM, HH:mm' }} }
+              </span>
+
+              @if (c.suppressedCount > 0) {
+                <span class="fit-row-sub mk-suppressed">
+                  <span class="material-symbols-outlined">block</span>
+                  {{ c.suppressedCount }} skipped — no consent, or it would have landed in quiet hours
+                </span>
+              }
+
+              @if (worthIt(c); as worth) {
+                <span class="fit-row-sub mk-worth">
+                  <span class="material-symbols-outlined">trending_up</span>{{ worth }}
+                </span>
+              }
+            </span>
+
+            @if (c.isSent) {
+              <span class="fit-row-figure">
+                <span class="fit-row-figure-value">{{ c.openRatePercent }}%</span>
+                <span class="fit-row-figure-label">opened</span>
+              </span>
+
+              <span class="fit-row-figure">
+                <span class="fit-row-figure-value">{{ c.clickRatePercent }}%</span>
+                <span class="fit-row-figure-label">clicked</span>
+              </span>
+            }
+
+            @if (c.cost > 0) {
+              <span class="fit-row-figure">
+                <span class="fit-row-figure-value">{{ c.cost | number:'1.0-0' }}</span>
+                <span class="fit-row-figure-label">cost</span>
+              </span>
+            }
+
+            <span class="fit-row-actions">
+              @if (!c.isSent && !c.isCancelled) {
+                <button type="button" class="btn-primary" (click)="sending = c">Send</button>
+              }
+            </span>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ── Journeys ─────────────────────────────────────────────────────── -->
+  @if (tab === 'journeys') {
+    @if (journeys.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">route</span>
+        <h3 class="fit-empty-title">No journeys</h3>
+        <p class="fit-empty-text">
+          A journey runs automatically on a trigger — joining, going quiet, hitting a milestone.
+        </p>
+      </div>
+    } @else {
+      <p class="fit-quiet mk-journey-note">
+        New journeys are created switched off. Turn one on deliberately, once you have read what
+        it will send and to whom.
+      </p>
+
+      <div class="fit-grid">
+        @for (j of journeys; track j.id) {
+          <section class="fit-card mk-journey" [class.is-live]="j.isActive">
+            <header class="fit-card-head">
+              <h3 class="fit-card-title">{{ j.name }}</h3>
+              <span class="fit-pill" [class.mk-live]="j.isActive">
+                {{ j.isActive ? 'live' : 'off' }}
+              </span>
+            </header>
+
+            <div class="fit-card-body">
+              <p class="mk-trigger">
+                <span class="material-symbols-outlined">bolt</span>
+                Starts when: {{ triggerLabels[j.trigger] }}
+                @if (j.triggerThresholdDays) { after {{ j.triggerThresholdDays }} days }
+                @if (j.segmentName) { , limited to {{ j.segmentName }} }
+              </p>
+
+              <ol class="mk-steps">
+                @for (s of j.steps; track s.id) {
+                  <li>
+                    <span class="mk-step-when">
+                      @if (s.delayHours === 0) { straight away }
+                      @else if (s.delayHours < 24) { after {{ s.delayHours }}h }
+                      @else { after {{ s.delayHours / 24 | number:'1.0-0' }}d }
+                    </span>
+                    <span class="mk-step-what">
+                      @if (s.channel != null) { {{ channelLabels[s.channel] }} }
+                      @if (s.messageTemplateName) { — {{ s.messageTemplateName }} }
+                      @else if (s.taskTitle) { — task: {{ s.taskTitle }} }
+                      @else if (s.loyaltyPointsToGrant > 0) { — {{ s.loyaltyPointsToGrant }} points }
+                      @else if (s.tagToApply) { — tag: {{ s.tagToApply }} }
+                    </span>
+                  </li>
+                }
+              </ol>
+
+              <dl class="fit-dl mk-journey-stats">
+                <div><dt>In it now</dt><dd>{{ j.currentlyEnrolled | number }}</dd></div>
+                <div><dt>Been through it</dt><dd>{{ j.completedCount | number }}</dd></div>
+                @if (j.successMetric) {
+                  <div>
+                    <dt>{{ j.successMetric }}</dt>
+                    <dd>{{ j.successCount }} ({{ j.successRatePercent }}%)</dd>
+                  </div>
+                }
+              </dl>
+            </div>
+
+            <footer class="mk-journey-foot">
+              <button
+                type="button"
+                [class]="j.isActive ? 'btn-warning' : 'btn-primary'"
+                (click)="toggleJourney(j)"
+              >
+                {{ j.isActive ? 'Pause it' : 'Switch it on' }}
+              </button>
+            </footer>
+          </section>
+        }
+      </div>
+    }
+  }
+
+  <!-- ── Segments ─────────────────────────────────────────────────────── -->
+  @if (tab === 'segments') {
+    @if (segments.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">filter_alt</span>
+        <h3 class="fit-empty-title">No segments</h3>
+        <p class="fit-empty-text">A segment is a saved question about your members.</p>
+      </div>
+    } @else {
+      <div class="fit-rows">
+        @for (s of segments; track s.id) {
+          <div class="fit-row" [class.is-good]="s.isActive">
+            <span class="fit-row-main">
+              <span class="fit-row-title">
+                {{ s.name }}
+                @if (s.isSystemSegment) { <span class="fit-pill">built in</span> }
+              </span>
+              <span class="fit-row-sub">
+                {{ s.explanation || 'Custom filter' }}
+                @if (s.lastCountedAt) { · counted {{ s.lastCountedAt | date:'d MMM, HH:mm' }} }
+              </span>
+            </span>
+
+            <span class="fit-row-figure">
+              <span class="fit-row-figure-value">{{ s.lastCount | number }}</span>
+              <span class="fit-row-figure-label">members</span>
+            </span>
+
+            <span class="fit-row-actions">
+              <button type="button" class="btn-secondary" (click)="previewSegment(s)">
+                Who is in it
+              </button>
+            </span>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ── Who is in a segment ──────────────────────────────────────────── -->
+  @if (previewing; as s) {
+    <div class="fit-modal-backdrop" (click)="previewing = null"></div>
+    <div class="fit-modal mk-modal" role="dialog" aria-modal="true" aria-labelledby="mk-seg-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="mk-seg-title">{{ s.name }}</h3>
+          <p class="fit-modal-sub">
+            {{ previewTotal | number }} member{{ previewTotal === 1 ? '' : 's' }}
+            @if (s.explanation) { · {{ s.explanation }} }
+          </p>
+        </div>
+        <button type="button" class="fit-close" (click)="previewing = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        @if (previewLoading) {
+          <div class="fit-skeleton" style="height: 220px"></div>
+        } @else if (previewMembers.length === 0) {
+          <p class="fit-quiet">Nobody matches this segment right now.</p>
+        } @else {
+          <p class="fit-quiet mk-preview-note">
+            Showing the first {{ previewMembers.length }}. This is exactly who would receive a
+            campaign sent to this segment, before consent and quiet hours are applied.
+          </p>
+
+          <div class="fit-table-wrap">
+            <table class="fit-table">
+              <thead>
+                <tr><th>Member</th><th>Plan</th><th>Last in</th><th class="ta-r">Balance</th></tr>
+              </thead>
+              <tbody>
+                @for (m of previewMembers; track m.id) {
+                  <tr>
+                    <td>{{ m.preferredName || m.fullName }}</td>
+                    <td>{{ m.planName || '—' }}</td>
+                    <td>
+                      @if (m.lastVisitOn) { {{ m.daysSinceLastVisit }} days ago }
+                      @else { never }
+                    </td>
+                    <td class="ta-r fit-money">{{ m.accountBalance | number:'1.2-2' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="previewing = null">Close</button>
+      </footer>
+    </div>
+  }
+
+  <!-- ── Send a campaign ──────────────────────────────────────────────── -->
+  @if (sending; as c) {
+    <div class="fit-modal-backdrop" (click)="sending = null"></div>
+    <div class="fit-modal" role="dialog" aria-modal="true" aria-labelledby="mk-send-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="mk-send-title">Send {{ c.name }}</h3>
+          <p class="fit-modal-sub">
+            {{ channelLabels[c.channel] }} to {{ c.recipientCount | number }} people
+            @if (c.segmentName) { in {{ c.segmentName }} }
+          </p>
+        </div>
+        <button type="button" class="fit-close" (click)="sending = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        <p class="fit-sensitive">
+          <span class="material-symbols-outlined">gpp_good</span>
+          Anyone who has not opted in to marketing on this channel is skipped, and anything that
+          would land inside quiet hours waits until morning. You will be told how many that was.
+        </p>
+
+        @if (c.cost > 0) {
+          <div class="fit-explain">
+            <div class="fit-explain-lines">
+              <div class="fit-explain-line is-total">
+                <span>This will cost</span>
+                <strong>{{ c.cost | number:'1.2-2' }}</strong>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="sending = null">Cancel</button>
+        <button type="button" class="btn-primary" [disabled]="busy" (click)="send()">
+          {{ busy ? 'Sending…' : 'Send it' }}
+        </button>
+      </footer>
+    </div>
+  }
+</div>

@@ -1,0 +1,262 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Timetable</h2>
+      <p class="subtitle">
+        @if (data) {
+          {{ data.totalClasses }} classes this week · {{ data.averageFillPercent }}% full on average
+        } @else { The published class timetable. }
+      </p>
+    </div>
+    <div class="page-header-actions">
+      <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+      <button type="button" class="btn-secondary" (click)="go('/fitness/schedule')">
+        <span class="material-symbols-outlined">edit_calendar</span>
+        Edit the timetable
+      </button>
+    </div>
+  </div>
+
+  <fit-page-help key="timetable"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <!-- ── Who are we booking for? ─────────────────────────────────────────
+       With a member chosen, the whole timetable answers from their point
+       of view: what they are booked into, and what they may book.        -->
+  <div class="tt-context">
+    @if (viewerMember; as m) {
+      <div class="tt-member">
+        <span class="material-symbols-outlined">person</span>
+        <span class="tt-member-name">Booking for {{ m.preferredName || m.fullName }}</span>
+        <span class="tt-member-num">{{ m.memberNumber }}</span>
+        <button type="button" class="fit-icon-btn" (click)="clearMember()" aria-label="Stop booking for this member">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+    } @else {
+      <div class="tt-member-search">
+        <div class="fit-search">
+          <span class="material-symbols-outlined">person_search</span>
+          <input
+            type="text"
+            placeholder="Book for a member — search by name or number"
+            aria-label="Search for a member to book for"
+            [(ngModel)]="memberSearch"
+            (ngModelChange)="onMemberSearch()"
+          />
+        </div>
+
+        @if (memberResults.length > 0) {
+          <ul class="tt-member-results">
+            @for (m of memberResults; track m.id) {
+              <li>
+                <button type="button" (click)="chooseMember(m)">
+                  <strong>{{ m.preferredName || m.fullName }}</strong>
+                  <span>{{ m.memberNumber }}@if (m.planName) { · {{ m.planName }} }</span>
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- ── Week and filters ───────────────────────────────────────────── -->
+  <div class="fit-toolbar tt-toolbar">
+    <div class="tt-week">
+      <button type="button" class="fit-icon-btn" (click)="shiftWeek(-1)" aria-label="Previous week">
+        <span class="material-symbols-outlined">chevron_left</span>
+      </button>
+      <button type="button" class="btn-secondary tt-week-label" (click)="thisWeek()">
+        {{ days[0] | date:'d MMM' }} – {{ days[6] | date:'d MMM yyyy' }}
+      </button>
+      <button type="button" class="fit-icon-btn" (click)="shiftWeek(1)" aria-label="Next week">
+        <span class="material-symbols-outlined">chevron_right</span>
+      </button>
+    </div>
+
+    @if (data; as d) {
+      <label class="fit-field fit-field-inline">
+        <span>Class</span>
+        <select [(ngModel)]="classTypeId" (ngModelChange)="load()">
+          <option [ngValue]="null">All</option>
+          @for (t of d.classTypes; track t.id) { <option [ngValue]="t.id">{{ t.name }}</option> }
+        </select>
+      </label>
+
+      <label class="fit-field fit-field-inline">
+        <span>Instructor</span>
+        <select [(ngModel)]="instructorStaffId" (ngModelChange)="load()">
+          <option [ngValue]="null">Anyone</option>
+          @for (s of d.instructors; track s.id) { <option [ngValue]="s.id">{{ s.displayName }}</option> }
+        </select>
+      </label>
+
+      <label class="fit-field fit-field-inline">
+        <span>Room</span>
+        <select [(ngModel)]="roomId" (ngModelChange)="load()">
+          <option [ngValue]="null">Anywhere</option>
+          @for (r of d.rooms; track r.id) { <option [ngValue]="r.id">{{ r.name }}</option> }
+        </select>
+      </label>
+    }
+  </div>
+
+  @if (loading) {
+    <div class="fit-timetable">
+      @for (i of [1,2,3,4,5,6,7]; track i) { <div class="fit-skeleton" style="height: 320px"></div> }
+    </div>
+  } @else if (data; as d) {
+    <div class="fit-timetable">
+      @for (day of days; track day.getTime()) {
+        <div class="fit-timetable-day">
+          <div class="fit-timetable-head" [class.is-today]="isToday(day)">
+            <span class="fit-timetable-dayname">{{ day | date:'EEE' }}</span>
+            <span class="fit-timetable-date">{{ day | date:'d' }}</span>
+          </div>
+
+          @for (o of classesOn(day); track o.id) {
+            <button
+              type="button"
+              class="fit-class"
+              [class.is-cancelled]="o.status === ClassOccurrenceStatus.Cancelled"
+              [class.is-booked]="o.viewerIsBooked"
+              [style.border-left-color]="o.colourHex || 'var(--accent, #2b7fff)'"
+              (click)="openBooking(o)"
+            >
+              <span class="fit-class-time">
+                {{ o.startsAt | date:'HH:mm' }} · {{ o.durationMinutes }} min
+              </span>
+              <span class="fit-class-name">{{ o.classTypeName }}</span>
+              <span class="fit-class-meta">
+                {{ o.instructorName || 'No instructor' }}@if (o.roomName) { · {{ o.roomName }} }
+                @if (o.hasSubstitute) { · cover }
+              </span>
+
+              @if (o.status === ClassOccurrenceStatus.Cancelled) {
+                <span class="tt-cancelled">Cancelled — {{ o.cancellationReason }}</span>
+              } @else {
+                <span class="fit-class-fill" [class]="fillClass(o)">
+                  <span class="fit-class-fill-bar">
+                    <span [style.width.%]="o.fillPercent > 100 ? 100 : o.fillPercent"></span>
+                  </span>
+                  {{ o.bookedCount }}/{{ o.capacity }}
+                </span>
+
+                @if (o.waitlistCount > 0) {
+                  <span class="tt-waitlist">{{ o.waitlistCount }} waiting</span>
+                }
+                @if (o.viewerIsBooked) { <span class="tt-booked">You are booked</span> }
+                @else if (o.viewerIsWaitlisted) { <span class="tt-booked">On the waitlist</span> }
+              }
+            </button>
+          } @empty {
+            <div class="fit-timetable-empty">Nothing on</div>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ── Booking dialog ─────────────────────────────────────────────────
+       Says what it will cost — a credit, a fee, or nothing — before it
+       does anything, and explains a refusal in a sentence.               -->
+  @if (bookingFor; as o) {
+    <div class="fit-modal-backdrop" (click)="closeBooking()"></div>
+    <div class="fit-modal" role="dialog" aria-modal="true" aria-labelledby="tt-book-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="tt-book-title">{{ o.classTypeName }}</h3>
+          <p class="fit-modal-sub">
+            {{ o.startsAt | date:'EEEE d MMMM, HH:mm' }}
+            @if (o.instructorName) { with {{ o.instructorName }} }
+            @if (o.roomName) { in {{ o.roomName }} }
+          </p>
+        </div>
+        <button type="button" class="fit-close" (click)="closeBooking()" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        @if (!eligibility) {
+          <div class="fit-skeleton" style="height: 96px"></div>
+        } @else {
+          @if (!eligibility.canBook && eligibility.blockReason) {
+            <div class="alert alert-error">{{ eligibility.blockReason }}</div>
+          }
+
+          <div class="fit-explain">
+            <div class="fit-explain-lines">
+              <div class="fit-explain-line">
+                <span>Spaces</span>
+                <strong>{{ o.spacesLeft }} of {{ o.capacity }} left</strong>
+              </div>
+              @if (eligibility.creditsRequired > 0) {
+                <div class="fit-explain-line">
+                  <span>Credits</span>
+                  <strong>
+                    {{ eligibility.creditsRequired }} needed,
+                    {{ eligibility.creditsAvailable }} available
+                  </strong>
+                </div>
+              }
+              @if (eligibility.amountPayable > 0) {
+                <div class="fit-explain-line is-total">
+                  <span>To pay</span>
+                  <strong>{{ eligibility.amountPayable | number:'1.2-2' }}</strong>
+                </div>
+              }
+            </div>
+
+            <p class="fit-explain-text">
+              @if (eligibility.canBook && eligibility.amountPayable > 0) {
+                This class is not covered by their membership, so it is charged as a drop-in.
+              } @else if (eligibility.canBook && eligibility.creditsRequired > 0) {
+                One credit will be taken when this is booked, and returned if they cancel in time.
+              } @else if (eligibility.canBook) {
+                Included in their membership — nothing to pay.
+              } @else if (eligibility.canWaitlist) {
+                The class is full. They can join the waitlist and will be told if a space comes up.
+              } @else {
+                They cannot book this one.
+              }
+            </p>
+          </div>
+
+          @if (eligibility.availableSpots.length > 0) {
+            <h4 class="tt-spot-title">Pick a spot</h4>
+            <div class="fit-spots" [style.grid-template-columns]="'repeat(6, 44px)'">
+              @for (s of eligibility.availableSpots; track s.id) {
+                <button
+                  type="button"
+                  class="fit-spot"
+                  [class.is-mine]="chosenSpotId === s.id"
+                  [class.is-out]="s.isOutOfService"
+                  [disabled]="s.isOutOfService"
+                  (click)="chosenSpotId = s.id"
+                >{{ s.label }}</button>
+              }
+            </div>
+          }
+        }
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="closeBooking()">Cancel</button>
+        @if (eligibility?.canBook) {
+          <button type="button" class="btn-primary" [disabled]="booking" (click)="confirmBooking(false)">
+            {{ booking ? 'Booking…' : 'Book it' }}
+          </button>
+        } @else if (eligibility?.canWaitlist) {
+          <button type="button" class="btn-primary" [disabled]="booking" (click)="confirmBooking(true)">
+            {{ booking ? 'Joining…' : 'Join the waitlist' }}
+          </button>
+        }
+      </footer>
+    </div>
+  }
+</div>

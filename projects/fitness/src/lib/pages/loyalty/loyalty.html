@@ -1,0 +1,172 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Loyalty &amp; challenges</h2>
+      <p class="subtitle">Points, tiers, challenges and badges.</p>
+    </div>
+    <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+  </div>
+
+  <fit-page-help key="loyalty"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <div class="fit-segment ly-tabs" role="tablist" aria-label="Loyalty sections">
+    <button type="button" role="tab" [class.is-active]="tab === 'tiers'" (click)="tab = 'tiers'">
+      <span class="material-symbols-outlined">workspace_premium</span>Tiers
+    </button>
+    <button type="button" role="tab" [class.is-active]="tab === 'challenges'" (click)="tab = 'challenges'">
+      <span class="material-symbols-outlined">emoji_events</span>Challenges
+    </button>
+    <button type="button" role="tab" [class.is-active]="tab === 'badges'" (click)="tab = 'badges'">
+      <span class="material-symbols-outlined">military_tech</span>Badges
+    </button>
+  </div>
+
+  <!-- ── Tiers ────────────────────────────────────────────────────────── -->
+  @if (tab === 'tiers') {
+    <p class="fit-quiet ly-note">
+      Points come from turning up, not from spending. People who come three times a week do not
+      cancel — rewarding attendance rewards the behaviour that actually keeps a member.
+    </p>
+
+    @if (loading) {
+      <div class="fit-rows">
+        @for (i of [1,2,3,4]; track i) { <div class="fit-skeleton" style="height: 78px"></div> }
+      </div>
+    } @else if (tiers.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">workspace_premium</span>
+        <h3 class="fit-empty-title">No tiers set up</h3>
+        <p class="fit-empty-text">Tiers give regulars something to reach for.</p>
+      </div>
+    } @else {
+      <div class="ly-ladder">
+        @for (t of tiers; track t.id) {
+          <div
+            class="ly-tier"
+            [style.width.%]="tierWidth(t)"
+            [style.border-left-color]="t.colourHex || 'var(--accent, #2b7fff)'"
+          >
+            <div class="ly-tier-head">
+              <span class="ly-tier-name" [style.color]="t.colourHex || 'var(--text-heading, #0f172a)'">
+                {{ t.name }}
+              </span>
+              <span class="ly-tier-points">{{ t.pointsRequired | number }} points</span>
+            </div>
+
+            <div class="ly-tier-meta">
+              <span><strong>{{ t.memberCount | number }}</strong> members</span>
+              @if (t.earnMultiplier !== 1) {
+                <span><strong>{{ t.earnMultiplier }}×</strong> earning</span>
+              }
+              @if (t.retentionMonths > 0) { <span>held for {{ t.retentionMonths }} months</span> }
+            </div>
+
+            @if (t.benefits) { <p class="ly-tier-benefits">{{ t.benefits }}</p> }
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ── Challenges ───────────────────────────────────────────────────── -->
+  @if (tab === 'challenges') {
+    @if (challenges.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">emoji_events</span>
+        <h3 class="fit-empty-title">No challenges</h3>
+        <p class="fit-empty-text">
+          A challenge gives the quieter months a reason to come in. Standings recalculate overnight.
+        </p>
+      </div>
+    } @else {
+      <div class="fit-grid">
+        @for (c of challenges; track c.id) {
+          <section class="fit-card ly-challenge" [class]="challengeClass(c)">
+            <header class="fit-card-head">
+              <h3 class="fit-card-title">{{ c.name }}</h3>
+              @if (c.isRunning) { <span class="fit-pill ly-live">running</span> }
+              @else if (!c.isPublished) { <span class="fit-pill">draft</span> }
+            </header>
+
+            <div class="fit-card-body">
+              @if (c.blurb) { <p class="ly-challenge-blurb">{{ c.blurb }}</p> }
+
+              <p class="ly-challenge-what">
+                <span class="material-symbols-outlined">flag</span>
+                {{ c.customMetricName || metricLabels[c.metric] }}
+                @if (c.targetValue) { — reach {{ c.targetValue }}@if (c.unit) { {{ c.unit }} } }
+                @if (c.isTeamBased) { · in teams }
+              </p>
+
+              <dl class="fit-dl">
+                <div>
+                  <dt>Running</dt>
+                  <dd>{{ c.startsOn | date:'d MMM' }} – {{ c.endsOn | date:'d MMM' }}</dd>
+                </div>
+                <div><dt>Entered</dt><dd>{{ c.participantCount | number }}</dd></div>
+                <div>
+                  <dt>Finished</dt>
+                  <dd>{{ c.completedCount | number }} ({{ completionPercent(c) }}%)</dd>
+                </div>
+                @if (c.prize) { <div><dt>Prize</dt><dd>{{ c.prize }}</dd></div> }
+                @if (c.pointsForCompletion > 0) {
+                  <div><dt>Points for finishing</dt><dd>{{ c.pointsForCompletion }}</dd></div>
+                }
+              </dl>
+
+              <p class="ly-challenge-time">{{ timeLeft(c) }}</p>
+
+              @if (c.topParticipants.length > 0) {
+                <h4 class="ly-top-title">Leading</h4>
+                <ol class="ly-top">
+                  @for (p of c.topParticipants; track p.id) {
+                    <li>
+                      <span class="ly-top-rank">{{ p.rank }}</span>
+                      <span class="ly-top-name">{{ p.teamName || p.memberName }}</span>
+                      <span class="ly-top-score">{{ p.currentValue | number:'1.0-1' }}</span>
+                    </li>
+                  }
+                </ol>
+              }
+            </div>
+          </section>
+        }
+      </div>
+    }
+  }
+
+  <!-- ── Badges ───────────────────────────────────────────────────────── -->
+  @if (tab === 'badges') {
+    @if (badges.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">military_tech</span>
+        <h3 class="fit-empty-title">No badges</h3>
+        <p class="fit-empty-text">Small recognitions for milestones people are already reaching.</p>
+      </div>
+    } @else {
+      <div class="fit-grid fit-grid-tight">
+        @for (b of badges; track b.id) {
+          <article class="ly-badge" [class.is-off]="!b.isActive">
+            <span class="ly-badge-icon" [style.background]="b.colourHex || 'var(--accent, #2b7fff)'">
+              <span class="material-symbols-outlined">military_tech</span>
+            </span>
+
+            <span class="ly-badge-name">{{ b.name }}</span>
+            @if (b.blurb) { <span class="ly-badge-blurb">{{ b.blurb }}</span> }
+            @if (b.criteriaDescription) {
+              <span class="ly-badge-criteria">{{ b.criteriaDescription }}</span>
+            }
+
+            <span class="ly-badge-stats">
+              <strong>{{ b.awardedCount | number }}</strong> awarded
+              @if (b.pointsAwarded > 0) { · {{ b.pointsAwarded }} points }
+            </span>
+          </article>
+        }
+      </div>
+    }
+  }
+</div>

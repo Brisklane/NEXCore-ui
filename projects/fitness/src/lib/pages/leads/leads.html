@@ -1,0 +1,270 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Enquiries</h2>
+      <p class="subtitle">
+        @if (board) {
+          {{ board.totalOpen }} open · {{ board.conversionPercent }}% converted this month
+        } @else { Everyone who has asked about joining. }
+      </p>
+    </div>
+    <div class="page-header-actions">
+      <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+      <button type="button" class="btn-primary" (click)="startCreate()">
+        <span class="material-symbols-outlined">add</span>
+        New enquiry
+      </button>
+    </div>
+  </div>
+
+  <fit-page-help key="leads"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  @if (loading && !board) {
+    <div class="fit-board">
+      @for (i of [1,2,3,4,5]; track i) { <div class="fit-skeleton" style="height: 300px"></div> }
+    </div>
+  }
+
+  @if (board; as b) {
+    <!-- ── How fast are we answering? ─────────────────────────────────
+         The number that most affects conversion, at the top, named.    -->
+    <section class="ld-sla" [class.is-breaching]="b.breachingSla > 0">
+      <div class="ld-sla-figure">
+        <span class="ld-sla-value">{{ b.medianResponseMinutes }}<small> min</small></span>
+        <span class="ld-sla-label">Median reply time</span>
+        <span class="ld-sla-meta">target is {{ b.slaMinutes }} minutes</span>
+      </div>
+
+      <div class="ld-sla-figure" [class.is-alert]="b.breachingSla > 0">
+        <span class="ld-sla-value">{{ b.breachingSla }}</span>
+        <span class="ld-sla-label">Waiting too long</span>
+        <span class="ld-sla-meta">
+          @if (b.breachingSla > 0) { answer these first } @else { nothing overdue }
+        </span>
+      </div>
+
+      <div class="ld-sla-figure" [class.is-alert]="b.overdueFollowUps > 0">
+        <span class="ld-sla-value">{{ b.overdueFollowUps }}</span>
+        <span class="ld-sla-label">Follow-ups overdue</span>
+      </div>
+
+      <div class="ld-sla-figure">
+        <span class="ld-sla-value">{{ b.wonThisMonth }}</span>
+        <span class="ld-sla-label">Joined this month</span>
+        <span class="ld-sla-meta">{{ b.lostThisMonth }} lost</span>
+      </div>
+    </section>
+
+    <!-- ── The board ──────────────────────────────────────────────────-->
+    <div class="fit-board">
+      @for (col of b.columns; track col.status) {
+        <div class="fit-board-col">
+          <header class="fit-board-head">
+            <h3 class="fit-board-title">{{ col.label }}</h3>
+            <span class="fit-board-count">{{ col.count }}</span>
+          </header>
+
+          @if (col.estimatedValue > 0) {
+            <span class="fit-board-value">{{ col.estimatedValue | number:'1.0-0' }} in play</span>
+          }
+
+          @for (l of col.leads; track l.id) {
+            <div class="ld-card" [class.is-alert]="l.slaBreached" [class.is-warn]="l.followUpOverdue">
+              <button type="button" class="ld-card-main" (click)="open(l)">
+                <span class="fit-board-card-title">{{ l.fullName }}</span>
+                <span class="fit-board-card-meta">
+                  {{ l.sourceName || 'Unknown source' }} · {{ waiting(l.receivedAt) }}
+                  @if (l.assignedStaffName) { · {{ l.assignedStaffName }} }
+                </span>
+
+                @if (l.goal) { <span class="ld-goal">“{{ l.goal }}”</span> }
+
+                @if (l.slaBreached && !l.firstContactedAt) {
+                  <span class="ld-flag is-alert">
+                    <span class="material-symbols-outlined">timer_off</span>
+                    Nobody has replied yet
+                  </span>
+                } @else if (l.followUpOverdue) {
+                  <span class="ld-flag is-warn">
+                    <span class="material-symbols-outlined">event_repeat</span>
+                    Follow-up was due {{ l.nextFollowUpOn | date:'d MMM' }}
+                  </span>
+                } @else if (l.tourBookedFor) {
+                  <span class="ld-flag">
+                    <span class="material-symbols-outlined">tour</span>
+                    Tour {{ l.tourBookedFor | date:'EEE d MMM, HH:mm' }}
+                  </span>
+                } @else if (l.trialEndsOn) {
+                  <span class="ld-flag">
+                    <span class="material-symbols-outlined">hourglass_bottom</span>
+                    Trial ends {{ l.trialEndsOn | date:'d MMM' }}
+                  </span>
+                }
+              </button>
+
+              <div class="ld-card-actions">
+                @if (l.phone) {
+                  <a class="fit-icon-btn" [href]="'tel:' + l.phone" [attr.aria-label]="'Call ' + l.fullName">
+                    <span class="material-symbols-outlined">call</span>
+                  </a>
+                }
+                <button
+                  type="button"
+                  class="fit-icon-btn"
+                  (click)="startContact(l)"
+                  [attr.aria-label]="'Log contact with ' + l.fullName"
+                >
+                  <span class="material-symbols-outlined">edit_note</span>
+                </button>
+                @if (l.status !== LeadStatus.Won) {
+                  <button
+                    type="button"
+                    class="fit-icon-btn ld-convert"
+                    (click)="convert(l)"
+                    [attr.aria-label]="'Sign ' + l.fullName + ' up'"
+                  >
+                    <span class="material-symbols-outlined">how_to_reg</span>
+                  </button>
+                }
+              </div>
+            </div>
+          } @empty {
+            <p class="ld-empty">Nothing here</p>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ── New enquiry ──────────────────────────────────────────────────-->
+  @if (creating) {
+    <div class="fit-modal-backdrop" (click)="creating = false"></div>
+    <div class="fit-modal" role="dialog" aria-modal="true" aria-labelledby="ld-new-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="ld-new-title">New enquiry</h3>
+          <p class="fit-modal-sub">It will be assigned to whoever has fewest open enquiries.</p>
+        </div>
+        <button type="button" class="fit-close" (click)="creating = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        <div class="fit-form-grid">
+          <label class="fit-field">
+            <span>First name</span>
+            <input type="text" [(ngModel)]="draft.firstName" id="ld-first" />
+            <fit-field-error [message]="errors['firstName']" for="ld-first"></fit-field-error>
+          </label>
+
+          <label class="fit-field">
+            <span>Last name</span>
+            <input type="text" [(ngModel)]="draft.lastName" />
+          </label>
+
+          <label class="fit-field">
+            <span>Phone</span>
+            <input type="tel" [(ngModel)]="draft.phone" id="ld-phone" />
+            <fit-field-error [message]="errors['phone']" for="ld-phone"></fit-field-error>
+          </label>
+
+          <label class="fit-field">
+            <span>Email</span>
+            <input type="email" [(ngModel)]="draft.email" />
+          </label>
+
+          <label class="fit-field">
+            <span>How did they hear about us?</span>
+            <select [(ngModel)]="draft.leadSourceId">
+              <option [ngValue]="null">Not sure</option>
+              @for (s of sources; track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }
+            </select>
+          </label>
+
+          <label class="fit-field">
+            <span>What are they after?</span>
+            <input type="text" [(ngModel)]="draft.goal" placeholder="e.g. Lose weight before a wedding" />
+          </label>
+        </div>
+
+        <label class="fit-field">
+          <span>Anything else worth knowing</span>
+          <textarea rows="2" [(ngModel)]="draft.notes"></textarea>
+        </label>
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="creating = false">Cancel</button>
+        <button type="button" class="btn-primary" [disabled]="saving" (click)="saveLead()">
+          {{ saving ? 'Saving…' : 'Log the enquiry' }}
+        </button>
+      </footer>
+    </div>
+  }
+
+  <!-- ── Log contact ──────────────────────────────────────────────────-->
+  @if (contacting; as l) {
+    <div class="fit-modal-backdrop" (click)="contacting = null"></div>
+    <div class="fit-modal" role="dialog" aria-modal="true" aria-labelledby="ld-contact-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="ld-contact-title">Log contact with {{ l.fullName }}</h3>
+          <p class="fit-modal-sub">
+            @if (!l.firstContactedAt) {
+              This is the first contact, so it stops the response clock.
+            } @else {
+              Attempt {{ l.contactAttempts + 1 }}.
+            }
+          </p>
+        </div>
+        <button type="button" class="fit-close" (click)="contacting = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        <div class="fit-segment" role="group" aria-label="How did you contact them?">
+          @for (k of [
+            { v: LeadActivityKind.Call, l: 'Called', i: 'call' },
+            { v: LeadActivityKind.Sms, l: 'Texted', i: 'sms' },
+            { v: LeadActivityKind.Email, l: 'Emailed', i: 'mail' },
+            { v: LeadActivityKind.Note, l: 'Note', i: 'sticky_note_2' }
+          ]; track k.v) {
+            <button
+              type="button"
+              [class.is-active]="contactKind === k.v"
+              (click)="contactKind = k.v"
+            >
+              <span class="material-symbols-outlined">{{ k.i }}</span>{{ k.l }}
+            </button>
+          }
+        </div>
+
+        <label class="fit-check ld-reached">
+          <input type="checkbox" [(ngModel)]="contactSuccessful" />
+          <span>They actually answered</span>
+        </label>
+
+        <label class="fit-field">
+          <span>What was said?</span>
+          <textarea
+            rows="3"
+            [(ngModel)]="contactSummary"
+            placeholder="Anyone picking this up later should know where it got to."
+          ></textarea>
+        </label>
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="contacting = null">Cancel</button>
+        <button type="button" class="btn-primary" [disabled]="saving" (click)="logContact()">
+          {{ saving ? 'Saving…' : 'Log it' }}
+        </button>
+      </footer>
+    </div>
+  }
+</div>

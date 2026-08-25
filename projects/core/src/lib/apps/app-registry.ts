@@ -169,6 +169,18 @@ export const APP_REGISTRY: AppDefinition[] = [
   },
 
   {
+    key: 'fitness',
+    name: 'Fitness',
+    tagline: 'Members, memberships, classes, access control and retention',
+    icon: 'fitness_center',
+    accent: 'linear-gradient(135deg, #38bdf8, #6366f1)',
+    status: 'available',
+    prefixes: ['/fitness'],
+    home: '/fitness/dashboard',
+    sidebarLabel: 'Fitness',
+  },
+
+  {
     key: 'distribution',
     name: 'Distribution',
     tagline: 'Field force, van sales, trade schemes and route settlement',

@@ -1,0 +1,118 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Leaderboards</h2>
+      <p class="subtitle">
+        @if (board) { {{ board.title }} · {{ board.totalParticipants }} scores }
+        @else { Scores, records and the board. }
+      </p>
+    </div>
+    <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+  </div>
+
+  <fit-page-help key="leaderboards"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <div class="fit-toolbar lb-filters">
+    <label class="fit-field fit-field-inline">
+      <span>Workout</span>
+      <select [(ngModel)]="workoutId" (ngModelChange)="load()">
+        <option [ngValue]="null">Anything</option>
+        @for (w of workouts; track w.id) { <option [ngValue]="w.id">{{ w.name }}</option> }
+      </select>
+    </label>
+
+    <label class="fit-field fit-field-inline">
+      <span>Division</span>
+      <select [(ngModel)]="division" (ngModelChange)="load()">
+        <option [ngValue]="null">All</option>
+        @for (d of divisions; track d) { <option [ngValue]="d">{{ d }}</option> }
+      </select>
+    </label>
+
+    @if (chosenWorkout; as w) {
+      <div class="fit-spacer"></div>
+      <span class="lb-scoretype">
+        @if (w.scoreType != null) { Scored {{ scoreLabels[w.scoreType] }} }
+        @if (w.timeCapSeconds) { · {{ w.timeCapSeconds / 60 | number:'1.0-0' }} min cap }
+      </span>
+    }
+  </div>
+
+  @if (loading) {
+    <div class="fit-skeleton" style="height: 420px"></div>
+  } @else if (!board || board.entries.length === 0) {
+    <div class="fit-empty">
+      <span class="material-symbols-outlined fit-empty-icon">leaderboard</span>
+      <h3 class="fit-empty-title">No scores yet</h3>
+      <p class="fit-empty-text">Log a result against this workout and the board fills itself in.</p>
+    </div>
+  } @else {
+    <div class="lb-layout">
+      <section class="lb-board">
+        <ol class="lb-list">
+          @for (e of board.entries; track e.id) {
+            <li class="lb-entry" [class]="rankClass(e.rank)">
+              <span class="lb-rank">{{ e.rank }}</span>
+
+              <span class="fit-avatar" [class.has-photo]="!!e.memberPhotoUrl">
+                @if (e.memberPhotoUrl) { <img [src]="e.memberPhotoUrl" [alt]="e.memberDisplayName" /> }
+                @else { {{ initials(e.memberDisplayName) }} }
+              </span>
+
+              <span class="lb-who">
+                <span class="lb-name">{{ e.memberDisplayName }}</span>
+                <span class="lb-meta">
+                  @if (e.division) { {{ e.division }} }
+                  @if (e.wasScaled) { · scaled }
+                  @if (e.achievedOn) { · {{ e.achievedOn | date:'d MMM yyyy' }} }
+                </span>
+              </span>
+
+              <span class="lb-score">{{ e.scoreDisplay }}</span>
+            </li>
+          }
+        </ol>
+
+        <p class="fit-quiet lb-optout">
+          Members who have opted out of leaderboards do not appear here at all — not anonymised,
+          absent. Somebody who does not want their name on a screen in a gym has a good reason.
+        </p>
+      </section>
+
+      <aside class="lb-side">
+        <h3 class="fit-section-title">
+          <span class="material-symbols-outlined">history</span>
+          Recently logged
+        </h3>
+
+        @if (recent.length === 0) {
+          <p class="fit-quiet">Nothing logged yet.</p>
+        } @else {
+          <ul class="lb-recent">
+            @for (r of recent; track r.id) {
+              <li [class.is-pr]="r.isPersonalRecord">
+                <span class="lb-recent-who">
+                  {{ r.memberName }}
+                  @if (r.isPersonalRecord) {
+                    <span class="lb-pr">
+                      <span class="material-symbols-outlined">trending_up</span>PR
+                    </span>
+                  }
+                </span>
+                <span class="lb-recent-meta">
+                  {{ r.workoutName }}
+                  @if (r.wasScaled) { · scaled }
+                  @if (r.didNotFinish) { · did not finish }
+                  · {{ r.performedOn | date:'d MMM' }}
+                </span>
+                <span class="lb-recent-score">{{ r.scoreDisplay }}</span>
+              </li>
+            }
+          </ul>
+        }
+      </aside>
+    </div>
+  }
+</div>

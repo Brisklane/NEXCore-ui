@@ -1,0 +1,450 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Schedule builder</h2>
+      <p class="subtitle">
+        The recurring pattern behind the timetable. Nothing reaches a member until it is published.
+      </p>
+    </div>
+    <div class="page-header-actions">
+      <button type="button" class="btn btn-secondary" (click)="go('/fitness/timetable')">
+        <span class="material-symbols-outlined">calendar_month</span>See the timetable
+      </button>
+      <button type="button" class="btn btn-primary" [disabled]="!clubId" (click)="create()">
+        <span class="material-symbols-outlined">add</span>New schedule
+      </button>
+      <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+    </div>
+  </div>
+
+  <fit-page-help key="schedule-builder"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <div class="fit-toolbar sc-toolbar">
+    <label class="fit-field fit-field-inline">
+      <span>Season</span>
+      <input type="text" placeholder="All seasons" [(ngModel)]="seasonCode"
+        (change)="load()" />
+    </label>
+
+    <label class="sc-check">
+      <input type="checkbox" [(ngModel)]="showDraftsOnly" />
+      <span>Only show drafts</span>
+    </label>
+
+    <div class="fit-spacer"></div>
+
+    <span class="sc-counts">
+      <strong>{{ published }}</strong> published ·
+      <strong>{{ drafts }}</strong> draft{{ drafts === 1 ? '' : 's' }}
+    </span>
+
+    <button type="button" class="btn btn-secondary" [disabled]="busy || !clubId" (click)="recheck()">
+      <span class="material-symbols-outlined">rule</span>Check for conflicts
+    </button>
+  </div>
+
+  <!-- ── Conflicts ────────────────────────────────────────────────────── -->
+  @if (blocking.length > 0 || warnings.length > 0) {
+    <section class="sc-conflicts">
+      @if (blocking.length > 0) {
+        <div class="sc-conflict-group is-blocking">
+          <h3 class="sc-conflict-title">
+            <span class="material-symbols-outlined">block</span>
+            {{ blocking.length }} thing{{ blocking.length === 1 ? '' : 's' }} stopping publication
+          </h3>
+          <ul class="sc-conflict-list">
+            @for (c of blocking; track c.message + c.occursAt) {
+              <li>
+                <span class="sc-conflict-when">{{ c.occursAt | date:'EEE d MMM, HH:mm' }}</span>
+                <span class="sc-conflict-what">{{ c.message }}</span>
+                @if (c.conflictsWithLabel) {
+                  <span class="sc-conflict-with">clashes with {{ c.conflictsWithLabel }}</span>
+                }
+              </li>
+            }
+          </ul>
+        </div>
+      }
+
+      @if (warnings.length > 0) {
+        <div class="sc-conflict-group is-warning">
+          <h3 class="sc-conflict-title">
+            <span class="material-symbols-outlined">info</span>
+            {{ warnings.length }} worth a look
+          </h3>
+          <ul class="sc-conflict-list">
+            @for (c of warnings; track c.message + c.occursAt) {
+              <li>
+                <span class="sc-conflict-when">{{ c.occursAt | date:'EEE d MMM, HH:mm' }}</span>
+                <span class="sc-conflict-what">{{ c.message }}</span>
+                @if (c.conflictsWithLabel) {
+                  <span class="sc-conflict-with">alongside {{ c.conflictsWithLabel }}</span>
+                }
+              </li>
+            }
+          </ul>
+          <p class="fit-quiet sc-conflict-note">
+            These do not stop a publish. They are the things a manager would want to have decided
+            on purpose rather than found out about later.
+          </p>
+        </div>
+      }
+    </section>
+  }
+
+  @if (loading) {
+    <div class="fit-skeleton" style="height: 460px"></div>
+  } @else if (!clubId) {
+    <div class="fit-empty">
+      <span class="material-symbols-outlined fit-empty-icon">apartment</span>
+      <h3 class="fit-empty-title">Choose a club</h3>
+      <p class="fit-empty-text">Schedules belong to one club — its rooms and its instructors.</p>
+    </div>
+  } @else if (visible.length === 0) {
+    <div class="fit-empty">
+      <span class="material-symbols-outlined fit-empty-icon">event_repeat</span>
+      <h3 class="fit-empty-title">
+        @if (showDraftsOnly) { Nothing in draft } @else { No schedules yet }
+      </h3>
+      <p class="fit-empty-text">
+        @if (showDraftsOnly) { Everything here has been published. }
+        @else { A schedule is one rule — a class, its days, its time, its room. The timetable is built from these. }
+      </p>
+      @if (!showDraftsOnly) {
+        <button type="button" class="btn btn-primary" (click)="create()">
+          <span class="material-symbols-outlined">add</span>New schedule
+        </button>
+      }
+    </div>
+  } @else {
+
+    <!-- ── The week ─────────────────────────────────────────────────── -->
+    <div class="sc-week">
+      @for (day of weekOrder; track day) {
+        <section class="sc-day">
+          <header class="sc-day-head">
+            <h3>{{ dayLongNames[day] }}</h3>
+            <span class="sc-day-count">{{ onDay(day).length }}</span>
+          </header>
+
+          @if (onDay(day).length === 0) {
+            <p class="sc-day-empty">Nothing scheduled</p>
+          } @else {
+            @for (r of onDay(day); track r.id) {
+              <article class="sc-slot" [class.is-draft]="!r.isPublished"
+                [style.--slot-colour]="colourFor(r)">
+                <button type="button" class="sc-slot-main" (click)="edit(r)">
+                  <span class="sc-slot-time">{{ time(r.startsAt) }}–{{ endTime(r) }}</span>
+                  <span class="sc-slot-name">{{ r.classTypeName }}</span>
+                  <span class="sc-slot-meta">
+                    {{ r.roomName || 'No room' }} · {{ r.instructorName || 'No instructor' }}
+                  </span>
+                  <span class="sc-slot-meta">
+                    {{ r.capacity }} places
+                    @if (r.marketplaceCapacity > 0) { · {{ r.marketplaceCapacity }} on marketplace }
+                    @if (r.repeatEveryWeeks > 1) { · every {{ r.repeatEveryWeeks }} weeks }
+                  </span>
+                </button>
+
+                <!-- Draft and published are told apart by the word, the border and the action,
+                     never by the colour alone. -->
+                @if (!r.isPublished) {
+                  <span class="fit-pill tone-warning sc-slot-state">Draft</span>
+                }
+              </article>
+            }
+          }
+        </section>
+      }
+    </div>
+
+    <!-- ── Every schedule, in full ──────────────────────────────────── -->
+    <h3 class="fit-section-title sc-list-title">
+      <span class="material-symbols-outlined">list</span>
+      Every schedule
+    </h3>
+
+    <div class="fit-table-wrap">
+      <table class="fit-table sc-table">
+        <thead>
+          <tr>
+            <th>Class</th>
+            <th>Days</th>
+            <th>Time</th>
+            <th>Room</th>
+            <th>Instructor</th>
+            <th class="num">Places</th>
+            <th>Runs</th>
+            <th>State</th>
+            <th class="actions">&nbsp;</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of visible; track r.id) {
+            <tr>
+              <td class="strong">
+                <span class="sc-swatch" [style.background]="colourFor(r)"></span>
+                {{ r.classTypeName }}
+              </td>
+              <td>{{ dayLabel(r.daysOfWeekMask) }}</td>
+              <td class="num">{{ time(r.startsAt) }}–{{ endTime(r) }}</td>
+              <td [class.muted]="!r.roomName">{{ r.roomName || 'Not set' }}</td>
+              <td [class.muted]="!r.instructorName">{{ r.instructorName || 'Not set' }}</td>
+              <td class="num">{{ r.capacity }}</td>
+              <td>
+                <span class="sc-runs">
+                  {{ r.effectiveFrom | date:'d MMM yyyy' }}
+                  @if (r.effectiveTo) { – {{ r.effectiveTo | date:'d MMM yyyy' }} }
+                  @else { onwards }
+                </span>
+                <span class="sc-generated">{{ generatedThroughLabel(r) }}</span>
+              </td>
+              <td>
+                @if (r.isPublished) {
+                  <span class="fit-pill tone-success">Published</span>
+                } @else {
+                  <span class="fit-pill tone-warning">Draft</span>
+                }
+                @if (blockersFor(r).length > 0) {
+                  <span class="fit-pill tone-danger">{{ blockersFor(r).length }} blocking</span>
+                }
+              </td>
+              <td class="actions">
+                <button type="button" class="btn-link" (click)="edit(r)">Edit</button>
+                @if (!r.isPublished) {
+                  <button type="button" class="btn-link"
+                    [disabled]="busy || blockersFor(r).length > 0" (click)="publish(r)">Publish</button>
+                }
+                <button type="button" class="btn-link is-danger"
+                  (click)="deleting = r; cancelFuture = true">Remove</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- ── Editor ───────────────────────────────────────────────────────── -->
+  @if (draft) {
+    <div class="fit-modal-backdrop" (click)="draft = null">
+      <div class="fit-modal is-wide" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        <header class="fit-modal-head">
+          <div>
+            <h3 class="fit-modal-title">
+              @if (draftId) { Edit schedule } @else { New schedule }
+            </h3>
+            <p class="fit-modal-sub">
+              One rule — a class, its days, its time, its room. The timetable is built from it.
+            </p>
+          </div>
+          <button type="button" class="fit-close" (click)="draft = null" aria-label="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </header>
+
+        <div class="fit-modal-body">
+          @if (formError) { <div class="alert alert-error">{{ formError }}</div> }
+
+          <div class="fit-form-grid">
+            <label class="fit-field">
+              <span>Class</span>
+              <select [(ngModel)]="draft.classTypeId" (ngModelChange)="onClassTypeChosen()">
+                <option value="">Choose a class…</option>
+                @for (t of classTypes; track t.id) { <option [ngValue]="t.id">{{ t.name }}</option> }
+              </select>
+              <span class="fit-hint">Duration and capacity come from the class and can be changed here.</span>
+            </label>
+
+            <label class="fit-field">
+              <span>Room</span>
+              <select [(ngModel)]="draft.roomId">
+                <option [ngValue]="null">Not set</option>
+                @for (rm of rooms; track rm.id) {
+                  <option [ngValue]="rm.id">{{ rm.name }} ({{ rm.capacity }})</option>
+                }
+              </select>
+            </label>
+
+            <label class="fit-field">
+              <span>Instructor</span>
+              <select [(ngModel)]="draft.instructorStaffId">
+                <option [ngValue]="null">Not set</option>
+                @for (s of instructors; track s.id) {
+                  <option [ngValue]="s.id">{{ s.displayName || s.fullName }}</option>
+                }
+              </select>
+              <span class="fit-hint">Leave unset while cover is still being arranged.</span>
+            </label>
+
+            <label class="fit-field">
+              <span>Season</span>
+              <input type="text" [(ngModel)]="draft.seasonCode" placeholder="e.g. Autumn 2026" />
+              <span class="fit-hint">A label for a whole timetable, so it can be built and published together.</span>
+            </label>
+          </div>
+
+          <!-- ── Days ─────────────────────────────────────────────── -->
+          <fieldset class="sc-days">
+            <legend>Which days</legend>
+            <div class="sc-day-toggles">
+              @for (day of weekOrder; track day) {
+                <button type="button" class="sc-day-toggle"
+                  [class.is-on]="isDayOn(draft.daysOfWeekMask, day)"
+                  [attr.aria-pressed]="isDayOn(draft.daysOfWeekMask, day)"
+                  (click)="toggleDay(day)">
+                  {{ dayNames[day] }}
+                </button>
+              }
+            </div>
+            <p class="fit-hint">{{ dayLabel(draft.daysOfWeekMask) }}</p>
+          </fieldset>
+
+          <div class="fit-form-grid">
+            <label class="fit-field">
+              <span>Starts at</span>
+              <input type="time" [(ngModel)]="draftStartTime" step="300" />
+            </label>
+
+            <label class="fit-field">
+              <span>Length (minutes)</span>
+              <input type="number" min="5" max="240" [(ngModel)]="draft.durationMinutes" />
+            </label>
+
+            <label class="fit-field">
+              <span>Places</span>
+              <input type="number" min="1" max="500" [(ngModel)]="draft.capacity" />
+            </label>
+
+            <label class="fit-field">
+              <span>Of those, on the marketplace</span>
+              <input type="number" min="0" [max]="draft.capacity" [(ngModel)]="draft.marketplaceCapacity" />
+              <span class="fit-hint">Places held for third-party passes. Zero keeps the class members-only.</span>
+            </label>
+
+            <label class="fit-field">
+              <span>Runs from</span>
+              <input type="date" [(ngModel)]="draft.effectiveFrom" />
+            </label>
+
+            <label class="fit-field">
+              <span>Runs until</span>
+              <input type="date" [(ngModel)]="draft.effectiveTo" />
+              <span class="fit-hint">Leave empty for a class with no end date.</span>
+            </label>
+
+            <label class="fit-field">
+              <span>Repeat every</span>
+              <select [(ngModel)]="draft.repeatEveryWeeks">
+                <option [ngValue]="1">Week</option>
+                <option [ngValue]="2">2 weeks</option>
+                <option [ngValue]="3">3 weeks</option>
+                <option [ngValue]="4">4 weeks</option>
+              </select>
+            </label>
+
+            <label class="fit-field">
+              <span>Create classes this far ahead</span>
+              <select [(ngModel)]="draft.generateAheadDays">
+                <option [ngValue]="30">30 days</option>
+                <option [ngValue]="60">60 days</option>
+                <option [ngValue]="90">90 days</option>
+                <option [ngValue]="180">180 days</option>
+              </select>
+              <span class="fit-hint">How far into the future members can book. Longer means more to move if plans change.</span>
+            </label>
+          </div>
+
+          <!-- What saving this will actually do, in a sentence, before it does it. -->
+          <div class="fit-explain sc-explain">
+            <div class="fit-explain-lines">
+              <div class="fit-explain-line">
+                <span>{{ dayLabel(draft.daysOfWeekMask) }}</span>
+                <strong>{{ draftStartTime }}</strong>
+              </div>
+              <div class="fit-explain-line">
+                <span>Length</span>
+                <strong>{{ draft.durationMinutes }} minutes</strong>
+              </div>
+              <div class="fit-explain-line is-total">
+                <span>Places per class</span>
+                <strong>{{ draft.capacity }}</strong>
+              </div>
+            </div>
+            <p class="fit-explain-text">
+              @if (draftId) {
+                Saving rebuilds the classes that have not happened yet. Classes members have already
+                attended are left exactly as they were, and anybody booked into a class that moves
+                is told.
+              } @else {
+                Saving creates the schedule as a draft. Nothing appears on the timetable and nobody
+                can book until you publish it.
+              }
+            </p>
+          </div>
+        </div>
+
+        <div class="fit-modal-foot">
+          <span class="fit-foot-spacer"></span>
+          <button type="button" class="btn btn-secondary" (click)="draft = null">Cancel</button>
+          <button type="button" class="btn btn-primary" [disabled]="busy" (click)="save()">
+            @if (busy) { Saving… } @else if (draftId) { Save changes } @else { Create as draft }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── Removing ─────────────────────────────────────────────────────── -->
+  @if (deleting) {
+    <div class="fit-modal-backdrop" (click)="deleting = null">
+      <div class="fit-modal is-narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        <header class="fit-modal-head">
+          <div>
+            <h3 class="fit-modal-title">Remove {{ deleting.classTypeName }}?</h3>
+            <p class="fit-modal-sub">
+              {{ dayLabel(deleting.daysOfWeekMask) }} at {{ time(deleting.startsAt) }}
+            </p>
+          </div>
+          <button type="button" class="fit-close" (click)="deleting = null" aria-label="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </header>
+
+        <div class="fit-modal-body">
+          <p class="sc-delete-text">
+            {{ deleting.upcomingOccurrences }} class{{ deleting.upcomingOccurrences === 1 ? '' : 'es' }}
+            have already been created from this schedule. Decide what happens to them.
+          </p>
+
+          <label class="sc-radio">
+            <input type="radio" [value]="true" [(ngModel)]="cancelFuture" name="cancelFuture" />
+            <span>
+              <strong>Cancel them too</strong>
+              Anybody booked is told and, where the class was paid for, their credit goes back.
+            </span>
+          </label>
+
+          <label class="sc-radio">
+            <input type="radio" [value]="false" [(ngModel)]="cancelFuture" name="cancelFuture" />
+            <span>
+              <strong>Leave them running</strong>
+              The classes already on the timetable go ahead; no new ones are created.
+            </span>
+          </label>
+        </div>
+
+        <div class="fit-modal-foot">
+          <span class="fit-foot-spacer"></span>
+          <button type="button" class="btn btn-secondary" (click)="deleting = null">Keep it</button>
+          <button type="button" class="btn btn-danger" [disabled]="busy" (click)="confirmDelete()">
+            @if (busy) { Removing… } @else { Remove schedule }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

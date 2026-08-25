@@ -1,0 +1,74 @@
+.cp-tabs { margin-bottom: 14px; }
+.cp-modal { max-width: 800px; }
+.cp-note { margin-top: 14px; max-width: 66ch; }
+.cp-auth-title { margin-top: 26px; }
+.cp-payers { margin-bottom: 8px; }
+
+.cp-card.is-good { border-top: 3px solid var(--success, #16a34a); }
+.cp-card.is-warn { border-top: 3px solid var(--warning, #f59e0b); }
+
+.cp-model {
+  margin: 0 0 14px;
+  padding: 8px 12px;
+  border-radius: 9px;
+  background: var(--bg-muted, #f8fafc);
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--text-secondary, #64748b);
+}
+
+/* ── Utilisation ─────────────────────────────────────────────────────
+   Given its own block with a warning under it, because this is the one
+   figure that decides whether a scheme is renewed.                     */
+.cp-usage {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-subtle, #f1f5f9);
+}
+
+.cp-usage-warn {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  font-weight: 600;
+  color: var(--warning-text, #b45309);
+}
+
+.cp-rules {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.cp-rules-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.cp-card-foot {
+  display: flex;
+  gap: 9px;
+  padding: 12px 17px;
+  border-top: 1px solid var(--border-subtle, #f1f5f9);
+  background: var(--bg-muted, #f8fafc);
+}
+
+.cp-overdue { background: var(--danger-bg, #fee2e2); color: var(--danger-text, #b91c1c); }
+.cp-exhausted { opacity: 0.55; }
+.cp-expired { display: block; font-size: 10.5px; color: var(--danger-text, #b91c1c); font-weight: 700; }
+
+/* Somebody on a scheme who never comes is the reason a renewal fails,
+   so they are marked in the member list rather than left to be noticed. */
+.cp-unused td { background: var(--warning-bg, #fef3c7); }
+
+.cp-unused-flag {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--warning-text, #b45309);
+}

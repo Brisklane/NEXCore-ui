@@ -1,0 +1,395 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Memberships</h2>
+      <p class="subtitle">
+        @if (!loading) { {{ total | number }} agreement{{ total === 1 ? '' : 's' }} }
+        @else { Agreements, freezes and leaving. }
+      </p>
+    </div>
+    <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+  </div>
+
+  <fit-page-help key="plans"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <div class="fit-toolbar ag-filters">
+    <label class="fit-field fit-field-inline">
+      <span>Status</span>
+      <select [(ngModel)]="status" (ngModelChange)="page = 1; load()">
+        <option [ngValue]="null">Any</option>
+        @for (o of statusOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+      </select>
+    </label>
+
+    @if (memberId) {
+      <button type="button" class="btn-link" (click)="memberId = null; page = 1; load()">
+        Show all members
+      </button>
+    }
+  </div>
+
+  @if (loading) {
+    <div class="fit-rows">
+      @for (i of [1,2,3,4]; track i) { <div class="fit-skeleton" style="height: 66px"></div> }
+    </div>
+  } @else if (rows.length === 0) {
+    <div class="fit-empty">
+      <span class="material-symbols-outlined fit-empty-icon">contract</span>
+      <h3 class="fit-empty-title">No memberships</h3>
+      <p class="fit-empty-text">Nothing matches those filters.</p>
+    </div>
+  } @else {
+    <div class="fit-rows">
+      @for (a of rows; track a.id) {
+        <div class="fit-row" [class]="rowClass(a)">
+          <span class="fit-row-main">
+            <span class="fit-row-title">
+              {{ a.memberName }}
+              <span class="fit-pill">{{ statusLabels[a.status] }}</span>
+              @if (a.isFrozen) {
+                <span class="fit-pill ag-frozen">frozen to {{ a.frozenUntil | date:'d MMM' }}</span>
+              }
+              @if (a.isInMinimumTerm) { <span class="fit-pill">in minimum term</span> }
+              @if (a.priceLocked) { <span class="fit-pill">price locked</span> }
+            </span>
+            <span class="fit-row-sub">
+              {{ a.planName }} · {{ a.agreementNumber }} ·
+              started {{ a.startsOn | date:'d MMM yyyy' }}
+              @if (a.cancellationEffectiveOn) {
+                · <strong>ends {{ a.cancellationEffectiveOn | date:'d MMM yyyy' }}</strong>
+              }
+            </span>
+          </span>
+
+          <span class="fit-row-figure">
+            <span class="fit-row-figure-value">
+              {{ (a.promotionalPeriodsRemaining > 0 ? a.promotionalPrice : a.price) | number:'1.2-2' }}
+            </span>
+            <span class="fit-row-figure-label">
+              @if (a.promotionalPeriodsRemaining > 0) { promo, {{ a.promotionalPeriodsRemaining }} left }
+              @else { {{ a.currencyCode }} }
+            </span>
+          </span>
+
+          @if (a.creditsGranted > 0) {
+            <span class="fit-row-figure">
+              <span class="fit-row-figure-value">{{ a.creditsRemaining }}</span>
+              <span class="fit-row-figure-label">of {{ a.creditsGranted }} credits</span>
+            </span>
+          }
+
+          <span class="fit-row-actions">
+            <button type="button" class="fit-icon-btn" (click)="go('/fitness/members/' + a.memberId)"
+              aria-label="Open member">
+              <span class="material-symbols-outlined">person</span>
+            </button>
+
+            @if (a.status === AgreementStatus.Active) {
+              @if (!a.isFrozen) {
+                <button type="button" class="btn-secondary" (click)="startFreeze(a)">Freeze</button>
+              }
+              <button type="button" class="btn-secondary" (click)="startChange(a)">Change plan</button>
+              <button type="button" class="btn-link" (click)="startCancel(a)">Cancel</button>
+            }
+          </span>
+        </div>
+      }
+    </div>
+
+    @if (totalPages > 1) {
+      <nav class="fit-pager" aria-label="Pages">
+        <button type="button" class="btn-secondary" [disabled]="page === 1" (click)="goPage(page - 1)">
+          Previous
+        </button>
+        <span class="fit-pager-count">Page {{ page }} of {{ totalPages }}</span>
+        <button type="button" class="btn-secondary" [disabled]="page === totalPages" (click)="goPage(page + 1)">
+          Next
+        </button>
+      </nav>
+    }
+  }
+
+  <!-- ── Freeze ─────────────────────────────────────────────────────── -->
+  @if (freezing; as a) {
+    <div class="fit-modal-backdrop" (click)="freezing = null"></div>
+    <div class="fit-modal" role="dialog" aria-modal="true" aria-labelledby="ag-freeze-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="ag-freeze-title">Freeze {{ a.memberName }}'s membership</h3>
+          <p class="fit-modal-sub">{{ a.planName }} · {{ a.price | number:'1.2-2' }} {{ a.currencyCode }}</p>
+        </div>
+        <button type="button" class="fit-close" (click)="freezing = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        <div class="fit-form-grid">
+          <label class="fit-field">
+            <span>From</span>
+            <input type="date" [(ngModel)]="freezeFrom" (ngModelChange)="freezePreview = null" />
+          </label>
+          <label class="fit-field">
+            <span>Until</span>
+            <input type="date" [(ngModel)]="freezeTo" (ngModelChange)="previewFreeze()" />
+          </label>
+          <label class="fit-field">
+            <span>Why</span>
+            <select [(ngModel)]="freezeReason" (ngModelChange)="previewFreeze()">
+              @for (o of freezeReasonOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+            </select>
+          </label>
+        </div>
+
+        @if (freezePreview; as p) {
+          @if (!p.isAllowed) {
+            <div class="alert alert-error">{{ p.blockReason }}</div>
+          } @else {
+            <div class="fit-explain">
+              <div class="fit-explain-lines">
+                <div class="fit-explain-line">
+                  <span>Frozen for</span>
+                  <strong>{{ p.freezeDays }} days</strong>
+                </div>
+                <div class="fit-explain-line">
+                  <span>Allowance used</span>
+                  <strong>
+                    {{ p.freezeDaysUsedThisYear }} of {{ p.freezeDaysAllowance }},
+                    {{ p.freezeDaysRemaining }} left
+                  </strong>
+                </div>
+                @if (p.skippedCharges.length > 0) {
+                  <div class="fit-explain-line">
+                    <span>Payments skipped</span>
+                    <strong>{{ p.skippedCharges.length }}</strong>
+                  </div>
+                }
+                <div class="fit-explain-line is-total">
+                  <span>Freeze fee</span>
+                  <strong>{{ p.fee | number:'1.2-2' }}</strong>
+                </div>
+              </div>
+
+              <p class="fit-explain-text">
+                {{ p.explanation
+                   || 'Billing pauses for that period and picks up again on ' + (p.newNextBillingOn | date:'d MMMM') + '.' }}
+              </p>
+            </div>
+          }
+        }
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="freezing = null">Cancel</button>
+        <button
+          type="button"
+          class="btn-primary"
+          [disabled]="!freezePreview?.isAllowed || busy"
+          (click)="confirmFreeze()"
+        >
+          {{ busy ? 'Freezing…' : 'Freeze it' }}
+        </button>
+      </footer>
+    </div>
+  }
+
+  <!-- ── Change plan ────────────────────────────────────────────────── -->
+  @if (changing; as a) {
+    <div class="fit-modal-backdrop" (click)="changing = null"></div>
+    <div class="fit-modal" role="dialog" aria-modal="true" aria-labelledby="ag-change-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="ag-change-title">Change {{ a.memberName }}'s plan</h3>
+          <p class="fit-modal-sub">
+            On {{ a.planName }} at {{ a.price | number:'1.2-2' }} {{ a.currencyCode }}
+          </p>
+        </div>
+        <button type="button" class="fit-close" (click)="changing = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        <label class="fit-field">
+          <span>Move them to</span>
+          <select [(ngModel)]="newPlanId" (ngModelChange)="previewChange()">
+            <option [ngValue]="null">Pick a plan</option>
+            @for (p of changeOptions; track p.id) {
+              <option [ngValue]="p.id">{{ p.name }} — {{ p.price | number:'1.2-2' }}</option>
+            }
+          </select>
+        </label>
+
+        @if (changePreview; as p) {
+          @if (!p.isAllowed) {
+            <div class="alert alert-error">{{ p.blockReason }}</div>
+          } @else {
+            <div class="fit-explain">
+              <div class="fit-explain-lines">
+                <div class="fit-explain-line">
+                  <span>New price</span>
+                  <strong>
+                    {{ p.newPrice | number:'1.2-2' }}
+                    ({{ p.priceDifference > 0 ? '+' : '' }}{{ p.priceDifference | number:'1.2-2' }})
+                  </strong>
+                </div>
+                @if (p.prorationCredit > 0) {
+                  <div class="fit-explain-line">
+                    <span>Credit for the rest of this period</span>
+                    <strong>−{{ p.prorationCredit | number:'1.2-2' }}</strong>
+                  </div>
+                }
+                @if (p.prorationCharge > 0) {
+                  <div class="fit-explain-line">
+                    <span>Charge for the rest of this period</span>
+                    <strong>{{ p.prorationCharge | number:'1.2-2' }}</strong>
+                  </div>
+                }
+                @if (p.changeFee > 0) {
+                  <div class="fit-explain-line">
+                    <span>Change fee</span>
+                    <strong>{{ p.changeFee | number:'1.2-2' }}</strong>
+                  </div>
+                }
+                <div class="fit-explain-line is-total">
+                  <span>Due now</span>
+                  <strong>{{ p.dueNow | number:'1.2-2' }}</strong>
+                </div>
+              </div>
+
+              <p class="fit-explain-text">
+                {{ p.explanation
+                   || (p.effectiveImmediately
+                       ? 'This takes effect today.'
+                       : 'This takes effect on ' + (p.effectiveOn | date:'d MMMM') + '.') }}
+                @if (p.restartsMinimumTerm) {
+                  A new minimum term starts, ending {{ p.newMinimumTermEndsOn | date:'d MMMM yyyy' }}.
+                }
+              </p>
+            </div>
+          }
+        }
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="changing = null">Cancel</button>
+        <button
+          type="button"
+          class="btn-primary"
+          [disabled]="!changePreview?.isAllowed || busy"
+          (click)="confirmChange()"
+        >
+          {{ busy ? 'Changing…' : 'Change the plan' }}
+        </button>
+      </footer>
+    </div>
+  }
+
+  <!-- ── Cancel ─────────────────────────────────────────────────────────
+       The save offers come from what has actually worked on members in
+       this position before, with the accept rate shown.                  -->
+  @if (cancelling; as a) {
+    <div class="fit-modal-backdrop" (click)="cancelling = null"></div>
+    <div class="fit-modal ag-cancel-modal" role="dialog" aria-modal="true" aria-labelledby="ag-cancel-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="ag-cancel-title">{{ a.memberName }} wants to leave</h3>
+          <p class="fit-modal-sub">{{ a.planName }} · member since {{ a.startsOn | date:'MMM yyyy' }}</p>
+        </div>
+        <button type="button" class="fit-close" (click)="cancelling = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        @if (!cancelPreview) {
+          <div class="fit-skeleton" style="height: 180px"></div>
+        } @else {
+          @if (cancelPreview.suggestedOffers.length > 0) {
+            <h4 class="ag-offers-title">Worth trying first</h4>
+            <ul class="ag-offers">
+              @for (o of cancelPreview.suggestedOffers; track o.kind) {
+                <li>
+                  <strong>{{ o.label }}</strong>
+                  <span>{{ o.rationale }}</span>
+                  <span class="ag-offer-rate">
+                    {{ o.historicAcceptRatePercent }}% of members in this position took it
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+
+          <div class="fit-explain">
+            <div class="fit-explain-lines">
+              <div class="fit-explain-line">
+                <span>Last day</span>
+                <strong>{{ cancelPreview.effectiveOn | date:'d MMMM yyyy' }}</strong>
+              </div>
+              <div class="fit-explain-line">
+                <span>Notice period</span>
+                <strong>{{ cancelPreview.noticePeriodDays }} days</strong>
+              </div>
+              @if (cancelPreview.earlyTerminationFee > 0) {
+                <div class="fit-explain-line">
+                  <span>Early termination fee</span>
+                  <strong>{{ cancelPreview.earlyTerminationFee | number:'1.2-2' }}</strong>
+                </div>
+              }
+              @if (cancelPreview.outstandingBalance > 0) {
+                <div class="fit-explain-line">
+                  <span>Already outstanding</span>
+                  <strong>{{ cancelPreview.outstandingBalance | number:'1.2-2' }}</strong>
+                </div>
+              }
+              <div class="fit-explain-line is-total">
+                <span>{{ cancelPreview.netDue >= 0 ? 'Still to pay' : 'To refund' }}</span>
+                <strong>{{ cancelPreview.netDue | number:'1.2-2' }}</strong>
+              </div>
+            </div>
+
+            <p class="fit-explain-text">
+              {{ cancelPreview.explanation
+                 || 'They keep full access until their last day, and nothing further is collected after that.' }}
+              @if (cancelPreview.isInCoolingOff) {
+                They are still inside the cooling-off period, so everything paid comes back.
+              }
+              @if (cancelPreview.bookingsToCancel.length > 0) {
+                {{ cancelPreview.bookingsToCancel.length }} future bookings will be cancelled.
+              }
+              @if (cancelPreview.unusedCredits > 0) {
+                They have {{ cancelPreview.unusedCredits }} unused credits worth
+                {{ cancelPreview.unusedCreditValue | number:'1.2-2' }}.
+              }
+            </p>
+          </div>
+
+          <div class="fit-form-grid ag-reason">
+            <label class="fit-field">
+              <span>Why are they leaving?</span>
+              <select [(ngModel)]="leaveReason">
+                @for (o of leaveReasonOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+              </select>
+            </label>
+          </div>
+
+          <label class="fit-field">
+            <span>Anything they said worth recording</span>
+            <textarea rows="2" [(ngModel)]="leaveNote"
+              placeholder="This is what makes the leave-reason report worth reading."></textarea>
+          </label>
+        }
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="cancelling = null">Keep them</button>
+        <button type="button" class="btn-warning" [disabled]="busy" (click)="confirmCancel()">
+          {{ busy ? 'Logging…' : 'Log the cancellation' }}
+        </button>
+      </footer>
+    </div>
+  }
+</div>

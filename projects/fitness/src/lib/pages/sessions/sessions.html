@@ -1,0 +1,185 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Sessions &amp; credits</h2>
+      <p class="subtitle">
+        @if (!loading) { {{ packages.length }} pack{{ packages.length === 1 ? '' : 's' }} }
+        @else { Session packs, and the credits inside them. }
+      </p>
+    </div>
+    <div class="page-header-actions">
+      <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+      <button type="button" class="btn-primary" (click)="startSell()">
+        <span class="material-symbols-outlined">sell</span>
+        Sell a pack
+      </button>
+    </div>
+  </div>
+
+  <fit-page-help key="sessions"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  @if (expiring.length > 0) {
+    <div class="alert alert-warning ss-expiring">
+      <strong>
+        {{ expiring.length }} pack{{ expiring.length === 1 ? '' : 's' }} expiring with sessions unused.
+      </strong>
+      <span>
+        Unused credits are a refund risk and usually mean somebody has stopped coming. Worth a call.
+      </span>
+    </div>
+  }
+
+  <div class="fit-toolbar ss-filters">
+    <label class="fit-check">
+      <input type="checkbox" [(ngModel)]="activeOnly" (ngModelChange)="load()" />
+      <span>Only packs with sessions left</span>
+    </label>
+  </div>
+
+  @if (loading) {
+    <div class="fit-rows">
+      @for (i of [1,2,3,4]; track i) { <div class="fit-skeleton" style="height: 70px"></div> }
+    </div>
+  } @else if (packages.length === 0) {
+    <div class="fit-empty">
+      <span class="material-symbols-outlined fit-empty-icon">confirmation_number</span>
+      <h3 class="fit-empty-title">No session packs</h3>
+      <p class="fit-empty-text">Sell one and its credits appear on the member's record straight away.</p>
+      <button type="button" class="btn-primary" (click)="startSell()">Sell a pack</button>
+    </div>
+  } @else {
+    <div class="fit-rows">
+      @for (p of packages; track p.id) {
+        <div class="fit-row" [class]="packClass(p)">
+          <span class="fit-row-main">
+            <span class="fit-row-title">
+              {{ p.memberName }}
+              @if (p.isExpired) { <span class="fit-pill ss-expired">expired</span> }
+              @else if (p.expiringSoon) {
+                <span class="fit-pill ss-soon">{{ p.daysToExpiry }} days left</span>
+              }
+              @if (p.staffName) { <span class="fit-pill">{{ p.staffName }}</span> }
+            </span>
+            <span class="fit-row-sub">
+              {{ p.planName || p.serviceName }} · {{ p.purchaseNumber }} ·
+              bought {{ p.purchasedOn | date:'d MMM yyyy' }}
+              @if (p.soldByName) { by {{ p.soldByName }} }
+              @if (p.expiresOn) { · expires {{ p.expiresOn | date:'d MMM yyyy' }} }
+            </span>
+            <span class="ss-progress">
+              <span class="fit-bar-track">
+                <span class="fit-bar-fill" [style.width.%]="usedPercent(p)"></span>
+              </span>
+              <small>{{ p.sessionsUsed }} of {{ p.sessionsPurchased }} used</small>
+            </span>
+          </span>
+
+          <span class="fit-row-figure">
+            <span class="fit-row-figure-value">{{ p.sessionsRemaining }}</span>
+            <span class="fit-row-figure-label">left</span>
+          </span>
+
+          <span class="fit-row-figure">
+            <span class="fit-row-figure-value">{{ p.pricePerSession | number:'1.2-2' }}</span>
+            <span class="fit-row-figure-label">per session</span>
+          </span>
+
+          @if (p.unearnedValue > 0) {
+            <span class="fit-row-figure">
+              <span class="fit-row-figure-value">{{ p.unearnedValue | number:'1.2-2' }}</span>
+              <span class="fit-row-figure-label">still deferred</span>
+            </span>
+          }
+
+          <span class="fit-row-actions">
+            <button type="button" class="btn-secondary" (click)="go('/fitness/members/' + p.memberId)">
+              Open
+            </button>
+            <button type="button" class="btn-primary" (click)="go('/fitness/appointments')">
+              Book a session
+            </button>
+          </span>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Sell a pack -->
+  @if (selling) {
+    <div class="fit-modal-backdrop" (click)="selling = false"></div>
+    <div class="fit-modal" role="dialog" aria-modal="true" aria-labelledby="ss-sell-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="ss-sell-title">Sell a session pack</h3>
+          <p class="fit-modal-sub">Credits appear on their record immediately.</p>
+        </div>
+        <button type="button" class="fit-close" (click)="selling = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        @if (member; as m) {
+          <div class="ss-member">
+            <span class="material-symbols-outlined">person</span>
+            <span>{{ m.preferredName || m.fullName }}</span>
+            <button type="button" class="fit-icon-btn" (click)="member = null" aria-label="Change member">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+        } @else {
+          <div class="ss-search">
+            <div class="fit-search">
+              <span class="material-symbols-outlined">person_search</span>
+              <input type="text" placeholder="Who is buying?" aria-label="Find a member"
+                [(ngModel)]="memberSearch" (ngModelChange)="onMemberSearch()" />
+            </div>
+            @if (memberResults.length > 0) {
+              <ul class="ss-results">
+                @for (m of memberResults; track m.id) {
+                  <li>
+                    <button type="button" (click)="chooseMember(m)">
+                      <strong>{{ m.preferredName || m.fullName }}</strong>
+                      <span>{{ m.memberNumber }}</span>
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        }
+
+        <div class="ss-packs">
+          @for (p of packs; track p.id) {
+            <button type="button" class="ss-pack" [class.is-chosen]="packPlanId === p.id"
+              (click)="packPlanId = p.id">
+              <span class="ss-pack-name">{{ p.name }}</span>
+              <span class="ss-pack-price">{{ p.price | number:'1.2-2' }}</span>
+              <span class="ss-pack-per">{{ perSession(p) | number:'1.2-2' }} a session</span>
+              @if (p.validForDays > 0) { <span class="ss-pack-valid">valid {{ p.validForDays }} days</span> }
+            </button>
+          } @empty {
+            <p class="fit-quiet">No session packs on sale. Add one under Plans &amp; pricing.</p>
+          }
+        </div>
+
+        <label class="fit-field ss-method">
+          <span>How they are paying</span>
+          <select [(ngModel)]="paymentMethod">
+            @for (o of methodOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+          </select>
+        </label>
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="selling = false">Cancel</button>
+        <button type="button" class="btn-primary" [disabled]="!member || !packPlanId || saving" (click)="sell()">
+          {{ saving ? 'Selling…' : 'Sell it' }}
+        </button>
+      </footer>
+    </div>
+  }
+</div>

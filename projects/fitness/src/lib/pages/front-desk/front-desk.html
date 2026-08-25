@@ -1,0 +1,448 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Front desk</h2>
+      <p class="subtitle">
+        @if (data) {
+          {{ data.clubName }} —
+          @if (data.isOpenNow) {
+            open@if (data.closesAt) { until {{ data.closesAt }} }@if (!data.isStaffedNow) { , unstaffed }
+          } @else { closed }
+        } @else { Who is in, what is on, and what needs doing. }
+      </p>
+    </div>
+    <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+  </div>
+
+  <fit-page-help key="front-desk"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <!-- ── Search and scan ───────────────────────────────────────────────
+       One box for both. A fob reader types its number and presses enter,
+       which is exactly what a person does, so both paths are the same.  -->
+  <div class="fd-search">
+    <span class="material-symbols-outlined fd-search-icon">search</span>
+    <input
+      type="text"
+      class="fd-search-input"
+      placeholder="Scan a fob, or search by name, number or phone"
+      aria-label="Scan a fob, or search for a member"
+      [(ngModel)]="term"
+      (ngModelChange)="onTermChange()"
+      (keyup.enter)="onScan()"
+      autocomplete="off"
+      autofocus
+    />
+    @if (term) {
+      <button type="button" class="fd-search-clear" (click)="term = ''; results = []" aria-label="Clear">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    }
+  </div>
+
+  @if (results.length > 0) {
+    <div class="fd-results" role="listbox" aria-label="Search results">
+      @for (m of results; track m.id) {
+        <div class="fd-result" [class.is-blocked]="m.hasBlockingAlert || m.isBanned">
+          <div class="fd-avatar" [class.has-photo]="!!m.photoUrl">
+            @if (m.photoUrl) { <img [src]="m.photoUrl" [alt]="m.fullName" /> }
+            @else { {{ initials(m.fullName) }} }
+          </div>
+
+          <div class="fd-result-body">
+            <div class="fd-result-name">
+              {{ m.preferredName || m.fullName }}
+              <span class="fit-status" [class]="statusClass(m.status)">{{ statusLabels[m.status] }}</span>
+              @if (m.isCheckedIn) { <span class="fit-pill">In the club</span> }
+            </div>
+            <div class="fd-result-meta">
+              {{ m.memberNumber }}@if (m.planName) { · {{ m.planName }} }
+              @if (m.accountBalance > 0) { · <strong class="fd-owed">{{ m.accountBalance | number:'1.2-2' }} owed</strong> }
+              @if (m.daysSinceLastVisit > 0) { · last in {{ m.daysSinceLastVisit }}d ago }
+            </div>
+          </div>
+
+          <div class="fd-result-actions">
+            <button type="button" class="btn-secondary" (click)="go('/fitness/members/' + m.id)">
+              Open
+            </button>
+            @if (!m.isCheckedIn) {
+              <button type="button" class="btn-primary" (click)="checkIn(m)">
+                Check in
+              </button>
+            } @else {
+              <span class="fd-in-badge">
+                <span class="material-symbols-outlined">how_to_reg</span>
+              </span>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  } @else if (searching) {
+    <div class="fd-results"><div class="fit-skeleton" style="height: 64px"></div></div>
+  }
+
+  <!-- ── The decision ──────────────────────────────────────────────────
+       Deliberately the largest thing on the page.                       -->
+  @if (decision; as d) {
+    <section class="fd-decision-wrap" aria-live="assertive">
+      <div class="fit-decision" [class]="decisionClass(d)">
+        <span class="material-symbols-outlined">{{ decisionIcon(d) }}</span>
+
+        <div class="fd-decision-body">
+          <h3 class="fit-decision-title">{{ decisionHeadline(d) }}</h3>
+          <p class="fit-decision-reason">{{ d.message }}</p>
+
+          @if (d.amountDue) {
+            <p class="fd-decision-owed">{{ d.amountDue | number:'1.2-2' }} outstanding</p>
+          }
+
+          @if (d.nextBooking; as b) {
+            <p class="fd-decision-next">
+              <span class="material-symbols-outlined">event</span>
+              {{ b.title }} at {{ b.startsAt | date:'HH:mm' }}
+            </p>
+          }
+        </div>
+
+        <div class="fd-decision-actions">
+          @if (d.memberId) {
+            <button type="button" class="btn-secondary" (click)="go('/fitness/members/' + d.memberId)">
+              Open record
+            </button>
+          }
+          @if (d.decision === AccessDecision.Denied && d.memberId) {
+            <button type="button" class="btn-warning" (click)="askOverride()">
+              Let them in anyway
+            </button>
+          }
+          @if (d.resolutionRoute && d.resolutionAction) {
+            <button type="button" class="btn-primary" (click)="go(d.resolutionRoute)">
+              {{ d.resolutionAction }}
+            </button>
+          }
+          <button type="button" class="fit-icon-btn" (click)="dismissDecision()" aria-label="Dismiss">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+      </div>
+
+      @if (d.alerts.length > 0) {
+        <ul class="fd-alerts">
+          @for (a of d.alerts; track a.id) {
+            <li class="fd-alert" [class.is-blocking]="a.blocksAccess">
+              <span class="material-symbols-outlined">{{ a.blocksAccess ? 'block' : 'info' }}</span>
+              <span>{{ a.message }}</span>
+              @if (a.actionRoute && a.actionLabel) {
+                <button type="button" class="fd-alert-action" (click)="go(a.actionRoute)">
+                  {{ a.actionLabel }}
+                </button>
+              }
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  }
+
+  @if (loading && !data) {
+    <div class="fd-grid">
+      @for (i of [1,2,3]; track i) { <div class="fit-skeleton" style="height: 240px"></div> }
+    </div>
+  }
+
+  @if (data; as d) {
+    <!-- ── Urgent, club-wide ──────────────────────────────────────────── -->
+    @if (d.announcements.length > 0) {
+      @for (a of d.announcements; track a.id) {
+        @if (a.isUrgent) {
+          <div class="alert alert-warning fd-announce">
+            <strong>{{ a.title }}</strong>
+            <span>{{ a.body }}</span>
+          </div>
+        }
+      }
+    }
+
+    <div class="fd-grid">
+      <!-- ── In the club ───────────────────────────────────────────────-->
+      <section class="fit-card fd-panel">
+        <header class="fit-card-head">
+          <h3 class="fit-card-title">In the club</h3>
+          <button type="button" class="fit-icon-btn" (click)="load()" aria-label="Refresh">
+            <span class="material-symbols-outlined">refresh</span>
+          </button>
+        </header>
+
+        <div class="fit-card-body">
+          <div class="fit-occupancy">
+            <div class="fit-occupancy-figure">
+              <span class="fit-occupancy-now">{{ d.occupancy.occupancy }}</span>
+              @if (d.occupancy.hardCapacity) {
+                <span class="fit-occupancy-cap">of {{ d.occupancy.hardCapacity }}</span>
+              }
+            </div>
+            @if (d.occupancy.hardCapacity) {
+              <div class="fit-occupancy-bar">
+                <span
+                  class="fit-occupancy-fill"
+                  [class]="occupancyClass(d.occupancy.percentFull)"
+                  [style.width.%]="d.occupancy.percentFull > 100 ? 100 : d.occupancy.percentFull"
+                ></span>
+              </div>
+            }
+            @if (d.occupancy.isAtHardCap) {
+              <p class="fd-cap-note">At capacity — the barrier is turning people away.</p>
+            } @else if (d.occupancy.isOverSoftCap) {
+              <p class="fd-cap-note">Busy. Worth telling anyone asking about a quieter time.</p>
+            }
+          </div>
+
+          @if (d.occupancy.areas.length > 0) {
+            <ul class="fd-areas">
+              @for (a of d.occupancy.areas; track a.areaId) {
+                <li>
+                  <span>{{ a.areaName }}</span>
+                  <strong>{{ a.occupancy }}@if (a.capacity) {/{{ a.capacity }}}</strong>
+                </li>
+              }
+            </ul>
+          }
+
+          <h4 class="fd-subhead">Recent check-ins</h4>
+
+          @if (d.recentCheckIns.length === 0) {
+            <div class="fit-empty">
+              <span class="material-symbols-outlined fit-empty-icon">sensor_door</span>
+              <p class="fit-empty-text">Nobody has come in yet today.</p>
+            </div>
+          } @else {
+            <ul class="fd-checkins">
+              @for (c of d.recentCheckIns; track c.id) {
+                <li class="fd-checkin">
+                  <div class="fd-avatar fd-avatar-sm" [class.has-photo]="!!c.photoUrl">
+                    @if (c.photoUrl) { <img [src]="c.photoUrl" [alt]="c.memberName || 'Member'" /> }
+                    @else { {{ initials(c.memberName) }} }
+                  </div>
+                  <div class="fd-checkin-body">
+                    <span class="fd-checkin-name">
+                      {{ c.memberName || 'Guest' }}
+                      @if (c.wasManualEntry) { <span class="fit-pill">manual</span> }
+                    </span>
+                    <span class="fd-checkin-meta">
+                      {{ c.checkedInAt | date:'HH:mm' }}
+                      @if (c.className) { · {{ c.className }} }
+                      · {{ duration(c.durationMinutes) }}
+                    </span>
+                  </div>
+                  @if (!c.checkedOutAt) {
+                    <button type="button" class="fit-icon-btn" (click)="checkOut(c)" aria-label="Check out">
+                      <span class="material-symbols-outlined">logout</span>
+                    </button>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </section>
+
+      <!-- ── On today ──────────────────────────────────────────────────-->
+      <section class="fit-card fd-panel">
+        <header class="fit-card-head">
+          <h3 class="fit-card-title">On today</h3>
+          <button type="button" class="btn-link" (click)="go('/fitness/timetable')">Timetable</button>
+        </header>
+
+        <div class="fit-card-body">
+          @if (d.classesToday.length === 0) {
+            <div class="fit-empty">
+              <span class="material-symbols-outlined fit-empty-icon">event_busy</span>
+              <p class="fit-empty-text">No classes today.</p>
+            </div>
+          } @else {
+            <ul class="fd-classes">
+              @for (c of d.classesToday; track c.id) {
+                <li>
+                  <button
+                    type="button"
+                    class="fd-class"
+                    [style.border-left-color]="c.colourHex || 'var(--accent, #2b7fff)'"
+                    (click)="go('/fitness/classes/' + c.id)"
+                  >
+                    <span class="fd-class-time">{{ c.startsAt | date:'HH:mm' }}</span>
+                    <span class="fd-class-body">
+                      <span class="fd-class-name">{{ c.classTypeName }}</span>
+                      <span class="fd-class-meta">
+                        {{ c.instructorName || 'No instructor' }}@if (c.roomName) { · {{ c.roomName }} }
+                      </span>
+                    </span>
+                    <span
+                      class="fd-class-fill"
+                      [class.is-full]="c.fillPercent >= 100"
+                      [class.is-quiet]="c.fillPercent < 35"
+                    >
+                      {{ c.bookedCount }}/{{ c.capacity }}
+                      @if (c.waitlistCount > 0) { <small>+{{ c.waitlistCount }} waiting</small> }
+                    </span>
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+
+          @if (d.appointmentsToday.length > 0) {
+            <h4 class="fd-subhead">Sessions</h4>
+            <ul class="fd-appointments">
+              @for (a of d.appointmentsToday; track a.id) {
+                <li class="fd-appointment">
+                  <span class="fd-class-time">{{ a.startsAt | date:'HH:mm' }}</span>
+                  <span class="fd-class-body">
+                    <span class="fd-class-name">{{ a.memberName || a.serviceName }}</span>
+                    <span class="fd-class-meta">{{ a.serviceName }} with {{ a.staffName }}</span>
+                  </span>
+                  @if (a.checkedInAt) {
+                    <span class="material-symbols-outlined fd-appointment-in">how_to_reg</span>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </section>
+
+      <!-- ── Needs doing ───────────────────────────────────────────────-->
+      <section class="fit-card fd-panel">
+        <header class="fit-card-head">
+          <h3 class="fit-card-title">Needs doing</h3>
+        </header>
+
+        <div class="fit-card-body">
+          <div class="fd-counters">
+            <button
+              type="button"
+              class="fd-counter"
+              [class.is-alert]="d.leadsBreachingSla > 0"
+              (click)="go('/fitness/leads')"
+            >
+              <span class="fd-counter-value">{{ d.openLeads }}</span>
+              <span class="fd-counter-label">Open enquiries</span>
+              @if (d.leadsBreachingSla > 0) {
+                <span class="fd-counter-alert">{{ d.leadsBreachingSla }} overdue</span>
+              }
+            </button>
+
+            <button
+              type="button"
+              class="fd-counter"
+              [class.is-alert]="d.overdueBalances > 0"
+              (click)="go('/fitness/collections')"
+            >
+              <span class="fd-counter-value">{{ d.overdueBalances }}</span>
+              <span class="fd-counter-label">In arrears</span>
+              @if (d.overdueAmount > 0) {
+                <span class="fd-counter-alert">{{ d.overdueAmount | number:'1.0-0' }} owed</span>
+              }
+            </button>
+
+            <button
+              type="button"
+              class="fd-counter"
+              [class.is-alert]="d.waiversOutstanding > 0"
+              (click)="go('/fitness/waivers')"
+            >
+              <span class="fd-counter-value">{{ d.waiversOutstanding }}</span>
+              <span class="fd-counter-label">Waivers unsigned</span>
+              @if (d.waiversOutstanding > 0) {
+                <span class="fd-counter-alert">blocked at the door</span>
+              }
+            </button>
+
+            <button type="button" class="fd-counter" (click)="go('/fitness/pos')">
+              <span class="fd-counter-value">{{ d.cashSessionTakings | number:'1.0-0' }}</span>
+              <span class="fd-counter-label">Taken this shift</span>
+              @if (!d.openCashSessionId) { <span class="fd-counter-alert">no drawer open</span> }
+            </button>
+          </div>
+
+          @if (d.urgentAlerts.length > 0) {
+            <h4 class="fd-subhead">Watch out for</h4>
+            <ul class="fd-alerts fd-alerts-inline">
+              @for (a of d.urgentAlerts; track a.id) {
+                <li class="fd-alert" [class.is-blocking]="a.blocksAccess">
+                  <span class="material-symbols-outlined">{{ a.blocksAccess ? 'block' : 'warning' }}</span>
+                  <span>{{ a.message }}</span>
+                </li>
+              }
+            </ul>
+          }
+
+          @if (d.myTasks.length > 0) {
+            <h4 class="fd-subhead">Your tasks</h4>
+            <ul class="fd-tasks">
+              @for (t of d.myTasks; track t.id) {
+                <li class="fd-task" [class.is-overdue]="t.isOverdue">
+                  <button type="button" class="fd-task-btn" (click)="go('/fitness/members/' + t.memberId)">
+                    <span class="fd-task-title">{{ t.title }}</span>
+                    <span class="fd-task-meta">
+                      {{ t.memberName }} · due {{ t.dueOn | date:'d MMM' }}
+                      @if (t.isOverdue) { · <strong>overdue</strong> }
+                    </span>
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </section>
+    </div>
+  }
+
+  <!-- ── Override dialog ────────────────────────────────────────────────
+       A reason is mandatory. An override with nobody's name and no reason
+       against it is the hole every access dispute goes through.          -->
+  @if (overrideFor) {
+    <div class="fit-modal-backdrop" (click)="overrideFor = null"></div>
+    <div class="fit-modal" role="dialog" aria-modal="true" aria-labelledby="fd-override-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="fd-override-title">Let them in anyway</h3>
+          <p class="fit-modal-sub">{{ overrideFor.message }}</p>
+        </div>
+        <button type="button" class="fit-close" (click)="overrideFor = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        <p class="fit-sensitive">
+          <span class="material-symbols-outlined">badge</span>
+          This override is recorded against your name, with the reason you give below.
+        </p>
+
+        <label class="fit-field">
+          <span>Why are you letting them in?</span>
+          <textarea
+            rows="3"
+            [(ngModel)]="overrideReason"
+            placeholder="e.g. Card payment failed at the bank; member is paying at the desk now."
+          ></textarea>
+        </label>
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="overrideFor = null">Cancel</button>
+        <button
+          type="button"
+          class="btn-primary"
+          [disabled]="overrideReason.trim().length < 3 || overrideBusy"
+          (click)="confirmOverride()"
+        >
+          {{ overrideBusy ? 'Saving…' : 'Let them in' }}
+        </button>
+      </footer>
+    </div>
+  }
+</div>

@@ -1,0 +1,237 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Billing runs</h2>
+      <p class="subtitle">Collecting the month's dues.</p>
+    </div>
+    <div class="page-header-actions">
+      <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+      <button type="button" class="btn-secondary" (click)="go('/fitness/invoices')">Invoices</button>
+      <button type="button" class="btn-secondary" (click)="go('/fitness/collections')">Collections</button>
+    </div>
+  </div>
+
+  <fit-page-help key="billing"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <!-- ── Start a run ────────────────────────────────────────────────────
+       Preview first, always. The real run is a second, deliberate press.  -->
+  <section class="fit-card bl-launcher">
+    <header class="fit-card-head">
+      <h3 class="fit-card-title">Run billing</h3>
+    </header>
+
+    <div class="fit-card-body">
+      <div class="bl-controls">
+        <label class="fit-field">
+          <span>Billing date</span>
+          <input type="date" [(ngModel)]="billingDate" />
+        </label>
+
+        <label class="fit-check">
+          <input type="checkbox" [(ngModel)]="collectPayments" />
+          <span>Take payment as well as raising invoices</span>
+        </label>
+
+        <div class="fit-spacer"></div>
+
+        <button type="button" class="btn-secondary" [disabled]="running" (click)="runPreview()">
+          {{ running ? 'Working…' : 'Preview' }}
+        </button>
+      </div>
+
+      @if (preview; as p) {
+        <div class="fit-explain bl-preview">
+          <div class="fit-explain-lines">
+            <div class="fit-explain-line">
+              <span>Members due</span>
+              <strong>{{ p.totalScheduled | number }}</strong>
+            </div>
+            <div class="fit-explain-line">
+              <span>Invoices that would be raised</span>
+              <strong>{{ p.invoicesCreated | number }}</strong>
+            </div>
+            @if (p.skipped > 0) {
+              <div class="fit-explain-line">
+                <span>Skipped — frozen, cancelled or already billed</span>
+                <strong>{{ p.skipped | number }}</strong>
+              </div>
+            }
+            <div class="fit-explain-line is-total">
+              <span>Total to bill</span>
+              <strong>{{ p.totalBilled | number:'1.2-2' }}</strong>
+            </div>
+          </div>
+
+          <p class="fit-explain-text">
+            This is a preview. Nothing has been invoiced and no money has moved.
+            @if (collectPayments) {
+              Running it for real will raise these invoices and attempt collection on each one.
+            } @else {
+              Running it for real will raise these invoices without taking payment.
+            }
+          </p>
+
+          <div class="bl-preview-actions">
+            <button type="button" class="btn-secondary" (click)="preview = null">Discard</button>
+            <button type="button" class="btn-primary" [disabled]="running" (click)="runForReal()">
+              {{ running ? 'Running…' : 'Run it for real' }}
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- ── History ────────────────────────────────────────────────────── -->
+  <h3 class="fit-section-title">
+    <span class="material-symbols-outlined">history</span>
+    Recent runs
+  </h3>
+
+  @if (loading) {
+    <div class="fit-rows">
+      @for (i of [1,2,3]; track i) { <div class="fit-skeleton" style="height: 62px"></div> }
+    </div>
+  } @else if (runs.length === 0) {
+    <div class="fit-empty">
+      <span class="material-symbols-outlined fit-empty-icon">sync_alt</span>
+      <h3 class="fit-empty-title">No billing runs yet</h3>
+      <p class="fit-empty-text">Preview one above to see what the next collection would look like.</p>
+    </div>
+  } @else {
+    <div class="fit-rows">
+      @for (r of runs; track r.id) {
+        <button type="button" class="fit-row" [class]="statusClass(r.status)" (click)="inspect(r)">
+          <span class="fit-row-main">
+            <span class="fit-row-title">
+              {{ r.runNumber }}
+              @if (r.isPreview) { <span class="fit-pill">preview</span> }
+              @if (r.isAutomatic) { <span class="fit-pill">overnight</span> }
+              <span class="fit-pill">{{ statusLabels[r.status] }}</span>
+            </span>
+            <span class="fit-row-sub">
+              {{ r.billingDate | date:'d MMM yyyy' }}
+              @if (r.clubName) { · {{ r.clubName }} }
+              @if (r.runByName) { · {{ r.runByName }} }
+              · took {{ duration(r.durationSeconds) }}
+            </span>
+          </span>
+
+          <span class="bl-run-stats">
+            <span class="bl-run-stat">
+              <strong>{{ r.invoicesCreated | number }}</strong>
+              <small>invoices</small>
+            </span>
+            <span class="bl-run-stat">
+              <strong>{{ r.totalBilled | number:'1.0-0' }}</strong>
+              <small>billed</small>
+            </span>
+            <span class="bl-run-stat">
+              <strong>{{ r.totalCollected | number:'1.0-0' }}</strong>
+              <small>collected</small>
+            </span>
+            @if (r.paymentsFailed > 0) {
+              <span class="bl-run-stat is-alert">
+                <strong>{{ r.paymentsFailed }}</strong>
+                <small>failed</small>
+              </span>
+            }
+          </span>
+
+          <span class="bl-run-rate">
+            <span class="fit-bar-track" style="width: 72px">
+              <span
+                class="fit-bar-fill"
+                [class]="collectionClass(r.collectionRatePercent)"
+                [style.width.%]="r.collectionRatePercent"
+              ></span>
+            </span>
+            <small>{{ r.collectionRatePercent }}%</small>
+          </span>
+
+          <span class="material-symbols-outlined fit-row-go">chevron_right</span>
+        </button>
+      }
+    </div>
+  }
+
+  <!-- ── One run's lines ────────────────────────────────────────────── -->
+  @if (openRun; as r) {
+    <div class="fit-modal-backdrop" (click)="close()"></div>
+    <div class="fit-modal bl-modal" role="dialog" aria-modal="true" aria-labelledby="bl-run-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="bl-run-title">{{ r.runNumber }}</h3>
+          <p class="fit-modal-sub">
+            {{ r.billingDate | date:'d MMMM yyyy' }} ·
+            {{ r.invoicesCreated }} invoices ·
+            {{ r.totalCollected | number:'1.2-2' }} collected of {{ r.totalBilled | number:'1.2-2' }}
+          </p>
+        </div>
+        <button type="button" class="fit-close" (click)="close()" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        @if (r.errorSummary) { <div class="alert alert-error">{{ r.errorSummary }}</div> }
+
+        <div class="fit-segment bl-outcomes" role="group" aria-label="Filter by outcome">
+          @for (o of [
+            { v: null, l: 'Everything' },
+            { v: 'Collected', l: 'Collected' },
+            { v: 'Failed', l: 'Failed' },
+            { v: 'Skipped', l: 'Skipped' }
+          ]; track o.l) {
+            <button
+              type="button"
+              [class.is-active]="outcomeFilter === o.v"
+              (click)="outcomeFilter = o.v; loadLines()"
+            >{{ o.l }}</button>
+          }
+        </div>
+
+        @if (linesLoading) {
+          <div class="fit-skeleton" style="height: 200px"></div>
+        } @else if (lines.length === 0) {
+          <p class="fit-quiet">Nothing matches that filter.</p>
+        } @else {
+          <div class="fit-table-wrap">
+            <table class="fit-table">
+              <thead>
+                <tr><th>Member</th><th class="ta-r">Amount</th><th>Outcome</th><th>Why</th></tr>
+              </thead>
+              <tbody>
+                @for (l of lines; track l.id) {
+                  <tr>
+                    <td>
+                      <button type="button" class="btn-link" (click)="go('/fitness/members/' + l.memberId)">
+                        {{ l.memberName }}
+                      </button>
+                      <small class="bl-num">{{ l.memberNumber }}</small>
+                    </td>
+                    <td class="ta-r fit-money">{{ l.amount | number:'1.2-2' }}</td>
+                    <td>{{ l.outcome }}</td>
+                    <td class="bl-why">{{ l.message || '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="close()">Close</button>
+        @if (r.paymentsFailed > 0) {
+          <button type="button" class="btn-primary" (click)="go('/fitness/collections')">
+            Work the failures
+          </button>
+        }
+      </footer>
+    </div>
+  }
+</div>

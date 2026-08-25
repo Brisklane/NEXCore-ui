@@ -1,0 +1,401 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Incidents &amp; safety</h2>
+      <p class="subtitle">
+        @if (!loading) {
+          {{ openIncidents.length }} open incident{{ openIncidents.length === 1 ? '' : 's' }},
+          {{ openComplaints.length }} open complaint{{ openComplaints.length === 1 ? '' : 's' }}
+        } @else { Incidents, complaints, checks and lost property. }
+      </p>
+    </div>
+    <div class="page-header-actions">
+      <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+      <button type="button" class="btn-warning" (click)="startReport()">
+        <span class="material-symbols-outlined">report</span>
+        Report an incident
+      </button>
+    </div>
+  </div>
+
+  <fit-page-help key="incidents"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <div class="fit-segment co-tabs" role="tablist" aria-label="Compliance sections">
+    <button type="button" role="tab" [class.is-active]="tab === 'incidents'" (click)="tab = 'incidents'">
+      <span class="material-symbols-outlined">report</span>Incidents
+    </button>
+    <button type="button" role="tab" [class.is-active]="tab === 'complaints'" (click)="tab = 'complaints'">
+      <span class="material-symbols-outlined">feedback</span>Complaints
+    </button>
+    <button type="button" role="tab" [class.is-active]="tab === 'checks'" (click)="tab = 'checks'">
+      <span class="material-symbols-outlined">checklist</span>Daily checks
+    </button>
+    <button type="button" role="tab" [class.is-active]="tab === 'lost'" (click)="tab = 'lost'">
+      <span class="material-symbols-outlined">inventory_2</span>Lost property
+    </button>
+  </div>
+
+  <!-- ── Incidents ────────────────────────────────────────────────────── -->
+  @if (tab === 'incidents') {
+    @if (loading) {
+      <div class="fit-rows">
+        @for (i of [1,2,3]; track i) { <div class="fit-skeleton" style="height: 72px"></div> }
+      </div>
+    } @else if (incidents.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">health_and_safety</span>
+        <h3 class="fit-empty-title">Nothing recorded</h3>
+        <p class="fit-empty-text">
+          Record accidents and near misses here. A near miss written down is the one that does not
+          become an accident.
+        </p>
+      </div>
+    } @else {
+      <div class="fit-rows">
+        @for (i of incidents; track i.id) {
+          <div class="fit-row" [class]="incidentClass(i)">
+            <span class="fit-row-main">
+              <span class="fit-row-title">
+                {{ i.summary }}
+                <span class="fit-pill">{{ kindLabels[i.kind] }}</span>
+                <span class="fit-pill">{{ severityLabels[i.severity] }}</span>
+                <span class="fit-pill">{{ statusLabels[i.status] }}</span>
+                @if (i.isReportable) { <span class="fit-pill co-reportable">reportable</span> }
+                @if (i.isOverdue) { <span class="fit-pill co-overdue">review overdue</span> }
+              </span>
+              <span class="fit-row-sub">
+                {{ i.incidentNumber }} · {{ i.occurredAt | date:'d MMM yyyy, HH:mm' }}
+                @if (i.memberName) { · {{ i.memberName }} }
+                @else if (i.involvedPersonName) { · {{ i.involvedPersonName }} }
+                @if (i.areaName) { · {{ i.areaName }} }
+                @if (i.reportedByName) { · reported by {{ i.reportedByName }} }
+              </span>
+
+              @if (i.firstAidGiven || i.aedUsed || i.ambulanceCalled || i.hospitalAttended) {
+                <span class="co-medical">
+                  @if (i.firstAidGiven) { <span>First aid given</span> }
+                  @if (i.aedUsed) { <span>Defibrillator used</span> }
+                  @if (i.ambulanceCalled) { <span>Ambulance called</span> }
+                  @if (i.hospitalAttended) { <span>Hospital attended</span> }
+                </span>
+              }
+
+              @if (blockedFrom(i); as blocked) {
+                <span class="fit-row-sub co-blocked">
+                  <span class="material-symbols-outlined">pending_actions</span>{{ blocked }}
+                </span>
+              }
+            </span>
+
+            @if (i.estimatedCost) {
+              <span class="fit-row-figure">
+                <span class="fit-row-figure-value">{{ i.estimatedCost | number:'1.0-0' }}</span>
+                <span class="fit-row-figure-label">estimated cost</span>
+              </span>
+            }
+
+            <span class="fit-row-actions">
+              @if (i.memberId) {
+                <button type="button" class="fit-icon-btn" (click)="go('/fitness/members/' + i.memberId)"
+                  aria-label="Open member">
+                  <span class="material-symbols-outlined">person</span>
+                </button>
+              }
+              @if (i.status !== IncidentStatus.Closed) {
+                <button type="button" class="btn-primary" [disabled]="!!blockedFrom(i)" (click)="startClose(i)">
+                  Close it
+                </button>
+              }
+            </span>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ── Complaints ───────────────────────────────────────────────────── -->
+  @if (tab === 'complaints') {
+    @if (complaints.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">feedback</span>
+        <h3 class="fit-empty-title">No complaints</h3>
+        <p class="fit-empty-text">
+          Which is either good news, or a sign they are being handled at the desk and not written
+          down.
+        </p>
+      </div>
+    } @else {
+      <div class="fit-rows">
+        @for (c of complaints; track c.id) {
+          <div class="fit-row" [class.is-alert]="c.isOverdue" [class.is-good]="c.resolvedOn">
+            <span class="fit-row-main">
+              <span class="fit-row-title">
+                {{ c.summary }}
+                <span class="fit-pill">{{ complaintLabels[c.status] }}</span>
+                <span class="fit-pill">{{ c.category }}</span>
+                @if (c.isOverdue) { <span class="fit-pill co-overdue">overdue</span> }
+              </span>
+              <span class="fit-row-sub">
+                {{ c.complaintNumber }} ·
+                {{ c.memberName || c.complainantName || 'Anonymous' }} ·
+                raised {{ c.raisedOn | date:'d MMM yyyy' }} · {{ c.ageDays }} days old
+                @if (c.ownerName) { · {{ c.ownerName }} }
+              </span>
+              @if (c.resolution) { <span class="fit-row-sub co-resolution">{{ c.resolution }}</span> }
+            </span>
+
+            @if (c.compensationValue) {
+              <span class="fit-row-figure">
+                <span class="fit-row-figure-value">{{ c.compensationValue | number:'1.2-2' }}</span>
+                <span class="fit-row-figure-label">compensation</span>
+              </span>
+            }
+
+            <span class="fit-row-actions">
+              @if (c.memberId) {
+                <button type="button" class="btn-secondary" (click)="go('/fitness/members/' + c.memberId)">
+                  Open member
+                </button>
+              }
+            </span>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ── Daily checks ─────────────────────────────────────────────────── -->
+  @if (tab === 'checks') {
+    @if (checks.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">checklist</span>
+        <h3 class="fit-empty-title">No checks set up</h3>
+        <p class="fit-empty-text">
+          Opening, closing and safety sweeps live here. A failed critical item raises an incident
+          rather than sitting in a list.
+        </p>
+      </div>
+    } @else {
+      <div class="fit-grid">
+        @for (c of checks; track c.id) {
+          <section class="fit-card co-check" [class]="checkClass(c)">
+            <header class="fit-card-head">
+              <h3 class="fit-card-title">{{ c.name }}</h3>
+              @if (c.isOverdue) { <span class="fit-pill co-overdue">overdue</span> }
+              @else if (c.completedToday) { <span class="fit-pill co-done">done today</span> }
+              @else if (c.dueToday) { <span class="fit-pill">due today</span> }
+            </header>
+
+            <div class="fit-card-body">
+              <p class="fit-quiet">
+                Due at {{ c.dueAt }}@if (c.timesPerDay > 1) { , {{ c.timesPerDay }} times a day }
+                @if (c.areaName) { · {{ c.areaName }} }
+              </p>
+
+              @if (c.lastCompletedAt) {
+                <p class="co-lastdone">
+                  Last done {{ c.lastCompletedAt | date:'d MMM, HH:mm' }}
+                  @if (c.lastCompletedByName) { by {{ c.lastCompletedByName }} }
+                  @if (c.failedItemCount > 0) {
+                    · <strong>{{ c.failedItemCount }} item(s) failed</strong>
+                  }
+                </p>
+              }
+
+              <ul class="co-items">
+                @for (item of c.items; track item.id) {
+                  <li [class.is-critical]="item.isCritical" [class.is-failed]="item.lastPassed === false">
+                    @if (item.isCritical) {
+                      <span class="material-symbols-outlined">priority_high</span>
+                    }
+                    {{ item.itemDescription }}
+                  </li>
+                }
+              </ul>
+            </div>
+          </section>
+        }
+      </div>
+    }
+  }
+
+  <!-- ── Lost property ────────────────────────────────────────────────── -->
+  @if (tab === 'lost') {
+    @if (lostProperty.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">inventory_2</span>
+        <p class="fit-empty-text">Nothing in lost property.</p>
+      </div>
+    } @else {
+      <div class="fit-rows">
+        @for (l of lostProperty; track l.id) {
+          <div class="fit-row" [class.is-warn]="l.readyForDisposal">
+            <span class="fit-row-main">
+              <span class="fit-row-title">
+                {{ l.itemDescription }}
+                <span class="fit-pill">{{ lostLabels[l.status] }}</span>
+                @if (l.readyForDisposal) { <span class="fit-pill co-overdue">ready to dispose</span> }
+              </span>
+              <span class="fit-row-sub">
+                Found {{ l.foundOn | date:'d MMM yyyy' }}
+                @if (l.foundLocation) { in {{ l.foundLocation }} }
+                @if (l.storageLocation) { · stored {{ l.storageLocation }} }
+                · held {{ l.daysHeld }} days
+                @if (l.claimedByName) { · claimed by {{ l.claimedByName }} }
+              </span>
+            </span>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ── Report an incident ───────────────────────────────────────────── -->
+  @if (reporting && draft; as d) {
+    <div class="fit-modal-backdrop" (click)="reporting = false"></div>
+    <div class="fit-modal co-modal" role="dialog" aria-modal="true" aria-labelledby="co-report-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="co-report-title">Report an incident</h3>
+          <p class="fit-modal-sub">Write it down while it is fresh. Detail is easier now than in six months.</p>
+        </div>
+        <button type="button" class="fit-close" (click)="reporting = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        <div class="fit-form-grid">
+          <label class="fit-field">
+            <span>What kind</span>
+            <select [(ngModel)]="d.kind">
+              @for (o of kindOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+            </select>
+          </label>
+
+          <label class="fit-field">
+            <span>How serious</span>
+            <select [(ngModel)]="d.severity">
+              @for (o of severityOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+            </select>
+          </label>
+
+          <label class="fit-field">
+            <span>When</span>
+            <input type="datetime-local" [(ngModel)]="d.occurredAt" />
+          </label>
+
+          <label class="fit-field">
+            <span>Who was involved</span>
+            <input type="text" [(ngModel)]="d.involvedPersonName" placeholder="Name, if not a member" />
+          </label>
+        </div>
+
+        <label class="fit-field">
+          <span>What happened</span>
+          <textarea rows="3" [(ngModel)]="d.summary" id="co-what"
+            placeholder="Facts, in the order they happened."></textarea>
+          <fit-field-error [message]="errors['summary']" for="co-what"></fit-field-error>
+        </label>
+
+        <label class="fit-field">
+          <span>What was done about it at the time</span>
+          <textarea rows="2" [(ngModel)]="d.immediateAction"></textarea>
+        </label>
+
+        <label class="fit-field">
+          <span>Witnesses</span>
+          <input type="text" [(ngModel)]="d.witnessNames" placeholder="Names, if any" />
+        </label>
+
+        <h4 class="co-group">Medical response</h4>
+        <div class="co-checks">
+          <label class="fit-check">
+            <input type="checkbox" [(ngModel)]="d.firstAidGiven" /><span>First aid was given</span>
+          </label>
+          <label class="fit-check">
+            <input type="checkbox" [(ngModel)]="d.aedUsed" /><span>The defibrillator was used</span>
+          </label>
+          <label class="fit-check">
+            <input type="checkbox" [(ngModel)]="d.ambulanceCalled" /><span>An ambulance was called</span>
+          </label>
+          <label class="fit-check">
+            <input type="checkbox" [(ngModel)]="d.hospitalAttended" /><span>They went to hospital</span>
+          </label>
+        </div>
+
+        <h4 class="co-group">Follow-up</h4>
+        <div class="co-checks">
+          <label class="fit-check">
+            <input type="checkbox" [(ngModel)]="d.isReportable" />
+            <span>This is reportable to the authorities</span>
+          </label>
+          <label class="fit-check">
+            <input type="checkbox" [(ngModel)]="d.insurerNotified" />
+            <span>The insurer has been told</span>
+          </label>
+          <label class="fit-check">
+            <input type="checkbox" [(ngModel)]="d.takeEquipmentOutOfService" />
+            <span>Take the equipment involved out of service</span>
+          </label>
+        </div>
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="reporting = false">Cancel</button>
+        <button type="button" class="btn-primary" [disabled]="saving" (click)="saveIncident()">
+          {{ saving ? 'Recording…' : 'Record it' }}
+        </button>
+      </footer>
+    </div>
+  }
+
+  <!-- ── Close an incident ────────────────────────────────────────────── -->
+  @if (closing; as i) {
+    <div class="fit-modal-backdrop" (click)="closing = null"></div>
+    <div class="fit-modal" role="dialog" aria-modal="true" aria-labelledby="co-close-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="co-close-title">Close {{ i.incidentNumber }}</h3>
+          <p class="fit-modal-sub">{{ i.summary }}</p>
+        </div>
+        <button type="button" class="fit-close" (click)="closing = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        <p class="fit-quiet">
+          Both of these are required. An incident closed without them teaches nobody anything, and
+          the same thing happens again.
+        </p>
+
+        <label class="fit-field">
+          <span>Root cause — why did this actually happen?</span>
+          <textarea rows="3" [(ngModel)]="rootCause"
+            placeholder="Not 'member slipped' — why was the floor wet, and why was nobody told."></textarea>
+        </label>
+
+        <label class="fit-field">
+          <span>What has changed so it does not happen again?</span>
+          <textarea rows="3" [(ngModel)]="preventiveAction"></textarea>
+        </label>
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="closing = null">Cancel</button>
+        <button
+          type="button"
+          class="btn-primary"
+          [disabled]="!rootCause.trim() || !preventiveAction.trim() || saving"
+          (click)="confirmClose()"
+        >
+          {{ saving ? 'Closing…' : 'Close the incident' }}
+        </button>
+      </footer>
+    </div>
+  }
+</div>

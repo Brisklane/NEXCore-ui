@@ -1,0 +1,294 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Collections</h2>
+      <p class="subtitle">
+        @if (arrears) {
+          {{ arrears.totalOutstanding | number:'1.0-0' }} {{ arrears.currencyCode }} owed by
+          {{ arrears.memberCount }} member{{ arrears.memberCount === 1 ? '' : 's' }}
+        } @else { Members in arrears, and the ladder chasing them. }
+      </p>
+    </div>
+    <div class="page-header-actions">
+      <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+      <button type="button" class="btn-secondary" (click)="go('/fitness/invoices')">Invoices</button>
+    </div>
+  </div>
+
+  <fit-page-help key="collections"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  @if (loading && !arrears) {
+    <div class="fit-skeleton" style="height: 200px; margin-bottom: 16px"></div>
+    <div class="fit-skeleton" style="height: 320px"></div>
+  }
+
+  @if (arrears; as a) {
+    <div class="cl-top">
+      <!-- ── Ageing ───────────────────────────────────────────────────── -->
+      <section class="fit-card">
+        <header class="fit-card-head">
+          <h3 class="fit-card-title">How old the debt is</h3>
+        </header>
+        <div class="fit-card-body">
+          <div class="fit-bars">
+            @for (b of bands; track b.label) {
+              <div class="fit-bar-row">
+                <div class="fit-bar-head">
+                  <span class="fit-bar-label">{{ b.label }}</span>
+                  <span class="fit-bar-value">
+                    {{ b.amount | number:'1.0-0' }}
+                    <small>{{ bandPercent(b.amount) }}%</small>
+                  </span>
+                </div>
+                <div class="fit-bar-track">
+                  <span class="fit-bar-fill" [class]="b.tone" [style.width.%]="bandPercent(b.amount)"></span>
+                </div>
+              </div>
+            }
+          </div>
+
+          <div class="cl-recovery">
+            <div>
+              <strong>{{ a.recoveredThisMonth | number:'1.0-0' }}</strong>
+              recovered this month
+            </div>
+            <div>
+              <strong>{{ a.recoveryRatePercent }}%</strong>
+              of what was chased
+            </div>
+            <div>
+              <strong>{{ a.openDunningCases }}</strong>
+              cases open
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Why it failed ────────────────────────────────────────────────
+           The most actionable panel on the page: an expired card and a
+           refusal to pay call for completely different responses.          -->
+      <section class="fit-card">
+        <header class="fit-card-head">
+          <h3 class="fit-card-title">Why the payments failed</h3>
+        </header>
+        <div class="fit-card-body">
+          @if (a.byFailureReason.length === 0) {
+            <p class="fit-quiet">Nothing has failed. Which is the point.</p>
+          } @else {
+            <div class="fit-bars">
+              @for (r of a.byFailureReason; track r.label) {
+                <div class="fit-bar-row">
+                  <div class="fit-bar-head">
+                    <span class="fit-bar-label">{{ r.label }}</span>
+                    <span class="fit-bar-value">{{ r.count }}<small>{{ r.percentOfTotal }}%</small></span>
+                  </div>
+                  <div class="fit-bar-track">
+                    <span class="fit-bar-fill" [style.width.%]="r.percentOfTotal"></span>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <p class="cl-note">
+              Most of these are an expired card, not a refusal to pay. A link to update the details
+              usually recovers more than a chasing letter does.
+            </p>
+          }
+        </div>
+      </section>
+    </div>
+
+    <div class="fit-segment cl-tabs" role="tablist" aria-label="Collections sections">
+      <button type="button" role="tab" [class.is-active]="tab === 'arrears'" (click)="tab = 'arrears'">
+        <span class="material-symbols-outlined">group</span>Who owes ({{ a.members.length }})
+      </button>
+      <button type="button" role="tab" [class.is-active]="tab === 'cases'" (click)="tab = 'cases'">
+        <span class="material-symbols-outlined">gavel</span>Cases ({{ cases.length }})
+      </button>
+    </div>
+
+    <!-- ── Who owes ─────────────────────────────────────────────────── -->
+    @if (tab === 'arrears') {
+      @if (a.members.length === 0) {
+        <div class="fit-empty">
+          <span class="material-symbols-outlined fit-empty-icon">check_circle</span>
+          <h3 class="fit-empty-title">Nobody is behind</h3>
+          <p class="fit-empty-text">Every account is up to date.</p>
+        </div>
+      } @else {
+        <div class="fit-rows">
+          @for (m of a.members; track m.memberId) {
+            <div class="fit-row" [class.is-alert]="m.accessSuspended" [class.is-warn]="m.daysOverdue > 30">
+              <span class="fit-row-main">
+                <span class="fit-row-title">
+                  {{ m.memberName }}
+                  @if (m.accessSuspended) { <span class="fit-pill cl-suspended">access suspended</span> }
+                  @if (!m.hasValidPaymentMethod) { <span class="fit-pill cl-nocard">no card on file</span> }
+                </span>
+                <span class="fit-row-sub">
+                  {{ m.memberNumber }} · {{ m.ageBand }}
+                  @if (m.lastFailureReason) { · {{ failureLabels[m.lastFailureReason] }} }
+                  @if (m.dunningStep > 0) { · step {{ m.dunningStep }} of the ladder }
+                </span>
+              </span>
+
+              <span class="fit-row-figure is-debit">
+                <span class="fit-row-figure-value">{{ m.outstanding | number:'1.2-2' }}</span>
+                <span class="fit-row-figure-label">{{ m.daysOverdue }} days</span>
+              </span>
+
+              <span class="fit-row-actions">
+                @if (m.phone) {
+                  <a class="fit-icon-btn" [href]="'tel:' + m.phone" aria-label="Call">
+                    <span class="material-symbols-outlined">call</span>
+                  </a>
+                }
+                <button type="button" class="btn-secondary" (click)="go('/fitness/members/' + m.memberId)">
+                  Open
+                </button>
+                <button type="button" class="btn-primary" (click)="go('/fitness/invoices?memberId=' + m.memberId)">
+                  Take payment
+                </button>
+              </span>
+            </div>
+          }
+        </div>
+      }
+    }
+
+    <!-- ── Cases ────────────────────────────────────────────────────── -->
+    @if (tab === 'cases') {
+      @if (cases.length === 0) {
+        <div class="fit-empty">
+          <span class="material-symbols-outlined fit-empty-icon">gavel</span>
+          <h3 class="fit-empty-title">No open cases</h3>
+          <p class="fit-empty-text">A case opens automatically when a payment fails.</p>
+        </div>
+      } @else {
+        <div class="fit-rows">
+          @for (c of cases; track c.id) {
+            <div class="fit-row cl-case" [class]="caseClass(c)">
+              <span class="fit-row-main">
+                <span class="fit-row-title">
+                  {{ c.memberName }}
+                  <span class="fit-pill">{{ statusLabels[c.status] }}</span>
+                  @if (c.isPaused) { <span class="fit-pill">paused</span> }
+                </span>
+                <span class="fit-row-sub">
+                  {{ c.caseNumber }} · open {{ c.daysOpen }} days ·
+                  step {{ c.currentStep }} of {{ c.totalSteps }}
+                  @if (c.nextAction) { · next: {{ c.nextAction }} }
+                  @if (c.nextStepDueOn) { on {{ c.nextStepDueOn | date:'d MMM' }} }
+                </span>
+                @if (c.pauseReason) { <span class="fit-row-sub">Paused: {{ c.pauseReason }}</span> }
+              </span>
+
+              <span class="fit-row-figure is-debit">
+                <span class="fit-row-figure-value">{{ c.amountOutstanding | number:'1.2-2' }}</span>
+                <span class="fit-row-figure-label">outstanding</span>
+              </span>
+
+              <span class="fit-row-actions cl-case-actions">
+                <button type="button" class="fit-icon-btn" (click)="startAction(c, 'retry')" aria-label="Retry">
+                  <span class="material-symbols-outlined">refresh</span>
+                </button>
+                <button type="button" class="fit-icon-btn" (click)="startAction(c, 'promise')" aria-label="Promise to pay">
+                  <span class="material-symbols-outlined">handshake</span>
+                </button>
+                @if (c.isPaused) {
+                  <button type="button" class="fit-icon-btn" (click)="startAction(c, 'resume')" aria-label="Resume">
+                    <span class="material-symbols-outlined">play_arrow</span>
+                  </button>
+                } @else {
+                  <button type="button" class="fit-icon-btn" (click)="startAction(c, 'pause')" aria-label="Pause">
+                    <span class="material-symbols-outlined">pause</span>
+                  </button>
+                }
+                <button type="button" class="btn-secondary" (click)="go('/fitness/members/' + c.memberId)">
+                  Open
+                </button>
+              </span>
+            </div>
+          }
+        </div>
+      }
+    }
+  }
+
+  <!-- ── Action dialog ─────────────────────────────────────────────── -->
+  @if (acting; as c) {
+    <div class="fit-modal-backdrop" (click)="acting = null"></div>
+    <div class="fit-modal" role="dialog" aria-modal="true" aria-labelledby="cl-action-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="cl-action-title">{{ actionTitle() }}</h3>
+          <p class="fit-modal-sub">
+            {{ c.memberName }} · {{ c.amountOutstanding | number:'1.2-2' }} outstanding
+          </p>
+        </div>
+        <button type="button" class="fit-close" (click)="acting = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        @if (action === 'retry') {
+          <p class="fit-quiet">
+            @if (c.hasValidPaymentMethod) {
+              This tries the stored payment method again. Banks often clear on a retry once the
+              member has topped up.
+            } @else {
+              There is no valid payment method on file, so a retry will fail. Send a card-update
+              link instead, or take payment at the desk.
+            }
+          </p>
+        }
+
+        @if (action === 'promise') {
+          <label class="fit-field">
+            <span>When will they pay?</span>
+            <input type="date" [(ngModel)]="promiseDate" />
+          </label>
+          <p class="fit-quiet">
+            Chasing pauses until that date. Somebody who has told you when they will pay should
+            not get another automated message before then.
+          </p>
+        }
+
+        @if (action === 'writeoff') {
+          <p class="fit-sensitive">
+            <span class="material-symbols-outlined">warning</span>
+            Writing off closes the case and clears the balance. It does not un-cancel a membership,
+            and it cannot be undone from this screen.
+          </p>
+        }
+
+        <label class="fit-field">
+          <span>Note</span>
+          <textarea rows="2" [(ngModel)]="actionNote" placeholder="What was agreed, and with whom."></textarea>
+        </label>
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="acting = null">Cancel</button>
+        @if (action === 'writeoff') {
+          <button type="button" class="btn-warning" [disabled]="saving" (click)="confirmAction()">
+            {{ saving ? 'Saving…' : 'Write it off' }}
+          </button>
+        } @else {
+          <button
+            type="button"
+            class="btn-primary"
+            [disabled]="saving || (action === 'promise' && !promiseDate)"
+            (click)="confirmAction()"
+          >
+            {{ saving ? 'Saving…' : 'Confirm' }}
+          </button>
+        }
+      </footer>
+    </div>
+  }
+</div>

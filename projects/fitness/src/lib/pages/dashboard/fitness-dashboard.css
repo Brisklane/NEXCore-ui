@@ -1,0 +1,347 @@
+/* ── Section headings ────────────────────────────────────────────────── */
+.dash-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 13px;
+  font-size: 14px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  color: var(--text-heading, #0f172a);
+}
+
+.dash-section-title .material-symbols-outlined {
+  font-size: 19px;
+  color: var(--text-secondary, #64748b);
+}
+
+.dash-section-note {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+}
+
+.dash-block {
+  margin-bottom: 18px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-default, #e6eaf0);
+}
+
+/* ── Needs attention ─────────────────────────────────────────────────
+   Ordered by consequence. Severity is carried by an icon, a border and
+   a word — never by colour alone.                                       */
+.dash-attention {
+  margin-bottom: 18px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-default, #e6eaf0);
+}
+
+.dash-attention-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 9px;
+}
+
+.dash-attention-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  min-height: 60px;
+  border-radius: 12px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  border-left: 4px solid var(--text-muted, #94a3b8);
+  background: var(--bg-muted, #f8fafc);
+  text-align: left;
+  cursor: pointer;
+  transition: box-shadow 0.14s ease, transform 0.14s ease;
+}
+
+.dash-attention-item:disabled { cursor: default; }
+.dash-attention-item:not(:disabled):hover { box-shadow: var(--shadow-md, 0 4px 12px rgba(15, 23, 42, 0.1)); }
+.dash-attention-item:not(:disabled):active { transform: translateY(1px); }
+.dash-attention-item:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.dash-attention-item.is-critical {
+  border-left-color: var(--danger, #dc2626);
+  background: var(--danger-bg, #fee2e2);
+}
+
+.dash-attention-item.is-critical .material-symbols-outlined { color: var(--danger-text, #b91c1c); }
+
+.dash-attention-item.is-warning {
+  border-left-color: var(--warning, #f59e0b);
+  background: var(--warning-bg, #fef3c7);
+}
+
+.dash-attention-item.is-warning .material-symbols-outlined { color: var(--warning-text, #b45309); }
+
+.dash-attention-item > .material-symbols-outlined { font-size: 22px; flex-shrink: 0; }
+
+.dash-attention-body { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+
+.dash-attention-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+  line-height: 1.35;
+}
+
+.dash-attention-detail {
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+  line-height: 1.45;
+}
+
+.dash-attention-go { font-size: 18px; color: var(--text-muted, #94a3b8); flex-shrink: 0; }
+
+/* ── Right now ───────────────────────────────────────────────────────── */
+.dash-live {
+  margin-bottom: 18px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-default, #e6eaf0);
+}
+
+.dash-live-head { display: flex; align-items: center; gap: 9px; margin-bottom: 14px; }
+
+.dash-live-head h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  color: var(--text-heading, #0f172a);
+}
+
+.dash-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success, #16a34a);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--success, #16a34a) 20%, transparent);
+}
+
+.dash-live-time {
+  margin-left: auto;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+  font-variant-numeric: tabular-nums;
+}
+
+.dash-live-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(184px, 1fr));
+  gap: 10px;
+}
+
+.dash-live-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 14px 15px;
+  min-height: 108px;
+  border-radius: 13px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-muted, #f8fafc);
+  text-align: left;
+  cursor: pointer;
+  transition: box-shadow 0.14s ease, transform 0.14s ease;
+}
+
+.dash-live-tile:hover { box-shadow: var(--shadow-md, 0 4px 12px rgba(15, 23, 42, 0.1)); }
+.dash-live-tile:active { transform: translateY(1px); }
+.dash-live-tile:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.dash-live-tile.is-alert {
+  border-color: var(--danger-border, rgba(185, 28, 28, 0.3));
+  background: var(--danger-bg, #fee2e2);
+}
+
+.dash-live-tile.is-alert .dash-live-meta { color: var(--danger-text, #b91c1c); font-weight: 700; }
+
+.dash-live-tile > .material-symbols-outlined {
+  font-size: 20px;
+  color: var(--text-secondary, #64748b);
+  margin-bottom: 2px;
+}
+
+.dash-live-value {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.dash-live-value small {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+}
+
+.dash-live-label {
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--text-primary, #1e293b);
+}
+
+.dash-live-meta { font-size: 11.5px; color: var(--text-muted, #94a3b8); line-height: 1.4; }
+
+.dash-live-tile .fit-occupancy-bar { margin-top: 6px; height: 6px; }
+
+/* ── Coming up ───────────────────────────────────────────────────────── */
+.dash-next {
+  margin-bottom: 18px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-default, #e6eaf0);
+}
+
+.dash-next-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px;
+}
+
+/* ── Stat cards ──────────────────────────────────────────────────────── */
+.fit-stat.is-warning { border-color: var(--warning-border, rgba(180, 83, 9, 0.3)); }
+.fit-stat.is-danger { border-color: var(--danger-border, rgba(185, 28, 28, 0.3)); }
+
+.fit-stat-meta.is-up { color: var(--success-text, #15803d); font-weight: 700; }
+.fit-stat-meta.is-down { color: var(--danger-text, #b91c1c); font-weight: 700; }
+
+.fit-stat-value small {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+}
+
+/* ── Sparkline ───────────────────────────────────────────────────────
+   Twelve months of active members. Bars rather than a line, because a
+   bar chart survives being three centimetres tall and a line does not. */
+.dash-spark {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 62px;
+  margin-top: 16px;
+  padding: 0 2px;
+}
+
+.dash-spark-bar {
+  flex: 1;
+  min-width: 6px;
+  border-radius: 3px 3px 0 0;
+  background: var(--accent, #2b7fff);
+  opacity: 0.75;
+  transition: opacity 0.14s ease;
+}
+
+.dash-spark-bar:hover { opacity: 1; }
+
+.dash-spark-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+}
+
+/* ── Revenue streams ─────────────────────────────────────────────────── */
+.dash-streams {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.dash-stream { display: flex; flex-direction: column; gap: 5px; }
+
+.dash-stream-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+
+.dash-stream-label {
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--text-primary, #1e293b);
+}
+
+.dash-stream-value {
+  font-size: 13px;
+  font-weight: 750;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.dash-stream-value small {
+  margin-left: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+}
+
+.dash-stream-bar {
+  height: 7px;
+  border-radius: 999px;
+  background: var(--bg-muted, #f1f5f9);
+  overflow: hidden;
+}
+
+.dash-stream-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent, #2b7fff);
+}
+
+/* ── Hourly visits ───────────────────────────────────────────────────── */
+.dash-hours {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 96px;
+  padding-bottom: 16px;
+  position: relative;
+}
+
+.dash-hour {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  height: 100%;
+  position: relative;
+}
+
+.dash-hour-bar {
+  width: 100%;
+  border-radius: 3px 3px 0 0;
+  background: var(--accent, #2b7fff);
+  opacity: 0.8;
+  min-height: 2px;
+}
+
+.dash-hour-label {
+  position: absolute;
+  bottom: -15px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 640px) {
+  .dash-attention-list,
+  .dash-live-grid,
+  .dash-next-list { grid-template-columns: 1fr; }
+}

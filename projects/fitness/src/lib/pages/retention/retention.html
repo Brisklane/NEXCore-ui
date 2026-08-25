@@ -1,0 +1,289 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Retention</h2>
+      <p class="subtitle">
+        @if (board) {
+          {{ board.atRiskCount + board.criticalCount }} members at risk ·
+          {{ board.valueAtRisk | number:'1.0-0' }} {{ board.currencyCode }} a month
+        } @else { Who is drifting away, and what to do about it. }
+      </p>
+    </div>
+    <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+  </div>
+
+  <fit-page-help key="retention"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  @if (loading && !board) {
+    <div class="fit-skeleton" style="height: 110px; margin-bottom: 16px"></div>
+    <div class="fit-skeleton" style="height: 400px"></div>
+  }
+
+  @if (board; as b) {
+    <!-- ── The four bands ─────────────────────────────────────────────
+         Also the filter. Clicking a band narrows the list to it.       -->
+    <section class="rt-bands" role="group" aria-label="Filter by risk band">
+      <button type="button" class="rt-band" [class.is-selected]="band === null" (click)="filterBand(null)">
+        <span class="rt-band-value">{{ b.healthyCount + b.watchCount + b.atRiskCount + b.criticalCount }}</span>
+        <span class="rt-band-label">Everyone</span>
+      </button>
+
+      <button
+        type="button"
+        class="rt-band is-healthy"
+        [class.is-selected]="band === ChurnRiskBand.Healthy"
+        (click)="filterBand(ChurnRiskBand.Healthy)"
+      >
+        <span class="rt-band-value">{{ b.healthyCount }}</span>
+        <span class="rt-band-label">Healthy</span>
+      </button>
+
+      <button
+        type="button"
+        class="rt-band is-watch"
+        [class.is-selected]="band === ChurnRiskBand.Watch"
+        (click)="filterBand(ChurnRiskBand.Watch)"
+      >
+        <span class="rt-band-value">{{ b.watchCount }}</span>
+        <span class="rt-band-label">Worth watching</span>
+      </button>
+
+      <button
+        type="button"
+        class="rt-band is-atrisk"
+        [class.is-selected]="band === ChurnRiskBand.AtRisk"
+        (click)="filterBand(ChurnRiskBand.AtRisk)"
+      >
+        <span class="rt-band-value">{{ b.atRiskCount }}</span>
+        <span class="rt-band-label">At risk</span>
+      </button>
+
+      <button
+        type="button"
+        class="rt-band is-critical"
+        [class.is-selected]="band === ChurnRiskBand.Critical"
+        (click)="filterBand(ChurnRiskBand.Critical)"
+      >
+        <span class="rt-band-value">{{ b.criticalCount }}</span>
+        <span class="rt-band-label">About to leave</span>
+      </button>
+    </section>
+
+    <!-- ── How the work is going ────────────────────────────────────── -->
+    <section class="rt-summary">
+      <div class="rt-summary-item">
+        <strong>{{ b.contactedThisWeek }}</strong> contacted this week
+      </div>
+      <div class="rt-summary-item">
+        <strong>{{ b.savedThisMonth }}</strong> saved this month
+        @if (b.saveRatePercent > 0) { ({{ b.saveRatePercent }}% of those asked) }
+      </div>
+      <div class="rt-summary-item">
+        <strong>{{ b.recoveredThisMonth | number:'1.0-0' }}</strong> {{ b.currencyCode }} kept
+      </div>
+      @if (b.newlyAtRisk > 0) {
+        <div class="rt-summary-item is-alert">
+          <strong>{{ b.newlyAtRisk }}</strong> got worse since the last scoring
+        </div>
+      }
+      @if (b.lastScoredAt) {
+        <div class="rt-summary-item fit-spacer">
+          Scored {{ b.lastScoredAt | date:'d MMM, HH:mm' }}
+        </div>
+      }
+    </section>
+
+    <div class="fit-segment rt-tabs" role="tablist" aria-label="Retention sections">
+      <button type="button" role="tab" [class.is-active]="tab === 'members'" (click)="tab = 'members'">
+        <span class="material-symbols-outlined">group</span>Members
+      </button>
+      <button type="button" role="tab" [class.is-active]="tab === 'tasks'" (click)="tab = 'tasks'">
+        <span class="material-symbols-outlined">task_alt</span>Tasks ({{ b.openTasks.length }})
+      </button>
+    </div>
+
+    <!-- ── Members ────────────────────────────────────────────────────
+         Every row carries its own reasons, expanded on demand.         -->
+    @if (tab === 'members') {
+      @if (b.members.length === 0) {
+        <div class="fit-empty">
+          <span class="material-symbols-outlined fit-empty-icon">sentiment_satisfied</span>
+          <h3 class="fit-empty-title">Nobody in that band</h3>
+          <p class="fit-empty-text">Which is the outcome this screen exists to produce.</p>
+        </div>
+      } @else {
+        <div class="fit-rows">
+          @for (m of b.members; track m.id) {
+            <div class="rt-member" [class.is-open]="expandedId === m.id">
+              <button type="button" class="rt-member-head" (click)="toggle(m)">
+                <span class="fit-avatar" [class.has-photo]="!!m.photoUrl">
+                  @if (m.photoUrl) { <img [src]="m.photoUrl" [alt]="m.memberName" /> }
+                  @else { {{ initials(m.memberName) }} }
+                </span>
+
+                <span class="rt-member-main">
+                  <span class="rt-member-name">
+                    {{ m.memberName }}
+                    @if (m.bandWorsened) { <span class="fit-pill is-alert">worse</span> }
+                  </span>
+                  <span class="rt-member-reason">
+                    {{ m.headlineReason || lastVisit(m.daysSinceLastVisit) }}
+                  </span>
+                </span>
+
+                <span class="rt-member-figures">
+                  <span class="fit-risk" [class]="bandClass(m.band)">
+                    <span class="fit-risk-dot"></span>{{ riskLabels[m.band] }}
+                  </span>
+                  <span class="rt-member-value">
+                    {{ m.monthlyValue | number:'1.0-0' }}<small>/mo</small>
+                  </span>
+                </span>
+
+                <span class="material-symbols-outlined rt-chevron">
+                  {{ expandedId === m.id ? 'expand_less' : 'expand_more' }}
+                </span>
+              </button>
+
+              @if (expandedId === m.id) {
+                <div class="rt-member-detail">
+                  <div class="rt-detail-facts">
+                    <span>{{ lastVisit(m.daysSinceLastVisit) }}</span>
+                    @if (frequencyNote(m)) { <span>{{ frequencyNote(m) }}</span> }
+                    @if (m.planName) { <span>On {{ m.planName }}</span> }
+                    @if (m.hasUpcomingBooking) { <span>Has something booked</span> }
+                    @else { <span>Nothing booked</span> }
+                    @if (m.daysToContractEnd > 0 && m.daysToContractEnd < 60) {
+                      <span>Contract ends in {{ m.daysToContractEnd }} days</span>
+                    }
+                  </div>
+
+                  <h4 class="rt-detail-title">Why this score</h4>
+                  <ul class="rt-factors">
+                    @for (f of topFactors(m); track f.kind) {
+                      <li>
+                        <span class="rt-factor-weight" [style.width.%]="f.weight"></span>
+                        <span class="rt-factor-text">
+                          {{ f.explanation }}
+                          @if (f.suggestedAction) { <em>{{ f.suggestedAction }}</em> }
+                        </span>
+                      </li>
+                    }
+                  </ul>
+
+                  @if (m.suggestedAction) {
+                    <p class="rt-suggested">
+                      <span class="material-symbols-outlined">tips_and_updates</span>
+                      {{ m.suggestedAction }}
+                    </p>
+                  }
+
+                  <div class="rt-detail-actions">
+                    @if (m.phone) {
+                      <a class="btn-secondary" [href]="'tel:' + m.phone">
+                        <span class="material-symbols-outlined">call</span>Call them
+                      </a>
+                    }
+                    <button type="button" class="btn-secondary" (click)="go('/fitness/members/' + m.memberId)">
+                      Open record
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    }
+
+    <!-- ── Tasks ─────────────────────────────────────────────────────── -->
+    @if (tab === 'tasks') {
+      @if (b.openTasks.length === 0) {
+        <div class="fit-empty">
+          <span class="material-symbols-outlined fit-empty-icon">task_alt</span>
+          <h3 class="fit-empty-title">Nothing outstanding</h3>
+          <p class="fit-empty-text">New tasks are raised automatically when somebody's risk worsens.</p>
+        </div>
+      } @else {
+        <div class="fit-rows">
+          @for (t of b.openTasks; track t.id) {
+            <div class="fit-row" [class.is-alert]="t.isOverdue">
+              <span class="fit-avatar" [class.has-photo]="!!t.photoUrl">
+                @if (t.photoUrl) { <img [src]="t.photoUrl" [alt]="t.memberName" /> }
+                @else { {{ initials(t.memberName) }} }
+              </span>
+
+              <span class="fit-row-main">
+                <span class="fit-row-title">{{ t.title }}</span>
+                <span class="fit-row-sub">
+                  {{ t.memberName }} · due {{ t.dueOn | date:'d MMM' }}
+                  @if (t.isOverdue) { · <strong>overdue</strong> }
+                  @if (t.assignedStaffName) { · {{ t.assignedStaffName }} }
+                </span>
+                @if (t.detail) { <span class="fit-row-sub">{{ t.detail }}</span> }
+              </span>
+
+              <span class="fit-row-actions">
+                @if (t.memberPhone) {
+                  <a class="fit-icon-btn" [href]="'tel:' + t.memberPhone" aria-label="Call">
+                    <span class="material-symbols-outlined">call</span>
+                  </a>
+                }
+                <button type="button" class="btn-secondary" (click)="go('/fitness/members/' + t.memberId)">
+                  Open
+                </button>
+                <button type="button" class="btn-primary" (click)="startComplete(t)">Done</button>
+              </span>
+            </div>
+          }
+        </div>
+      }
+    }
+  }
+
+  <!-- ── Complete a task ────────────────────────────────────────────────
+       Asks what happened, because a task closed with no outcome tells the
+       next person nothing and gets repeated.                             -->
+  @if (completing; as t) {
+    <div class="fit-modal-backdrop" (click)="completing = null"></div>
+    <div class="fit-modal" role="dialog" aria-modal="true" aria-labelledby="rt-done-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="rt-done-title">{{ t.title }}</h3>
+          <p class="fit-modal-sub">{{ t.memberName }}</p>
+        </div>
+        <button type="button" class="fit-close" (click)="completing = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        <label class="fit-field">
+          <span>What happened?</span>
+          <textarea
+            rows="3"
+            [(ngModel)]="outcome"
+            placeholder="e.g. Spoke to her — she's been travelling for work, booked her into Tuesday's spin."
+          ></textarea>
+        </label>
+
+        <label class="fit-check">
+          <input type="checkbox" [(ngModel)]="logOnTimeline" />
+          <span>Add this to the member's timeline</span>
+        </label>
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" [disabled]="saving" (click)="completeTask(true)">
+          Not needed
+        </button>
+        <button type="button" class="btn-primary" [disabled]="saving" (click)="completeTask(false)">
+          {{ saving ? 'Saving…' : 'Mark done' }}
+        </button>
+      </footer>
+    </div>
+  }
+</div>

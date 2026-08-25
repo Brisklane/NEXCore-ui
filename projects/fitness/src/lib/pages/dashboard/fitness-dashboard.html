@@ -1,0 +1,334 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Fitness</h2>
+      <p class="subtitle">
+        @if (data) { {{ data.clubName }} — right now, and how the month is going. }
+        @else { Right now, and how the month is going. }
+      </p>
+    </div>
+    <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+  </div>
+
+  <fit-page-help key="dashboard"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  @if (loading && !data) {
+    <div class="fit-stats">
+      @for (i of [1,2,3,4,5,6]; track i) { <div class="fit-stat fit-skeleton" style="height: 92px"></div> }
+    </div>
+  }
+
+  @if (data; as d) {
+    <!-- ── Needs attention ─────────────────────────────────────────────
+         First, because it is the only part of this screen that asks
+         somebody to do something.                                       -->
+    @if (d.needsAttention.length > 0) {
+      <section class="dash-attention" aria-label="Needs attention">
+        <h3 class="dash-section-title">
+          <span class="material-symbols-outlined">priority_high</span>
+          Needs attention
+        </h3>
+
+        <div class="dash-attention-list">
+          @for (item of d.needsAttention; track item.kind) {
+            <button
+              type="button"
+              class="dash-attention-item"
+              [class.is-critical]="item.severity === 'critical'"
+              [class.is-warning]="item.severity === 'warning'"
+              (click)="item.route ? go(item.route) : null"
+              [disabled]="!item.route"
+            >
+              <span class="material-symbols-outlined">{{ item.icon || 'error' }}</span>
+              <span class="dash-attention-body">
+                <span class="dash-attention-title">{{ item.title }}</span>
+                @if (item.detail) { <span class="dash-attention-detail">{{ item.detail }}</span> }
+              </span>
+              @if (item.route) { <span class="material-symbols-outlined dash-attention-go">chevron_right</span> }
+            </button>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- ── Right now ───────────────────────────────────────────────────
+         The block that stays true only for the next few minutes.        -->
+    <section class="dash-live" aria-label="Right now">
+      <header class="dash-live-head">
+        <span class="dash-live-dot" aria-hidden="true"></span>
+        <h3>Right now</h3>
+        <span class="dash-live-time">Updated {{ d.generatedAt | date:'HH:mm:ss' }}</span>
+      </header>
+
+      <div class="dash-live-grid">
+        <button type="button" class="dash-live-tile" (click)="go('/fitness/front-desk')">
+          <span class="material-symbols-outlined">groups</span>
+          <span class="dash-live-value">
+            {{ d.inClubNow }}@if (d.clubCapacity) { <small>/{{ d.clubCapacity }}</small> }
+          </span>
+          <span class="dash-live-label">In the club</span>
+          <span class="dash-live-meta">{{ d.checkInsToday }} check-ins today</span>
+          @if (d.clubCapacity) {
+            <span class="fit-occupancy-bar">
+              <span
+                class="fit-occupancy-fill"
+                [class]="occupancyClass(d.occupancyPercent)"
+                [style.width.%]="d.occupancyPercent"
+              ></span>
+            </span>
+          }
+        </button>
+
+        <button type="button" class="dash-live-tile" (click)="go('/fitness/timetable')">
+          <span class="material-symbols-outlined">event</span>
+          <span class="dash-live-value">{{ d.classesRemainingToday }}</span>
+          <span class="dash-live-label">Classes still to run</span>
+          <span class="dash-live-meta">
+            @if (d.underFilledClassesToday > 0) {
+              {{ d.underFilledClassesToday }} nearly empty
+            } @else {
+              {{ d.classesToday }} on today
+            }
+          </span>
+        </button>
+
+        <button type="button" class="dash-live-tile" (click)="go('/fitness/appointments')">
+          <span class="material-symbols-outlined">fitness_center</span>
+          <span class="dash-live-value">{{ d.appointmentsToday }}</span>
+          <span class="dash-live-label">Sessions today</span>
+          <span class="dash-live-meta">personal training and inductions</span>
+        </button>
+
+        <button
+          type="button"
+          class="dash-live-tile"
+          [class.is-alert]="d.leadsBreachingSla > 0"
+          (click)="go('/fitness/leads')"
+        >
+          <span class="material-symbols-outlined">forum</span>
+          <span class="dash-live-value">{{ d.openLeads }}</span>
+          <span class="dash-live-label">Open enquiries</span>
+          <span class="dash-live-meta">
+            @if (d.leadsBreachingSla > 0) { {{ d.leadsBreachingSla }} waiting too long }
+            @else { all answered in time }
+          </span>
+        </button>
+
+        <button type="button" class="dash-live-tile" (click)="go('/fitness/retention')">
+          <span class="material-symbols-outlined">task_alt</span>
+          <span class="dash-live-value">{{ d.tasksDueToday }}</span>
+          <span class="dash-live-label">Tasks due</span>
+          <span class="dash-live-meta">retention and follow-ups</span>
+        </button>
+
+        <button type="button" class="dash-live-tile" (click)="go('/fitness/pos')">
+          <span class="material-symbols-outlined">payments</span>
+          <span class="dash-live-value">{{ d.takingsToday | number:'1.0-0' }}</span>
+          <span class="dash-live-label">Taken today</span>
+          <span class="dash-live-meta">{{ d.currencyCode }}, all methods</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ── Next classes ────────────────────────────────────────────────
+         What is about to happen, so an under-booked class can still be
+         filled while there is time to fill it.                          -->
+    @if (d.nextClasses.length > 0) {
+      <section class="dash-next" aria-label="Coming up">
+        <h3 class="dash-section-title">
+          <span class="material-symbols-outlined">schedule</span>
+          Coming up
+        </h3>
+
+        <div class="dash-next-list">
+          @for (c of d.nextClasses; track c.id) {
+            <button
+              type="button"
+              class="fit-class"
+              [style.border-left-color]="c.colourHex || 'var(--accent, #2b7fff)'"
+              (click)="go('/fitness/classes/' + c.id)"
+            >
+              <span class="fit-class-time">{{ c.startsAt | date:'HH:mm' }} · {{ c.durationMinutes }} min</span>
+              <span class="fit-class-name">{{ c.classTypeName }}</span>
+              <span class="fit-class-meta">
+                {{ c.instructorName || 'No instructor' }}@if (c.roomName) { · {{ c.roomName }} }
+              </span>
+              <span
+                class="fit-class-fill"
+                [class.is-full]="c.fillPercent >= 100"
+                [class.is-quiet]="c.fillPercent < 35"
+              >
+                <span class="fit-class-fill-bar">
+                  <span [style.width.%]="c.fillPercent > 100 ? 100 : c.fillPercent"></span>
+                </span>
+                {{ c.bookedCount }}/{{ c.capacity }}
+              </span>
+            </button>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- ── Membership ──────────────────────────────────────────────────-->
+    <section class="dash-block" aria-label="Membership">
+      <h3 class="dash-section-title">
+        <span class="material-symbols-outlined">badge</span>
+        Membership
+      </h3>
+
+      <div class="fit-stats">
+        <div class="fit-stat">
+          <span class="fit-stat-label">Active members</span>
+          <span class="fit-stat-value">{{ d.activeMembers | number }}</span>
+          <span class="fit-stat-meta" [class]="trendClass(d.netGrowth)">
+            {{ d.netGrowth > 0 ? '+' : '' }}{{ d.netGrowth }} this month
+          </span>
+        </div>
+
+        <div class="fit-stat">
+          <span class="fit-stat-label">Joined this month</span>
+          <span class="fit-stat-value">{{ d.joinsThisMonth | number }}</span>
+          <span class="fit-stat-meta">{{ d.toursThisMonth }} tours, {{ d.leadConversionPercent }}% converted</span>
+        </div>
+
+        <div class="fit-stat">
+          <span class="fit-stat-label">Left this month</span>
+          <span class="fit-stat-value">{{ d.cancellationsThisMonth | number }}</span>
+          <span class="fit-stat-meta" [class]="trendClass(d.churnRatePercent - d.churnRateLastMonth, false)">
+            {{ d.churnRatePercent }}% churn, was {{ d.churnRateLastMonth }}%
+          </span>
+        </div>
+
+        <div class="fit-stat">
+          <span class="fit-stat-label">Frozen</span>
+          <span class="fit-stat-value">{{ d.frozenMembers | number }}</span>
+          <span class="fit-stat-meta">{{ d.trialMembers }} on trial</span>
+        </div>
+
+        <div class="fit-stat" [class.is-warning]="d.pastDueMembers > 0">
+          <span class="fit-stat-label">In arrears</span>
+          <span class="fit-stat-value">{{ d.pastDueMembers | number }}</span>
+          <span class="fit-stat-meta">{{ d.outstandingBalance | number:'1.2-2' }} {{ d.currencyCode }} owed</span>
+        </div>
+
+        <div class="fit-stat" [class.is-danger]="d.criticalRiskMembers > 0">
+          <span class="fit-stat-label">At risk of leaving</span>
+          <span class="fit-stat-value">{{ d.atRiskMembers + d.criticalRiskMembers | number }}</span>
+          <span class="fit-stat-meta">
+            {{ d.valueAtRisk | number:'1.0-0' }} {{ d.currencyCode }} a month between them
+          </span>
+        </div>
+      </div>
+
+      @if (d.memberTrend.length > 0) {
+        <div class="dash-spark" aria-label="Active members over the last twelve months">
+          @for (p of d.memberTrend; track p.period) {
+            <span
+              class="dash-spark-bar"
+              [style.height.%]="barHeight(d.memberTrend, p.value)"
+              [attr.title]="p.label + ': ' + p.value + ' active, ' + p.secondaryValue + ' joined, ' + p.count + ' left'"
+            ></span>
+          }
+        </div>
+        <div class="dash-spark-axis">
+          <span>{{ d.memberTrend[0].label }}</span>
+          <span>Active members</span>
+          <span>{{ d.memberTrend[d.memberTrend.length - 1].label }}</span>
+        </div>
+      }
+    </section>
+
+    <!-- ── Money ───────────────────────────────────────────────────────-->
+    <section class="dash-block" aria-label="Money">
+      <h3 class="dash-section-title">
+        <span class="material-symbols-outlined">account_balance</span>
+        Money
+      </h3>
+
+      <div class="fit-stats">
+        <div class="fit-stat">
+          <span class="fit-stat-label">Monthly recurring revenue</span>
+          <span class="fit-stat-value">{{ d.monthlyRecurringRevenue | number:'1.0-0' }}</span>
+          <span class="fit-stat-meta" [class]="trendClass(d.mrrChangePercent)">
+            {{ signed(d.mrrChangePercent) }} on last month
+          </span>
+        </div>
+
+        <div class="fit-stat">
+          <span class="fit-stat-label">Collected this month</span>
+          <span class="fit-stat-value">{{ d.collectedThisMonth | number:'1.0-0' }}</span>
+          <span class="fit-stat-meta" [class]="trendClass(d.revenueChangePercent)">
+            {{ signed(d.revenueChangePercent) }} on last month
+          </span>
+        </div>
+
+        <div class="fit-stat" [class.is-warning]="d.collectionRatePercent < 95">
+          <span class="fit-stat-label">Collection rate</span>
+          <span class="fit-stat-value">{{ d.collectionRatePercent }}%</span>
+          <span class="fit-stat-meta">
+            {{ d.collectedThisMonth | number:'1.0-0' }} of {{ d.billedThisMonth | number:'1.0-0' }} billed
+          </span>
+        </div>
+
+        <div class="fit-stat">
+          <span class="fit-stat-label">Average per member</span>
+          <span class="fit-stat-value">{{ d.averageRevenuePerMember | number:'1.2-2' }}</span>
+          <span class="fit-stat-meta">{{ d.currencyCode }} a month</span>
+        </div>
+
+        <div class="fit-stat">
+          <span class="fit-stat-label">Net promoter score</span>
+          <span class="fit-stat-value">{{ d.nps }}</span>
+          <span class="fit-stat-meta">last 90 days</span>
+        </div>
+
+        <div class="fit-stat">
+          <span class="fit-stat-label">Median reply time</span>
+          <span class="fit-stat-value">{{ d.medianResponseMinutes }}<small> min</small></span>
+          <span class="fit-stat-meta">to a new enquiry</span>
+        </div>
+      </div>
+
+      @if (d.revenueByStream.length > 0) {
+        <div class="dash-streams">
+          @for (s of d.revenueByStream; track s.label) {
+            <div class="dash-stream">
+              <div class="dash-stream-head">
+                <span class="dash-stream-label">{{ s.label }}</span>
+                <span class="dash-stream-value">
+                  {{ s.amount | number:'1.0-0' }}
+                  <small>{{ s.percentOfTotal }}%</small>
+                </span>
+              </div>
+              <div class="dash-stream-bar"><span [style.width.%]="s.percentOfTotal"></span></div>
+            </div>
+          }
+        </div>
+      }
+    </section>
+
+    <!-- ── When people come ────────────────────────────────────────────
+         The shape of the day. Useful for staffing, and for knowing which
+         classes are competing with the busiest gym-floor hours.          -->
+    @if (d.visitsByHour.length > 0) {
+      <section class="dash-block" aria-label="Visits by hour">
+        <h3 class="dash-section-title">
+          <span class="material-symbols-outlined">bar_chart</span>
+          When people came in today
+          <span class="dash-section-note">Busiest at {{ hourLabel(peakHour()) }}</span>
+        </h3>
+
+        <div class="dash-hours">
+          @for (h of d.visitsByHour; track h.hour) {
+            <div class="dash-hour" [attr.title]="hourLabel(h.hour) + ': ' + h.visits + ' check-ins'">
+              <span class="dash-hour-bar" [style.height.%]="visitBarHeight(h.visits)"></span>
+              @if (h.hour % 3 === 0) { <span class="dash-hour-label">{{ h.hour }}</span> }
+            </div>
+          }
+        </div>
+      </section>
+    }
+  }
+</div>

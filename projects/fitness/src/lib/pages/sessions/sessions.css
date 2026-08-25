@@ -1,0 +1,113 @@
+.ss-filters { margin-bottom: 14px; }
+.ss-expiring { display: flex; flex-direction: column; gap: 4px; }
+.ss-expired { background: var(--danger-bg, #fee2e2); color: var(--danger-text, #b91c1c); }
+.ss-soon { background: var(--warning-bg, #fef3c7); color: var(--warning-text, #b45309); }
+
+.ss-progress {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 6px;
+  max-width: 300px;
+}
+
+.ss-progress small {
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Selling ─────────────────────────────────────────────────────────── */
+.ss-member {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 16px;
+  padding: 8px 9px 8px 13px;
+  border-radius: 999px;
+  background: var(--accent-soft, rgba(43, 127, 255, 0.1));
+  border: 1px solid var(--accent-border, rgba(43, 127, 255, 0.3));
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+}
+
+.ss-member .material-symbols-outlined { font-size: 17px; color: var(--accent, #2b7fff); }
+.ss-member > span:nth-child(2) { flex: 1; }
+
+.ss-search { position: relative; margin-bottom: 16px; }
+
+.ss-results {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  border-radius: 11px;
+  background: var(--bg-elevated, #fff);
+  border: 1px solid var(--border-default, #e6eaf0);
+  box-shadow: var(--shadow-lg, 0 10px 30px rgba(15, 23, 42, 0.14));
+}
+
+.ss-results button {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 8px 11px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ss-results button:hover { background: var(--bg-muted, #f1f5f9); }
+.ss-results strong { font-size: 12.5px; color: var(--text-heading, #0f172a); }
+.ss-results span { font-size: 11px; color: var(--text-muted, #94a3b8); }
+
+/* Per-session price shown on every card, because that is how a member
+   compares a five-pack with a ten-pack.                               */
+.ss-packs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 9px;
+  margin-bottom: 16px;
+}
+
+.ss-pack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 13px 15px;
+  min-height: 104px;
+  border-radius: 13px;
+  border: 2px solid var(--border-default, #e6eaf0);
+  background: var(--bg-surface, #fff);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ss-pack:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.ss-pack.is-chosen {
+  border-color: var(--accent, #2b7fff);
+  background: var(--accent-soft, rgba(43, 127, 255, 0.06));
+}
+
+.ss-pack-name { font-size: 12.5px; font-weight: 750; color: var(--text-heading, #0f172a); }
+
+.ss-pack-price {
+  font-size: 21px;
+  font-weight: 800;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.ss-pack-per { font-size: 11.5px; font-weight: 650; color: var(--accent, #2b7fff); }
+.ss-pack-valid { font-size: 11px; color: var(--text-muted, #94a3b8); }
+
+.ss-method { max-width: 240px; }

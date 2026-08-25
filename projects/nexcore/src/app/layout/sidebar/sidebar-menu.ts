@@ -784,6 +784,107 @@ export function expandToRoute(nodes: SidebarChild[] | undefined, url: string): v
         ],
       },
       {
+        label: 'Fitness',
+        iconType: 'app',
+        appKey: 'fitness',
+        moduleImage: 'images/hr.svg',
+        expanded: false,
+        /**
+         * Grouped by who does the work, not by data model. **Running the day** is what the desk
+         * touches during a shift; **Members** is the record everything hangs off; **Activity** is
+         * what the club actually sells; **Money** is what has to collect; **Growing** is sales and
+         * retention; **The building** is the physical estate; **Setup** is configured once and
+         * left alone. That split is also how roles land later: a receptionist sees the first two
+         * groups, an owner sees all of it.
+         */
+        children: [
+          { label: 'Dashboard', route: '/fitness/dashboard', icon: 'dashboard' },
+          {
+            label: 'Running the day',
+            icon: 'concierge',
+            expanded: false,
+            children: [
+              { label: 'Front Desk', route: '/fitness/front-desk', icon: 'support_agent' },
+              { label: 'Self Check-in', route: '/fitness/kiosk', icon: 'tablet' },
+              { label: 'Households', route: '/fitness/households', icon: 'family_restroom' },
+              { label: 'Timetable', route: '/fitness/timetable', icon: 'calendar_month' },
+              { label: 'Trainer Diary', route: '/fitness/appointments', icon: 'fitness_center' },
+              { label: 'Pro Shop', route: '/fitness/pos', icon: 'storefront' },
+            ],
+          },
+          {
+            label: 'Members',
+            icon: 'group',
+            expanded: false,
+            children: [
+              { label: 'Members', route: '/fitness/members', icon: 'badge' },
+              { label: 'Join Someone', route: '/fitness/join', icon: 'person_add' },
+              { label: 'Memberships', route: '/fitness/agreements', icon: 'contract' },
+              { label: 'Assessments', route: '/fitness/assessments', icon: 'monitor_weight' },
+            ],
+          },
+          {
+            label: 'Activity',
+            icon: 'sports_gymnastics',
+            expanded: false,
+            children: [
+              { label: 'Schedule Builder', route: '/fitness/schedule', icon: 'edit_calendar' },
+              { label: 'Class Types & Rooms', route: '/fitness/setup/classes', icon: 'sports_gymnastics' },
+              { label: 'Sessions & Credits', route: '/fitness/sessions', icon: 'confirmation_number' },
+              { label: 'Programming', route: '/fitness/programming', icon: 'list_alt' },
+              { label: 'Leaderboards', route: '/fitness/leaderboards', icon: 'leaderboard' },
+            ],
+          },
+          {
+            label: 'Money',
+            icon: 'payments',
+            expanded: false,
+            children: [
+              { label: 'Billing Runs', route: '/fitness/billing', icon: 'sync_alt' },
+              { label: 'Invoices', route: '/fitness/invoices', icon: 'receipt_long' },
+              { label: 'Collections', route: '/fitness/collections', icon: 'credit_card_off' },
+              { label: 'Commission', route: '/fitness/commission', icon: 'percent' },
+              { label: 'Corporate', route: '/fitness/corporate', icon: 'domain' },
+            ],
+          },
+          {
+            label: 'Growing the club',
+            icon: 'trending_up',
+            expanded: false,
+            children: [
+              { label: 'Enquiries', route: '/fitness/leads', icon: 'forum' },
+              { label: 'Retention', route: '/fitness/retention', icon: 'favorite' },
+              { label: 'Marketing', route: '/fitness/marketing', icon: 'campaign' },
+              { label: 'Loyalty & Challenges', route: '/fitness/loyalty', icon: 'workspace_premium' },
+            ],
+          },
+          {
+            label: 'The building',
+            icon: 'apartment',
+            expanded: false,
+            children: [
+              { label: 'Access Control', route: '/fitness/access', icon: 'sensor_door' },
+              { label: 'Lockers & Courts', route: '/fitness/facilities', icon: 'lock' },
+              { label: 'Equipment', route: '/fitness/equipment', icon: 'build' },
+              { label: 'Incidents & Safety', route: '/fitness/compliance', icon: 'health_and_safety' },
+              { label: 'Waivers & Screening', route: '/fitness/waivers', icon: 'assignment_turned_in' },
+            ],
+          },
+          {
+            label: 'Setup',
+            icon: 'settings',
+            expanded: false,
+            children: [
+              { label: 'Plans & Pricing', route: '/fitness/plans', icon: 'sell' },
+              { label: 'Clubs & Rooms', route: '/fitness/clubs', icon: 'business' },
+              { label: 'Staff & Rota', route: '/fitness/staff', icon: 'badge' },
+              { label: 'Reports', route: '/fitness/reports', icon: 'insights' },
+              { label: 'Settings', route: '/fitness/settings', icon: 'tune' },
+            ],
+          },
+        ],
+      },
+      {
         label: 'Distribution',
         iconType: 'app',
         appKey: 'distribution',

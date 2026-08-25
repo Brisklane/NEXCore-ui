@@ -1,0 +1,252 @@
+.pg-tabs { margin-bottom: 14px; }
+.pg-toolbar { margin-bottom: 14px; }
+.pg-week { display: flex; align-items: center; gap: 6px; }
+.pg-week-label { min-width: 200px; justify-content: center; }
+.pg-note { margin-top: 14px; max-width: 80ch; }
+.pg-benchmark { background: var(--success-bg, #dcfce7); color: var(--success-text, #15803d); }
+
+/* ── A day on the week grid ──────────────────────────────────────────
+   Drafts are dashed and dimmed rather than hidden, so a coach can see
+   what is still unpublished at a glance.                              */
+.pg-day {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 11px 12px;
+  border-radius: 11px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  border-left: 4px solid var(--accent, #2b7fff);
+  background: var(--bg-surface, #fff);
+}
+
+.pg-day.is-draft { border-style: dashed; background: var(--bg-muted, #f8fafc); }
+
+.pg-day-track {
+  font-size: 10.5px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.pg-day-workout {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+  line-height: 1.35;
+}
+
+.pg-day-brief {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-secondary, #64748b);
+}
+
+.pg-day-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-subtle, #f1f5f9);
+}
+
+.pg-day-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-muted, #94a3b8);
+}
+
+.pg-day-state.is-live { color: var(--success-text, #15803d); }
+.pg-day-state .material-symbols-outlined { font-size: 14px; }
+
+.pg-day-results {
+  margin-left: auto;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-secondary, #64748b);
+}
+
+.pg-day-foot .btn-link { margin-left: auto; }
+
+/* ── The board ───────────────────────────────────────────────────────
+   Deliberately large type: this is what gets put on a screen on the wall
+   and read from the other side of the room.                            */
+.pg-board {
+  display: grid;
+  grid-template-columns: 1fr minmax(260px, 320px);
+  gap: 16px;
+  align-items: start;
+}
+
+.pg-board-main { display: flex; flex-direction: column; gap: 14px; }
+
+.pg-board-track {
+  padding: 20px 24px;
+  border-radius: 16px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  border-left: 6px solid var(--accent, #2b7fff);
+  background: var(--bg-surface, #fff);
+}
+
+.pg-board-name {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.pg-board-workout {
+  margin: 0 0 12px;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-heading, #0f172a);
+}
+
+.pg-board-summary {
+  margin: 0 0 16px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary, #64748b);
+}
+
+.pg-section { margin-bottom: 18px; }
+
+.pg-section h4 {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin: 0 0 9px;
+  font-size: 14px;
+  font-weight: 750;
+  color: var(--text-heading, #0f172a);
+}
+
+.pg-section h4 small {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.pg-movements { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+
+.pg-movements li {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  flex-wrap: wrap;
+  padding: 6px 0;
+  font-size: 15px;
+  color: var(--text-primary, #1e293b);
+}
+
+.pg-move-prescription {
+  min-width: 62px;
+  font-weight: 800;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.pg-move-name { font-weight: 600; }
+.pg-move-load { font-weight: 700; color: var(--accent, #2b7fff); }
+
+.pg-move-scale {
+  width: 100%;
+  padding-left: 71px;
+  font-size: 11.5px;
+  font-style: italic;
+  color: var(--text-muted, #94a3b8);
+}
+
+.pg-section-note {
+  margin: 9px 0 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-secondary, #64748b);
+}
+
+.pg-cap {
+  margin: 14px 0 0;
+  padding: 8px 13px;
+  border-radius: 9px;
+  background: var(--warning-bg, #fef3c7);
+  font-size: 13px;
+  font-weight: 750;
+  color: var(--warning-text, #b45309);
+}
+
+.pg-brief {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 11px 14px;
+  border-radius: 10px;
+  background: var(--accent-soft, rgba(43, 127, 255, 0.08));
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-primary, #1e293b);
+}
+
+.pg-brief .material-symbols-outlined { font-size: 18px; color: var(--accent, #2b7fff); flex-shrink: 0; }
+
+/* ── Today's scores ──────────────────────────────────────────────────── */
+.pg-board-side {
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-surface, #fff);
+  position: sticky;
+  top: 12px;
+}
+
+.pg-scores { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+
+.pg-scores li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 11px;
+  border-radius: 9px;
+  background: var(--bg-muted, #f8fafc);
+}
+
+.pg-score-rank {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent-soft, rgba(43, 127, 255, 0.15));
+  color: var(--accent, #2b7fff);
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+.pg-scores li:first-child .pg-score-rank { background: var(--warning, #f59e0b); color: #fff; }
+
+.pg-score-name { flex: 1; font-size: 13px; font-weight: 650; color: var(--text-heading, #0f172a); }
+.pg-score-name small { margin-left: 6px; font-size: 10px; color: var(--text-muted, #94a3b8); }
+
+.pg-score-value {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.pg-optout { margin-top: 12px; font-size: 11px; }
+
+@media (max-width: 960px) {
+  .pg-board { grid-template-columns: 1fr; }
+  .pg-board-side { position: static; }
+}

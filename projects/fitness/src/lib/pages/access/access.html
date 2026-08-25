@@ -1,0 +1,285 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Access control</h2>
+      <p class="subtitle">Doors, controllers and who gets through them.</p>
+    </div>
+    <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+  </div>
+
+  <fit-page-help key="access"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <!-- ── Offline controllers ────────────────────────────────────────────
+       Loud, because a barrier nobody knows is broken is a barrier that
+       gets propped open with a fire extinguisher.                        -->
+  @if (offlineControllers.length > 0) {
+    <div class="alert alert-error ac-offline">
+      <strong>
+        {{ offlineControllers.length }} controller{{ offlineControllers.length === 1 ? '' : 's' }} offline.
+      </strong>
+      <span>
+        The doors on them are deciding from their own cache. Members may be stuck outside, or
+        walking in unrecorded.
+      </span>
+    </div>
+  }
+
+  <div class="fit-segment ac-tabs" role="tablist" aria-label="Access sections">
+    <button type="button" role="tab" [class.is-active]="tab === 'events'" (click)="tab = 'events'">
+      <span class="material-symbols-outlined">list_alt</span>Event log
+    </button>
+    <button type="button" role="tab" [class.is-active]="tab === 'doors'" (click)="tab = 'doors'">
+      <span class="material-symbols-outlined">sensor_door</span>Doors &amp; hardware
+    </button>
+    <button type="button" role="tab" [class.is-active]="tab === 'rules'" (click)="tab = 'rules'">
+      <span class="material-symbols-outlined">rule</span>Rules
+    </button>
+  </div>
+
+  <!-- ── Event log ────────────────────────────────────────────────────── -->
+  @if (tab === 'events') {
+    <div class="fit-toolbar ac-filters">
+      <div class="fit-segment" role="group" aria-label="Filter events">
+        @for (f of [
+          { v: null, l: 'Everything' },
+          { v: AccessDecision.Granted, l: 'Let in' },
+          { v: AccessDecision.Denied, l: 'Refused' },
+          { v: AccessDecision.ManualOverride, l: 'Overridden' }
+        ]; track f.l) {
+          <button
+            type="button"
+            [class.is-active]="decisionFilter === f.v"
+            (click)="decisionFilter = f.v; load()"
+          >{{ f.l }}</button>
+        }
+      </div>
+    </div>
+
+    @if (loading) {
+      <div class="fit-rows">
+        @for (i of [1,2,3,4,5]; track i) { <div class="fit-skeleton" style="height: 56px"></div> }
+      </div>
+    } @else if (events.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">sensor_door</span>
+        <h3 class="fit-empty-title">Nothing recorded</h3>
+        <p class="fit-empty-text">Every tap on a reader appears here, whether it opened or not.</p>
+      </div>
+    } @else {
+      <div class="fit-rows">
+        @for (e of events; track e.id) {
+          <div class="fit-row ac-event" [class]="decisionClass(e)">
+            <span class="ac-event-time">{{ e.occurredAt | date:'d MMM, HH:mm:ss' }}</span>
+
+            <span class="fit-row-main">
+              <span class="fit-row-title">
+                {{ e.memberName || e.staffName || e.credentialIdentifier || 'Unknown credential' }}
+                <span class="fit-pill">{{ decisionLabels[e.decision] }}</span>
+                @if (e.wasOfflineDecision) { <span class="fit-pill">decided offline</span> }
+              </span>
+              <span class="fit-row-sub">
+                {{ eventReason(e) }}
+                @if (e.doorName) { · {{ e.doorName }} }
+                @if (e.overriddenByName) { · overridden by {{ e.overriddenByName }} }
+              </span>
+            </span>
+
+            <span class="fit-row-figure">
+              <span class="fit-row-figure-value">{{ e.decisionMs }}<small>ms</small></span>
+              <span class="fit-row-figure-label">{{ directionLabels[e.direction] }}</span>
+            </span>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ── Doors and hardware ───────────────────────────────────────────── -->
+  @if (tab === 'doors') {
+    <h3 class="fit-section-title">
+      <span class="material-symbols-outlined">router</span>
+      Controllers
+    </h3>
+
+    @if (controllers.length === 0) {
+      <p class="fit-quiet">No controllers configured. Doors will need opening by hand.</p>
+    } @else {
+      <div class="fit-rows ac-controllers">
+        @for (c of controllers; track c.id) {
+          <div class="fit-row" [class.is-alert]="!c.isOnline" [class.is-good]="c.isOnline">
+            <span class="fit-row-main">
+              <span class="fit-row-title">
+                {{ c.name }}
+                <span class="fit-pill" [class.ac-online]="c.isOnline" [class.ac-down]="!c.isOnline">
+                  {{ c.isOnline ? 'online' : 'offline' }}
+                </span>
+              </span>
+              <span class="fit-row-sub">
+                @if (c.vendor) { {{ c.vendor }} }
+                @if (c.model) { {{ c.model }} }
+                @if (c.ipAddress) { · {{ c.ipAddress }} }
+                · heard from {{ heartbeat(c) }}
+                @if (c.pendingEventCount > 0) { · {{ c.pendingEventCount }} events waiting to replay }
+              </span>
+            </span>
+
+            <span class="fit-row-figure">
+              <span class="fit-row-figure-value">{{ c.doors.length }}</span>
+              <span class="fit-row-figure-label">doors</span>
+            </span>
+
+            <span class="fit-row-figure">
+              <span class="fit-row-figure-value">{{ c.cacheSeconds }}<small>s</small></span>
+              <span class="fit-row-figure-label">offline cache</span>
+            </span>
+          </div>
+        }
+      </div>
+    }
+
+    <h3 class="fit-section-title ac-doors-title">
+      <span class="material-symbols-outlined">sensor_door</span>
+      Doors
+    </h3>
+
+    @if (doors.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">door_front</span>
+        <p class="fit-empty-text">No doors configured yet.</p>
+      </div>
+    } @else {
+      <div class="fit-rows">
+        @for (d of doors; track d.id) {
+          <div class="fit-row" [class.is-warn]="d.isHeldOpen" [class.is-alert]="!d.controllerOnline">
+            <span class="fit-row-main">
+              <span class="fit-row-title">
+                {{ d.name }}
+                <span class="fit-pill">{{ directionLabels[d.direction] }}</span>
+                @if (d.staffOnly) { <span class="fit-pill">staff only</span> }
+                @if (d.requiresClassBooking) { <span class="fit-pill">needs a class booking</span> }
+                @if (d.isHeldOpen) { <span class="fit-pill ac-held">held open</span> }
+              </span>
+              <span class="fit-row-sub">
+                {{ d.controllerName || 'No controller' }}
+                @if (d.areaName) { · {{ d.areaName }} }
+                @if (d.countsOccupancy) { · counts occupancy }
+                @if (d.isHeldOpen && d.heldOpenReason) { · {{ d.heldOpenReason }} }
+              </span>
+            </span>
+
+            <span class="fit-row-figure">
+              <span class="fit-row-figure-value">{{ d.entriesToday }}</span>
+              <span class="fit-row-figure-label">in today</span>
+            </span>
+
+            <span class="fit-row-figure" [class.is-debit]="d.denialsToday > 0">
+              <span class="fit-row-figure-value">{{ d.denialsToday }}</span>
+              <span class="fit-row-figure-label">refused</span>
+            </span>
+
+            <span class="fit-row-actions">
+              <button type="button" class="btn-warning" (click)="releasing = d; releaseReason = ''">
+                Hold open
+              </button>
+            </span>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ── Rules ────────────────────────────────────────────────────────── -->
+  @if (tab === 'rules') {
+    @if (rules.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">rule</span>
+        <p class="fit-empty-text">No access rules yet.</p>
+      </div>
+    } @else {
+      <div class="fit-grid">
+        @for (r of rules; track r.id) {
+          <section class="fit-card">
+            <header class="fit-card-head">
+              <h3 class="fit-card-title">{{ r.name }}</h3>
+              @if (r.isDefault) { <span class="fit-pill">default</span> }
+            </header>
+            <div class="fit-card-body">
+              <dl class="fit-dl">
+                <div>
+                  <dt>Owes more than</dt>
+                  <dd>
+                    @if (r.balanceThreshold != null) { {{ r.balanceThreshold | number:'1.2-2' }} — refused }
+                    @else { no limit }
+                  </dd>
+                </div>
+                <div><dt>Waiver required</dt><dd>{{ r.requiresWaiver ? 'yes' : 'no' }}</dd></div>
+                <div><dt>Medical clearance</dt><dd>{{ r.requiresMedicalClearance ? 'required' : 'not required' }}</dd></div>
+                <div><dt>Respects capacity</dt><dd>{{ r.respectsOccupancyCap ? 'yes' : 'no' }}</dd></div>
+                @if (r.minimumAge) { <div><dt>Minimum age</dt><dd>{{ r.minimumAge }}</dd></div> }
+                @if (r.maxVisitsPerPeriod > 0) {
+                  <div><dt>Visit limit</dt><dd>{{ r.maxVisitsPerPeriod }}</dd></div>
+                }
+              </dl>
+
+              @if (r.windows.length > 0) {
+                <h4 class="ac-windows-title">When it applies</h4>
+                <ul class="ac-windows">
+                  @for (w of r.windows; track w.id) {
+                    <li>
+                      <strong>{{ w.label || 'Window' }}</strong>
+                      <span>{{ w.startsAt }}–{{ w.endsAt }}</span>
+                    </li>
+                  }
+                </ul>
+              }
+            </div>
+          </section>
+        }
+      </div>
+    }
+  }
+
+  <!-- ── Hold-open dialog ───────────────────────────────────────────── -->
+  @if (releasing; as d) {
+    <div class="fit-modal-backdrop" (click)="releasing = null"></div>
+    <div class="fit-modal" role="dialog" aria-modal="true" aria-labelledby="ac-hold-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="ac-hold-title">Hold {{ d.name }} open</h3>
+          <p class="fit-modal-sub">Anyone can walk through until it is closed again.</p>
+        </div>
+        <button type="button" class="fit-close" (click)="releasing = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        <p class="fit-sensitive">
+          <span class="material-symbols-outlined">badge</span>
+          Holding a door open is recorded against your name with the reason you give.
+        </p>
+
+        <label class="fit-field">
+          <span>Why?</span>
+          <textarea rows="2" [(ngModel)]="releaseReason"
+            placeholder="e.g. Delivery, 10 minutes"></textarea>
+        </label>
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="releasing = null">Cancel</button>
+        <button
+          type="button"
+          class="btn-warning"
+          [disabled]="releaseReason.trim().length < 3 || saving"
+          (click)="release()"
+        >
+          {{ saving ? 'Releasing…' : 'Hold it open' }}
+        </button>
+      </footer>
+    </div>
+  }
+</div>

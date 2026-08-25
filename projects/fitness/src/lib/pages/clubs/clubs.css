@@ -1,0 +1,40 @@
+.cb-modal { max-width: 780px; }
+.cb-tabs { margin-bottom: 16px; }
+.cb-wide { grid-column: 1 / -1; }
+
+.cb-group {
+  margin: 22px 0 11px;
+  font-size: 11.5px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.cb-checks { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+
+.cb-closed {
+  background: var(--danger-bg, #fee2e2);
+  color: var(--danger-text, #b91c1c);
+}
+
+.cb-hours-note { margin-bottom: 14px; max-width: 76ch; }
+
+.cb-hours input[type='time'] {
+  min-height: 36px;
+  padding: 5px 9px;
+  border-radius: 8px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--input-bg, #fff);
+  color: var(--input-text, #1e293b);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A closed day dims its times but keeps the day name and the checkbox
+   readable, so the row is still obviously interactive.                */
+.cb-hours tr.is-closed td { opacity: 0.5; }
+.cb-hours tr.is-closed td:first-child,
+.cb-hours tr.is-closed td:last-child { opacity: 1; }
+
+.cb-space { min-height: 54px; cursor: default; }

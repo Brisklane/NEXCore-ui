@@ -1,0 +1,57 @@
+.cl-top {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+  align-items: start;
+}
+
+.cl-recovery {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-subtle, #f1f5f9);
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+}
+
+.cl-recovery strong {
+  display: block;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The sentence that turns the failure chart into an instruction. */
+.cl-note {
+  margin: 16px 0 0;
+  padding: 11px 14px;
+  border-radius: 10px;
+  background: var(--accent-soft, rgba(43, 127, 255, 0.07));
+  border: 1px solid var(--accent-border, rgba(43, 127, 255, 0.2));
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-primary, #1e293b);
+}
+
+.cl-tabs { margin-bottom: 14px; }
+
+.cl-suspended {
+  background: var(--danger-bg, #fee2e2);
+  color: var(--danger-text, #b91c1c);
+}
+
+.cl-nocard {
+  background: var(--warning-bg, #fef3c7);
+  color: var(--warning-text, #b45309);
+}
+
+.cl-case { align-items: flex-start; }
+.cl-case-actions { align-items: center; }
+
+@media (max-width: 640px) {
+  .cl-top { grid-template-columns: 1fr; }
+}

@@ -1,0 +1,282 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Households</h2>
+      <p class="subtitle">Families and couples billed together, and who may collect the children.</p>
+    </div>
+    <div class="page-header-actions">
+      <button type="button" class="btn btn-primary" (click)="create()">
+        <span class="material-symbols-outlined">add</span>New household
+      </button>
+      <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+    </div>
+  </div>
+
+  <fit-page-help key="households"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <div class="fit-toolbar hh-toolbar">
+    <div class="fit-search">
+      <span class="material-symbols-outlined">search</span>
+      <input type="text" placeholder="Family name or a person in it"
+        [(ngModel)]="search" (ngModelChange)="onSearch()" />
+    </div>
+
+    <div class="fit-spacer"></div>
+
+    <span class="hh-count">{{ total }} household{{ total === 1 ? '' : 's' }}</span>
+  </div>
+
+  @if (loading) {
+    <div class="fit-skeleton" style="height: 420px"></div>
+  } @else if (rows.length === 0) {
+    <div class="fit-empty">
+      <span class="material-symbols-outlined fit-empty-icon">family_restroom</span>
+      <h3 class="fit-empty-title">
+        @if (search) { Nothing matches "{{ search }}" } @else { No households yet }
+      </h3>
+      <p class="fit-empty-text">
+        A household puts a family on one invoice and records who is allowed to collect the
+        children — the two questions reception is asked and cannot improvise an answer to.
+      </p>
+      @if (!search) {
+        <button type="button" class="btn btn-primary" (click)="create()">
+          <span class="material-symbols-outlined">add</span>New household
+        </button>
+      }
+    </div>
+  } @else {
+    <div class="hh-grid">
+      @for (h of rows; track h.id) {
+        <article class="hh-card">
+          <header class="hh-card-head">
+            <div>
+              <h3 class="hh-name">{{ h.name }}</h3>
+              <p class="hh-sub">
+                {{ adults(h) }} adult{{ adults(h) === 1 ? '' : 's' }}
+                @if (children(h) > 0) { · {{ children(h) }} child{{ children(h) === 1 ? '' : 'ren' }} }
+                @if (h.city) { · {{ h.city }} }
+              </p>
+            </div>
+
+            <div class="hh-balance" [class.is-owed]="h.combinedBalance > 0">
+              <span class="hh-balance-value">{{ h.combinedBalance | currency:'GBP' }}</span>
+              <span class="hh-balance-label">
+                @if (h.combinedBalance > 0) { owed between them } @else { nothing owed }
+              </span>
+            </div>
+          </header>
+
+          <ul class="hh-people">
+            @for (m of h.members; track m.id) {
+              <li>
+                <button type="button" (click)="openMember(m.memberId)">
+                  <span class="fit-avatar fit-avatar-sm" [class.has-photo]="!!m.photoUrl">
+                    @if (m.photoUrl) { <img [src]="m.photoUrl" [alt]="m.memberName" /> }
+                    @else { {{ initials(m.memberName) }} }
+                  </span>
+
+                  <span class="hh-person">
+                    <span class="hh-person-name">{{ m.memberName }}</span>
+                    <span class="hh-person-meta">
+                      {{ roleLabels[m.role] }}
+                      @if (m.age != null) { · {{ m.age }} }
+                      @if (m.memberId === h.primaryMemberId) { · pays }
+                    </span>
+                  </span>
+
+                  <!-- Collection permission is stated in words on the row itself: reception is
+                       asked this at the desk with a child standing there. -->
+                  @if (m.mayCollectChildren && children(h) > 0 && m.role !== HouseholdRole.Child) {
+                    <span class="fit-pill tone-info">May collect</span>
+                  }
+                  @if (m.agesOutSoon) {
+                    <span class="fit-pill tone-warning">
+                      Turns 18 {{ m.agesOutOn | date:'d MMM' }}
+                    </span>
+                  }
+                </button>
+              </li>
+            }
+          </ul>
+
+          @if (children(h) > 0 && collectors(h).length === 0) {
+            <p class="hh-warn">
+              <span class="material-symbols-outlined">warning</span>
+              Nobody in this household is recorded as allowed to collect the children.
+            </p>
+          }
+
+          @if (agingOut(h).length > 0) {
+            <p class="hh-note">
+              {{ agingOut(h).length }} junior membership
+              {{ agingOut(h).length === 1 ? 'expires' : 'expire' }} soon — the family plan needs
+              revisiting before it lapses.
+            </p>
+          }
+
+          <footer class="hh-card-foot">
+            <span class="fit-quiet">
+              @if (h.anyAdultMayCheckInChildren) { Any adult may check a child in }
+              @else { Only the named adults may check a child in }
+            </span>
+            <div class="fit-spacer"></div>
+            <button type="button" class="btn-link" (click)="edit(h)">Edit</button>
+          </footer>
+        </article>
+      }
+    </div>
+
+    @if (pageCount > 1) {
+      <div class="fit-pager">
+        <button type="button" class="btn btn-secondary" [disabled]="pageNumber === 1"
+          (click)="turnPage(-1)">Previous</button>
+        <span>Page {{ pageNumber }} of {{ pageCount }}</span>
+        <button type="button" class="btn btn-secondary" [disabled]="pageNumber >= pageCount"
+          (click)="turnPage(1)">Next</button>
+      </div>
+    }
+  }
+
+  <!-- ── Editor ───────────────────────────────────────────────────────── -->
+  @if (draft) {
+    <div class="fit-modal-backdrop" (click)="draft = null">
+      <div class="fit-modal is-wide" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        <header class="fit-modal-head">
+          <div>
+            <h3 class="fit-modal-title">
+              @if (draft.id) { Edit {{ draft.name }} } @else { New household }
+            </h3>
+            <p class="fit-modal-sub">Who is billed together, and who may collect the children.</p>
+          </div>
+          <button type="button" class="fit-close" (click)="draft = null" aria-label="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </header>
+
+        <div class="fit-modal-body">
+          @if (formError) { <div class="alert alert-error">{{ formError }}</div> }
+
+          <div class="fit-form-grid">
+            <label class="fit-field">
+              <span>Household name</span>
+              <input type="text" [(ngModel)]="draft.name" placeholder="e.g. Okonkwo household" />
+            </label>
+
+            <label class="fit-field">
+              <span>Address</span>
+              <input type="text" [(ngModel)]="draft.addressLine" />
+            </label>
+
+            <label class="fit-field">
+              <span>Town or city</span>
+              <input type="text" [(ngModel)]="draft.city" />
+            </label>
+
+            <label class="fit-field">
+              <span>Postcode</span>
+              <input type="text" [(ngModel)]="draft.postCode" />
+            </label>
+          </div>
+
+          <!-- ── Who is in it ─────────────────────────────────────── -->
+          <h4 class="hh-group">Who is in it</h4>
+
+          @if (draft.members.length === 0) {
+            <p class="fit-quiet hh-empty-people">
+              Nobody added yet. Search below — everybody in a household is already a member.
+            </p>
+          } @else {
+            <div class="hh-editor-rows">
+              @for (m of draft.members; track m.memberId) {
+                <div class="hh-editor-row">
+                  <span class="fit-avatar fit-avatar-sm">{{ initials(m.memberName) }}</span>
+
+                  <span class="hh-editor-name">
+                    {{ m.memberName }}
+                    @if (m.agesOutOn) {
+                      <span class="hh-editor-ages">turns 18 on {{ m.agesOutOn | date:'d MMM yyyy' }}</span>
+                    }
+                  </span>
+
+                  <label class="fit-field fit-field-inline">
+                    <span>Role</span>
+                    <select [(ngModel)]="m.role">
+                      @for (o of roleOptions; track o.value) {
+                        <option [ngValue]="o.value">{{ o.label }}</option>
+                      }
+                    </select>
+                  </label>
+
+                  <label class="hh-editor-check" [class.is-disabled]="m.role === HouseholdRole.Child">
+                    <input type="checkbox" [(ngModel)]="m.mayCollectChildren"
+                      [disabled]="m.role === HouseholdRole.Child" />
+                    <span>May collect children</span>
+                  </label>
+
+                  <label class="hh-editor-check">
+                    <input type="radio" name="primary" [value]="m.memberId"
+                      [(ngModel)]="draft.primaryMemberId" [disabled]="!canBePrimary(m)" />
+                    <span>Invoice goes here</span>
+                  </label>
+
+                  <button type="button" class="btn-link is-danger" (click)="removeMember(m)">Remove</button>
+                </div>
+              }
+            </div>
+          }
+
+          <div class="hh-add">
+            <div class="fit-search">
+              <span class="material-symbols-outlined">person_search</span>
+              <input type="text" placeholder="Add somebody — name, number or email"
+                [(ngModel)]="memberSearch" (ngModelChange)="onMemberSearch()" />
+            </div>
+
+            @if (memberResults.length > 0) {
+              <ul class="hh-results">
+                @for (m of memberResults; track m.id) {
+                  <li>
+                    <button type="button" (click)="addMember(m)">
+                      <strong>{{ m.preferredName || m.fullName }}</strong>
+                      <span>{{ m.memberNumber }}</span>
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+
+          <label class="hh-switch">
+            <input type="checkbox" [(ngModel)]="draft.anyAdultMayCheckInChildren" />
+            <span>
+              <strong>Any adult in this household may check a child in</strong>
+              Turn this off where collection is restricted to named people — a court order, a
+              separation, a safeguarding note. Reception is shown the answer, not asked to judge it.
+            </span>
+          </label>
+
+          <div class="fit-explain hh-explain">
+            <p class="fit-explain-text">
+              Saving bills these people together from the next invoice onwards. Taking somebody out
+              of a household does not take them out of the club: they keep every agreement, invoice
+              and visit they ever had, and go back to being billed on their own. Nobody's medical or
+              assessment records move between people in a household — those stay with the person
+              they belong to.
+            </p>
+          </div>
+        </div>
+
+        <div class="fit-modal-foot">
+          <span class="fit-foot-spacer"></span>
+          <button type="button" class="btn btn-secondary" (click)="draft = null">Cancel</button>
+          <button type="button" class="btn btn-primary" [disabled]="busy" (click)="save()">
+            @if (busy) { Saving… } @else { Save household }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

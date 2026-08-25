@@ -1,0 +1,222 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Commission</h2>
+      <p class="subtitle">What the team has earned, and what has been paid.</p>
+    </div>
+    <div class="page-header-actions">
+      <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+      <button type="button" class="btn-primary" (click)="generating = true">
+        <span class="material-symbols-outlined">calculate</span>
+        Generate statements
+      </button>
+    </div>
+  </div>
+
+  <fit-page-help key="commission"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <div class="fit-segment cm-tabs" role="tablist" aria-label="Commission sections">
+    <button type="button" role="tab" [class.is-active]="tab === 'statements'" (click)="tab = 'statements'">
+      <span class="material-symbols-outlined">receipt_long</span>Statements
+    </button>
+    <button type="button" role="tab" [class.is-active]="tab === 'rules'" (click)="tab = 'rules'">
+      <span class="material-symbols-outlined">rule</span>How it is earned
+    </button>
+  </div>
+
+  @if (tab === 'statements') {
+    @if (loading) {
+      <div class="fit-rows">
+        @for (i of [1,2,3]; track i) { <div class="fit-skeleton" style="height: 70px"></div> }
+      </div>
+    } @else if (statements.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">percent</span>
+        <h3 class="fit-empty-title">No statements yet</h3>
+        <p class="fit-empty-text">
+          Accruals build as sessions are signed off and memberships sold. Generate a period to turn
+          them into statements.
+        </p>
+        <button type="button" class="btn-primary" (click)="generating = true">Generate statements</button>
+      </div>
+    } @else {
+      <div class="fit-rows">
+        @for (s of statements; track s.id) {
+          <div class="fit-row" [class]="statusClass(s)">
+            <span class="fit-row-main">
+              <span class="fit-row-title">
+                {{ s.staffName }}
+                <span class="fit-pill">{{ statusLabels[s.status] }}</span>
+                @if (s.payrollReference) { <span class="fit-pill">{{ s.payrollReference }}</span> }
+              </span>
+              <span class="fit-row-sub">
+                {{ s.statementNumber }} ·
+                {{ s.periodStart | date:'d MMM' }} – {{ s.periodEnd | date:'d MMM yyyy' }} ·
+                {{ s.sessionsDelivered }} sessions, {{ s.classesTaught }} classes,
+                {{ s.membershipsSold }} memberships
+                @if (s.approvedByName) { · approved by {{ s.approvedByName }} }
+              </span>
+            </span>
+
+            <span class="fit-row-figure">
+              <span class="fit-row-figure-value">{{ s.total | number:'1.2-2' }}</span>
+              <span class="fit-row-figure-label">{{ s.currencyCode }}</span>
+            </span>
+
+            <span class="fit-row-actions">
+              <button type="button" class="btn-secondary" (click)="inspect(s)">Breakdown</button>
+              @if (s.status === CommissionStatementStatus.Draft
+                   || s.status === CommissionStatementStatus.Submitted) {
+                <button type="button" class="btn-primary" (click)="approve(s)">Approve</button>
+              } @else if (s.status === CommissionStatementStatus.Approved) {
+                <button type="button" class="btn-primary" (click)="exportToPayroll(s)">
+                  Export to payroll
+                </button>
+              }
+            </span>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  @if (tab === 'rules') {
+    @if (rules.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">rule</span>
+        <p class="fit-empty-text">No commission rules. Nobody is earning anything.</p>
+      </div>
+    } @else {
+      <div class="fit-rows">
+        @for (r of rules; track r.id) {
+          <div class="fit-row" [class.is-good]="r.isActive">
+            <span class="fit-row-main">
+              <span class="fit-row-title">
+                {{ r.name }}
+                @if (!r.isActive) { <span class="fit-pill">off</span> }
+                @if (r.staffName) { <span class="fit-pill">{{ r.staffName }}</span> }
+              </span>
+              <span class="fit-row-sub">
+                {{ describeRule(r) }}
+                @if (r.periodCap > 0) { · capped at {{ r.periodCap }} a period }
+                @if (r.serviceName) { · {{ r.serviceName }} only }
+                @if (r.classTypeName) { · {{ r.classTypeName }} only }
+              </span>
+              @if (r.explanation) { <span class="fit-row-sub cm-why">{{ r.explanation }}</span> }
+            </span>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- Generate -->
+  @if (generating) {
+    <div class="fit-modal-backdrop" (click)="generating = false"></div>
+    <div class="fit-modal" role="dialog" aria-modal="true" aria-labelledby="cm-gen-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="cm-gen-title">Generate statements</h3>
+          <p class="fit-modal-sub">Turns the period's accruals into statements to review.</p>
+        </div>
+        <button type="button" class="fit-close" (click)="generating = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        <div class="fit-form-grid">
+          <label class="fit-field">
+            <span>From</span>
+            <input type="date" [(ngModel)]="periodStart" />
+          </label>
+          <label class="fit-field">
+            <span>To</span>
+            <input type="date" [(ngModel)]="periodEnd" />
+          </label>
+        </div>
+
+        <p class="fit-quiet cm-note">
+          Generating does not pay anybody. Review each statement, approve it, then export — which
+          is what marks it paid and stops it going through payroll twice.
+        </p>
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="generating = false">Cancel</button>
+        <button type="button" class="btn-primary" [disabled]="busy" (click)="generate()">
+          {{ busy ? 'Generating…' : 'Generate' }}
+        </button>
+      </footer>
+    </div>
+  }
+
+  <!-- Breakdown -->
+  @if (open; as s) {
+    <div class="fit-modal-backdrop" (click)="open = null"></div>
+    <div class="fit-modal cm-modal" role="dialog" aria-modal="true" aria-labelledby="cm-detail-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="cm-detail-title">{{ s.staffName }}</h3>
+          <p class="fit-modal-sub">
+            {{ s.statementNumber }} ·
+            {{ s.periodStart | date:'d MMM' }} – {{ s.periodEnd | date:'d MMM yyyy' }}
+          </p>
+        </div>
+        <button type="button" class="fit-close" (click)="open = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        <dl class="fit-dl cm-totals">
+          @if (s.sessionCommission > 0) {
+            <div><dt>Sessions delivered</dt><dd>{{ s.sessionCommission | number:'1.2-2' }}</dd></div>
+          }
+          @if (s.classCommission > 0) {
+            <div><dt>Classes taught</dt><dd>{{ s.classCommission | number:'1.2-2' }}</dd></div>
+          }
+          @if (s.salesCommission > 0) {
+            <div><dt>Memberships and packs</dt><dd>{{ s.salesCommission | number:'1.2-2' }}</dd></div>
+          }
+          @if (s.retailCommission > 0) {
+            <div><dt>Pro shop</dt><dd>{{ s.retailCommission | number:'1.2-2' }}</dd></div>
+          }
+          @if (s.bonus > 0) { <div><dt>Bonus</dt><dd>{{ s.bonus | number:'1.2-2' }}</dd></div> }
+          @if (s.adjustments !== 0) {
+            <div><dt>Adjustments</dt><dd>{{ s.adjustments | number:'1.2-2' }}</dd></div>
+          }
+          <div><dt>Total</dt><dd>{{ s.total | number:'1.2-2' }} {{ s.currencyCode }}</dd></div>
+        </dl>
+
+        @if (s.accruals.length > 0) {
+          <h4 class="cm-subhead">Every line</h4>
+          <div class="fit-table-wrap">
+            <table class="fit-table">
+              <thead>
+                <tr><th>When</th><th>What</th><th>Member</th><th class="ta-r">Amount</th></tr>
+              </thead>
+              <tbody>
+                @for (a of s.accruals; track a.id) {
+                  <tr [class.cm-reversed]="a.isReversed">
+                    <td>{{ a.earnedOn | date:'d MMM' }}</td>
+                    <td>{{ a.narrative || a.ruleName }}</td>
+                    <td>{{ a.memberName || '—' }}</td>
+                    <td class="ta-r fit-money">{{ a.amount | number:'1.2-2' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="open = null">Close</button>
+      </footer>
+    </div>
+  }
+</div>
