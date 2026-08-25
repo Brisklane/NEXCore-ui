@@ -1,0 +1,381 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Pro shop</h2>
+      <p class="subtitle">
+        @if (session) { Drawer {{ session.sessionNumber }} open · {{ session.cashSales | number:'1.2-2' }} in cash }
+        @else { The till and the cash drawer. }
+      </p>
+    </div>
+    <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+  </div>
+
+  <fit-page-help key="pos"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <div class="fit-segment ps-tabs" role="tablist" aria-label="Till sections">
+    <button type="button" role="tab" [class.is-active]="tab === 'till'" (click)="tab = 'till'">
+      <span class="material-symbols-outlined">storefront</span>Till
+    </button>
+    <button type="button" role="tab" [class.is-active]="tab === 'drawer'" (click)="tab = 'drawer'; loadDayEnd()">
+      <span class="material-symbols-outlined">point_of_sale</span>Cash drawer
+    </button>
+  </div>
+
+  <!-- ── Till ─────────────────────────────────────────────────────────── -->
+  @if (tab === 'till') {
+    <div class="ps-layout">
+      <!-- Products -->
+      <section class="ps-products">
+        <div class="fit-search ps-search">
+          <span class="material-symbols-outlined">search</span>
+          <input
+            type="text"
+            placeholder="Scan a barcode, or search the shop"
+            aria-label="Search products"
+            [(ngModel)]="search"
+            (ngModelChange)="load()"
+          />
+        </div>
+
+        @if (loading) {
+          <div class="ps-grid">
+            @for (i of [1,2,3,4,5,6,7,8]; track i) { <div class="fit-skeleton" style="height: 96px"></div> }
+          </div>
+        } @else if (products.length === 0) {
+          <div class="fit-empty">
+            <span class="material-symbols-outlined fit-empty-icon">shopping_bag</span>
+            <h3 class="fit-empty-title">Nothing in the shop</h3>
+            <p class="fit-empty-text">
+              Add retail products under Plans &amp; pricing and they will appear here.
+            </p>
+          </div>
+        } @else {
+          <div class="ps-grid">
+            @for (p of products; track p.id) {
+              <button type="button" class="ps-product" (click)="add(p)" [disabled]="!p.isActive">
+                <span class="ps-product-name">{{ p.name }}</span>
+                <span class="ps-product-price">{{ p.price | number:'1.2-2' }}</span>
+                @if (p.tracksStock && p.stockOnHand != null) {
+                  <span class="ps-product-stock" [class.is-low]="p.stockOnHand < 5">
+                    {{ p.stockOnHand }} left
+                  </span>
+                }
+              </button>
+            }
+          </div>
+        }
+      </section>
+
+      <!-- Basket -->
+      <aside class="ps-basket">
+        <header class="ps-basket-head">
+          <h3>Sale</h3>
+          @if (basket.length > 0) {
+            <button type="button" class="btn-link" (click)="clearBasket()">Clear</button>
+          }
+        </header>
+
+        <!-- Who it is for -->
+        <div class="ps-member">
+          @if (member; as m) {
+            <div class="ps-member-chosen">
+              <span class="material-symbols-outlined">person</span>
+              <span>{{ m.preferredName || m.fullName }}</span>
+              <button type="button" class="fit-icon-btn" (click)="member = null; chargeToAccount = false"
+                aria-label="Remove member">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
+          } @else {
+            <div class="fit-search ps-member-search">
+              <span class="material-symbols-outlined">person_search</span>
+              <input type="text" placeholder="Attach to a member (optional)" aria-label="Find a member"
+                [(ngModel)]="memberSearch" (ngModelChange)="onMemberSearch()" />
+            </div>
+
+            @if (memberResults.length > 0) {
+              <ul class="ps-member-results">
+                @for (m of memberResults; track m.id) {
+                  <li>
+                    <button type="button" (click)="chooseMember(m)">
+                      <strong>{{ m.preferredName || m.fullName }}</strong>
+                      <span>{{ m.memberNumber }}</span>
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+          }
+        </div>
+
+        <!-- Lines -->
+        @if (basket.length === 0) {
+          <div class="ps-basket-empty">
+            <span class="material-symbols-outlined">shopping_cart</span>
+            <p>Tap a product to start.</p>
+          </div>
+        } @else {
+          <ul class="ps-lines">
+            @for (l of basket; track l.key) {
+              <li class="ps-line">
+                <span class="ps-line-name">{{ l.itemName }}</span>
+                <span class="ps-line-qty">
+                  <button type="button" (click)="changeQty(l, -1)" aria-label="One fewer">−</button>
+                  <span>{{ l.quantity }}</span>
+                  <button type="button" (click)="changeQty(l, 1)" aria-label="One more">+</button>
+                </span>
+                <span class="ps-line-total">{{ l.quantity * l.unitPrice | number:'1.2-2' }}</span>
+                <button type="button" class="fit-icon-btn" (click)="remove(l)" aria-label="Remove">
+                  <span class="material-symbols-outlined">close</span>
+                </button>
+              </li>
+            }
+          </ul>
+
+          <dl class="fit-dl ps-totals">
+            <div><dt>Subtotal</dt><dd>{{ subtotal | number:'1.2-2' }}</dd></div>
+            @if (tax > 0) { <div><dt>Tax</dt><dd>{{ tax | number:'1.2-2' }}</dd></div> }
+            <div><dt>Total</dt><dd>{{ total | number:'1.2-2' }}</dd></div>
+          </dl>
+
+          <button type="button" class="btn-primary ps-pay" (click)="paying = true">
+            Take {{ total | number:'1.2-2' }}
+          </button>
+        }
+      </aside>
+    </div>
+  }
+
+  <!-- ── Cash drawer ──────────────────────────────────────────────────── -->
+  @if (tab === 'drawer') {
+    @if (!session) {
+      <section class="fit-card ps-open">
+        <header class="fit-card-head"><h3 class="fit-card-title">Open the drawer</h3></header>
+        <div class="fit-card-body">
+          <p class="fit-quiet">
+            Count the float before you start. Everything taken through this till is reconciled
+            against it at the end of the shift.
+          </p>
+          <label class="fit-field ps-float">
+            <span>Opening float</span>
+            <input type="number" step="0.01" min="0" [(ngModel)]="openingFloat" />
+          </label>
+          <button type="button" class="btn-primary" (click)="openDrawer()">Open drawer</button>
+        </div>
+      </section>
+    } @else {
+      <div class="fit-grid">
+        <section class="fit-card">
+          <header class="fit-card-head">
+            <h3 class="fit-card-title">{{ session.sessionNumber }}</h3>
+            <span class="fit-pill">{{ session.closedAt ? 'closed' : 'open' }}</span>
+          </header>
+          <div class="fit-card-body">
+            <dl class="fit-dl">
+              <div><dt>Opened</dt><dd>{{ session.openedAt | date:'d MMM, HH:mm' }}</dd></div>
+              <div><dt>Opening float</dt><dd>{{ session.openingFloat | number:'1.2-2' }}</dd></div>
+              <div><dt>Cash taken</dt><dd>{{ session.cashSales | number:'1.2-2' }}</dd></div>
+              <div><dt>Card taken</dt><dd>{{ session.cardSales | number:'1.2-2' }}</dd></div>
+              @if (session.paidIn > 0) { <div><dt>Paid in</dt><dd>{{ session.paidIn | number:'1.2-2' }}</dd></div> }
+              @if (session.paidOut > 0) { <div><dt>Paid out</dt><dd>{{ session.paidOut | number:'1.2-2' }}</dd></div> }
+              <div><dt>Transactions</dt><dd>{{ session.transactionCount }}</dd></div>
+            </dl>
+
+            @if (!session.closedAt) {
+              <p class="fit-sensitive ps-blind">
+                <span class="material-symbols-outlined">visibility_off</span>
+                Count the drawer first and enter what you counted. The expected figure appears
+                afterwards — a visible target is a target.
+              </p>
+
+              <label class="fit-field">
+                <span>What did you count?</span>
+                <input type="number" step="0.01" min="0" [(ngModel)]="countedCash" />
+              </label>
+
+              <label class="fit-field">
+                <span>Anything to note</span>
+                <input type="text" [(ngModel)]="varianceNote" placeholder="Optional" />
+              </label>
+
+              <button
+                type="button"
+                class="btn-primary fit-full"
+                [disabled]="countedCash == null || saving"
+                (click)="closeDrawer()"
+              >
+                {{ saving ? 'Closing…' : 'Close the drawer' }}
+              </button>
+            } @else if (showExpected) {
+              <div class="ps-variance" [class.is-off]="session.variance !== 0">
+                <div>
+                  <span class="ps-variance-label">Expected</span>
+                  <span class="ps-variance-value">{{ session.expectedCash | number:'1.2-2' }}</span>
+                </div>
+                <div>
+                  <span class="ps-variance-label">Counted</span>
+                  <span class="ps-variance-value">{{ session.countedCash | number:'1.2-2' }}</span>
+                </div>
+                <div>
+                  <span class="ps-variance-label">Difference</span>
+                  <span class="ps-variance-value">
+                    {{ session.variance > 0 ? '+' : '' }}{{ session.variance | number:'1.2-2' }}
+                  </span>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+
+        @if (!session.closedAt) {
+          <section class="fit-card">
+            <header class="fit-card-head"><h3 class="fit-card-title">Money in or out</h3></header>
+            <div class="fit-card-body">
+              <p class="fit-quiet">
+                A float top-up, a petty-cash payout, or a drop to the safe. Everything needs a
+                reason so the close reconciles.
+              </p>
+
+              <label class="fit-field">
+                <span>What kind</span>
+                <select [(ngModel)]="movementKind">
+                  <option [ngValue]="CashMovementKind.PaidIn">Money in</option>
+                  <option [ngValue]="CashMovementKind.PaidOut">Money out</option>
+                  <option [ngValue]="CashMovementKind.Drop">Drop to the safe</option>
+                </select>
+              </label>
+
+              <label class="fit-field">
+                <span>Amount</span>
+                <input type="number" step="0.01" min="0" [(ngModel)]="movementAmount" />
+              </label>
+
+              <label class="fit-field">
+                <span>Why</span>
+                <input type="text" [(ngModel)]="movementReason" placeholder="e.g. Window cleaner" />
+              </label>
+
+              <button
+                type="button"
+                class="btn-secondary fit-full"
+                [disabled]="movementAmount <= 0 || !movementReason.trim()"
+                (click)="recordMovement()"
+              >
+                Record it
+              </button>
+            </div>
+          </section>
+        }
+
+        @if (dayEnd; as d) {
+          <section class="fit-card">
+            <header class="fit-card-head">
+              <h3 class="fit-card-title">Today, everything</h3>
+              <span class="fit-section-note">All tills and methods</span>
+            </header>
+            <div class="fit-card-body">
+              <dl class="fit-dl">
+                <div><dt>Cash</dt><dd>{{ d.cashTakings | number:'1.2-2' }}</dd></div>
+                <div><dt>Card</dt><dd>{{ d.cardTakings | number:'1.2-2' }}</dd></div>
+                <div><dt>Direct debit</dt><dd>{{ d.directDebitCollected | number:'1.2-2' }}</dd></div>
+                @if (d.refunds > 0) { <div><dt>Refunded</dt><dd>−{{ d.refunds | number:'1.2-2' }}</dd></div> }
+                <div><dt>Net takings</dt><dd>{{ d.netTakings | number:'1.2-2' }} {{ d.currencyCode }}</dd></div>
+                <div><dt>Joined today</dt><dd>{{ d.joinCount }}</dd></div>
+                <div><dt>Cancelled today</dt><dd>{{ d.cancellationCount }}</dd></div>
+                <div><dt>Visits</dt><dd>{{ d.visitCount }}</dd></div>
+              </dl>
+
+              @if (d.byCategory.length > 0) {
+                <div class="fit-bars ps-categories">
+                  @for (c of d.byCategory; track c.label) {
+                    <div class="fit-bar-row">
+                      <div class="fit-bar-head">
+                        <span class="fit-bar-label">{{ c.label }}</span>
+                        <span class="fit-bar-value">{{ c.amount | number:'1.2-2' }}</span>
+                      </div>
+                      <div class="fit-bar-track">
+                        <span class="fit-bar-fill" [style.width.%]="c.percentOfTotal"></span>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </section>
+        }
+      </div>
+    }
+  }
+
+  <!-- ── Payment ──────────────────────────────────────────────────────── -->
+  @if (paying) {
+    <div class="fit-modal-backdrop" (click)="paying = false"></div>
+    <div class="fit-modal" role="dialog" aria-modal="true" aria-labelledby="ps-pay-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="ps-pay-title">Take {{ total | number:'1.2-2' }}</h3>
+          <p class="fit-modal-sub">
+            {{ basket.length }} item{{ basket.length === 1 ? '' : 's' }}
+            @if (member) { · {{ member.preferredName || member.fullName }} }
+          </p>
+        </div>
+        <button type="button" class="fit-close" (click)="paying = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        <div class="fit-segment ps-methods" role="group" aria-label="How they are paying">
+          @for (m of [
+            { v: PaymentMethod.Card, l: 'Card', i: 'credit_card' },
+            { v: PaymentMethod.Cash, l: 'Cash', i: 'payments' }
+          ]; track m.v) {
+            <button
+              type="button"
+              [class.is-active]="payMethod === m.v && !chargeToAccount"
+              (click)="payMethod = m.v; chargeToAccount = false"
+            >
+              <span class="material-symbols-outlined">{{ m.i }}</span>{{ m.l }}
+            </button>
+          }
+          @if (member) {
+            <button type="button" [class.is-active]="chargeToAccount" (click)="chargeToAccount = true">
+              <span class="material-symbols-outlined">receipt</span>On account
+            </button>
+          }
+        </div>
+
+        @if (payMethod === PaymentMethod.Cash && !chargeToAccount) {
+          <label class="fit-field ps-tendered">
+            <span>Cash given</span>
+            <input type="number" step="0.01" min="0" [(ngModel)]="tendered" />
+          </label>
+
+          @if (changeDue > 0) {
+            <div class="ps-change">
+              <span>Change to give back</span>
+              <strong>{{ changeDue | number:'1.2-2' }}</strong>
+            </div>
+          }
+        }
+
+        @if (chargeToAccount) {
+          <p class="fit-quiet">
+            This goes onto {{ member?.preferredName || member?.fullName }}'s account and is
+            collected with their next bill.
+          </p>
+        }
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="paying = false">Back</button>
+        <button type="button" class="btn-primary" [disabled]="saving" (click)="completeSale()">
+          {{ saving ? 'Taking…' : 'Complete sale' }}
+        </button>
+      </footer>
+    </div>
+  }
+</div>

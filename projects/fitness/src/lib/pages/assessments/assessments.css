@@ -1,0 +1,341 @@
+.as-notice { margin-bottom: 16px; max-width: 96ch; }
+.as-tabs { margin-bottom: 16px; }
+
+/* ── Picking a member ────────────────────────────────────────────────── */
+.as-pick {
+  padding: 20px 22px 22px;
+  border-radius: 16px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-surface, #fff);
+  max-width: 620px;
+}
+
+.as-pick-text { margin: 4px 0 14px; max-width: 60ch; }
+.as-search { width: 100%; }
+
+.as-results {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.as-results button {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-muted, #f8fafc);
+  cursor: pointer;
+  text-align: left;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.as-results button:hover {
+  background: color-mix(in srgb, var(--accent, #2b7fff) 6%, transparent);
+  border-color: color-mix(in srgb, var(--accent, #2b7fff) 35%, transparent);
+}
+
+.as-result-who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.as-result-who strong { font-size: 13.5px; font-weight: 700; color: var(--text-heading, #0f172a); }
+.as-result-who span { font-size: 11.5px; color: var(--text-muted, #94a3b8); }
+.as-results .material-symbols-outlined { color: var(--text-muted, #94a3b8); font-size: 20px; }
+
+/* ── The list of assessments ─────────────────────────────────────────── */
+.as-list { display: flex; flex-direction: column; gap: 8px; }
+
+.as-card {
+  border-radius: 14px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-surface, #fff);
+  overflow: hidden;
+}
+
+.as-card.is-open { border-color: color-mix(in srgb, var(--accent, #2b7fff) 40%, transparent); }
+
+.as-card-head {
+  width: 100%;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.as-card-head:hover { background: color-mix(in srgb, var(--accent, #2b7fff) 4%, transparent); }
+
+.as-card-date { display: flex; flex-direction: column; gap: 1px; min-width: 150px; }
+.as-card-date strong { font-size: 14px; font-weight: 750; color: var(--text-heading, #0f172a); }
+.as-card-date span { font-size: 11.5px; color: var(--text-muted, #94a3b8); }
+
+.as-card-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+}
+
+.as-card-staff { font-weight: 650; }
+.as-card-gap { color: var(--text-muted, #94a3b8); }
+
+.as-card-count {
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--text-muted, #94a3b8);
+  white-space: nowrap;
+}
+
+.as-card-chevron {
+  color: var(--text-muted, #94a3b8);
+  transition: transform 140ms ease;
+}
+
+.as-card.is-open .as-card-chevron { transform: rotate(180deg); }
+
+.as-card-body {
+  padding: 4px 16px 16px;
+  border-top: 1px solid var(--border-subtle, #f1f5f9);
+}
+
+/* ── Measures ────────────────────────────────────────────────────────── */
+.as-measures {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.as-measure {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 12px;
+  padding: 11px 13px;
+  border-radius: 12px;
+  background: var(--bg-muted, #f8fafc);
+}
+
+.as-measure-name {
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--text-secondary, #64748b);
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.as-measure-group { font-size: 10.5px; font-weight: 600; color: var(--text-muted, #94a3b8); }
+
+.as-measure-value {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.as-measure-unit { font-size: 11.5px; font-weight: 650; color: var(--text-muted, #94a3b8); margin-left: 3px; }
+
+/* Better and worse carry an arrow and a signed number as well as a colour: the direction is
+   readable without seeing the colour at all. */
+.as-measure-change {
+  grid-column: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--text-muted, #94a3b8);
+  font-variant-numeric: tabular-nums;
+}
+
+.as-measure-change .material-symbols-outlined { font-size: 14px; }
+.as-measure-change.is-better { color: var(--success, #16a34a); }
+.as-measure-change.is-worse { color: var(--danger, #ef4444); }
+
+.as-measure-prev { font-weight: 500; color: var(--text-muted, #94a3b8); }
+
+.as-measure-norm {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+  margin-top: 2px;
+}
+
+.as-notes {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--bg-inset, #eef2f7);
+  max-width: 90ch;
+}
+
+.as-notes p { margin: 0 0 6px; font-size: 12.5px; line-height: 1.55; color: var(--text-secondary, #64748b); }
+.as-notes p:last-child { margin-bottom: 0; }
+.as-notes strong { color: var(--text-heading, #0f172a); font-weight: 700; }
+
+.as-card-foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+/* ── Progress ────────────────────────────────────────────────────────── */
+.as-series-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 14px;
+}
+
+.as-series {
+  padding: 16px 18px 18px;
+  border-radius: 16px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-surface, #fff);
+}
+
+.as-series-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.as-series-name { margin: 0; font-size: 14.5px; font-weight: 750; color: var(--text-heading, #0f172a); }
+.as-series-sub { margin: 2px 0 0; font-size: 11.5px; color: var(--text-muted, #94a3b8); }
+
+.as-series-now { text-align: right; display: flex; flex-direction: column; gap: 2px; }
+
+.as-series-latest {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.as-series-change { font-size: 11.5px; font-weight: 650; color: var(--text-muted, #94a3b8); }
+.as-series-change.is-better { color: var(--success, #16a34a); }
+.as-series-change.is-worse { color: var(--danger, #ef4444); }
+
+/* Bars, not a line: readings months apart are points, and joining them would draw
+   measurements nobody took. */
+.as-spark {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 132px;
+  padding: 8px 2px 0;
+  border-bottom: 1px solid var(--border-subtle, #f1f5f9);
+  overflow-x: auto;
+}
+
+.as-spark-col {
+  flex: 1 0 26px;
+  min-width: 26px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 5px;
+}
+
+.as-spark-bar {
+  width: 100%;
+  min-height: 4px;
+  border-radius: 5px 5px 0 0;
+  background: linear-gradient(
+    180deg,
+    var(--accent, #2b7fff),
+    color-mix(in srgb, var(--accent, #2b7fff) 45%, transparent)
+  );
+}
+
+.as-spark-date {
+  font-size: 9.5px;
+  color: var(--text-muted, #94a3b8);
+  white-space: nowrap;
+  transform: rotate(-38deg);
+  transform-origin: center;
+}
+
+.as-series-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+  gap: 10px;
+  margin: 22px 0 0;
+}
+
+.as-series-facts div { display: flex; flex-direction: column; gap: 1px; }
+.as-series-facts dt { font-size: 10.5px; font-weight: 650; color: var(--text-muted, #94a3b8); }
+
+.as-series-facts dd {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Recording ───────────────────────────────────────────────────────── */
+.as-entry {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 12px;
+  margin: 14px 0;
+}
+
+.as-entry-input { display: flex; align-items: center; gap: 8px; }
+.as-entry-input input { flex: 1; min-width: 0; text-align: right; font-variant-numeric: tabular-nums; }
+
+.as-entry-unit {
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--text-muted, #94a3b8);
+  min-width: 32px;
+}
+
+.as-req {
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--danger, #ef4444);
+  margin-left: 5px;
+}
+
+.as-calc {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  max-width: 80ch;
+  margin: 0 0 14px;
+}
+
+.as-calc .material-symbols-outlined { font-size: 16px; margin-top: 1px; }
+.as-none { margin: 14px 0; }
+
+@media (max-width: 720px) {
+  .as-card-head { flex-wrap: wrap; gap: 8px 14px; }
+  .as-card-date { min-width: 0; }
+  .as-series-grid { grid-template-columns: 1fr; }
+}

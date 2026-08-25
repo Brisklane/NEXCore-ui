@@ -1,0 +1,112 @@
+/* ── Member context ──────────────────────────────────────────────────
+   Deliberately prominent. Booking a class onto the wrong person is easy
+   to do and irritating to unpick, so the screen says whose week it is. */
+.tt-context { margin-bottom: 12px; }
+
+.tt-member {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 8px 14px;
+  border-radius: 999px;
+  background: var(--accent-soft, rgba(43, 127, 255, 0.1));
+  border: 1px solid var(--accent-border, rgba(43, 127, 255, 0.3));
+}
+
+.tt-member .material-symbols-outlined { font-size: 18px; color: var(--accent, #2b7fff); }
+
+.tt-member-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+}
+
+.tt-member-num {
+  font-size: 11.5px;
+  color: var(--text-secondary, #64748b);
+  font-variant-numeric: tabular-nums;
+}
+
+.tt-member-search { position: relative; max-width: 480px; }
+
+.tt-member-results {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 5px);
+  left: 0;
+  right: 0;
+  list-style: none;
+  margin: 0;
+  padding: 5px;
+  border-radius: 12px;
+  background: var(--bg-elevated, #fff);
+  border: 1px solid var(--border-default, #e6eaf0);
+  box-shadow: var(--shadow-lg, 0 10px 30px rgba(15, 23, 42, 0.14));
+}
+
+.tt-member-results button {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  padding: 9px 12px;
+  min-height: 46px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tt-member-results button:hover { background: var(--bg-muted, #f1f5f9); }
+.tt-member-results button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.tt-member-results strong { font-size: 13px; font-weight: 700; color: var(--text-heading, #0f172a); }
+.tt-member-results span { font-size: 11.5px; color: var(--text-muted, #94a3b8); }
+
+/* ── Week bar ────────────────────────────────────────────────────────── */
+.tt-toolbar { margin-bottom: 14px; }
+
+.tt-week { display: flex; align-items: center; gap: 6px; }
+
+.tt-week-label {
+  min-width: 190px;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Class extras ────────────────────────────────────────────────────── */
+.tt-cancelled {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--danger-text, #b91c1c);
+  line-height: 1.4;
+}
+
+.tt-waitlist {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--warning-text, #b45309);
+}
+
+.tt-booked {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent, #2b7fff);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+}
+
+/* ── Booking dialog ──────────────────────────────────────────────────── */
+.tt-spot-title {
+  margin: 16px 0 10px;
+  font-size: 11.5px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #94a3b8);
+}

@@ -1,0 +1,183 @@
+.ly-tabs { margin-bottom: 14px; }
+.ly-note { margin-bottom: 16px; max-width: 80ch; }
+.ly-live { background: var(--success-bg, #dcfce7); color: var(--success-text, #15803d); }
+
+/* ── The ladder ──────────────────────────────────────────────────────
+   Tiers as steps of increasing width, so the shape of the scheme is
+   visible before any of the numbers are read.                          */
+.ly-ladder { display: flex; flex-direction: column; gap: 9px; }
+
+.ly-tier {
+  min-width: 220px;
+  padding: 13px 17px;
+  border-radius: 13px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  border-left: 5px solid var(--accent, #2b7fff);
+  background: var(--bg-surface, #fff);
+}
+
+.ly-tier-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 6px;
+}
+
+.ly-tier-name { font-size: 16px; font-weight: 800; letter-spacing: -0.01em; }
+
+.ly-tier-points {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-secondary, #64748b);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ly-tier-meta {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 11.5px;
+  color: var(--text-secondary, #64748b);
+}
+
+.ly-tier-meta strong { color: var(--text-heading, #0f172a); font-weight: 750; }
+
+.ly-tier-benefits {
+  margin: 9px 0 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text-secondary, #64748b);
+}
+
+/* ── Challenges ──────────────────────────────────────────────────────── */
+.ly-challenge.is-good { border-top: 3px solid var(--success, #16a34a); }
+.ly-challenge.is-warn { border-top: 3px solid var(--warning, #f59e0b); }
+
+.ly-challenge-blurb {
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-secondary, #64748b);
+}
+
+.ly-challenge-what {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 14px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  background: var(--bg-muted, #f8fafc);
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--text-primary, #1e293b);
+}
+
+.ly-challenge-what .material-symbols-outlined { font-size: 17px; color: var(--accent, #2b7fff); }
+
+.ly-challenge-time {
+  margin: 12px 0 0;
+  font-size: 12px;
+  font-weight: 750;
+  color: var(--text-secondary, #64748b);
+}
+
+.ly-top-title {
+  margin: 16px 0 8px;
+  font-size: 11px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ly-top { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+
+.ly-top li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--bg-muted, #f8fafc);
+}
+
+.ly-top-rank {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent-soft, rgba(43, 127, 255, 0.15));
+  color: var(--accent, #2b7fff);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.ly-top li:first-child .ly-top-rank {
+  background: var(--warning, #f59e0b);
+  color: #fff;
+}
+
+.ly-top-name { flex: 1; font-size: 12.5px; font-weight: 650; color: var(--text-heading, #0f172a); }
+
+.ly-top-score {
+  font-size: 12.5px;
+  font-weight: 750;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Badges ──────────────────────────────────────────────────────────── */
+.ly-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-surface, #fff);
+  text-align: center;
+}
+
+.ly-badge.is-off { opacity: 0.5; }
+
+.ly-badge-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.ly-badge-icon .material-symbols-outlined { font-size: 27px; }
+
+.ly-badge-name { font-size: 13.5px; font-weight: 750; color: var(--text-heading, #0f172a); }
+
+.ly-badge-blurb {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-secondary, #64748b);
+}
+
+.ly-badge-criteria {
+  font-size: 10.5px;
+  color: var(--text-muted, #94a3b8);
+  font-style: italic;
+}
+
+.ly-badge-stats {
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle, #f1f5f9);
+  width: 100%;
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ly-badge-stats strong { color: var(--text-heading, #0f172a); font-weight: 800; }

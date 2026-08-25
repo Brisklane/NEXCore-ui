@@ -1,0 +1,335 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Corporate</h2>
+      <p class="subtitle">Employer schemes and third-party payers.</p>
+    </div>
+    <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+  </div>
+
+  <fit-page-help key="corporate"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <div class="fit-segment cp-tabs" role="tablist" aria-label="Corporate sections">
+    <button type="button" role="tab" [class.is-active]="tab === 'accounts'" (click)="tab = 'accounts'">
+      <span class="material-symbols-outlined">domain</span>Schemes
+    </button>
+    <button type="button" role="tab" [class.is-active]="tab === 'invoices'" (click)="tab = 'invoices'">
+      <span class="material-symbols-outlined">receipt_long</span>Invoices
+    </button>
+    <button type="button" role="tab" [class.is-active]="tab === 'payers'" (click)="tab = 'payers'">
+      <span class="material-symbols-outlined">medical_services</span>Third-party payers
+    </button>
+  </div>
+
+  <!-- ── Schemes ──────────────────────────────────────────────────────── -->
+  @if (tab === 'accounts') {
+    @if (loading) {
+      <div class="fit-grid">
+        @for (i of [1,2,3]; track i) { <div class="fit-skeleton" style="height: 200px"></div> }
+      </div>
+    } @else if (accounts.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">domain</span>
+        <h3 class="fit-empty-title">No corporate schemes</h3>
+        <p class="fit-empty-text">
+          An employer scheme brings members in blocks and bills the company rather than the person.
+        </p>
+      </div>
+    } @else {
+      <div class="fit-grid">
+        @for (a of accounts; track a.id) {
+          <article class="fit-card cp-card" [class]="accountClass(a)">
+            <header class="fit-card-head">
+              <h3 class="fit-card-title">{{ a.name }}</h3>
+              @if (!a.isActive) { <span class="fit-pill">inactive</span> }
+            </header>
+
+            <div class="fit-card-body">
+              <p class="cp-model">{{ describeModel(a) }}</p>
+
+              <dl class="fit-dl">
+                <div>
+                  <dt>On the scheme</dt>
+                  <dd>
+                    {{ a.currentMemberCount }}@if (a.maxMembers > 0) { of {{ a.maxMembers }} }
+                  </dd>
+                </div>
+                <div><dt>Worth a month</dt><dd>{{ a.monthlyValue | number:'1.2-2' }}</dd></div>
+                @if (a.outstandingBalance > 0) {
+                  <div>
+                    <dt>Outstanding</dt>
+                    <dd class="is-debit">{{ a.outstandingBalance | number:'1.2-2' }}</dd>
+                  </div>
+                }
+                @if (a.contractEndsOn) {
+                  <div><dt>Contract ends</dt><dd>{{ a.contractEndsOn | date:'d MMM yyyy' }}</dd></div>
+                }
+                @if (a.contactName) { <div><dt>Contact</dt><dd>{{ a.contactName }}</dd></div> }
+              </dl>
+
+              <!-- The number that decides whether the scheme is renewed. -->
+              <div class="cp-usage">
+                <div class="fit-bar-head">
+                  <span class="fit-bar-label">Actually using it</span>
+                  <span class="fit-bar-value">
+                    {{ a.utilisationPercent }}%
+                    <small>{{ a.activeUsersLast30Days }} in 30 days</small>
+                  </span>
+                </div>
+                <div class="fit-bar-track">
+                  <span
+                    class="fit-bar-fill"
+                    [class]="utilisationClass(a.utilisationPercent)"
+                    [style.width.%]="a.utilisationPercent"
+                  ></span>
+                </div>
+                @if (a.utilisationPercent < 35) {
+                  <p class="cp-usage-warn">
+                    Low use. This is the figure the employer will look at when the contract comes up.
+                  </p>
+                }
+              </div>
+
+              @if (a.eligibilityRules.length > 0) {
+                <div class="cp-rules">
+                  <span class="cp-rules-label">Eligibility</span>
+                  @for (r of a.eligibilityRules; track r.id) {
+                    <span class="fit-pill">
+                      {{ proofLabels[r.proof] }}@if (r.matchValue) { · {{ r.matchValue }} }
+                    </span>
+                  }
+                </div>
+              }
+            </div>
+
+            <footer class="cp-card-foot">
+              <button type="button" class="btn-secondary" (click)="inspect(a)">Who is on it</button>
+              <button type="button" class="btn-primary" (click)="invoicing = a">Raise an invoice</button>
+            </footer>
+          </article>
+        }
+      </div>
+    }
+  }
+
+  <!-- ── Invoices ─────────────────────────────────────────────────────── -->
+  @if (tab === 'invoices') {
+    @if (invoices.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">receipt_long</span>
+        <p class="fit-empty-text">No corporate invoices yet.</p>
+      </div>
+    } @else {
+      <div class="fit-rows">
+        @for (i of invoices; track i.id) {
+          <div class="fit-row" [class]="invoiceClass(i)">
+            <span class="fit-row-main">
+              <span class="fit-row-title">
+                {{ i.corporateAccountName }}
+                <span class="fit-pill">{{ invoiceStatusLabels[i.status] }}</span>
+                @if (i.daysOverdue > 0) {
+                  <span class="fit-pill cp-overdue">{{ i.daysOverdue }} days overdue</span>
+                }
+                @if (i.purchaseOrderReference) { <span class="fit-pill">PO {{ i.purchaseOrderReference }}</span> }
+              </span>
+              <span class="fit-row-sub">
+                {{ i.invoiceNumber }} ·
+                {{ i.periodStart | date:'d MMM' }} – {{ i.periodEnd | date:'d MMM yyyy' }} ·
+                {{ i.memberCount }} employees · due {{ i.dueOn | date:'d MMM yyyy' }}
+              </span>
+            </span>
+
+            <span class="fit-row-figure">
+              <span class="fit-row-figure-value">{{ i.total | number:'1.2-2' }}</span>
+              <span class="fit-row-figure-label">{{ i.currencyCode }}</span>
+            </span>
+
+            <span class="fit-row-figure" [class.is-debit]="i.balanceDue > 0">
+              <span class="fit-row-figure-value">{{ i.balanceDue | number:'1.2-2' }}</span>
+              <span class="fit-row-figure-label">outstanding</span>
+            </span>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ── Third-party payers ───────────────────────────────────────────── -->
+  @if (tab === 'payers') {
+    @if (payers.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">medical_services</span>
+        <h3 class="fit-empty-title">No third-party payers</h3>
+        <p class="fit-empty-text">
+          An insurer, a GP referral scheme or a local authority paying for somebody's sessions.
+        </p>
+      </div>
+    } @else {
+      <div class="fit-rows cp-payers">
+        @for (p of payers; track p.id) {
+          <div class="fit-row" [class.is-good]="p.isActive">
+            <span class="fit-row-main">
+              <span class="fit-row-title">
+                {{ p.name }}
+                <span class="fit-pill">{{ p.payerType }}</span>
+                @if (p.requiresAuthorisationNumber) { <span class="fit-pill">needs an auth number</span> }
+              </span>
+              <span class="fit-row-sub">
+                @if (p.contactName) { {{ p.contactName }} · }
+                {{ p.paymentTermsDays }} day terms
+                @if (p.agreedRate) { · {{ p.agreedRate | number:'1.2-2' }} agreed rate }
+              </span>
+            </span>
+
+            <span class="fit-row-figure">
+              <span class="fit-row-figure-value">{{ p.activeAuthorisations }}</span>
+              <span class="fit-row-figure-label">live authorisations</span>
+            </span>
+
+            <span class="fit-row-figure">
+              <span class="fit-row-figure-value">{{ p.outstandingValue | number:'1.0-0' }}</span>
+              <span class="fit-row-figure-label">still to invoice</span>
+            </span>
+          </div>
+        }
+      </div>
+
+      @if (authorisations.length > 0) {
+        <h3 class="fit-section-title cp-auth-title">
+          <span class="material-symbols-outlined">assignment</span>
+          Live authorisations
+        </h3>
+
+        <div class="fit-table-wrap">
+          <table class="fit-table">
+            <thead>
+              <tr>
+                <th>Member</th><th>Payer</th><th>Reference</th>
+                <th class="ta-r">Used</th><th class="ta-r">Value</th><th>Until</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (a of authorisations; track a.id) {
+                <tr [class.cp-exhausted]="a.isExhausted">
+                  <td>{{ a.memberName }}</td>
+                  <td>{{ a.payerName }}</td>
+                  <td>{{ a.authorisationNumber }}</td>
+                  <td class="ta-r">{{ a.usedUnits }} of {{ a.approvedUnits }}</td>
+                  <td class="ta-r fit-money">{{ a.approvedValue | number:'1.2-2' }}</td>
+                  <td>
+                    {{ a.validTo | date:'d MMM yyyy' }}
+                    @if (a.isExpired) { <small class="cp-expired">expired</small> }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+  }
+
+  <!-- ── Who is on the scheme ─────────────────────────────────────────── -->
+  @if (open; as a) {
+    <div class="fit-modal-backdrop" (click)="open = null"></div>
+    <div class="fit-modal cp-modal" role="dialog" aria-modal="true" aria-labelledby="cp-members-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="cp-members-title">{{ a.name }}</h3>
+          <p class="fit-modal-sub">
+            {{ openMembers.length }} on the scheme · {{ a.utilisationPercent }}% used it in the last month
+          </p>
+        </div>
+        <button type="button" class="fit-close" (click)="open = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        @if (openMembers.length === 0) {
+          <p class="fit-quiet">Nobody has joined this scheme yet.</p>
+        } @else {
+          <div class="fit-table-wrap">
+            <table class="fit-table">
+              <thead>
+                <tr>
+                  <th>Member</th><th>Employee ref</th>
+                  <th class="ta-r">Employer pays</th><th class="ta-r">They pay</th>
+                  <th class="ta-r">Visits (30d)</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (m of openMembers; track m.id) {
+                  <tr [class.cp-unused]="m.visitsLast30Days === 0">
+                    <td>
+                      <button type="button" class="btn-link" (click)="go('/fitness/members/' + m.memberId)">
+                        {{ m.memberName }}
+                      </button>
+                    </td>
+                    <td>{{ m.employeeReference || '—' }}</td>
+                    <td class="ta-r fit-money">{{ m.employerContribution | number:'1.2-2' }}</td>
+                    <td class="ta-r fit-money">{{ m.employeeContribution | number:'1.2-2' }}</td>
+                    <td class="ta-r">
+                      {{ m.visitsLast30Days }}
+                      @if (m.visitsLast30Days === 0) { <small class="cp-unused-flag">not using it</small> }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="open = null">Close</button>
+        <button type="button" class="btn-primary" (click)="invoicing = a; open = null">Raise an invoice</button>
+      </footer>
+    </div>
+  }
+
+  <!-- ── Raise an invoice ─────────────────────────────────────────────── -->
+  @if (invoicing; as a) {
+    <div class="fit-modal-backdrop" (click)="invoicing = null"></div>
+    <div class="fit-modal" role="dialog" aria-modal="true" aria-labelledby="cp-inv-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="cp-inv-title">Invoice {{ a.name }}</h3>
+          <p class="fit-modal-sub">{{ a.currentMemberCount }} employees on the scheme.</p>
+        </div>
+        <button type="button" class="fit-close" (click)="invoicing = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        <div class="fit-form-grid">
+          <label class="fit-field">
+            <span>From</span>
+            <input type="date" [(ngModel)]="periodStart" />
+          </label>
+          <label class="fit-field">
+            <span>To</span>
+            <input type="date" [(ngModel)]="periodEnd" />
+          </label>
+        </div>
+
+        <p class="fit-quiet cp-note">
+          The invoice carries a line per employee with what each of them actually used. That
+          breakdown is usually why the employer bought the scheme — an invoice without it is the
+          one that gets queried.
+        </p>
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="invoicing = null">Cancel</button>
+        <button type="button" class="btn-primary" [disabled]="busy" (click)="generateInvoice()">
+          {{ busy ? 'Raising…' : 'Raise the invoice' }}
+        </button>
+      </footer>
+    </div>
+  }
+</div>

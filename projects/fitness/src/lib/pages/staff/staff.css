@@ -1,0 +1,100 @@
+.sf-tabs { margin-bottom: 14px; }
+.sf-filters { margin-bottom: 14px; }
+
+.sf-expiring {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sf-in { background: var(--success-bg, #dcfce7); color: var(--success-text, #15803d); }
+.sf-expired { background: var(--danger-bg, #fee2e2); color: var(--danger-text, #b91c1c); }
+.sf-soon { background: var(--warning-bg, #fef3c7); color: var(--warning-text, #b45309); }
+
+/* ── Rota ────────────────────────────────────────────────────────────── */
+.sf-week { margin-bottom: 14px; }
+
+.sf-week-label {
+  min-width: 180px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.sf-week-stats { font-size: 12px; color: var(--text-secondary, #64748b); }
+.sf-week-stats strong { color: var(--warning-text, #b45309); }
+
+.sf-shift {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 11px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  border-left: 4px solid var(--accent, #2b7fff);
+  background: var(--bg-surface, #fff);
+}
+
+.sf-shift.is-short { border-left-color: var(--warning, #f59e0b); }
+.sf-shift.is-draft { border-style: dashed; }
+
+.sf-shift-time {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary, #64748b);
+  font-variant-numeric: tabular-nums;
+}
+
+.sf-shift-title { font-size: 13px; font-weight: 700; color: var(--text-heading, #0f172a); }
+
+.sf-shift-people { display: flex; flex-direction: column; gap: 1px; }
+.sf-shift-person { font-size: 11.5px; color: var(--text-secondary, #64748b); }
+
+.sf-shift-unfilled {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--warning-text, #b45309);
+}
+
+.sf-shift-short { font-size: 11px; font-weight: 700; color: var(--warning-text, #b45309); }
+
+/* A gap in cover, shown in the day it happens rather than in a report
+   nobody opens until the shift has already gone unstaffed.            */
+.sf-gap {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 11px;
+  border-radius: 9px;
+  background: var(--warning-bg, #fef3c7);
+  border: 1px solid var(--warning-border, rgba(180, 83, 9, 0.3));
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--warning-text, #b45309);
+  font-weight: 600;
+}
+
+.sf-gap.is-critical {
+  background: var(--danger-bg, #fee2e2);
+  border-color: var(--danger-border, rgba(185, 28, 28, 0.3));
+  color: var(--danger-text, #b91c1c);
+}
+
+.sf-gap .material-symbols-outlined { font-size: 15px; flex-shrink: 0; }
+
+/* ── Editor ──────────────────────────────────────────────────────────── */
+.sf-pin { margin-top: 16px; max-width: 280px; }
+
+.sf-group {
+  margin: 20px 0 11px;
+  font-size: 11.5px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.sf-perms { display: flex; flex-direction: column; gap: 10px; }

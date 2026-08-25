@@ -1,0 +1,330 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Join someone</h2>
+      <p class="subtitle">Details, plan, health and payment — saved together at the end.</p>
+    </div>
+    <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+  </div>
+
+  <fit-page-help key="join"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <!-- ── Done ─────────────────────────────────────────────────────────── -->
+  @if (step === 'done' && result; as r) {
+    <section class="jn-done">
+      <span class="material-symbols-outlined jn-done-icon">check_circle</span>
+      <h3 class="jn-done-title">
+        {{ member.firstName }} is in — member {{ r.memberNumber }}
+      </h3>
+
+      <dl class="fit-dl jn-done-summary">
+        <div><dt>Agreement</dt><dd>{{ r.agreementNumber }}</dd></div>
+        <div><dt>Paid today</dt><dd>{{ r.amountPaid | number:'1.2-2' }}</dd></div>
+        @if (r.changeDue > 0) {
+          <div><dt>Change to give back</dt><dd>{{ r.changeDue | number:'1.2-2' }}</dd></div>
+        }
+        <div><dt>Then</dt><dd>{{ r.recurringAmount | number:'1.2-2' }} from {{ r.firstBillingOn | date:'d MMM yyyy' }}</dd></div>
+      </dl>
+
+      @if (r.outstandingRequirements.length > 0) {
+        <div class="jn-outstanding">
+          <h4>Before they can use the club</h4>
+          <ul>
+            @for (req of r.outstandingRequirements; track req) { <li>{{ req }}</li> }
+          </ul>
+        </div>
+      }
+
+      <div class="jn-done-actions">
+        <button type="button" class="btn-primary" (click)="openMember()">Open their record</button>
+        <button type="button" class="btn-secondary" (click)="startAgain()">Join somebody else</button>
+      </div>
+    </section>
+  } @else {
+    <!-- ── Stepper ──────────────────────────────────────────────────── -->
+    <div class="fit-steps" role="list" aria-label="Steps">
+      @for (s of steps; track s.key; let i = $index) {
+        <div class="fit-step" role="listitem"
+          [class.is-current]="step === s.key" [class.is-done]="isDone(s.key)">
+          <span class="fit-step-num">
+            @if (isDone(s.key)) { <span class="material-symbols-outlined">check</span> }
+            @else { {{ i + 1 }} }
+          </span>
+          {{ s.label }}
+        </div>
+      }
+    </div>
+
+    <section class="fit-card jn-panel">
+      <div class="fit-card-body">
+        <!-- ── Who ───────────────────────────────────────────────────── -->
+        @if (step === 'who') {
+          <div class="fit-form-grid">
+            <label class="fit-field">
+              <span>First name</span>
+              <input type="text" [(ngModel)]="member.firstName" id="jn-first" />
+              <fit-field-error [message]="errors['firstName']" for="jn-first"></fit-field-error>
+            </label>
+
+            <label class="fit-field">
+              <span>Last name</span>
+              <input type="text" [(ngModel)]="member.lastName" id="jn-last" />
+              <fit-field-error [message]="errors['lastName']" for="jn-last"></fit-field-error>
+            </label>
+
+            <label class="fit-field">
+              <span>What they like to be called</span>
+              <input type="text" [(ngModel)]="member.preferredName" placeholder="Optional" />
+            </label>
+
+            <label class="fit-field">
+              <span>Date of birth</span>
+              <input type="date" [(ngModel)]="member.dateOfBirth" id="jn-dob" />
+              <fit-field-error [message]="errors['dateOfBirth']" for="jn-dob"></fit-field-error>
+            </label>
+
+            <label class="fit-field">
+              <span>Phone</span>
+              <input type="tel" [(ngModel)]="member.phone" id="jn-phone" />
+              <fit-field-error [message]="errors['phone']" for="jn-phone"></fit-field-error>
+            </label>
+
+            <label class="fit-field">
+              <span>Email</span>
+              <input type="email" [(ngModel)]="member.email" id="jn-email" />
+              <fit-field-error [message]="errors['email']" for="jn-email"></fit-field-error>
+            </label>
+
+            <label class="fit-field">
+              <span>Gender</span>
+              <select [(ngModel)]="member.gender">
+                @for (o of genderOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+              </select>
+            </label>
+
+            <label class="fit-field">
+              <span>Address</span>
+              <input type="text" [(ngModel)]="member.addressLine" />
+            </label>
+          </div>
+
+          <p class="fit-quiet jn-note">
+            A date of birth is not optional here: the minimum age, guardian rules and junior plans
+            all depend on it, and getting it wrong is discovered at the barrier rather than now.
+          </p>
+        }
+
+        <!-- ── Plan ──────────────────────────────────────────────────── -->
+        @if (step === 'plan') {
+          @if (loading) {
+            <div class="fit-skeleton" style="height: 240px"></div>
+          } @else if (catalogueData; as cat) {
+            <h4 class="jn-group">Memberships</h4>
+            <div class="jn-plans">
+              @for (p of cat.memberships; track p.id) {
+                <button type="button" class="jn-plan" [class.is-chosen]="planId === p.id" (click)="planId = p.id">
+                  <span class="jn-plan-name">{{ p.name }}</span>
+                  <span class="jn-plan-price">{{ p.price | number:'1.2-2' }}</span>
+                  <span class="jn-plan-period">
+                    @switch (p.billingPeriod) {
+                      @case (BillingPeriod.Weekly) { a week }
+                      @case (BillingPeriod.Monthly) { a month }
+                      @case (BillingPeriod.Quarterly) { a quarter }
+                      @case (BillingPeriod.Annual) { a year }
+                      @default { one-off }
+                    }
+                  </span>
+                  @if (p.joiningFee > 0) {
+                    <span class="jn-plan-fee">plus {{ p.joiningFee | number:'1.2-2' }} to join</span>
+                  }
+                  @if (p.marketingBlurb) { <span class="jn-plan-blurb">{{ p.marketingBlurb }}</span> }
+                </button>
+              }
+            </div>
+
+            @if (cat.packs.length > 0) {
+              <h4 class="jn-group">Session packs</h4>
+              <div class="jn-plans">
+                @for (p of cat.packs; track p.id) {
+                  <button type="button" class="jn-plan" [class.is-chosen]="planId === p.id" (click)="planId = p.id">
+                    <span class="jn-plan-name">{{ p.name }}</span>
+                    <span class="jn-plan-price">{{ p.price | number:'1.2-2' }}</span>
+                    <span class="jn-plan-period">{{ p.creditCount }} sessions</span>
+                    @if (p.validForDays > 0) {
+                      <span class="jn-plan-fee">valid {{ p.validForDays }} days</span>
+                    }
+                  </button>
+                }
+              </div>
+            }
+
+            @if (cat.passes.length > 0) {
+              <h4 class="jn-group">Passes</h4>
+              <div class="jn-plans">
+                @for (p of cat.passes; track p.id) {
+                  <button type="button" class="jn-plan" [class.is-chosen]="planId === p.id" (click)="planId = p.id">
+                    <span class="jn-plan-name">{{ p.name }}</span>
+                    <span class="jn-plan-price">{{ p.price | number:'1.2-2' }}</span>
+                    <span class="jn-plan-period">{{ p.validForDays }} days</span>
+                  </button>
+                }
+              </div>
+            }
+
+            <fit-field-error [message]="errors['planId']"></fit-field-error>
+
+            <div class="jn-promo">
+              <label class="fit-field">
+                <span>Promo code</span>
+                <input type="text" [(ngModel)]="promoCode" placeholder="Optional" />
+              </label>
+              <button type="button" class="btn-secondary" (click)="checkPromo()">Check it</button>
+            </div>
+
+            @if (promoOk !== null) {
+              <p class="jn-promo-result" [class.is-ok]="promoOk" [class.is-bad]="!promoOk">
+                {{ promoMessage }}
+              </p>
+            }
+          }
+        }
+
+        <!-- ── Health ────────────────────────────────────────────────── -->
+        @if (step === 'health') {
+          @if (screeningForm; as f) {
+            <h4 class="jn-group">{{ f.templateName }}</h4>
+            @if (f.introduction) { <p class="jn-intro">{{ f.introduction }}</p> }
+
+            <ul class="jn-questions">
+              @for (q of answers; track q.questionNumber) {
+                <li class="jn-question" [class.is-gating]="q.isGatingQuestion && q.booleanAnswer">
+                  <span class="jn-question-text">{{ q.questionText }}</span>
+                  <span class="jn-question-answer">
+                    <button type="button" [class.is-on]="q.booleanAnswer === false"
+                      (click)="q.booleanAnswer = false">No</button>
+                    <button type="button" [class.is-on]="q.booleanAnswer === true"
+                      (click)="q.booleanAnswer = true">Yes</button>
+                  </span>
+                </li>
+              }
+            </ul>
+
+            @if (needsClearance) {
+              <div class="alert alert-warning jn-clearance">
+                <strong>They will need medical clearance before using the club.</strong>
+                <span>
+                  {{ f.gatingMessage
+                     || 'The membership can still start today. Access opens once a clinician signs off.' }}
+                </span>
+              </div>
+            }
+          }
+
+          @if (waiver; as w) {
+            <h4 class="jn-group">{{ w.name }}</h4>
+            <div class="jn-waiver" [innerHTML]="w.bodyHtml"></div>
+
+            <label class="fit-check jn-accept">
+              <input type="checkbox" [(ngModel)]="waiverAccepted" />
+              <span>They have read and accept the waiver and health declaration</span>
+            </label>
+            <fit-field-error [message]="errors['waiver']"></fit-field-error>
+          }
+
+          <h4 class="jn-group">Keeping in touch</h4>
+          <p class="fit-quiet jn-note">
+            Service messages — bookings, payments, closures — always go out. These two are for
+            offers and news, and they are the ones the law is strict about.
+          </p>
+          <label class="fit-check"><input type="checkbox" [(ngModel)]="marketingEmail" /><span>Offers and news by email</span></label>
+          <label class="fit-check"><input type="checkbox" [(ngModel)]="marketingSms" /><span>Offers and news by text</span></label>
+        }
+
+        <!-- ── Pay ───────────────────────────────────────────────────── -->
+        @if (step === 'pay') {
+          @if (chosenPlan; as p) {
+            <div class="fit-explain jn-summary">
+              <div class="fit-explain-lines">
+                <div class="fit-explain-line">
+                  <span>{{ p.name }}</span>
+                  <strong>{{ p.price | number:'1.2-2' }}</strong>
+                </div>
+                @if (joiningFee > 0) {
+                  <div class="fit-explain-line">
+                    <span>Joining fee</span>
+                    <strong>{{ joiningFee | number:'1.2-2' }}</strong>
+                  </div>
+                }
+                <div class="fit-explain-line is-total">
+                  <span>Due today</span>
+                  <strong>{{ dueToday | number:'1.2-2' }}</strong>
+                </div>
+              </div>
+
+              <p class="fit-explain-text">
+                @if (p.billingPeriod === BillingPeriod.OneOff) {
+                  A one-off purchase — nothing recurring is set up.
+                } @else {
+                  After today, {{ p.price | number:'1.2-2' }} is collected
+                  @switch (p.billingPeriod) {
+                    @case (BillingPeriod.Weekly) { every week }
+                    @case (BillingPeriod.Monthly) { every month }
+                    @case (BillingPeriod.Quarterly) { every quarter }
+                    @case (BillingPeriod.Annual) { every year }
+                    @default { each period }
+                  }@if (p.noticePeriodDays > 0) {, with {{ p.noticePeriodDays }} days' notice to cancel}.
+                }
+              </p>
+            </div>
+          }
+
+          <div class="fit-form-grid">
+            <label class="fit-field">
+              <span>How they will pay</span>
+              <select [(ngModel)]="paymentMethod">
+                @for (o of methodOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+              </select>
+            </label>
+
+            <label class="fit-field">
+              <span>Terminal reference</span>
+              <input type="text" [(ngModel)]="paymentReference" placeholder="Auth code from the card machine" />
+            </label>
+
+            <label class="fit-field">
+              <span>Fob or card number</span>
+              <input type="text" [(ngModel)]="credentialIdentifier" placeholder="Scan it now, or leave blank" />
+            </label>
+          </div>
+
+          <label class="fit-check">
+            <input type="checkbox" [(ngModel)]="takeFirstPaymentNow" />
+            <span>Take the first payment now</span>
+          </label>
+
+          <p class="fit-sensitive jn-nocard">
+            <span class="material-symbols-outlined">credit_card_off</span>
+            Never type a card number into this screen. Take the payment on the terminal and enter
+            its reference — this app does not accept, transmit or store card details.
+          </p>
+        }
+      </div>
+    </section>
+
+    <div class="fit-wizard-foot">
+      @if (step !== 'who') {
+        <button type="button" class="btn-secondary" (click)="back()">Back</button>
+      }
+      <div class="fit-spacer"></div>
+      @if (step !== 'pay') {
+        <button type="button" class="btn-primary" (click)="next()">Continue</button>
+      } @else {
+        <button type="button" class="btn-primary jn-finish" [disabled]="saving" (click)="submit()">
+          {{ saving ? 'Signing them up…' : 'Finish and sign them up' }}
+        </button>
+      }
+    </div>
+  }
+</div>

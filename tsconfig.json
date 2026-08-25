@@ -16,6 +16,7 @@
       "@nexcore/crm": ["projects/crm/src/public-api"],
       "@nexcore/manufacturing": ["projects/manufacturing/src/public-api"],
       "@nexcore/restaurant": ["projects/restaurant/src/public-api"],
+      "@nexcore/fitness": ["projects/fitness/src/public-api"],
       "@nexcore/distribution": ["projects/distribution/src/public-api"]
     },
 

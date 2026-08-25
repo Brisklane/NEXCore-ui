@@ -1,0 +1,138 @@
+/* ── Presets ─────────────────────────────────────────────────────────
+   Named after the question, not the filter. "About to leave" is what a
+   manager is thinking; "riskBand = Critical" is what the API needs.    */
+.mem-presets { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 12px; }
+
+.mem-preset {
+  min-height: 38px;
+  padding: 8px 15px;
+  border-radius: 999px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-surface, #fff);
+  color: var(--text-secondary, #64748b);
+  font-size: 12.5px;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mem-preset:hover { border-color: var(--accent, #2b7fff); color: var(--accent, #2b7fff); }
+.mem-preset:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.mem-filters { margin-bottom: 14px; }
+
+/* ── Rows ────────────────────────────────────────────────────────────
+   A row rather than a table: the same information reflows onto a phone
+   without a horizontal scrollbar, and the whole row is one hit target. */
+.mem-list { display: flex; flex-direction: column; gap: 6px; }
+
+.mem-row {
+  display: grid;
+  grid-template-columns: 44px minmax(180px, 2fr) auto auto auto auto 20px;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 11px 15px;
+  min-height: 68px;
+  border-radius: 13px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-surface, #fff);
+  text-align: left;
+  cursor: pointer;
+  transition: box-shadow 0.14s ease;
+}
+
+.mem-row:hover { box-shadow: var(--shadow-md, 0 4px 12px rgba(15, 23, 42, 0.1)); }
+.mem-row:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.mem-row.is-blocked { border-left: 4px solid var(--danger, #dc2626); }
+
+.mem-avatar {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--bg-muted, #f1f5f9);
+  color: var(--text-secondary, #64748b);
+  font-size: 14px;
+  font-weight: 800;
+  overflow: hidden;
+}
+
+.mem-avatar.has-photo { background: none; }
+.mem-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+.mem-in-dot {
+  position: absolute;
+  right: 0;
+  bottom: 1px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--success, #16a34a);
+  border: 2px solid var(--bg-surface, #fff);
+}
+
+.mem-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+.mem-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+}
+
+.mem-sub {
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mem-col { display: flex; flex-direction: column; gap: 1px; }
+
+.mem-col-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.mem-col-value {
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--text-primary, #1e293b);
+  font-variant-numeric: tabular-nums;
+}
+
+.mem-col-money { text-align: right; }
+.mem-col-money.is-owed .mem-col-value { color: var(--danger-text, #b91c1c); font-weight: 750; }
+
+.mem-go { font-size: 19px; color: var(--text-muted, #94a3b8); }
+
+@media (max-width: 1080px) {
+  .mem-row { grid-template-columns: 44px minmax(140px, 2fr) auto auto 20px; }
+  .mem-col-visit { display: none; }
+}
+
+@media (max-width: 780px) {
+  .mem-row {
+    grid-template-columns: 44px 1fr 20px;
+    grid-template-areas:
+      'avatar main go'
+      'avatar cols cols';
+    row-gap: 8px;
+  }
+  .mem-avatar { grid-area: avatar; align-self: start; }
+  .mem-main { grid-area: main; }
+  .mem-go { grid-area: go; align-self: start; }
+  .mem-col-status { grid-area: cols; justify-self: start; }
+  .mem-col-risk { grid-area: cols; justify-self: center; }
+  .mem-col-money { grid-area: cols; justify-self: end; }
+  .mem-col-visit { display: none; }
+}

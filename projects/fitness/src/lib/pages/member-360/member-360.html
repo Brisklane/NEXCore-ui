@@ -1,0 +1,575 @@
+<div class="page-container">
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  @if (loading && !member) {
+    <div class="fit-skeleton" style="height: 168px; margin-bottom: 16px"></div>
+    <div class="fit-skeleton" style="height: 320px"></div>
+  }
+
+  @if (member; as m) {
+    <!-- ── Header ───────────────────────────────────────────────────────
+         The four facts that change how you speak to somebody, above the
+         fold, before any tab is opened.                                  -->
+    <header class="m3-header" [class.is-blocked]="blockingAlerts.length > 0 || m.isBanned">
+      <button type="button" class="m3-back" (click)="go('/fitness/members')" aria-label="Back to members">
+        <span class="material-symbols-outlined">arrow_back</span>
+      </button>
+
+      <div class="m3-avatar" [class.has-photo]="!!m.photoUrl">
+        @if (m.photoUrl) { <img [src]="m.photoUrl" [alt]="m.fullName" /> }
+        @else { {{ initials(m.fullName) }} }
+        @if (m.isCheckedIn) { <span class="m3-in-dot" title="In the club now"></span> }
+      </div>
+
+      <div class="m3-identity">
+        <h2 class="m3-name">
+          {{ m.preferredName || m.fullName }}
+          @if (m.preferredName && m.preferredName !== m.fullName) {
+            <span class="m3-legal">({{ m.fullName }})</span>
+          }
+        </h2>
+
+        <div class="m3-badges">
+          <span class="fit-status" [class]="statusClass(m.status)">{{ statusLabels[m.status] }}</span>
+          <span class="fit-risk" [class]="riskClass(m.riskBand)">
+            <span class="fit-risk-dot"></span>{{ riskLabels[m.riskBand] }}
+          </span>
+          @if (m.isCheckedIn) { <span class="fit-pill">In the club</span> }
+          @if (m.isBanned) { <span class="fit-status is-blocked">Banned</span> }
+          @for (t of m.tags; track t) { <span class="fit-tag">{{ t }}</span> }
+        </div>
+
+        <p class="m3-meta">
+          {{ m.memberNumber }}
+          @if (m.homeClubName) { · {{ m.homeClubName }} }
+          @if (m.age) { · {{ m.age }} years old }
+          @if (m.joinedOn) { · member for {{ tenure(m.tenureDays) }} }
+        </p>
+
+        <p class="m3-contact">
+          @if (m.phone) {
+            <a [href]="'tel:' + m.phone"><span class="material-symbols-outlined">call</span>{{ m.phone }}</a>
+          }
+          @if (m.email) {
+            <a [href]="'mailto:' + m.email"><span class="material-symbols-outlined">mail</span>{{ m.email }}</a>
+          }
+        </p>
+      </div>
+
+      <div class="m3-figures">
+        <div class="m3-figure" [class.is-owed]="m.accountBalance > 0">
+          <span class="m3-figure-label">Balance</span>
+          <span class="m3-figure-value">{{ m.accountBalance | number:'1.2-2' }}</span>
+          @if (m.nextBillingOn) {
+            <span class="m3-figure-meta">
+              next {{ m.nextBillingAmount | number:'1.2-2' }} on {{ m.nextBillingOn | date:'d MMM' }}
+            </span>
+          }
+        </div>
+
+        <div class="m3-figure">
+          <span class="m3-figure-label">Last in</span>
+          <span class="m3-figure-value">{{ lastVisit() }}</span>
+          <span class="m3-figure-meta">{{ m.totalVisits }} visits, {{ m.visitsThisMonth }} this month</span>
+        </div>
+
+        <div class="m3-figure">
+          <span class="m3-figure-label">Lifetime value</span>
+          <span class="m3-figure-value">{{ m.lifetimeValue | number:'1.0-0' }}</span>
+          @if (m.loyaltyTierName) {
+            <span class="m3-figure-meta">{{ m.loyaltyTierName }} · {{ m.loyaltyPoints }} points</span>
+          }
+        </div>
+      </div>
+
+      <div class="m3-actions">
+        <button type="button" class="btn-primary" (click)="go('/fitness/billing?memberId=' + m.id)">
+          Take payment
+        </button>
+        <button type="button" class="btn-secondary" (click)="go('/fitness/timetable?memberId=' + m.id)">
+          Book a class
+        </button>
+        <button type="button" class="btn-secondary" (click)="go('/fitness/agreements?memberId=' + m.id)">
+          Membership
+        </button>
+      </div>
+    </header>
+
+    <!-- ── Blocking alerts ─────────────────────────────────────────────
+         Anything that would stop them at the barrier, said plainly.     -->
+    @if (blockingAlerts.length > 0) {
+      <div class="m3-blocking">
+        <h3>
+          <span class="material-symbols-outlined">block</span>
+          This member cannot get through the door
+        </h3>
+        <ul>
+          @for (a of blockingAlerts; track a.id) {
+            <li>
+              <span>{{ a.message }}</span>
+              @if (a.actionRoute && a.actionLabel) {
+                <button type="button" class="btn-link" (click)="go(a.actionRoute)">{{ a.actionLabel }}</button>
+              }
+            </li>
+          }
+        </ul>
+      </div>
+    }
+
+    @if (otherAlerts.length > 0) {
+      <ul class="m3-alerts">
+        @for (a of otherAlerts; track a.id) {
+          <li>
+            <span class="material-symbols-outlined">info</span>
+            <span>{{ a.message }}</span>
+            @if (a.actionRoute && a.actionLabel) {
+              <button type="button" class="btn-link" (click)="go(a.actionRoute)">{{ a.actionLabel }}</button>
+            }
+          </li>
+        }
+      </ul>
+    }
+
+    <!-- ── Tabs ─────────────────────────────────────────────────────── -->
+    <div class="fit-segment m3-tabs" role="tablist" aria-label="Member sections">
+      @for (t of [
+        { k: 'overview',   l: 'Overview',   i: 'dashboard' },
+        { k: 'visits',     l: 'Visits',     i: 'sensor_door' },
+        { k: 'bookings',   l: 'Bookings',   i: 'event' },
+        { k: 'money',      l: 'Money',      i: 'payments' },
+        { k: 'agreements', l: 'Membership', i: 'contract' },
+        { k: 'health',     l: 'Health',     i: 'health_and_safety' },
+        { k: 'notes',      l: 'Notes',      i: 'sticky_note_2' }
+      ]; track t.k) {
+        <button
+          type="button"
+          role="tab"
+          [class.is-active]="tab === t.k"
+          [attr.aria-selected]="tab === t.k"
+          (click)="setTab($any(t.k))"
+        >
+          <span class="material-symbols-outlined">{{ t.i }}</span>{{ t.l }}
+        </button>
+      }
+    </div>
+
+    <!-- ── Overview ─────────────────────────────────────────────────── -->
+    @if (tab === 'overview') {
+      <div class="m3-grid">
+        <section class="fit-card">
+          <header class="fit-card-head"><h3 class="fit-card-title">Coming up</h3></header>
+          <div class="fit-card-body">
+            @if (m.upcomingBookings.length === 0) {
+              <div class="fit-empty">
+                <span class="material-symbols-outlined fit-empty-icon">event_available</span>
+                <p class="fit-empty-text">
+                  Nothing booked. A member with nothing in the diary is a member drifting away.
+                </p>
+                <button type="button" class="btn-primary" (click)="go('/fitness/timetable?memberId=' + m.id)">
+                  Book something
+                </button>
+              </div>
+            } @else {
+              <ul class="m3-list">
+                @for (b of m.upcomingBookings; track b.id) {
+                  <li class="m3-list-row">
+                    <span class="m3-list-when">{{ b.startsAt | date:'EEE d MMM, HH:mm' }}</span>
+                    <span class="m3-list-body">
+                      <strong>{{ b.title }}</strong>
+                      <span>
+                        {{ b.location || '' }}@if (b.staffName) { · {{ b.staffName }} }
+                        @if (b.spotLabel) { · spot {{ b.spotLabel }} }
+                      </span>
+                    </span>
+                    @if (b.isWaitlisted) {
+                      <span class="fit-pill">waitlist #{{ b.waitlistPosition }}</span>
+                    }
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        </section>
+
+        <section class="fit-card">
+          <header class="fit-card-head"><h3 class="fit-card-title">Why they might leave</h3></header>
+          <div class="fit-card-body">
+            <div class="m3-risk-head">
+              <span class="fit-risk" [class]="riskClass(m.riskBand)">
+                <span class="fit-risk-dot"></span>{{ riskLabels[m.riskBand] }}
+              </span>
+              <span class="m3-risk-score">{{ m.riskScore }}/100</span>
+            </div>
+
+            @if (m.riskReasons.length === 0) {
+              <p class="m3-quiet">Nothing of concern. They come in regularly and the account is in order.</p>
+            } @else {
+              <ul class="m3-reasons">
+                @for (r of m.riskReasons; track r) { <li>{{ r }}</li> }
+              </ul>
+            }
+
+            <button type="button" class="btn-secondary m3-full" (click)="go('/fitness/retention')">
+              Open retention board
+            </button>
+          </div>
+        </section>
+
+        <section class="fit-card">
+          <header class="fit-card-head"><h3 class="fit-card-title">Credits and entitlements</h3></header>
+          <div class="fit-card-body">
+            @if (m.credits.length === 0) {
+              <p class="m3-quiet">No session credits.</p>
+            } @else {
+              <ul class="m3-credits">
+                @for (c of m.credits; track c.id) {
+                  <li [class.is-expiring]="c.expiringSoon">
+                    <span class="m3-credit-label">{{ c.label }}</span>
+                    <span class="m3-credit-count">{{ c.remaining }}<small>/{{ c.granted }}</small></span>
+                    @if (c.expiresOn) {
+                      <span class="m3-credit-expiry">expires {{ c.expiresOn | date:'d MMM' }}</span>
+                    }
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        </section>
+
+        <section class="fit-card">
+          <header class="fit-card-head"><h3 class="fit-card-title">Cards and fobs</h3></header>
+          <div class="fit-card-body">
+            @if (m.credentials.length === 0) {
+              <p class="m3-quiet">No credential issued — they cannot use the barrier.</p>
+            } @else {
+              <ul class="m3-list">
+                @for (c of m.credentials; track c.id) {
+                  <li class="m3-list-row">
+                    <span class="m3-list-body">
+                      <strong>{{ c.identifier }}</strong>
+                      <span>
+                        issued {{ c.issuedOn | date:'d MMM yyyy' }}
+                        @if (c.lastUsedAt) { · last used {{ c.lastUsedAt | date:'d MMM' }} }
+                      </span>
+                    </span>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        </section>
+
+        @if (m.emergencyContacts.length > 0) {
+          <section class="fit-card">
+            <header class="fit-card-head"><h3 class="fit-card-title">In an emergency</h3></header>
+            <div class="fit-card-body">
+              <ul class="m3-list">
+                @for (c of m.emergencyContacts; track c.id) {
+                  <li class="m3-list-row">
+                    <span class="m3-list-body">
+                      <strong>{{ c.name }}@if (c.isPrimary) { <span class="fit-pill">first call</span> }</strong>
+                      <span>{{ c.relationship }} · <a [href]="'tel:' + c.phone">{{ c.phone }}</a></span>
+                    </span>
+                  </li>
+                }
+              </ul>
+            </div>
+          </section>
+        }
+
+        @if (m.householdMembers.length > 0) {
+          <section class="fit-card">
+            <header class="fit-card-head">
+              <h3 class="fit-card-title">{{ m.householdName || 'Household' }}</h3>
+            </header>
+            <div class="fit-card-body">
+              <ul class="m3-list">
+                @for (h of m.householdMembers; track h.id) {
+                  <li class="m3-list-row">
+                    <span class="m3-list-body">
+                      <strong>{{ h.memberName }}</strong>
+                      <span>
+                        <span class="fit-status" [class]="statusClass(h.memberStatus)">
+                          {{ statusLabels[h.memberStatus] }}
+                        </span>
+                        @if (h.agesOutSoon) { · turns 18 on {{ h.agesOutOn | date:'d MMM' }} }
+                      </span>
+                    </span>
+                    <button type="button" class="btn-link" (click)="go('/fitness/members/' + h.memberId)">
+                      Open
+                    </button>
+                  </li>
+                }
+              </ul>
+            </div>
+          </section>
+        }
+      </div>
+    }
+
+    <!-- ── Visits ───────────────────────────────────────────────────── -->
+    @if (tab === 'visits') {
+      <section class="fit-card">
+        <div class="fit-card-body">
+          @if (visits.length === 0) {
+            <div class="fit-empty">
+              <span class="material-symbols-outlined fit-empty-icon">sensor_door</span>
+              <p class="fit-empty-text">No visits recorded.</p>
+            </div>
+          } @else {
+            <div class="fit-table-wrap">
+              <table class="fit-table">
+                <thead>
+                  <tr><th>When</th><th>Club</th><th>Activity</th><th>Stayed</th></tr>
+                </thead>
+                <tbody>
+                  @for (v of visits; track v.id) {
+                    <tr>
+                      <td>{{ v.checkedInAt | date:'EEE d MMM, HH:mm' }}</td>
+                      <td>{{ v.clubName }}</td>
+                      <td>{{ v.activity || '—' }}</td>
+                      <td>
+                        @if (v.durationMinutes) { {{ v.durationMinutes }} min }
+                        @else { still in }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- ── Bookings ─────────────────────────────────────────────────── -->
+    @if (tab === 'bookings') {
+      <section class="fit-card">
+        <div class="fit-card-body">
+          @if (m.upcomingBookings.length === 0) {
+            <div class="fit-empty">
+              <span class="material-symbols-outlined fit-empty-icon">event_busy</span>
+              <p class="fit-empty-text">Nothing booked.</p>
+            </div>
+          } @else {
+            <ul class="m3-list">
+              @for (b of m.upcomingBookings; track b.id) {
+                <li class="m3-list-row">
+                  <span class="m3-list-when">{{ b.startsAt | date:'EEE d MMM, HH:mm' }}</span>
+                  <span class="m3-list-body">
+                    <strong>{{ b.title }}</strong>
+                    <span>{{ b.bookingType }}@if (b.location) { · {{ b.location }} }</span>
+                  </span>
+                  <button type="button" class="btn-link" (click)="go(b.route)">Open</button>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- ── Money ────────────────────────────────────────────────────── -->
+    @if (tab === 'money') {
+      <section class="fit-card">
+        <header class="fit-card-head">
+          <h3 class="fit-card-title">Account</h3>
+          <button type="button" class="btn-primary" (click)="go('/fitness/billing?memberId=' + m.id)">
+            Take payment
+          </button>
+        </header>
+        <div class="fit-card-body">
+          @if (ledger.length === 0) {
+            <div class="fit-empty">
+              <span class="material-symbols-outlined fit-empty-icon">receipt_long</span>
+              <p class="fit-empty-text">Nothing on the account yet.</p>
+            </div>
+          } @else {
+            <div class="fit-table-wrap">
+              <table class="fit-table">
+                <thead>
+                  <tr><th>When</th><th>What</th><th class="ta-r">Amount</th><th class="ta-r">Balance</th></tr>
+                </thead>
+                <tbody>
+                  @for (e of ledger; track e.id) {
+                    <tr>
+                      <td>{{ e.occurredAt | date:'d MMM yyyy' }}</td>
+                      <td>
+                        {{ e.entryDescription }}
+                        @if (e.invoiceNumber) { <small class="m3-ref">{{ e.invoiceNumber }}</small> }
+                      </td>
+                      <td class="ta-r" [class.is-credit]="e.amount < 0">{{ e.amount | number:'1.2-2' }}</td>
+                      <td class="ta-r fit-money">{{ e.balanceAfter | number:'1.2-2' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- ── Membership ───────────────────────────────────────────────── -->
+    @if (tab === 'agreements') {
+      <div class="m3-grid">
+        @for (a of m.agreements; track a.id) {
+          <section class="fit-card">
+            <header class="fit-card-head">
+              <h3 class="fit-card-title">{{ a.planName }}</h3>
+              <span class="fit-pill">{{ a.agreementNumber }}</span>
+            </header>
+            <div class="fit-card-body">
+              <dl class="m3-dl">
+                <div><dt>Started</dt><dd>{{ a.startsOn | date:'d MMM yyyy' }}</dd></div>
+                <div>
+                  <dt>Price</dt>
+                  <dd>
+                    {{ (a.promotionalPeriodsRemaining > 0 ? a.promotionalPrice : a.price) | number:'1.2-2' }}
+                    {{ a.currencyCode }}
+                    @if (a.promotionalPeriodsRemaining > 0) {
+                      <small>promo, {{ a.promotionalPeriodsRemaining }} left</small>
+                    }
+                  </dd>
+                </div>
+                @if (a.nextBillingOn) {
+                  <div><dt>Next billed</dt><dd>{{ a.nextBillingOn | date:'d MMM yyyy' }}</dd></div>
+                }
+                @if (a.minimumTermEndsOn) {
+                  <div>
+                    <dt>Minimum term</dt>
+                    <dd>
+                      until {{ a.minimumTermEndsOn | date:'d MMM yyyy' }}
+                      @if (a.isInMinimumTerm) { <small>still inside it</small> }
+                    </dd>
+                  </div>
+                }
+                @if (a.isFrozen) {
+                  <div><dt>Frozen</dt><dd>until {{ a.frozenUntil | date:'d MMM yyyy' }}</dd></div>
+                }
+                @if (a.creditsGranted > 0) {
+                  <div><dt>Credits</dt><dd>{{ a.creditsRemaining }} of {{ a.creditsGranted }} left</dd></div>
+                }
+              </dl>
+
+              <div class="m3-agreement-actions">
+                <button type="button" class="btn-secondary" (click)="go('/fitness/agreements/' + a.id)">
+                  Open agreement
+                </button>
+              </div>
+            </div>
+          </section>
+        } @empty {
+          <div class="fit-empty">
+            <span class="material-symbols-outlined fit-empty-icon">contract</span>
+            <p class="fit-empty-text">No membership agreement on file.</p>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- ── Health ───────────────────────────────────────────────────────
+         Behind its own tab, with an explicit notice, because opening it is
+         recorded against whoever opened it.                              -->
+    @if (tab === 'health') {
+      <p class="fit-sensitive">
+        <span class="material-symbols-outlined">health_and_safety</span>
+        This is health information. Your name and the time are recorded against every viewing, and
+        it is excluded from ordinary data exports.
+      </p>
+
+      <div class="m3-grid">
+        <section class="fit-card">
+          <header class="fit-card-head"><h3 class="fit-card-title">Screening and clearance</h3></header>
+          <div class="fit-card-body">
+            <dl class="m3-dl">
+              <div>
+                <dt>Waiver</dt>
+                <dd>
+                  @if (m.waiverSigned) {
+                    signed {{ m.waiverSignedOn | date:'d MMM yyyy' }}
+                    @if (!m.waiverCurrent) { <small>an updated version needs signing</small> }
+                  } @else { not signed }
+                </dd>
+              </div>
+              <div><dt>Medical clearance</dt><dd>{{ m.medicalClearance }}</dd></div>
+            </dl>
+
+            @if (m.medicalSummary) {
+              <p class="m3-medical-summary">{{ m.medicalSummary }}</p>
+            }
+          </div>
+        </section>
+
+        <section class="fit-card">
+          <header class="fit-card-head"><h3 class="fit-card-title">Flags instructors can see</h3></header>
+          <div class="fit-card-body">
+            @if (m.medicalFlags.length === 0) {
+              <p class="m3-quiet">Nothing recorded.</p>
+            } @else {
+              <ul class="m3-flags">
+                @for (f of m.medicalFlags; track f.id) {
+                  <li [class.is-severe]="f.severity >= AlertSeverity.Warning">
+                    <span class="fit-medical">
+                      <span class="material-symbols-outlined">medical_information</span>{{ f.category }}
+                    </span>
+                    <span class="m3-flag-detail">{{ f.detail }}</span>
+                    @if (!f.visibleToInstructors) { <span class="fit-pill">desk only</span> }
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        </section>
+      </div>
+    }
+
+    <!-- ── Notes ────────────────────────────────────────────────────── -->
+    @if (tab === 'notes') {
+      <section class="fit-card">
+        <div class="fit-card-body">
+          <div class="m3-note-add">
+            <textarea
+              rows="2"
+              [(ngModel)]="noteText"
+              placeholder="What happened? Anyone reading this later should be able to pick up where you left off."
+              aria-label="Add a note"
+            ></textarea>
+            <button
+              type="button"
+              class="btn-primary"
+              [disabled]="!noteText.trim() || savingNote"
+              (click)="addNote()"
+            >
+              {{ savingNote ? 'Saving…' : 'Add note' }}
+            </button>
+          </div>
+
+          @if (timeline.length === 0) {
+            <div class="fit-empty">
+              <span class="material-symbols-outlined fit-empty-icon">sticky_note_2</span>
+              <p class="fit-empty-text">Nothing recorded yet.</p>
+            </div>
+          } @else {
+            <ol class="m3-timeline">
+              @for (n of timeline; track n.id) {
+                <li class="m3-timeline-item" [class.is-pinned]="n.isPinned">
+                  <span class="m3-timeline-dot"></span>
+                  <div class="m3-timeline-body">
+                    <p class="m3-timeline-text">{{ n.body }}</p>
+                    <p class="m3-timeline-meta">
+                      {{ n.occurredAt | date:'d MMM yyyy, HH:mm' }}
+                      @if (n.authorName) { · {{ n.authorName }} }
+                      @if (n.isPrivate) { · <span class="fit-pill">private</span> }
+                    </p>
+                  </div>
+                </li>
+              }
+            </ol>
+          }
+        </div>
+      </section>
+    }
+  }
+</div>

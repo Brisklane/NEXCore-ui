@@ -1,0 +1,326 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Staff &amp; rota</h2>
+      <p class="subtitle">
+        @if (!loading) { {{ rows.length }} on the team }
+        @else { The team, their tickets and their week. }
+      </p>
+    </div>
+    <div class="page-header-actions">
+      <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+      <button type="button" class="btn-secondary" (click)="go('/fitness/commission')">Commission</button>
+      <button type="button" class="btn-primary" (click)="create()">
+        <span class="material-symbols-outlined">person_add</span>
+        Add someone
+      </button>
+    </div>
+  </div>
+
+  <fit-page-help key="staff"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <!-- ── Expiring tickets ───────────────────────────────────────────────
+       Above the tabs because an out-of-date first-aid certificate is an
+       insurance problem, not an admin one.                               -->
+  @if (expiring.length > 0) {
+    <div class="alert alert-warning sf-expiring">
+      <strong>{{ expiring.length }} qualification{{ expiring.length === 1 ? '' : 's' }} needs attention.</strong>
+      <button type="button" class="btn-link" (click)="tab = 'tickets'">Look at them</button>
+    </div>
+  }
+
+  <div class="fit-segment sf-tabs" role="tablist" aria-label="Staff sections">
+    <button type="button" role="tab" [class.is-active]="tab === 'people'" (click)="tab = 'people'">
+      <span class="material-symbols-outlined">badge</span>The team
+    </button>
+    <button type="button" role="tab" [class.is-active]="tab === 'rota'" (click)="tab = 'rota'">
+      <span class="material-symbols-outlined">calendar_view_week</span>Rota
+    </button>
+    <button type="button" role="tab" [class.is-active]="tab === 'tickets'" (click)="tab = 'tickets'">
+      <span class="material-symbols-outlined">verified</span>Qualifications
+    </button>
+  </div>
+
+  <!-- ── The team ───────────────────────────────────────────────────── -->
+  @if (tab === 'people') {
+    <div class="fit-toolbar sf-filters">
+      <div class="fit-search">
+        <span class="material-symbols-outlined">search</span>
+        <input type="text" placeholder="Search by name" aria-label="Search staff"
+          [(ngModel)]="search" (ngModelChange)="load()" />
+      </div>
+
+      <label class="fit-field fit-field-inline">
+        <span>Role</span>
+        <select [(ngModel)]="role" (ngModelChange)="load()">
+          <option [ngValue]="null">Any</option>
+          @for (o of roleOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+        </select>
+      </label>
+    </div>
+
+    @if (loading) {
+      <div class="fit-rows">
+        @for (i of [1,2,3,4]; track i) { <div class="fit-skeleton" style="height: 62px"></div> }
+      </div>
+    } @else if (rows.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">badge</span>
+        <h3 class="fit-empty-title">Nobody on the team yet</h3>
+        <p class="fit-empty-text">Add your first member of staff so they can sign in at the desk.</p>
+        <button type="button" class="btn-primary" (click)="create()">Add someone</button>
+      </div>
+    } @else {
+      <div class="fit-rows">
+        @for (p of rows; track p.id) {
+          <div class="fit-row" [class.is-warn]="p.expiringCertifications > 0">
+            <span class="fit-avatar" [class.has-photo]="!!p.photoUrl">
+              @if (p.photoUrl) { <img [src]="p.photoUrl" [alt]="p.fullName" /> }
+              @else { {{ initials(p.fullName) }} }
+            </span>
+
+            <span class="fit-row-main">
+              <span class="fit-row-title">
+                {{ p.displayName || p.fullName }}
+                <span class="fit-pill">{{ roleLabels[p.roleKind] }}</span>
+                @if (p.isContractor) { <span class="fit-pill">contractor</span> }
+                @if (p.isClockedIn) { <span class="fit-pill sf-in">clocked in</span> }
+                @if (!p.isActive) { <span class="fit-pill">left</span> }
+              </span>
+              <span class="fit-row-sub">
+                @if (p.email) { {{ p.email }} }
+                @if (p.phone) { · {{ p.phone }} }
+                @if (p.startedOn) { · started {{ p.startedOn | date:'MMM yyyy' }} }
+                @if (p.expiringCertifications > 0) {
+                  · <strong>{{ p.expiringCertifications }} qualification(s) expiring</strong>
+                }
+              </span>
+            </span>
+
+            <span class="fit-row-actions">
+              @if (p.isBookable) {
+                <button type="button" class="btn-secondary" (click)="go('/fitness/appointments?staffId=' + p.id)">
+                  Diary
+                </button>
+              }
+              <button type="button" class="btn-secondary" (click)="edit(p)">Edit</button>
+            </span>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ── Rota ───────────────────────────────────────────────────────── -->
+  @if (tab === 'rota') {
+    <div class="fit-toolbar sf-week">
+      <button type="button" class="fit-icon-btn" (click)="shiftWeek(-1)" aria-label="Previous week">
+        <span class="material-symbols-outlined">chevron_left</span>
+      </button>
+      <span class="sf-week-label">{{ days[0] | date:'d MMM' }} – {{ days[6] | date:'d MMM yyyy' }}</span>
+      <button type="button" class="fit-icon-btn" (click)="shiftWeek(1)" aria-label="Next week">
+        <span class="material-symbols-outlined">chevron_right</span>
+      </button>
+
+      <div class="fit-spacer"></div>
+
+      @if (rota; as r) {
+        <span class="sf-week-stats">
+          {{ r.totalHours }} hours · {{ r.estimatedCost | number:'1.0-0' }} estimated
+          @if (r.unassignedShifts > 0) { · <strong>{{ r.unassignedShifts }} unfilled</strong> }
+        </span>
+      }
+
+      <button type="button" class="btn-primary" (click)="publishRota()">Publish the week</button>
+    </div>
+
+    @if (!rota) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">calendar_view_week</span>
+        <p class="fit-empty-text">Pick a club to see its rota.</p>
+      </div>
+    } @else {
+      <div class="fit-timetable sf-rota">
+        @for (day of days; track day.getTime()) {
+          <div class="fit-timetable-day">
+            <div class="fit-timetable-head">
+              <span class="fit-timetable-dayname">{{ day | date:'EEE' }}</span>
+              <span class="fit-timetable-date">{{ day | date:'d' }}</span>
+            </div>
+
+            @for (g of gapsOn(day); track g.from) {
+              <div class="sf-gap" [class.is-critical]="g.isCritical">
+                <span class="material-symbols-outlined">warning</span>
+                {{ g.message }}
+              </div>
+            }
+
+            @for (s of shiftsOn(day); track s.id) {
+              <div class="sf-shift" [class.is-short]="s.isUnderStaffed" [class.is-draft]="!s.isPublished">
+                <span class="sf-shift-time">
+                  {{ s.startsAt | date:'HH:mm' }}–{{ s.endsAt | date:'HH:mm' }}
+                </span>
+                <span class="sf-shift-title">{{ s.title || s.position || 'Shift' }}</span>
+                <span class="sf-shift-people">
+                  @for (a of s.assignments; track a.id) {
+                    <span class="sf-shift-person">{{ a.staffName }}</span>
+                  } @empty {
+                    <span class="sf-shift-unfilled">Nobody assigned</span>
+                  }
+                </span>
+                @if (s.isUnderStaffed) {
+                  <span class="sf-shift-short">
+                    {{ s.assignedHeadcount }} of {{ s.requiredHeadcount }} needed
+                  </span>
+                }
+              </div>
+            } @empty {
+              <div class="fit-timetable-empty">No shifts</div>
+            }
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ── Qualifications ─────────────────────────────────────────────── -->
+  @if (tab === 'tickets') {
+    @if (certifications.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">verified</span>
+        <h3 class="fit-empty-title">No qualifications recorded</h3>
+        <p class="fit-empty-text">
+          Record first aid, instructor and safeguarding tickets here, and the app will warn you
+          before they lapse.
+        </p>
+      </div>
+    } @else {
+      <div class="fit-rows">
+        @for (c of certifications; track c.id) {
+          <div class="fit-row" [class]="certClass(c)">
+            <span class="fit-row-main">
+              <span class="fit-row-title">
+                {{ c.name }}
+                @if (c.status === CertificationStatus.Expired) {
+                  <span class="fit-pill sf-expired">expired</span>
+                } @else if (c.status === CertificationStatus.ExpiringSoon) {
+                  <span class="fit-pill sf-soon">expires soon</span>
+                }
+                @if (c.blocksWorkOnExpiry) { <span class="fit-pill">blocks work</span> }
+              </span>
+              <span class="fit-row-sub">
+                {{ c.staffName }}
+                @if (c.issuingBody) { · {{ c.issuingBody }} }
+                @if (c.referenceNumber) { · {{ c.referenceNumber }} }
+              </span>
+            </span>
+
+            <span class="fit-row-figure">
+              <span class="fit-row-figure-value">
+                @if (c.expiresOn) { {{ c.expiresOn | date:'d MMM yyyy' }} } @else { — }
+              </span>
+              <span class="fit-row-figure-label">
+                @if (c.daysToExpiry != null && c.daysToExpiry >= 0) { {{ c.daysToExpiry }} days left }
+                @else if (c.daysToExpiry != null) { lapsed }
+                @else { no expiry }
+              </span>
+            </span>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ── Editor ─────────────────────────────────────────────────────── -->
+  @if (draft; as d) {
+    <div class="fit-modal-backdrop" (click)="draft = null"></div>
+    <div class="fit-modal" role="dialog" aria-modal="true" aria-labelledby="sf-edit-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="sf-edit-title">
+            {{ editing ? editing.fullName : 'Add someone' }}
+          </h3>
+          <p class="fit-modal-sub">Who they are, and what they are allowed to do.</p>
+        </div>
+        <button type="button" class="fit-close" (click)="draft = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        <div class="fit-form-grid">
+          <label class="fit-field">
+            <span>First name</span>
+            <input type="text" [(ngModel)]="d.firstName" id="sf-first" />
+            <fit-field-error [message]="errors['firstName']" for="sf-first"></fit-field-error>
+          </label>
+
+          <label class="fit-field">
+            <span>Last name</span>
+            <input type="text" [(ngModel)]="d.lastName" id="sf-last" />
+            <fit-field-error [message]="errors['lastName']" for="sf-last"></fit-field-error>
+          </label>
+
+          <label class="fit-field">
+            <span>What members call them</span>
+            <input type="text" [(ngModel)]="d.displayName" placeholder="e.g. Sarah" />
+          </label>
+
+          <label class="fit-field">
+            <span>Role</span>
+            <select [(ngModel)]="d.roleKind">
+              @for (o of roleOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+            </select>
+          </label>
+
+          <label class="fit-field">
+            <span>Phone</span>
+            <input type="tel" [(ngModel)]="d.phone" />
+          </label>
+
+          <label class="fit-field">
+            <span>Email</span>
+            <input type="email" [(ngModel)]="d.email" />
+          </label>
+        </div>
+
+        <label class="fit-field sf-pin">
+          <span>{{ editing ? 'Set a new PIN' : 'Desk PIN' }}</span>
+          <input type="password" [(ngModel)]="newPin" inputmode="numeric" maxlength="6" id="sf-pin"
+            [placeholder]="editing ? 'Leave blank to keep the current one' : '4 to 6 digits'" />
+          <fit-field-error [message]="errors['pin']" for="sf-pin"></fit-field-error>
+        </label>
+
+        <p class="fit-sensitive">
+          <span class="material-symbols-outlined">key</span>
+          A PIN is stored hashed and is never shown again — not to a manager, and not to you. If
+          somebody forgets theirs, set a new one.
+        </p>
+
+        <h4 class="sf-group">What they can do</h4>
+        <div class="sf-perms">
+          <label class="fit-check"><input type="checkbox" [(ngModel)]="d.canSell" /><span>Sell memberships</span></label>
+          <label class="fit-check"><input type="checkbox" [(ngModel)]="d.canTrain" /><span>Deliver PT sessions</span></label>
+          <label class="fit-check"><input type="checkbox" [(ngModel)]="d.canTeach" /><span>Teach classes</span></label>
+          <label class="fit-check"><input type="checkbox" [(ngModel)]="d.isBookable" /><span>Members can book them</span></label>
+          <label class="fit-check">
+            <input type="checkbox" [(ngModel)]="d.canApproveOverrides" />
+            <span>Approve overrides, discounts and refunds</span>
+          </label>
+          <label class="fit-check"><input type="checkbox" [(ngModel)]="d.isContractor" /><span>Contractor, not employed</span></label>
+          <label class="fit-check"><input type="checkbox" [(ngModel)]="d.isActive" /><span>Currently working here</span></label>
+        </div>
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="draft = null">Cancel</button>
+        <button type="button" class="btn-primary" [disabled]="saving" (click)="save()">
+          {{ saving ? 'Saving…' : 'Save' }}
+        </button>
+      </footer>
+    </div>
+  }
+</div>

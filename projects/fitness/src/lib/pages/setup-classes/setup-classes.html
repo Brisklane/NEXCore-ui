@@ -1,0 +1,674 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Class types &amp; rooms</h2>
+      <p class="subtitle">What the club runs, and the spaces it runs them in.</p>
+    </div>
+    <div class="page-header-actions">
+      <button type="button" class="btn btn-secondary" [disabled]="!clubId"
+        (click)="tab === 'classes' ? newClassType() : tab === 'rooms' ? newRoom() : newArea()">
+        <span class="material-symbols-outlined">add</span>
+        @if (tab === 'classes') { New class type }
+        @else if (tab === 'rooms') { New room }
+        @else { New area }
+      </button>
+      <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+    </div>
+  </div>
+
+  <fit-page-help key="setup-classes"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <div class="fit-segment st-tabs" role="tablist" aria-label="Setup sections">
+    <button type="button" role="tab" [class.is-active]="tab === 'classes'" (click)="tab = 'classes'">
+      <span class="material-symbols-outlined">sports_gymnastics</span>
+      Class types ({{ classTypes.length }})
+    </button>
+    <button type="button" role="tab" [class.is-active]="tab === 'rooms'" (click)="tab = 'rooms'">
+      <span class="material-symbols-outlined">meeting_room</span>
+      Rooms ({{ rooms.length }})
+    </button>
+    <button type="button" role="tab" [class.is-active]="tab === 'areas'" (click)="tab = 'areas'">
+      <span class="material-symbols-outlined">space_dashboard</span>
+      Areas ({{ areas.length }})
+    </button>
+  </div>
+
+  @if (loading) {
+    <div class="fit-skeleton" style="height: 420px"></div>
+  } @else if (!clubId) {
+    <div class="fit-empty">
+      <span class="material-symbols-outlined fit-empty-icon">apartment</span>
+      <h3 class="fit-empty-title">Choose a club</h3>
+      <p class="fit-empty-text">Classes and rooms belong to one site.</p>
+    </div>
+  } @else {
+
+    <!-- ── Class types ──────────────────────────────────────────────── -->
+    @if (tab === 'classes') {
+      @if (classTypes.length === 0) {
+        <div class="fit-empty">
+          <span class="material-symbols-outlined fit-empty-icon">sports_gymnastics</span>
+          <h3 class="fit-empty-title">No class types yet</h3>
+          <p class="fit-empty-text">
+            A class type is what "Spin" means — how long, how many places, what it costs a drop-in.
+            The timetable cannot be built until at least one exists.
+          </p>
+          <button type="button" class="btn btn-primary" (click)="newClassType()">
+            <span class="material-symbols-outlined">add</span>New class type
+          </button>
+        </div>
+      } @else {
+        <div class="st-type-grid">
+          @for (t of classTypes; track t.id) {
+            <article class="st-type" [class.is-retired]="!t.isActive"
+              [style.--type-colour]="t.colourHex || '#2b7fff'">
+              <header class="st-type-head">
+                <h3 class="st-type-name">{{ t.name }}</h3>
+                @if (!t.isActive) { <span class="fit-pill tone-neutral">Retired</span> }
+                @else if (!t.isBookable) { <span class="fit-pill tone-warning">Not bookable</span> }
+              </header>
+
+              @if (t.discipline) { <p class="st-type-discipline">{{ t.discipline }}</p> }
+
+              <dl class="st-type-facts">
+                <div><dt>Length</dt><dd>{{ t.defaultDurationMinutes }} min</dd></div>
+                <div><dt>Places</dt><dd>{{ t.defaultCapacity }}</dd></div>
+                <div><dt>Effort</dt><dd>{{ intensityLabel(t.intensity) }}</dd></div>
+                <div><dt>Credits</dt><dd>{{ t.creditCost }}</dd></div>
+              </dl>
+
+              <p class="st-type-rules">
+                @if (t.allowsDropIn) { Drop-in {{ t.dropInPrice | currency:'GBP' }} }
+                @else { Members only }
+                @if (t.minimumAge) { · {{ t.minimumAge }}+ }
+                @if (t.requiresSkillClearance) { · needs clearance }
+                @if (t.availableToMarketplace) { · on marketplace }
+              </p>
+
+              @if (t.bookingPolicyName || t.cancellationPolicyName) {
+                <p class="st-type-policy">
+                  @if (t.bookingPolicyName) { Booking: {{ t.bookingPolicyName }} }
+                  @if (t.cancellationPolicyName) { · Cancellation: {{ t.cancellationPolicyName }} }
+                </p>
+              }
+
+              <!-- How much it is actually used, so a retirement decision is an informed one. -->
+              <p class="st-type-usage">
+                {{ t.occurrencesLast30Days }} classes in the last 30 days
+                @if (t.occurrencesLast30Days > 0) {
+                  · {{ t.averageAttendance | number:'1.0-1' }} average
+                  · {{ t.averageFillPercent | number:'1.0-0' }}% full
+                }
+              </p>
+
+              <footer class="st-type-foot">
+                <button type="button" class="btn-link" (click)="editClassType(t)">Edit</button>
+                @if (t.isActive) {
+                  <button type="button" class="btn-link is-danger" [disabled]="busy"
+                    (click)="retireClassType(t)">Retire</button>
+                }
+              </footer>
+            </article>
+          }
+        </div>
+      }
+    }
+
+    <!-- ── Rooms ────────────────────────────────────────────────────── -->
+    @if (tab === 'rooms') {
+      @if (rooms.length === 0) {
+        <div class="fit-empty">
+          <span class="material-symbols-outlined fit-empty-icon">meeting_room</span>
+          <h3 class="fit-empty-title">No rooms yet</h3>
+          <p class="fit-empty-text">Classes need a room before they can be scheduled.</p>
+          <button type="button" class="btn btn-primary" (click)="newRoom()">
+            <span class="material-symbols-outlined">add</span>New room
+          </button>
+        </div>
+      } @else {
+        <div class="fit-table-wrap">
+          <table class="fit-table">
+            <thead>
+              <tr>
+                <th>Room</th>
+                <th>Area</th>
+                <th class="num">Places</th>
+                <th>Spot map</th>
+                <th>Equipment</th>
+                <th>State</th>
+                <th class="actions">&nbsp;</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of rooms; track r.id) {
+                <tr>
+                  <td class="strong">{{ r.name }}</td>
+                  <td [class.muted]="!r.areaName">{{ r.areaName || 'Not in an area' }}</td>
+                  <td class="num">{{ r.capacity }}</td>
+                  <td>
+                    @if (r.hasSpotMap) {
+                      {{ r.gridColumns }} × {{ r.gridRows }} · {{ r.spots.length }} spots
+                    } @else {
+                      <span class="muted">No — places are not numbered</span>
+                    }
+                  </td>
+                  <td [class.muted]="!r.equipmentNote">{{ r.equipmentNote || '—' }}</td>
+                  <td>
+                    @if (r.isOutOfService) { <span class="fit-pill tone-danger">Out of service</span> }
+                    @else if (!r.isActive) { <span class="fit-pill tone-neutral">Inactive</span> }
+                    @else { <span class="fit-pill tone-success">In use</span> }
+                  </td>
+                  <td class="actions">
+                    <button type="button" class="btn-link" (click)="editRoom(r)">Edit layout</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+
+    <!-- ── Areas ────────────────────────────────────────────────────── -->
+    @if (tab === 'areas') {
+      @if (areas.length === 0) {
+        <div class="fit-empty">
+          <span class="material-symbols-outlined fit-empty-icon">space_dashboard</span>
+          <h3 class="fit-empty-title">No areas yet</h3>
+          <p class="fit-empty-text">
+            An area is a part of the building that can fill up, be closed, or need a door —
+            the gym floor, the pool, the creche.
+          </p>
+          <button type="button" class="btn btn-primary" (click)="newArea()">
+            <span class="material-symbols-outlined">add</span>New area
+          </button>
+        </div>
+      } @else {
+        <div class="fit-table-wrap">
+          <table class="fit-table">
+            <thead>
+              <tr>
+                <th>Area</th>
+                <th>Kind</th>
+                <th class="num">Holds</th>
+                <th class="num">In there now</th>
+                <th class="num">Rooms</th>
+                <th class="num">Doors</th>
+                <th>Rules</th>
+                <th>State</th>
+                <th class="actions">&nbsp;</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (a of areas; track a.id) {
+                <tr>
+                  <td class="strong">{{ a.name }}</td>
+                  <td>{{ areaLabels[a.kind] }}</td>
+                  <td class="num">{{ a.capacity ?? '—' }}</td>
+                  <td class="num">{{ a.currentOccupancy }}</td>
+                  <td class="num">{{ roomsInArea(a.id) }}</td>
+                  <td class="num">{{ a.doorCount }}</td>
+                  <td>
+                    @if (a.requiresEntitlement) { <span class="fit-pill tone-info">Entitlement</span> }
+                    @if (a.minimumAge) { <span class="fit-pill tone-neutral">{{ a.minimumAge }}+</span> }
+                    @if (a.maxParticipantsPerStaff) {
+                      <span class="fit-pill tone-neutral">1:{{ a.maxParticipantsPerStaff }} staffing</span>
+                    }
+                  </td>
+                  <td>
+                    @if (a.isOutOfService) {
+                      <span class="fit-pill tone-danger">Closed</span>
+                    } @else if (!a.isActive) {
+                      <span class="fit-pill tone-neutral">Inactive</span>
+                    } @else {
+                      <span class="fit-pill tone-success">Open</span>
+                    }
+                  </td>
+                  <td class="actions">
+                    <button type="button" class="btn-link" (click)="editArea(a)">Edit</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+  }
+
+  <!-- ── Class type editor ────────────────────────────────────────────── -->
+  @if (typeDraft) {
+    <div class="fit-modal-backdrop" (click)="typeDraft = null">
+      <div class="fit-modal is-wide" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        <header class="fit-modal-head">
+          <div>
+            <h3 class="fit-modal-title">
+              @if (typeDraftId) { Edit {{ typeDraft.name }} } @else { New class type }
+            </h3>
+            <p class="fit-modal-sub">The defaults every scheduled instance of this class starts from.</p>
+          </div>
+          <button type="button" class="fit-close" (click)="typeDraft = null" aria-label="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </header>
+
+        <div class="fit-modal-body">
+          @if (formError) { <div class="alert alert-error">{{ formError }}</div> }
+
+          <div class="fit-form-grid">
+            <label class="fit-field">
+              <span>Name</span>
+              <input type="text" [(ngModel)]="typeDraft.name" placeholder="e.g. Reformer Pilates" />
+            </label>
+
+            <label class="fit-field">
+              <span>Short code</span>
+              <input type="text" [(ngModel)]="typeDraft.code" placeholder="e.g. RPIL" />
+              <span class="fit-hint">Used on the till and in exports.</span>
+            </label>
+
+            <label class="fit-field">
+              <span>Discipline</span>
+              <input type="text" [(ngModel)]="typeDraft.discipline" placeholder="e.g. Pilates" />
+            </label>
+
+            <label class="fit-field">
+              <span>Order in lists</span>
+              <input type="number" min="1" [(ngModel)]="typeDraft.displayOrder" />
+            </label>
+          </div>
+
+          <fieldset class="st-colour">
+            <legend>Colour on the timetable</legend>
+            <div class="st-swatches">
+              @for (c of palette; track c) {
+                <button type="button" class="st-swatch" [style.background]="c"
+                  [class.is-chosen]="typeDraft.colourHex === c"
+                  [attr.aria-pressed]="typeDraft.colourHex === c"
+                  [attr.aria-label]="'Colour ' + c"
+                  (click)="typeDraft.colourHex = c">
+                  @if (typeDraft.colourHex === c) {
+                    <span class="material-symbols-outlined">check</span>
+                  }
+                </button>
+              }
+            </div>
+            <p class="fit-hint">
+              Colour helps a manager scan a week. It never carries meaning on its own — the class
+              name is always written next to it.
+            </p>
+          </fieldset>
+
+          <div class="fit-form-grid">
+            <label class="fit-field">
+              <span>Length (minutes)</span>
+              <input type="number" min="5" max="240" [(ngModel)]="typeDraft.defaultDurationMinutes" />
+            </label>
+
+            <label class="fit-field">
+              <span>Places</span>
+              <input type="number" min="1" max="500" [(ngModel)]="typeDraft.defaultCapacity" />
+            </label>
+
+            <label class="fit-field">
+              <span>How hard it is</span>
+              <select [(ngModel)]="typeDraft.intensity">
+                @for (l of [1, 2, 3, 4, 5]; track l) {
+                  <option [ngValue]="l">{{ l }} — {{ intensityLabel(l) }}</option>
+                }
+              </select>
+              <span class="fit-hint">Shown to members choosing a class.</span>
+            </label>
+
+            <label class="fit-field">
+              <span>Credits it costs</span>
+              <input type="number" min="0" max="20" [(ngModel)]="typeDraft.creditCost" />
+              <span class="fit-hint">How many class credits a booking takes off a package.</span>
+            </label>
+
+            <label class="fit-field">
+              <span>Drop-in price</span>
+              <input type="number" min="0" step="0.01" [(ngModel)]="typeDraft.dropInPrice"
+                [disabled]="!typeDraft.allowsDropIn" />
+            </label>
+
+            <label class="fit-field">
+              <span>Equipment needed</span>
+              <input type="text" [(ngModel)]="typeDraft.equipmentNeeded"
+                placeholder="e.g. Mat and light dumbbells" />
+            </label>
+
+            <label class="fit-field">
+              <span>Minimum age</span>
+              <input type="number" min="0" max="120" [(ngModel)]="typeDraft.minimumAge" />
+              <span class="fit-hint">Leave empty when the class is open to everybody.</span>
+            </label>
+
+            <label class="fit-field">
+              <span>Maximum age</span>
+              <input type="number" min="0" max="120" [(ngModel)]="typeDraft.maximumAge" />
+            </label>
+
+            <label class="fit-field">
+              <span>Booking policy</span>
+              <select [(ngModel)]="typeDraft.bookingPolicyId">
+                <option [ngValue]="null">Club default</option>
+                @for (p of bookingPolicies; track p.id) { <option [ngValue]="p.id">{{ p.name }}</option> }
+              </select>
+              <span class="fit-hint">When booking opens and closes, and how many a member may hold.</span>
+            </label>
+
+            <label class="fit-field">
+              <span>Cancellation policy</span>
+              <select [(ngModel)]="typeDraft.cancellationPolicyId">
+                <option [ngValue]="null">Club default</option>
+                @for (p of cancellationPolicies; track p.id) { <option [ngValue]="p.id">{{ p.name }}</option> }
+              </select>
+              <span class="fit-hint">The late-cancel window, the fee and what happens to the credit.</span>
+            </label>
+          </div>
+
+          <div class="st-switches">
+            <label class="st-switch">
+              <input type="checkbox" [(ngModel)]="typeDraft.isBookable" />
+              <span>
+                <strong>Members can book it</strong>
+                Turn off for a class that runs but is not opened up — a school hire, a private group.
+              </span>
+            </label>
+
+            <label class="st-switch">
+              <input type="checkbox" [(ngModel)]="typeDraft.allowsDropIn" />
+              <span>
+                <strong>Non-members can pay to drop in</strong>
+                Sold at the price above, on the till or at the door.
+              </span>
+            </label>
+
+            <label class="st-switch">
+              <input type="checkbox" [(ngModel)]="typeDraft.requiresSkillClearance" />
+              <span>
+                <strong>Needs a clearance first</strong>
+                A member without the recorded clearance is refused the booking, and told why.
+              </span>
+            </label>
+
+            <label class="st-switch">
+              <input type="checkbox" [(ngModel)]="typeDraft.availableToMarketplace" />
+              <span>
+                <strong>Offer it on marketplace channels</strong>
+                Places carved out per schedule, not the whole class.
+              </span>
+            </label>
+
+            <label class="st-switch">
+              <input type="checkbox" [(ngModel)]="typeDraft.isActive" />
+              <span>
+                <strong>Still in use</strong>
+                Turning this off keeps it out of new schedules. Classes already run keep their history.
+              </span>
+            </label>
+          </div>
+
+          <label class="fit-field">
+            <span>What a member reads about it</span>
+            <textarea rows="3" [(ngModel)]="typeDraft.marketingBlurb"
+              placeholder="One or two sentences, written for somebody deciding whether to come."></textarea>
+          </label>
+        </div>
+
+        <div class="fit-modal-foot">
+          <span class="fit-foot-spacer"></span>
+          <button type="button" class="btn btn-secondary" (click)="typeDraft = null">Cancel</button>
+          <button type="button" class="btn btn-primary" [disabled]="busy" (click)="saveClassType()">
+            @if (busy) { Saving… } @else { Save class type }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── Room layout editor ───────────────────────────────────────────── -->
+  @if (roomDraft) {
+    <div class="fit-modal-backdrop" (click)="roomDraft = null">
+      <div class="fit-modal is-wide" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        <header class="fit-modal-head">
+          <div>
+            <h3 class="fit-modal-title">
+              @if (roomDraft.roomId) { Edit {{ roomDraft.name }} } @else { New room }
+            </h3>
+            <p class="fit-modal-sub">The room, and — where places are numbered — the map of it.</p>
+          </div>
+          <button type="button" class="fit-close" (click)="roomDraft = null" aria-label="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </header>
+
+        <div class="fit-modal-body">
+          @if (formError) { <div class="alert alert-error">{{ formError }}</div> }
+
+          <div class="fit-form-grid">
+            <label class="fit-field">
+              <span>Name</span>
+              <input type="text" [(ngModel)]="roomDraft.name" placeholder="e.g. Studio 2" />
+            </label>
+
+            <label class="fit-field">
+              <span>Area it sits in</span>
+              <select [(ngModel)]="roomDraft.areaId">
+                <option [ngValue]="null">Not in an area</option>
+                @for (a of areas; track a.id) { <option [ngValue]="a.id">{{ a.name }}</option> }
+              </select>
+            </label>
+
+            <label class="fit-field">
+              <span>Places</span>
+              <input type="number" min="1" max="500" [(ngModel)]="roomDraft.capacity"
+                [disabled]="roomDraft.hasSpotMap" />
+              @if (roomDraft.hasSpotMap) {
+                <span class="fit-hint">Set by the spot map: {{ bookableSpots }} bookable spots.</span>
+              }
+            </label>
+
+            <label class="fit-field">
+              <span>Equipment note</span>
+              <input type="text" [(ngModel)]="roomDraft.equipmentNote"
+                placeholder="e.g. 24 Keiser bikes, sound system" />
+            </label>
+          </div>
+
+          <label class="st-switch st-switch-standalone">
+            <input type="checkbox" [(ngModel)]="roomDraft.hasSpotMap" />
+            <span>
+              <strong>Places in this room are numbered</strong>
+              Cycle studios and reformer rooms book a specific bike or bed. A member who booked
+              bike 7 wants bike 7, and the instructor needs to know which one is broken.
+            </span>
+          </label>
+
+          @if (roomDraft.hasSpotMap) {
+            <div class="st-grid-tools">
+              <label class="fit-field fit-field-inline">
+                <span>Columns</span>
+                <input type="number" min="1" max="20" [(ngModel)]="roomDraft.gridColumns" />
+              </label>
+
+              <label class="fit-field fit-field-inline">
+                <span>Rows</span>
+                <input type="number" min="1" max="20" [(ngModel)]="roomDraft.gridRows" />
+              </label>
+
+              <div class="fit-spacer"></div>
+
+              <button type="button" class="btn btn-secondary" (click)="fillGrid()">Fill every square</button>
+              <button type="button" class="btn btn-secondary" (click)="clearGrid()">Clear</button>
+            </div>
+
+            <p class="st-front">Front of the room — where the instructor stands</p>
+
+            <div class="st-grid" [style.--cols]="roomDraft.gridColumns">
+              @for (row of gridRows; track row) {
+                @for (col of gridColumns; track col) {
+                  <button type="button" class="st-cell"
+                    [class.is-spot]="!!spotAt(col, row)"
+                    [class.is-out]="spotAt(col, row)?.isOutOfService"
+                    [attr.aria-label]="'Row ' + row + ', column ' + col"
+                    (click)="toggleSpot(col, row)">
+                    @if (spotAt(col, row); as spot) {
+                      <span class="st-cell-label">{{ spot.label }}</span>
+                      <span class="st-cell-flag" (click)="toggleSpotOutOfService(spot, $event)"
+                        [title]="spot.isOutOfService ? 'Put back in service' : 'Mark out of service'">
+                        <span class="material-symbols-outlined">
+                          {{ spot.isOutOfService ? 'build' : 'build_circle' }}
+                        </span>
+                      </span>
+                    }
+                  </button>
+                }
+              }
+            </div>
+
+            <div class="fit-explain st-explain">
+              <div class="fit-explain-lines">
+                <div class="fit-explain-line">
+                  <span>Spots placed</span>
+                  <strong>{{ placedSpots }}</strong>
+                </div>
+                <div class="fit-explain-line">
+                  <span>Out of service</span>
+                  <strong>{{ placedSpots - bookableSpots }}</strong>
+                </div>
+                <div class="fit-explain-line is-total">
+                  <span>Members who can book this room</span>
+                  <strong>{{ bookableSpots }}</strong>
+                </div>
+              </div>
+              <p class="fit-explain-text">
+                Click a square to place a spot, click it again to take it away, and click the
+                spanner on a spot to mark it out of service. A gap in the grid is a real thing —
+                a pillar, a door, the space the instructor stands in. Out-of-service spots stay on
+                the map and stay unbookable, so nobody is sold a broken bike.
+              </p>
+            </div>
+          }
+        </div>
+
+        <div class="fit-modal-foot">
+          <span class="fit-foot-spacer"></span>
+          <button type="button" class="btn btn-secondary" (click)="roomDraft = null">Cancel</button>
+          <button type="button" class="btn btn-primary" [disabled]="busy" (click)="saveRoom()">
+            @if (busy) { Saving… } @else { Save room }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── Area editor ──────────────────────────────────────────────────── -->
+  @if (areaDraft) {
+    <div class="fit-modal-backdrop" (click)="areaDraft = null">
+      <div class="fit-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        <header class="fit-modal-head">
+          <div>
+            <h3 class="fit-modal-title">
+              @if (areaDraft.id) { Edit {{ areaDraft.name }} } @else { New area }
+            </h3>
+            <p class="fit-modal-sub">A part of the building that can fill up, close, or need a door.</p>
+          </div>
+          <button type="button" class="fit-close" (click)="areaDraft = null" aria-label="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </header>
+
+        <div class="fit-modal-body">
+          @if (formError) { <div class="alert alert-error">{{ formError }}</div> }
+
+          <div class="fit-form-grid">
+            <label class="fit-field">
+              <span>Name</span>
+              <input type="text" [(ngModel)]="areaDraft.name" placeholder="e.g. Main gym floor" />
+            </label>
+
+            <label class="fit-field">
+              <span>Kind</span>
+              <select [(ngModel)]="areaDraft.kind">
+                @for (o of areaKindOptions; track o.value) {
+                  <option [ngValue]="o.value">{{ o.label }}</option>
+                }
+              </select>
+            </label>
+
+            <label class="fit-field">
+              <span>How many it holds</span>
+              <input type="number" min="0" [(ngModel)]="areaDraft.capacity" />
+              <span class="fit-hint">Used for the live occupancy figure on the dashboard.</span>
+            </label>
+
+            <label class="fit-field">
+              <span>Minimum age</span>
+              <input type="number" min="0" max="120" [(ngModel)]="areaDraft.minimumAge" />
+            </label>
+
+            <label class="fit-field">
+              <span>Most people per member of staff</span>
+              <input type="number" min="0" [(ngModel)]="areaDraft.maxParticipantsPerStaff" />
+              <span class="fit-hint">Pools and creches have a legal ratio. Leave empty where none applies.</span>
+            </label>
+
+            <label class="fit-field">
+              <span>Order in lists</span>
+              <input type="number" min="1" [(ngModel)]="areaDraft.displayOrder" />
+            </label>
+          </div>
+
+          <div class="st-switches">
+            <label class="st-switch">
+              <input type="checkbox" [(ngModel)]="areaDraft.requiresEntitlement" />
+              <span>
+                <strong>Membership has to include it</strong>
+                A member whose plan does not cover this area is refused at its door, and told which
+                plan would cover it.
+              </span>
+            </label>
+
+            <label class="st-switch">
+              <input type="checkbox" [(ngModel)]="areaDraft.isOutOfService" />
+              <span>
+                <strong>Closed right now</strong>
+                Reception will be asked why, so write it down.
+              </span>
+            </label>
+
+            <label class="st-switch">
+              <input type="checkbox" [(ngModel)]="areaDraft.isActive" />
+              <span>
+                <strong>Still part of the club</strong>
+                Turn off for a space that no longer exists.
+              </span>
+            </label>
+          </div>
+
+          @if (areaDraft.isOutOfService) {
+            <label class="fit-field">
+              <span>Why it is closed</span>
+              <input type="text" [(ngModel)]="areaDraft.outOfServiceNote"
+                placeholder="e.g. Pool plant repair, back Thursday" />
+              <span class="fit-hint">Shown to reception and to members who ask.</span>
+            </label>
+          }
+        </div>
+
+        <div class="fit-modal-foot">
+          <span class="fit-foot-spacer"></span>
+          <button type="button" class="btn btn-secondary" (click)="areaDraft = null">Cancel</button>
+          <button type="button" class="btn btn-primary" [disabled]="busy" (click)="saveArea()">
+            @if (busy) { Saving… } @else { Save area }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

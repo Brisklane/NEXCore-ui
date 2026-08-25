@@ -1,0 +1,107 @@
+.mk-tabs { margin-bottom: 14px; }
+.mk-modal { max-width: 720px; }
+.mk-preview-note { margin-bottom: 14px; max-width: 76ch; }
+.mk-journey-note { margin-bottom: 14px; max-width: 80ch; }
+
+.mk-sent { background: var(--success-bg, #dcfce7); color: var(--success-text, #15803d); }
+.mk-live { background: var(--success-bg, #dcfce7); color: var(--success-text, #15803d); }
+
+/* How many people were deliberately not messaged. Shown on the row, not
+   hidden in a report, because it is the number that proves the club is
+   handling consent properly.                                           */
+.mk-suppressed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-weight: 650;
+  color: var(--text-muted, #94a3b8);
+}
+
+.mk-suppressed .material-symbols-outlined { font-size: 15px; }
+
+/* What the campaign was worth — the figure that matters more than opens. */
+.mk-worth {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-weight: 700;
+  color: var(--success-text, #15803d);
+}
+
+.mk-worth .material-symbols-outlined { font-size: 15px; }
+
+/* ── Journeys ────────────────────────────────────────────────────────── */
+.mk-journey { display: flex; flex-direction: column; }
+.mk-journey.is-live { border-top: 3px solid var(--success, #16a34a); }
+
+.mk-trigger {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 14px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  background: var(--accent-soft, rgba(43, 127, 255, 0.08));
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--text-primary, #1e293b);
+  line-height: 1.5;
+}
+
+.mk-trigger .material-symbols-outlined { font-size: 17px; color: var(--accent, #2b7fff); flex-shrink: 0; }
+
+/* The steps, in order, so somebody can read what a journey will actually
+   send before switching it on.                                          */
+.mk-steps {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0 0 0 16px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.mk-steps::before {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  background: var(--border-default, #e6eaf0);
+}
+
+.mk-steps li { position: relative; display: flex; flex-direction: column; gap: 1px; }
+
+.mk-steps li::before {
+  content: '';
+  position: absolute;
+  left: -16px;
+  top: 5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bg-surface, #fff);
+  border: 2px solid var(--border-strong, #cbd5e1);
+}
+
+.mk-step-when {
+  font-size: 10.5px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.mk-step-what { font-size: 12.5px; color: var(--text-primary, #1e293b); line-height: 1.45; }
+
+.mk-journey-stats { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-subtle, #f1f5f9); }
+
+.mk-journey-foot {
+  padding: 12px 17px;
+  border-top: 1px solid var(--border-subtle, #f1f5f9);
+  background: var(--bg-muted, #f8fafc);
+}

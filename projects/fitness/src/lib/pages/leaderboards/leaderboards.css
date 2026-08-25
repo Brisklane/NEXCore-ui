@@ -1,0 +1,144 @@
+.lb-filters { margin-bottom: 16px; }
+
+.lb-scoretype {
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--text-secondary, #64748b);
+}
+
+.lb-layout {
+  display: grid;
+  grid-template-columns: 1fr minmax(260px, 340px);
+  gap: 16px;
+  align-items: start;
+}
+
+.lb-board {
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-surface, #fff);
+}
+
+.lb-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+
+.lb-entry {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: var(--bg-muted, #f8fafc);
+  border: 1px solid transparent;
+}
+
+/* The top three get a medal colour; everybody else gets a plain number.
+   The score is always printed, so the ordering never depends on colour. */
+.lb-entry.is-first {
+  background: color-mix(in srgb, var(--warning, #f59e0b) 12%, transparent);
+  border-color: color-mix(in srgb, var(--warning, #f59e0b) 35%, transparent);
+}
+
+.lb-entry.is-second { background: var(--bg-inset, #eef2f7); }
+.lb-entry.is-third { background: color-mix(in srgb, #b08d57 10%, transparent); }
+
+.lb-rank {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-default, #e6eaf0);
+  color: var(--text-secondary, #64748b);
+  font-size: 12.5px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.lb-entry.is-first .lb-rank { background: var(--warning, #f59e0b); border-color: transparent; color: #fff; }
+.lb-entry.is-second .lb-rank { background: #94a3b8; border-color: transparent; color: #fff; }
+.lb-entry.is-third .lb-rank { background: #b08d57; border-color: transparent; color: #fff; }
+
+.lb-who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+
+.lb-name { font-size: 14px; font-weight: 700; color: var(--text-heading, #0f172a); }
+.lb-meta { font-size: 11.5px; color: var(--text-muted, #94a3b8); }
+
+.lb-score {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.lb-optout { margin-top: 16px; max-width: 78ch; font-size: 11.5px; }
+
+/* ── Recently logged ─────────────────────────────────────────────────── */
+.lb-side {
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-surface, #fff);
+  position: sticky;
+  top: 12px;
+}
+
+.lb-recent { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+
+.lb-recent li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 10px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: var(--bg-muted, #f8fafc);
+}
+
+.lb-recent li.is-pr {
+  background: var(--success-bg, #dcfce7);
+  border: 1px solid var(--success-border, rgba(21, 128, 61, 0.25));
+}
+
+.lb-recent-who {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+}
+
+.lb-pr {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--success, #16a34a);
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.lb-pr .material-symbols-outlined { font-size: 12px; }
+
+.lb-recent-meta { grid-column: 1; font-size: 11px; color: var(--text-muted, #94a3b8); }
+
+.lb-recent-score {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  align-self: center;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 960px) {
+  .lb-layout { grid-template-columns: 1fr; }
+  .lb-side { position: static; }
+}

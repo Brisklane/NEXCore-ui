@@ -1,0 +1,286 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Trainer diary</h2>
+      <p class="subtitle">
+        @if (!loading) { {{ diary.length }} session{{ diary.length === 1 ? '' : 's' }} on this day }
+        @else { Personal training, inductions and assessments. }
+      </p>
+    </div>
+    <div class="page-header-actions">
+      <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+      <button type="button" class="btn-primary" (click)="startBooking()">
+        <span class="material-symbols-outlined">add</span>
+        Book a session
+      </button>
+    </div>
+  </div>
+
+  <fit-page-help key="appointments"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <div class="fit-toolbar ap-toolbar">
+    <div class="ap-day">
+      <button type="button" class="fit-icon-btn" (click)="shiftDay(-1)" aria-label="Previous day">
+        <span class="material-symbols-outlined">chevron_left</span>
+      </button>
+      <button type="button" class="btn-secondary ap-day-label" (click)="today()">
+        {{ forDate | date:'EEEE d MMMM' }}
+      </button>
+      <button type="button" class="fit-icon-btn" (click)="shiftDay(1)" aria-label="Next day">
+        <span class="material-symbols-outlined">chevron_right</span>
+      </button>
+    </div>
+
+    <label class="fit-field fit-field-inline">
+      <span>Trainer</span>
+      <select [(ngModel)]="staffId" (ngModelChange)="load()">
+        <option [ngValue]="null">Everybody</option>
+        @for (t of trainers; track t.id) {
+          <option [ngValue]="t.staffId">{{ t.displayName }}</option>
+        }
+      </select>
+    </label>
+  </div>
+
+  <!-- ── One trainer's day ──────────────────────────────────────────── -->
+  @if (trainerDay; as td) {
+    <section class="ap-trainer">
+      <div class="ap-trainer-figure">
+        <span class="ap-trainer-value">{{ td.sessionsToday }}</span>
+        <span class="ap-trainer-label">Sessions</span>
+      </div>
+      <div class="ap-trainer-figure">
+        <span class="ap-trainer-value">{{ td.hoursBooked }}<small>h</small></span>
+        <span class="ap-trainer-label">Booked</span>
+      </div>
+      <div class="ap-trainer-figure">
+        <span class="ap-trainer-value">{{ td.activeClients }}</span>
+        <span class="ap-trainer-label">Clients</span>
+      </div>
+      <div class="ap-trainer-figure" [class.is-alert]="td.clientsAtRisk > 0">
+        <span class="ap-trainer-value">{{ td.clientsAtRisk }}</span>
+        <span class="ap-trainer-label">At risk</span>
+      </div>
+      <div class="ap-trainer-figure">
+        <span class="ap-trainer-value">{{ td.commissionThisPeriod | number:'1.0-0' }}</span>
+        <span class="ap-trainer-label">Commission</span>
+      </div>
+
+      @if (td.dueCheckIns.length > 0) {
+        <div class="ap-trainer-note">
+          <span class="material-symbols-outlined">forum</span>
+          {{ td.dueCheckIns.length }} client check-in{{ td.dueCheckIns.length === 1 ? ' is' : 's are' }} due
+        </div>
+      }
+    </section>
+  }
+
+  <!-- ── The diary ──────────────────────────────────────────────────── -->
+  @if (loading) {
+    <div class="fit-rows">
+      @for (i of [1,2,3,4]; track i) { <div class="fit-skeleton" style="height: 66px"></div> }
+    </div>
+  } @else if (diary.length === 0) {
+    <div class="fit-empty">
+      <span class="material-symbols-outlined fit-empty-icon">event_available</span>
+      <h3 class="fit-empty-title">Nothing booked</h3>
+      <p class="fit-empty-text">A quiet diary is a chance to fill it — or a sign the packs are not selling.</p>
+      <button type="button" class="btn-primary" (click)="startBooking()">Book a session</button>
+    </div>
+  } @else {
+    <div class="fit-rows">
+      @for (a of diary; track a.id) {
+        <div class="fit-row ap-row" [class]="statusClass(a)">
+          <span class="ap-time">
+            <strong>{{ a.startsAt | date:'HH:mm' }}</strong>
+            <small>{{ a.durationMinutes }} min</small>
+          </span>
+
+          <span class="fit-avatar" [class.has-photo]="!!a.memberPhotoUrl">
+            @if (a.memberPhotoUrl) { <img [src]="a.memberPhotoUrl" [alt]="a.memberName || 'Member'" /> }
+            @else { {{ initials(a.memberName) }} }
+          </span>
+
+          <span class="fit-row-main">
+            <span class="fit-row-title">
+              {{ a.memberName || 'No member' }}
+              <span class="fit-pill">{{ statusLabels[a.status] }}</span>
+              @if (a.isFirstSession) { <span class="fit-pill ap-first">first session</span> }
+              @if (a.checkedInAt) { <span class="fit-pill ap-here">here</span> }
+            </span>
+            <span class="fit-row-sub">
+              {{ a.serviceName }} with {{ a.staffName }}
+              @if (a.roomName) { · {{ a.roomName }} }
+              @if (a.participantCount > 1) { · {{ a.participantCount }} people }
+            </span>
+          </span>
+
+          <span class="fit-row-actions">
+            @if (a.memberId) {
+              <button type="button" class="fit-icon-btn" (click)="go('/fitness/members/' + a.memberId)"
+                aria-label="Open member">
+                <span class="material-symbols-outlined">person</span>
+              </button>
+            }
+
+            @if (a.status === AppointmentStatus.Booked || a.status === AppointmentStatus.Confirmed) {
+              @if (!a.checkedInAt) {
+                <button type="button" class="btn-secondary" (click)="checkIn(a)">Arrived</button>
+              }
+              <button type="button" class="btn-link" (click)="markNoShow(a)">No-show</button>
+            }
+
+            @if (!a.isSignedOff && a.status !== AppointmentStatus.Cancelled
+                 && a.status !== AppointmentStatus.NoShow) {
+              <button type="button" class="btn-primary" (click)="startSignOff(a)">Sign off</button>
+            }
+          </span>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ── Booking ────────────────────────────────────────────────────── -->
+  @if (booking) {
+    <div class="fit-modal-backdrop" (click)="booking = false"></div>
+    <div class="fit-modal ap-modal" role="dialog" aria-modal="true" aria-labelledby="ap-book-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="ap-book-title">Book a session</h3>
+          <p class="fit-modal-sub">Their own coach is offered first where there is one.</p>
+        </div>
+        <button type="button" class="fit-close" (click)="booking = false" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        <label class="fit-field">
+          <span>What kind of session</span>
+          <select [(ngModel)]="serviceId" (ngModelChange)="findSlots()">
+            @for (s of services; track s.id) {
+              <option [ngValue]="s.id">{{ s.name }} — {{ s.durationMinutes }} min</option>
+            }
+          </select>
+        </label>
+
+        @if (member; as m) {
+          <div class="ap-member-chosen">
+            <span class="material-symbols-outlined">person</span>
+            <span>{{ m.preferredName || m.fullName }}</span>
+            <button type="button" class="fit-icon-btn" (click)="member = null" aria-label="Change member">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+        } @else {
+          <div class="ap-member-search">
+            <div class="fit-search">
+              <span class="material-symbols-outlined">person_search</span>
+              <input type="text" placeholder="Who is the session for?" aria-label="Find a member"
+                [(ngModel)]="memberSearch" (ngModelChange)="onMemberSearch()" />
+            </div>
+
+            @if (memberResults.length > 0) {
+              <ul class="ap-member-results">
+                @for (m of memberResults; track m.id) {
+                  <li>
+                    <button type="button" (click)="chooseMember(m)">
+                      <strong>{{ m.preferredName || m.fullName }}</strong>
+                      <span>{{ m.memberNumber }}</span>
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        }
+
+        @if (member) {
+          @if (searchingSlots) {
+            <div class="fit-skeleton" style="height: 160px; margin-top: 16px"></div>
+          } @else if (slots.length === 0) {
+            <p class="fit-quiet ap-noslots">
+              No free slots in the next week for that service. Try a different session type, or
+              check the trainers' availability under Staff.
+            </p>
+          } @else {
+            <h4 class="ap-slots-title">Free slots</h4>
+            @for (group of slotsByDay; track group.label) {
+              <div class="ap-slot-day">
+                <span class="ap-slot-daylabel">{{ group.label }}</span>
+                <div class="ap-slots">
+                  @for (s of group.slots; track s.startsAt + s.staffId) {
+                    <button
+                      type="button"
+                      class="ap-slot"
+                      [class.is-chosen]="chosenSlot === s"
+                      [class.is-preferred]="s.isPreferredCoach"
+                      (click)="chosenSlot = s"
+                    >
+                      <span class="ap-slot-time">{{ s.startsAt | date:'HH:mm' }}</span>
+                      <span class="ap-slot-staff">{{ s.staffName }}</span>
+                      @if (s.isPreferredCoach) { <span class="ap-slot-flag">their coach</span> }
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+          }
+        }
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="booking = false">Cancel</button>
+        <button type="button" class="btn-primary" [disabled]="!chosenSlot || saving" (click)="confirmBooking()">
+          {{ saving ? 'Booking…' : 'Book it' }}
+        </button>
+      </footer>
+    </div>
+  }
+
+  <!-- ── Sign-off ───────────────────────────────────────────────────── -->
+  @if (signingOff; as a) {
+    <div class="fit-modal-backdrop" (click)="signingOff = null"></div>
+    <div class="fit-modal" role="dialog" aria-modal="true" aria-labelledby="ap-sign-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="ap-sign-title">Sign off the session</h3>
+          <p class="fit-modal-sub">
+            {{ a.memberName }} · {{ a.serviceName }} · {{ a.startsAt | date:'d MMM, HH:mm' }}
+          </p>
+        </div>
+        <button type="button" class="fit-close" (click)="signingOff = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        <p class="fit-quiet">
+          Signing off uses one of their credits, accrues the trainer's commission, and recognises
+          the revenue for this session. All three together.
+        </p>
+
+        <label class="fit-field">
+          <span>What did you do, and what is next?</span>
+          <textarea rows="4" [(ngModel)]="sessionNotes"
+            placeholder="Anyone covering next time should be able to pick up from this."></textarea>
+        </label>
+
+        <label class="fit-check">
+          <input type="checkbox" [(ngModel)]="memberProgressed" />
+          <span>The member confirmed the session took place</span>
+        </label>
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="signingOff = null">Cancel</button>
+        <button type="button" class="btn-primary" [disabled]="saving" (click)="confirmSignOff()">
+          {{ saving ? 'Saving…' : 'Sign off' }}
+        </button>
+      </footer>
+    </div>
+  }
+</div>

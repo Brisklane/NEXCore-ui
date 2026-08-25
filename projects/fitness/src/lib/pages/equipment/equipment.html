@@ -1,0 +1,297 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Equipment</h2>
+      <p class="subtitle">
+        @if (!loading) {
+          {{ assets.length }} assets · {{ outOfService.length }} out of service ·
+          {{ openWorkOrders.length }} jobs open
+        } @else { Machines, their condition and the work outstanding. }
+      </p>
+    </div>
+    <div class="page-header-actions">
+      <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+      <button type="button" class="btn-secondary" (click)="generateDue()">
+        <span class="material-symbols-outlined">build_circle</span>
+        Raise due servicing
+      </button>
+    </div>
+  </div>
+
+  <fit-page-help key="equipment"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <!-- ── Open faults ────────────────────────────────────────────────────
+       Reported by members and staff, above everything else, because a
+       fault nobody has looked at is a member's wasted evening.          -->
+  @if (faults.length > 0) {
+    <div class="alert alert-warning eq-faults">
+      <strong>{{ faults.length }} fault{{ faults.length === 1 ? '' : 's' }} reported and not yet resolved.</strong>
+      <ul>
+        @for (f of faults; track f.id) {
+          <li>
+            {{ f.equipmentName || f.areaName }} — {{ f.faultDescription }}
+            <small>
+              reported {{ f.reportedAt | date:'d MMM, HH:mm' }}
+              @if (f.reportedByName) { by {{ f.reportedByName }} }
+              @if (f.takenOutOfService) { · taken out of service }
+            </small>
+          </li>
+        }
+      </ul>
+    </div>
+  }
+
+  <div class="fit-segment eq-tabs" role="tablist" aria-label="Equipment sections">
+    <button type="button" role="tab" [class.is-active]="tab === 'assets'" (click)="tab = 'assets'">
+      <span class="material-symbols-outlined">fitness_center</span>Assets
+    </button>
+    <button type="button" role="tab" [class.is-active]="tab === 'work'" (click)="tab = 'work'">
+      <span class="material-symbols-outlined">handyman</span>Work orders ({{ openWorkOrders.length }})
+    </button>
+    <button type="button" role="tab" [class.is-active]="tab === 'maintenance'" (click)="tab = 'maintenance'">
+      <span class="material-symbols-outlined">event_repeat</span>Servicing
+    </button>
+  </div>
+
+  <!-- ── Assets ───────────────────────────────────────────────────────── -->
+  @if (tab === 'assets') {
+    <div class="fit-toolbar eq-filters">
+      <div class="fit-search">
+        <span class="material-symbols-outlined">search</span>
+        <input type="text" placeholder="Name, model or asset tag" aria-label="Search equipment"
+          [(ngModel)]="search" (ngModelChange)="onSearchChange()" />
+      </div>
+
+      <label class="fit-field fit-field-inline">
+        <span>Status</span>
+        <select [(ngModel)]="status" (ngModelChange)="load()">
+          <option [ngValue]="null">Any</option>
+          @for (o of statusOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+        </select>
+      </label>
+    </div>
+
+    @if (loading) {
+      <div class="fit-rows">
+        @for (i of [1,2,3,4]; track i) { <div class="fit-skeleton" style="height: 68px"></div> }
+      </div>
+    } @else if (assets.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">fitness_center</span>
+        <h3 class="fit-empty-title">No equipment recorded</h3>
+        <p class="fit-empty-text">
+          Add machines here and members can report a fault by scanning the sticker on them.
+        </p>
+      </div>
+    } @else {
+      <div class="fit-rows">
+        @for (a of assets; track a.id) {
+          <div class="fit-row" [class]="assetClass(a)">
+            <span class="fit-row-main">
+              <span class="fit-row-title">
+                {{ a.name }}
+                <span class="fit-pill">{{ statusLabels[a.status] }}</span>
+                @if (a.inWarranty) { <span class="fit-pill eq-warranty">in warranty</span> }
+                @if (a.serviceOverdue) { <span class="fit-pill eq-overdue">service overdue</span> }
+                @if (a.openWorkOrders > 0) {
+                  <span class="fit-pill">{{ a.openWorkOrders }} job(s) open</span>
+                }
+              </span>
+              <span class="fit-row-sub">
+                @if (a.manufacturer) { {{ a.manufacturer }} }
+                @if (a.model) { {{ a.model }} }
+                @if (a.assetTag) { · {{ a.assetTag }} }
+                @if (a.areaName) { · {{ a.areaName }} }
+                @if (a.ageMonths) { · {{ a.ageMonths }} months old }
+                @if (a.usageHours > 0) { · {{ a.usageHours | number:'1.0-0' }} hours run }
+              </span>
+              @if (a.status === AssetStatus.OutOfOrder && a.outOfServiceNote) {
+                <span class="fit-row-sub eq-note">
+                  <span class="material-symbols-outlined">build</span>
+                  {{ a.outOfServiceNote }}
+                  @if (a.daysOutOfService) { · {{ a.daysOutOfService }} days }
+                </span>
+              }
+            </span>
+
+            @if (a.faultsLast90Days > 0) {
+              <span class="fit-row-figure" [class.is-debit]="a.faultsLast90Days > 2">
+                <span class="fit-row-figure-value">{{ a.faultsLast90Days }}</span>
+                <span class="fit-row-figure-label">faults, 90 days</span>
+              </span>
+            }
+
+            @if (a.costOfOwnership > 0) {
+              <span class="fit-row-figure">
+                <span class="fit-row-figure-value">{{ a.costOfOwnership | number:'1.0-0' }}</span>
+                <span class="fit-row-figure-label">cost to own</span>
+              </span>
+            }
+
+            <span class="fit-row-actions">
+              @if (a.status === AssetStatus.OutOfOrder) {
+                <button type="button" class="btn-primary" (click)="startChange(a)">Back in service</button>
+              } @else {
+                <button type="button" class="btn-warning" (click)="startChange(a)">Take out of service</button>
+              }
+            </span>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ── Work orders ──────────────────────────────────────────────────── -->
+  @if (tab === 'work') {
+    @if (workOrders.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">handyman</span>
+        <h3 class="fit-empty-title">Nothing outstanding</h3>
+        <p class="fit-empty-text">Work orders are raised by a fault report or by servicing falling due.</p>
+      </div>
+    } @else {
+      <div class="fit-rows">
+        @for (w of workOrders; track w.id) {
+          <div class="fit-row" [class]="workClass(w)">
+            <span class="fit-row-main">
+              <span class="fit-row-title">
+                {{ w.title }}
+                <span class="fit-pill">{{ workStatusLabels[w.status] }}</span>
+                <span class="fit-pill">{{ priorityLabels[w.priority] }}</span>
+                @if (w.isOverdue) { <span class="fit-pill eq-overdue">overdue</span> }
+              </span>
+              <span class="fit-row-sub">
+                {{ w.workOrderNumber }}
+                @if (w.equipmentName) { · {{ w.equipmentName }} }
+                @if (w.areaName) { · {{ w.areaName }} }
+                · raised {{ w.raisedOn | date:'d MMM yyyy' }} · {{ w.ageDays }} days old
+                @if (w.assignedStaffName) { · {{ w.assignedStaffName }} }
+                @else if (w.contractorName) { · {{ w.contractorName }} }
+              </span>
+              @if (w.detail) { <span class="fit-row-sub">{{ w.detail }}</span> }
+            </span>
+
+            @if (w.totalCost > 0) {
+              <span class="fit-row-figure">
+                <span class="fit-row-figure-value">{{ w.totalCost | number:'1.2-2' }}</span>
+                <span class="fit-row-figure-label">cost</span>
+              </span>
+            }
+
+            @if (w.downtimeHours > 0) {
+              <span class="fit-row-figure">
+                <span class="fit-row-figure-value">{{ w.downtimeHours | number:'1.0-0' }}<small>h</small></span>
+                <span class="fit-row-figure-label">downtime</span>
+              </span>
+            }
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ── Servicing ────────────────────────────────────────────────────── -->
+  @if (tab === 'maintenance') {
+    @if (maintenance.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">event_repeat</span>
+        <h3 class="fit-empty-title">No servicing scheduled</h3>
+        <p class="fit-empty-text">
+          Schedule servicing by date or by hours run, and the app raises the work orders when they
+          fall due.
+        </p>
+      </div>
+    } @else {
+      <div class="fit-rows">
+        @for (m of maintenance; track m.id) {
+          <div class="fit-row" [class.is-alert]="m.isOverdue" [class.is-good]="!m.isOverdue && m.isActive">
+            <span class="fit-row-main">
+              <span class="fit-row-title">
+                {{ m.taskName }}
+                @if (m.isOverdue) { <span class="fit-pill eq-overdue">overdue</span> }
+                @if (m.autoCreateWorkOrder) { <span class="fit-pill">raises its own job</span> }
+                @if (!m.isActive) { <span class="fit-pill">paused</span> }
+              </span>
+              <span class="fit-row-sub">
+                {{ m.equipmentName || m.appliesToCategory || 'All equipment' }} ·
+                {{ maintenanceDue(m) }}
+                @if (m.lastPerformedOn) { · last done {{ m.lastPerformedOn | date:'d MMM yyyy' }} }
+                @if (m.defaultAssigneeName) { · {{ m.defaultAssigneeName }} }
+              </span>
+              @if (m.instructions) { <span class="fit-row-sub eq-instructions">{{ m.instructions }}</span> }
+            </span>
+
+            @if (m.estimatedMinutes > 0) {
+              <span class="fit-row-figure">
+                <span class="fit-row-figure-value">{{ m.estimatedMinutes }}<small>m</small></span>
+                <span class="fit-row-figure-label">to do</span>
+              </span>
+            }
+
+            @if (m.daysUntilDue != null) {
+              <span class="fit-row-figure" [class.is-debit]="m.daysUntilDue < 0">
+                <span class="fit-row-figure-value">{{ m.daysUntilDue }}</span>
+                <span class="fit-row-figure-label">days</span>
+              </span>
+            }
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ── Change status ────────────────────────────────────────────────── -->
+  @if (changing; as a) {
+    <div class="fit-modal-backdrop" (click)="changing = null"></div>
+    <div class="fit-modal" role="dialog" aria-modal="true" aria-labelledby="eq-status-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="eq-status-title">
+            {{ newStatus === AssetStatus.OutOfOrder ? 'Take out of service' : 'Back in service' }}
+          </h3>
+          <p class="fit-modal-sub">
+            {{ a.name }}
+            @if (a.assetTag) { · {{ a.assetTag }} }
+            @if (a.areaName) { · {{ a.areaName }} }
+          </p>
+        </div>
+        <button type="button" class="fit-close" (click)="changing = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        @if (newStatus === AssetStatus.OutOfOrder) {
+          <p class="fit-sensitive">
+            <span class="material-symbols-outlined">link</span>
+            This does more than change a label. The spot on any rig map goes dark, the resource
+            stops being bookable, and anybody already booked onto it is moved and told.
+          </p>
+        }
+
+        <label class="fit-field">
+          <span>{{ newStatus === AssetStatus.OutOfOrder ? 'What is wrong with it?' : 'What was done?' }}</span>
+          <textarea rows="3" [(ngModel)]="statusNote"
+            [placeholder]="newStatus === AssetStatus.OutOfOrder
+              ? 'Members see a short version of this on the machine.'
+              : 'Optional.'"></textarea>
+        </label>
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="changing = null">Cancel</button>
+        <button
+          type="button"
+          [class]="newStatus === AssetStatus.OutOfOrder ? 'btn-warning' : 'btn-primary'"
+          [disabled]="busy"
+          (click)="confirmChange()"
+        >
+          {{ busy ? 'Saving…' : (newStatus === AssetStatus.OutOfOrder ? 'Take it out' : 'Put it back') }}
+        </button>
+      </footer>
+    </div>
+  }
+</div>

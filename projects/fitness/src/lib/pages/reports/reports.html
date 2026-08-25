@@ -1,0 +1,733 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Reports</h2>
+      <p class="subtitle">The numbers the club is run on.</p>
+    </div>
+    <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+  </div>
+
+  <fit-page-help key="reports"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+  <!-- ── One filter bar for every report ─────────────────────────────── -->
+  <div class="fit-report-filters">
+    <label class="fit-field">
+      <span>Period</span>
+      <select [(ngModel)]="period" (ngModelChange)="run()">
+        @for (o of periodOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+      </select>
+    </label>
+
+    @if (period === ReportPeriod.Custom) {
+      <label class="fit-field">
+        <span>From</span>
+        <input type="date" [(ngModel)]="from" (ngModelChange)="run()" />
+      </label>
+      <label class="fit-field">
+        <span>To</span>
+        <input type="date" [(ngModel)]="to" (ngModelChange)="run()" />
+      </label>
+    }
+
+    <div class="fit-spacer"></div>
+    <button type="button" class="btn-secondary" (click)="run()">Refresh</button>
+  </div>
+
+  <div class="fit-segment rp-tabs" role="tablist" aria-label="Reports">
+    @for (t of tabs; track t.key) {
+      <button type="button" role="tab" [class.is-active]="report === t.key" (click)="choose(t.key)">
+        <span class="material-symbols-outlined">{{ t.icon }}</span>{{ t.label }}
+      </button>
+    }
+  </div>
+
+  @if (loading) { <div class="fit-skeleton" style="height: 380px"></div> }
+
+  <!-- ── Membership ───────────────────────────────────────────────────── -->
+  @if (!loading && report === 'membership' && membership; as m) {
+    <div class="fit-stats">
+      <div class="fit-stat">
+        <span class="fit-stat-label">Members at the end</span>
+        <span class="fit-stat-value">{{ m.closingActive | number }}</span>
+        <span class="fit-stat-meta">started at {{ m.openingActive | number }}</span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Joined</span>
+        <span class="fit-stat-value">{{ m.joins | number }}</span>
+        <span class="fit-stat-meta">{{ m.rejoins }} came back</span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Left</span>
+        <span class="fit-stat-value">{{ m.cancellations + m.expiries | number }}</span>
+        <span class="fit-stat-meta">{{ m.cancellations }} cancelled, {{ m.expiries }} expired</span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Churn</span>
+        <span class="fit-stat-value">{{ m.grossChurnPercent }}%</span>
+        <span class="fit-stat-meta">{{ m.netChurnPercent }}% after rejoins</span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Average tenure</span>
+        <span class="fit-stat-value">{{ m.averageTenureMonths }}<small> mo</small></span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Lifetime value</span>
+        <span class="fit-stat-value">{{ m.averageLifetimeValue | number:'1.0-0' }}</span>
+      </div>
+    </div>
+
+    <p class="rp-footnote">
+      Churn is leavers over the <strong>average</strong> active count for the period — not the
+      closing count, which would flatter a shrinking club and punish a growing one.
+    </p>
+
+    <div class="fit-grid">
+      <section class="fit-card">
+        <header class="fit-card-head"><h3 class="fit-card-title">Plan mix</h3></header>
+        <div class="fit-card-body">
+          <div class="fit-table-wrap">
+            <table class="fit-table">
+              <thead>
+                <tr>
+                  <th>Plan</th><th class="ta-r">Members</th><th class="ta-r">Monthly</th>
+                  <th class="ta-r">Joined</th><th class="ta-r">Churn</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (p of m.planMix; track p.planId) {
+                  <tr>
+                    <td>{{ p.planName }}</td>
+                    <td class="ta-r">{{ p.memberCount }}<small class="rp-pct">{{ p.percentOfBase }}%</small></td>
+                    <td class="ta-r fit-money">{{ p.monthlyRevenue | number:'1.0-0' }}</td>
+                    <td class="ta-r">{{ p.joinsInPeriod }}</td>
+                    <td class="ta-r">{{ p.churnPercent }}%</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="fit-card">
+        <header class="fit-card-head"><h3 class="fit-card-title">Why people left</h3></header>
+        <div class="fit-card-body">
+          @if (m.leaveReasons.length === 0) {
+            <p class="fit-quiet">Nobody left in this period.</p>
+          } @else {
+            <div class="fit-bars">
+              @for (r of m.leaveReasons; track r.reason) {
+                <div class="fit-bar-row">
+                  <div class="fit-bar-head">
+                    <span class="fit-bar-label">{{ r.label }}</span>
+                    <span class="fit-bar-value">
+                      {{ r.count }}<small>{{ r.percentOfTotal }}%</small>
+                    </span>
+                  </div>
+                  <div class="fit-bar-track">
+                    <span class="fit-bar-fill" [style.width.%]="r.percentOfTotal"></span>
+                  </div>
+                  @if (r.savedCount > 0) {
+                    <span class="rp-saved">{{ r.savedCount }} saved ({{ r.saveRatePercent }}%)</span>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="fit-card">
+        <header class="fit-card-head"><h3 class="fit-card-title">How long people stay</h3></header>
+        <div class="fit-card-body">
+          <div class="fit-bars">
+            @for (t of m.tenureDistribution; track t.band) {
+              <div class="fit-bar-row">
+                <div class="fit-bar-head">
+                  <span class="fit-bar-label">{{ t.band }}</span>
+                  <span class="fit-bar-value">
+                    {{ t.memberCount }}<small>{{ t.churnPercent }}% churn</small>
+                  </span>
+                </div>
+                <div class="fit-bar-track">
+                  <span class="fit-bar-fill" [style.width.%]="t.percentOfBase"></span>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </section>
+    </div>
+  }
+
+  <!-- ── Cohorts ──────────────────────────────────────────────────────── -->
+  @if (!loading && report === 'cohorts' && cohorts; as c) {
+    <p class="rp-lead">
+      Of everyone who joined in a given month, what share were still members later. This is the
+      report that tells you which channel brings members who <em>stay</em> — a source producing
+      cheap leads at 40% six-month retention is more expensive than a dear one at 80%.
+    </p>
+
+    @if (c.cohorts.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">grid_view</span>
+        <p class="fit-empty-text">Not enough history yet for a cohort view.</p>
+      </div>
+    } @else {
+      <div class="fit-table-wrap">
+        <table class="fit-table rp-cohorts">
+          <thead>
+            <tr>
+              <th>Cohort</th>
+              <th class="ta-r">Joined</th>
+              @for (p of c.periods; track p) { <th class="ta-c">{{ p }}mo</th> }
+              <th class="ta-r">Lifetime value</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of c.cohorts; track row.label) {
+              <tr>
+                <td>{{ row.label }}</td>
+                <td class="ta-r">{{ row.initialSize }}</td>
+                @for (p of row.retentionPercent; track $index) {
+                  <td class="ta-c rp-cell" [class]="cohortShade(p)">
+                    @if (p != null) { {{ p }}% } @else { — }
+                  </td>
+                }
+                <td class="ta-r fit-money">{{ row.averageLifetimeValue | number:'1.0-0' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <!-- ── Revenue ──────────────────────────────────────────────────────── -->
+  @if (!loading && report === 'revenue' && revenue; as r) {
+    <div class="fit-stats">
+      <div class="fit-stat">
+        <span class="fit-stat-label">Billed</span>
+        <span class="fit-stat-value">{{ r.totalBilled | number:'1.0-0' }}</span>
+        <span class="fit-stat-meta">{{ r.currencyCode }}</span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Collected</span>
+        <span class="fit-stat-value">{{ r.totalCollected | number:'1.0-0' }}</span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Net revenue</span>
+        <span class="fit-stat-value">{{ r.netRevenue | number:'1.0-0' }}</span>
+        <span class="fit-stat-meta">after {{ r.totalRefunded | number:'1.0-0' }} refunded</span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Recognised</span>
+        <span class="fit-stat-value">{{ r.recognisedRevenue | number:'1.0-0' }}</span>
+        <span class="fit-stat-meta">{{ r.deferredBalance | number:'1.0-0' }} still deferred</span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Per member</span>
+        <span class="fit-stat-value">{{ r.averageRevenuePerMember | number:'1.2-2' }}</span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Written off</span>
+        <span class="fit-stat-value">{{ r.totalWrittenOff | number:'1.0-0' }}</span>
+      </div>
+    </div>
+
+    <div class="fit-grid">
+      <section class="fit-card">
+        <header class="fit-card-head"><h3 class="fit-card-title">Where it came from</h3></header>
+        <div class="fit-card-body">
+          <div class="fit-bars">
+            @for (s of r.byStream; track s.label) {
+              <div class="fit-bar-row">
+                <div class="fit-bar-head">
+                  <span class="fit-bar-label">{{ s.label }}</span>
+                  <span class="fit-bar-value">
+                    {{ s.amount | number:'1.0-0' }}<small>{{ s.percentOfTotal }}%</small>
+                  </span>
+                </div>
+                <div class="fit-bar-track">
+                  <span class="fit-bar-fill" [style.width.%]="s.percentOfTotal"></span>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </section>
+
+      <section class="fit-card">
+        <header class="fit-card-head"><h3 class="fit-card-title">How it was paid</h3></header>
+        <div class="fit-card-body">
+          <div class="fit-bars">
+            @for (s of r.byPaymentMethod; track s.label) {
+              <div class="fit-bar-row">
+                <div class="fit-bar-head">
+                  <span class="fit-bar-label">{{ s.label }}</span>
+                  <span class="fit-bar-value">
+                    {{ s.amount | number:'1.0-0' }}<small>{{ s.count }} payments</small>
+                  </span>
+                </div>
+                <div class="fit-bar-track">
+                  <span class="fit-bar-fill" [style.width.%]="s.percentOfTotal"></span>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </section>
+    </div>
+  }
+
+  <!-- ── MRR movement ─────────────────────────────────────────────────── -->
+  @if (!loading && report === 'mrr' && mrr; as m) {
+    <p class="rp-lead">
+      "Revenue is down" is not a finding. This splits the change into its five causes, so the
+      answer is "eleven downgrades and four cancellations" — which is something you can act on.
+    </p>
+
+    <section class="fit-card rp-waterfall">
+      <div class="fit-card-body">
+        <div class="rp-mrr-ends">
+          <div>
+            <span class="rp-mrr-label">Started at</span>
+            <span class="rp-mrr-value">{{ m.openingMrr | number:'1.0-0' }}</span>
+          </div>
+          <span class="material-symbols-outlined rp-mrr-arrow">arrow_forward</span>
+          <div>
+            <span class="rp-mrr-label">Ended at</span>
+            <span class="rp-mrr-value">{{ m.closingMrr | number:'1.0-0' }}</span>
+            <span class="rp-mrr-change" [class.is-up]="m.netChange > 0" [class.is-down]="m.netChange < 0">
+              {{ m.netChange > 0 ? '+' : '' }}{{ m.netChange | number:'1.0-0' }}
+              ({{ m.netChangePercent }}%)
+            </span>
+          </div>
+        </div>
+
+        <div class="fit-bars rp-mrr-bars">
+          @for (c of [
+            { label: 'New members', value: m.newMrr, tone: 'is-good', note: 'people who joined' },
+            { label: 'Upgrades', value: m.expansionMrr, tone: 'is-good', note: 'existing members paying more' },
+            { label: 'Came back', value: m.reactivationMrr, tone: 'is-good', note: 'former members rejoining' },
+            { label: 'Downgrades', value: m.contractionMrr, tone: 'is-warn', note: 'existing members paying less' },
+            { label: 'Cancellations', value: m.churnedMrr, tone: 'is-bad', note: 'members who left' }
+          ]; track c.label) {
+            <div class="fit-bar-row">
+              <div class="fit-bar-head">
+                <span class="fit-bar-label">{{ c.label }}<small class="rp-mrr-note">{{ c.note }}</small></span>
+                <span class="fit-bar-value">{{ c.value | number:'1.0-0' }}</span>
+              </div>
+              <div class="fit-bar-track">
+                <span class="fit-bar-fill" [class]="c.tone" [style.width.%]="barWidth(c.value, mrrMax)"></span>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- ── Attendance ───────────────────────────────────────────────────── -->
+  @if (!loading && report === 'attendance' && attendance; as a) {
+    <div class="fit-stats">
+      <div class="fit-stat">
+        <span class="fit-stat-label">Visits</span>
+        <span class="fit-stat-value">{{ a.totalVisits | number }}</span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Unique members</span>
+        <span class="fit-stat-value">{{ a.uniqueMembers | number }}</span>
+        <span class="fit-stat-meta">{{ a.visitsPerMember }} visits each</span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Average stay</span>
+        <span class="fit-stat-value">{{ a.averageVisitMinutes }}<small> min</small></span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Busiest it got</span>
+        <span class="fit-stat-value">{{ a.peakOccupancy }}</span>
+        <span class="fit-stat-meta">{{ a.peakAt | date:'EEE d MMM, HH:mm' }}</span>
+      </div>
+      <div class="fit-stat is-warning">
+        <span class="fit-stat-label">Never came in</span>
+        <span class="fit-stat-value">{{ a.zeroVisitMembers | number }}</span>
+        <span class="fit-stat-meta">paying, not using</span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Barely came in</span>
+        <span class="fit-stat-value">{{ a.lowUsageMembers | number }}</span>
+      </div>
+    </div>
+
+    <section class="fit-card">
+      <header class="fit-card-head">
+        <h3 class="fit-card-title">When the club is busy</h3>
+        <span class="fit-section-note">Darker means busier</span>
+      </header>
+      <div class="fit-card-body">
+        <div class="fit-heat">
+          <span class="fit-heat-label"></span>
+          @for (h of [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]; track h) {
+            <span class="fit-heat-label rp-heat-hour">{{ hourLabel(h) }}</span>
+          }
+
+          @for (d of [1,2,3,4,5,6,0]; track d) {
+            <span class="fit-heat-label">{{ dayNames[d] }}</span>
+            @for (h of [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]; track h) {
+              <span
+                class="fit-heat-cell"
+                [style]="heatStyle(cellFor(d, h)?.intensity ?? 0)"
+                [attr.title]="dayNames[d] + ' ' + hourLabel(h) + ':00 — ' + (cellFor(d, h)?.visits ?? 0) + ' visits'"
+              ></span>
+            }
+          }
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- ── Classes ──────────────────────────────────────────────────────── -->
+  @if (!loading && report === 'classes' && classes; as c) {
+    <div class="fit-stats">
+      <div class="fit-stat">
+        <span class="fit-stat-label">Classes run</span>
+        <span class="fit-stat-value">{{ c.totalClasses - c.cancelledClasses | number }}</span>
+        <span class="fit-stat-meta">{{ c.cancelledClasses }} cancelled</span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Average fill</span>
+        <span class="fit-stat-value">{{ c.averageFillPercent }}%</span>
+        <span class="fit-stat-meta">{{ c.totalBooked }} of {{ c.totalCapacity }} places</span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Turned up</span>
+        <span class="fit-stat-value">{{ c.totalAttended | number }}</span>
+      </div>
+      <div class="fit-stat" [class.is-warning]="c.noShowRatePercent > 12">
+        <span class="fit-stat-label">No-shows</span>
+        <span class="fit-stat-value">{{ c.noShowRatePercent }}%</span>
+        <span class="fit-stat-meta">{{ c.noShows }} places wasted</span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Waitlist demand</span>
+        <span class="fit-stat-value">{{ c.waitlistDemand | number }}</span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Late cancels</span>
+        <span class="fit-stat-value">{{ c.lateCancels | number }}</span>
+      </div>
+    </div>
+
+    <div class="fit-grid">
+      @if (c.highDemand.length > 0) {
+        <section class="fit-card rp-verdict is-good">
+          <header class="fit-card-head">
+            <h3 class="fit-card-title">Put more of these on</h3>
+          </header>
+          <div class="fit-card-body">
+            <p class="fit-quiet rp-verdict-why">Full most weeks, with people still waiting.</p>
+            <ul class="fit-rows">
+              @for (l of c.highDemand; track l.label) {
+                <li class="fit-row rp-verdict-row">
+                  <span class="fit-row-main">
+                    <span class="fit-row-title">{{ l.label }}</span>
+                    <span class="fit-row-sub">
+                      {{ l.fillPercent }}% full · {{ l.waitlistTotal }} waiting ·
+                      {{ l.occurrences }} run
+                    </span>
+                  </span>
+                  <span class="fit-row-figure">
+                    <span class="fit-row-figure-value">{{ l.contribution | number:'1.0-0' }}</span>
+                    <span class="fit-row-figure-label">contribution</span>
+                  </span>
+                </li>
+              }
+            </ul>
+          </div>
+        </section>
+      }
+
+      @if (c.underPerforming.length > 0) {
+        <section class="fit-card rp-verdict is-bad">
+          <header class="fit-card-head">
+            <h3 class="fit-card-title">Consider cutting these</h3>
+          </header>
+          <div class="fit-card-body">
+            <p class="fit-quiet rp-verdict-why">
+              An instructor's hour for a near-empty room. Contribution is revenue less what the
+              instructor cost.
+            </p>
+            <ul class="fit-rows">
+              @for (l of c.underPerforming; track l.label) {
+                <li class="fit-row rp-verdict-row">
+                  <span class="fit-row-main">
+                    <span class="fit-row-title">{{ l.label }}</span>
+                    <span class="fit-row-sub">
+                      {{ l.fillPercent }}% full · {{ l.attended }} attended across {{ l.occurrences }} classes
+                    </span>
+                  </span>
+                  <span class="fit-row-figure" [class.is-debit]="l.contribution < 0">
+                    <span class="fit-row-figure-value">{{ l.contribution | number:'1.0-0' }}</span>
+                    <span class="fit-row-figure-label">contribution</span>
+                  </span>
+                </li>
+              }
+            </ul>
+          </div>
+        </section>
+      }
+
+      <section class="fit-card">
+        <header class="fit-card-head"><h3 class="fit-card-title">By instructor</h3></header>
+        <div class="fit-card-body">
+          <div class="fit-table-wrap">
+            <table class="fit-table">
+              <thead>
+                <tr>
+                  <th>Instructor</th><th class="ta-r">Classes</th><th class="ta-r">Fill</th>
+                  <th class="ta-r">No-shows</th><th class="ta-r">Contribution</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (l of c.byInstructor; track l.id) {
+                  <tr>
+                    <td>{{ l.label }}</td>
+                    <td class="ta-r">{{ l.occurrences }}</td>
+                    <td class="ta-r">{{ l.fillPercent }}%</td>
+                    <td class="ta-r">{{ l.noShowPercent }}%</td>
+                    <td class="ta-r fit-money">{{ l.contribution | number:'1.0-0' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  }
+
+  <!-- ── Sales ────────────────────────────────────────────────────────── -->
+  @if (!loading && report === 'sales' && sales; as s) {
+    <div class="fit-stats">
+      <div class="fit-stat">
+        <span class="fit-stat-label">Enquiries</span>
+        <span class="fit-stat-value">{{ s.totalLeads | number }}</span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Joined</span>
+        <span class="fit-stat-value">{{ s.joins | number }}</span>
+        <span class="fit-stat-meta">{{ s.overallConversionPercent }}% of enquiries</span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Median reply</span>
+        <span class="fit-stat-value">{{ s.medianResponseMinutes }}<small> min</small></span>
+        <span class="fit-stat-meta">{{ s.slaBreaches }} answered late</span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Cost per join</span>
+        <span class="fit-stat-value">{{ s.costPerAcquisition | number:'1.0-0' }}</span>
+        <span class="fit-stat-meta">{{ s.costPerLead | number:'1.2-2' }} per enquiry</span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Value signed</span>
+        <span class="fit-stat-value">{{ s.joinValue | number:'1.0-0' }}</span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Tours</span>
+        <span class="fit-stat-value">{{ s.tours | number }}</span>
+        <span class="fit-stat-meta">{{ s.tourNoShows }} did not turn up</span>
+      </div>
+    </div>
+
+    <div class="fit-grid">
+      <section class="fit-card">
+        <header class="fit-card-head"><h3 class="fit-card-title">The funnel</h3></header>
+        <div class="fit-card-body">
+          <div class="rp-funnel">
+            @for (f of s.funnel; track f.stage) {
+              <div class="rp-funnel-stage">
+                <div class="rp-funnel-bar" [style.width.%]="f.conversionFromTopPercent">
+                  <span>{{ f.count | number }}</span>
+                </div>
+                <div class="rp-funnel-label">
+                  {{ f.stage }}
+                  <small>{{ f.conversionFromPreviousPercent }}% of the step before</small>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </section>
+
+      <section class="fit-card">
+        <header class="fit-card-head"><h3 class="fit-card-title">Which sources actually work</h3></header>
+        <div class="fit-card-body">
+          <div class="fit-table-wrap">
+            <table class="fit-table">
+              <thead>
+                <tr>
+                  <th>Source</th><th class="ta-r">Enquiries</th><th class="ta-r">Joins</th>
+                  <th class="ta-r">Conversion</th><th class="ta-r">Cost per join</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (src of s.bySource; track src.id) {
+                  <tr>
+                    <td>{{ src.name }}</td>
+                    <td class="ta-r">{{ src.leadsThisMonth }}</td>
+                    <td class="ta-r">{{ src.joinsThisMonth }}</td>
+                    <td class="ta-r">{{ src.conversionPercent }}%</td>
+                    <td class="ta-r fit-money">
+                      @if (src.costPerAcquisition > 0) { {{ src.costPerAcquisition | number:'1.0-0' }} }
+                      @else { free }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  }
+
+  <!-- ── Staff ────────────────────────────────────────────────────────── -->
+  @if (!loading && report === 'staff' && staff; as st) {
+    <div class="fit-stats">
+      <div class="fit-stat">
+        <span class="fit-stat-label">Sessions delivered</span>
+        <span class="fit-stat-value">{{ st.totalSessionsDelivered | number }}</span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Classes taught</span>
+        <span class="fit-stat-value">{{ st.totalClassesTaught | number }}</span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Hours worked</span>
+        <span class="fit-stat-value">{{ st.totalHours | number:'1.0-0' }}</span>
+        <span class="fit-stat-meta">{{ st.averageUtilisationPercent }}% utilised</span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Commission</span>
+        <span class="fit-stat-value">{{ st.totalCommission | number:'1.0-0' }}</span>
+      </div>
+    </div>
+
+    <div class="fit-table-wrap">
+      <table class="fit-table">
+        <thead>
+          <tr>
+            <th>Person</th><th class="ta-r">Sessions</th><th class="ta-r">Classes</th>
+            <th class="ta-r">Fill</th><th class="ta-r">Sold</th><th class="ta-r">Retention</th>
+            <th class="ta-r">Commission</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of st.staff; track p.staffId) {
+            <tr>
+              <td>
+                {{ p.staffName }}
+                @if (p.expiringCertifications > 0) {
+                  <small class="rp-cert-warn">{{ p.expiringCertifications }} ticket(s) expiring</small>
+                }
+              </td>
+              <td class="ta-r">{{ p.sessionsDelivered }}</td>
+              <td class="ta-r">{{ p.classesTaught }}</td>
+              <td class="ta-r">{{ p.averageClassFillPercent }}%</td>
+              <td class="ta-r fit-money">{{ p.salesValue | number:'1.0-0' }}</td>
+              <td class="ta-r">{{ p.clientRetentionPercent }}%</td>
+              <td class="ta-r fit-money">{{ p.commission | number:'1.0-0' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- ── Operations ───────────────────────────────────────────────────── -->
+  @if (!loading && report === 'operations' && operations; as o) {
+    <div class="fit-stats">
+      <div class="fit-stat" [class.is-danger]="o.reportableIncidents > 0">
+        <span class="fit-stat-label">Incidents</span>
+        <span class="fit-stat-value">{{ o.incidents }}</span>
+        <span class="fit-stat-meta">{{ o.reportableIncidents }} reportable, {{ o.openIncidents }} open</span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Complaints</span>
+        <span class="fit-stat-value">{{ o.complaints }}</span>
+        <span class="fit-stat-meta">resolved in {{ o.averageResolutionDays }} days on average</span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Work orders</span>
+        <span class="fit-stat-value">{{ o.workOrders }}</span>
+        <span class="fit-stat-meta">{{ o.openWorkOrders }} still open</span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Equipment downtime</span>
+        <span class="fit-stat-value">{{ o.equipmentDowntimeHours | number:'1.0-0' }}<small> h</small></span>
+        <span class="fit-stat-meta">{{ o.assetsOutOfService }} out of service now</span>
+      </div>
+      <div class="fit-stat" [class.is-warning]="o.complianceRatePercent < 90">
+        <span class="fit-stat-label">Checks completed</span>
+        <span class="fit-stat-value">{{ o.complianceRatePercent }}%</span>
+        <span class="fit-stat-meta">{{ o.facilityChecksCompleted }} of {{ o.facilityChecksDue }}</span>
+      </div>
+      <div class="fit-stat">
+        <span class="fit-stat-label">Door refusals</span>
+        <span class="fit-stat-value">{{ o.accessDenials | number }}</span>
+        <span class="fit-stat-meta">{{ o.manualOverrides }} overridden by staff</span>
+      </div>
+    </div>
+
+    <div class="fit-grid">
+      <section class="fit-card">
+        <header class="fit-card-head"><h3 class="fit-card-title">Why the door said no</h3></header>
+        <div class="fit-card-body">
+          @if (o.denialsByReason.length === 0) {
+            <p class="fit-quiet">Nobody was refused.</p>
+          } @else {
+            <div class="fit-bars">
+              @for (d of o.denialsByReason; track d.label) {
+                <div class="fit-bar-row">
+                  <div class="fit-bar-head">
+                    <span class="fit-bar-label">{{ d.label }}</span>
+                    <span class="fit-bar-value">{{ d.count }}<small>{{ d.percentOfTotal }}%</small></span>
+                  </div>
+                  <div class="fit-bar-track">
+                    <span class="fit-bar-fill" [style.width.%]="d.percentOfTotal"></span>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="fit-card">
+        <header class="fit-card-head"><h3 class="fit-card-title">What went wrong</h3></header>
+        <div class="fit-card-body">
+          @if (o.incidentsByKind.length === 0) {
+            <p class="fit-quiet">No incidents in this period.</p>
+          } @else {
+            <div class="fit-bars">
+              @for (i of o.incidentsByKind; track i.label) {
+                <div class="fit-bar-row">
+                  <div class="fit-bar-head">
+                    <span class="fit-bar-label">{{ i.label }}</span>
+                    <span class="fit-bar-value">{{ i.count }}</span>
+                  </div>
+                  <div class="fit-bar-track">
+                    <span class="fit-bar-fill is-bad" [style.width.%]="i.percentOfTotal"></span>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </section>
+    </div>
+  }
+</div>

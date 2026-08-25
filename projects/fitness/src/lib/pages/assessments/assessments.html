@@ -1,0 +1,330 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Assessments</h2>
+      <p class="subtitle">
+        @if (member) { {{ member.preferredName || member.fullName }} · {{ member.memberNumber }} }
+        @else { Body composition, measurements and progress over time. }
+      </p>
+    </div>
+    <div class="page-header-actions">
+      @if (member) {
+        <button type="button" class="btn btn-secondary" (click)="clearMember()">
+          <span class="material-symbols-outlined">close</span>Clear member
+        </button>
+        <button type="button" class="btn btn-primary" (click)="startRecord()">
+          <span class="material-symbols-outlined">add</span>Record assessment
+        </button>
+      }
+      <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+    </div>
+  </div>
+
+  <fit-page-help key="assessments"></fit-page-help>
+
+  <!-- Not decoration. Staff should know what they are looking at before they look at it. -->
+  <div class="fit-sensitive as-notice">
+    <span class="material-symbols-outlined">health_and_safety</span>
+    <div>
+      <strong>Health data.</strong>
+      Everything on this screen is special-category health information. Opening it is recorded
+      against your name, it is left out of ordinary exports, and a progress photo cannot be
+      stored or shown without the member's recorded consent. Share results with the member,
+      not with the room.
+    </div>
+  </div>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <!-- ── Who ──────────────────────────────────────────────────────────── -->
+  @if (!member) {
+    <section class="as-pick">
+      <h3 class="fit-section-title">
+        <span class="material-symbols-outlined">person_search</span>
+        Find a member
+      </h3>
+      <p class="fit-quiet as-pick-text">
+        Progress belongs to one person. Pick the member first and the whole screen follows them.
+      </p>
+
+      <div class="fit-search as-search">
+        <span class="material-symbols-outlined">search</span>
+        <input type="text" placeholder="Name, member number or email"
+          [(ngModel)]="memberSearch" (ngModelChange)="onMemberSearch()" />
+      </div>
+
+      @if (memberResults.length > 0) {
+        <ul class="as-results">
+          @for (m of memberResults; track m.id) {
+            <li>
+              <button type="button" (click)="chooseMember(m)">
+                <span class="fit-avatar fit-avatar-sm">{{ (m.preferredName || m.fullName).charAt(0) }}</span>
+                <span class="as-result-who">
+                  <strong>{{ m.preferredName || m.fullName }}</strong>
+                  <span>{{ m.memberNumber }}</span>
+                </span>
+                <span class="material-symbols-outlined">chevron_right</span>
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  }
+
+  @if (member) {
+    <div class="fit-segment as-tabs" role="tablist" aria-label="Assessment sections">
+      <button type="button" role="tab" [class.is-active]="tab === 'recent'" (click)="tab = 'recent'">
+        <span class="material-symbols-outlined">assignment</span>Assessments
+      </button>
+      <button type="button" role="tab" [class.is-active]="tab === 'progress'" (click)="tab = 'progress'">
+        <span class="material-symbols-outlined">show_chart</span>Progress
+      </button>
+    </div>
+  }
+
+  @if (loading) {
+    <div class="fit-skeleton" style="height: 380px"></div>
+  } @else {
+
+    <!-- ── Assessments ───────────────────────────────────────────────── -->
+    @if (tab === 'recent') {
+      @if (rows.length === 0) {
+        <div class="fit-empty">
+          <span class="material-symbols-outlined fit-empty-icon">monitor_weight</span>
+          <h3 class="fit-empty-title">Nothing measured yet</h3>
+          <p class="fit-empty-text">
+            @if (member) { Record the first assessment and every one after it shows the change. }
+            @else { Assessments recorded at this club will appear here. }
+          </p>
+        </div>
+      } @else {
+        <div class="as-list">
+          @for (a of rows; track a.id) {
+            <article class="as-card" [class.is-open]="open?.id === a.id">
+              <button type="button" class="as-card-head"
+                (click)="open = open?.id === a.id ? null : a">
+                <span class="as-card-date">
+                  <strong>{{ a.performedOn | date:'d MMM yyyy' }}</strong>
+                  <span>{{ a.templateName || 'Assessment' }}</span>
+                </span>
+
+                <span class="as-card-meta">
+                  @if (!member) { <span class="fit-pill tone-neutral">{{ a.memberName }}</span> }
+                  @if (a.staffName) { <span class="as-card-staff">{{ a.staffName }}</span> }
+                  @if (a.daysSincePrevious != null) {
+                    <span class="as-card-gap">{{ a.daysSincePrevious }} days since the last one</span>
+                  } @else {
+                    <span class="as-card-gap">First assessment</span>
+                  }
+                </span>
+
+                <span class="as-card-count">{{ a.values.length }} measures</span>
+                <span class="material-symbols-outlined as-card-chevron">expand_more</span>
+              </button>
+
+              @if (open?.id === a.id) {
+                <div class="as-card-body">
+                  <div class="as-measures">
+                    @for (v of a.values; track v.id) {
+                      <div class="as-measure">
+                        <span class="as-measure-name">
+                          {{ v.measureName }}
+                          @if (v.grouping) { <span class="as-measure-group">{{ v.grouping }}</span> }
+                        </span>
+
+                        <span class="as-measure-value">
+                          {{ v.displayValue }}
+                          @if (v.unit) { <span class="as-measure-unit">{{ v.unit }}</span> }
+                        </span>
+
+                        <!-- The change is the conversation. Direction is per measure: down is
+                             progress for one member and a problem for another. -->
+                        <span class="as-measure-change" [class]="changeClass(v.direction, v.change)">
+                          @if (v.change != null && v.change !== 0) {
+                            <span class="material-symbols-outlined">
+                              {{ v.change > 0 ? 'arrow_upward' : 'arrow_downward' }}
+                            </span>
+                          }
+                          {{ changeText(v.change, v.unit) }}
+                          @if (v.previousValue != null) {
+                            <span class="as-measure-prev">was {{ v.previousValue }}</span>
+                          }
+                        </span>
+
+                        @if (v.normBand) { <span class="as-measure-norm">{{ v.normBand }}</span> }
+                      </div>
+                    }
+                  </div>
+
+                  @if (a.summary || a.recommendations) {
+                    <div class="as-notes">
+                      @if (a.summary) {
+                        <p><strong>Summary.</strong> {{ a.summary }}</p>
+                      }
+                      @if (a.recommendations) {
+                        <p><strong>What next.</strong> {{ a.recommendations }}</p>
+                      }
+                    </div>
+                  }
+
+                  <div class="as-card-foot">
+                    @if (a.deviceSource) {
+                      <span class="fit-quiet">Imported from {{ a.deviceSource }}</span>
+                    }
+                    @if (a.sharedWithMember) {
+                      <span class="fit-pill tone-success">Shared with the member</span>
+                    } @else {
+                      <span class="fit-pill tone-neutral">Not shared with the member</span>
+                    }
+                    @if (a.nextDueOn) {
+                      <span class="fit-quiet">Next due {{ a.nextDueOn | date:'d MMM yyyy' }}</span>
+                    }
+                  </div>
+                </div>
+              }
+            </article>
+          }
+        </div>
+      }
+    }
+
+    <!-- ── Progress ──────────────────────────────────────────────────── -->
+    @if (tab === 'progress') {
+      @if (progress.length === 0) {
+        <div class="fit-empty">
+          <span class="material-symbols-outlined fit-empty-icon">show_chart</span>
+          <h3 class="fit-empty-title">Not enough history</h3>
+          <p class="fit-empty-text">
+            A trend needs at least two assessments. Record another and the change appears here.
+          </p>
+        </div>
+      } @else {
+        <div class="as-series-grid">
+          @for (s of progress; track s.measureName) {
+            <section class="as-series">
+              <header class="as-series-head">
+                <div>
+                  <h3 class="as-series-name">{{ s.measureName }}</h3>
+                  <p class="as-series-sub">
+                    {{ s.points.length }} readings
+                    @if (s.goalValue != null) {
+                      · goal {{ s.goalValue }}{{ s.unit ? ' ' + s.unit : '' }}
+                      @if (s.goalDate) { by {{ s.goalDate | date:'d MMM yyyy' }} }
+                    }
+                  </p>
+                </div>
+
+                <div class="as-series-now">
+                  <span class="as-series-latest">
+                    {{ s.latest }}<span class="as-measure-unit">{{ s.unit }}</span>
+                  </span>
+                  <span class="as-series-change" [class]="changeClass(s.direction, s.totalChange)">
+                    {{ changeText(s.totalChange, s.unit) }} overall
+                  </span>
+                </div>
+              </header>
+
+              <!-- Bars, not a line: a handful of readings months apart is not a curve, and
+                   drawing one would imply measurements nobody took. -->
+              <div class="as-spark" role="img"
+                [attr.aria-label]="s.measureName + ' from ' + s.first + ' to ' + s.latest">
+                @for (p of s.points; track p.on) {
+                  <span class="as-spark-col" [title]="p.value + ' on ' + (p.on | date:'d MMM yyyy')">
+                    <span class="as-spark-bar" [style.height.%]="pointHeight(s, p.value)"></span>
+                    <span class="as-spark-date">{{ p.on | date:'d MMM' }}</span>
+                  </span>
+                }
+              </div>
+
+              <dl class="as-series-facts">
+                <div><dt>First</dt><dd>{{ s.first }}{{ s.unit }}</dd></div>
+                <div><dt>Latest</dt><dd>{{ s.latest }}{{ s.unit }}</dd></div>
+                @if (s.best != null) { <div><dt>Best</dt><dd>{{ s.best }}{{ s.unit }}</dd></div> }
+                @if (s.normalLow != null && s.normalHigh != null) {
+                  <div><dt>Typical range</dt><dd>{{ s.normalLow }}–{{ s.normalHigh }}{{ s.unit }}</dd></div>
+                }
+              </dl>
+            </section>
+          }
+        </div>
+      }
+    }
+  }
+
+  <!-- ── Record ─────────────────────────────────────────────────────── -->
+  @if (recording && member) {
+    <div class="fit-modal-backdrop" (click)="recording = false">
+      <div class="fit-modal is-wide" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        <header class="fit-modal-head">
+          <div>
+            <h3 class="fit-modal-title">Record an assessment</h3>
+            <p class="fit-modal-sub">{{ member.preferredName || member.fullName }} · {{ member.memberNumber }}</p>
+          </div>
+          <button type="button" class="fit-close" (click)="recording = false" aria-label="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </header>
+
+        <div class="fit-modal-body">
+          <label class="fit-field">
+            <span>Assessment</span>
+            <select [(ngModel)]="templateId">
+              @for (t of templates; track t.id) { <option [ngValue]="t.id">{{ t.name }}</option> }
+            </select>
+            @if (chosenTemplate?.purpose) {
+              <span class="fit-hint">{{ chosenTemplate?.purpose }}</span>
+            }
+          </label>
+
+          @if (enterableMeasures.length === 0) {
+            <p class="fit-quiet as-none">This assessment has no measures set up yet.</p>
+          } @else {
+            <div class="as-entry">
+              @for (m of enterableMeasures; track m.id) {
+                <label class="fit-field as-entry-field">
+                  <span>
+                    {{ m.name }}
+                    @if (m.isRequired) { <em class="as-req">required</em> }
+                  </span>
+                  <div class="as-entry-input">
+                    <input type="number" step="0.1" inputmode="decimal"
+                      [attr.min]="m.minValue" [attr.max]="m.maxValue"
+                      [(ngModel)]="values[m.id]" />
+                    <span class="as-entry-unit">{{ m.unit }}</span>
+                  </div>
+                  @if (m.instructions) { <span class="fit-hint">{{ m.instructions }}</span> }
+                </label>
+              }
+            </div>
+
+            <!-- Trainers enter what they measured; the rest is arithmetic and belongs to the server. -->
+            @if (chosenTemplate && chosenTemplate.measures.length > enterableMeasures.length) {
+              <p class="fit-quiet as-calc">
+                <span class="material-symbols-outlined">function</span>
+                BMI, fat mass, lean mass and ratios are worked out from these numbers — enter only
+                what you actually measured.
+              </p>
+            }
+          }
+
+          <label class="fit-field">
+            <span>What you told the member</span>
+            <textarea rows="3" [(ngModel)]="assessmentNote"
+              placeholder="The thing worth saying out loud — what moved, and what to do about it."></textarea>
+            <span class="fit-hint">Saved with the assessment and shared with the member.</span>
+          </label>
+        </div>
+
+        <div class="fit-modal-foot">
+          <span class="fit-foot-spacer"></span>
+          <button type="button" class="btn btn-secondary" (click)="recording = false">Cancel</button>
+          <button type="button" class="btn btn-primary" [disabled]="saving" (click)="saveAssessment()">
+            @if (saving) { Saving… } @else { Record assessment }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

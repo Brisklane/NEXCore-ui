@@ -1,0 +1,287 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Clubs &amp; rooms</h2>
+      <p class="subtitle">Sites, opening hours and the spaces inside them.</p>
+    </div>
+    <button type="button" class="btn-primary" (click)="create()">
+      <span class="material-symbols-outlined">add_business</span>
+      Add a club
+    </button>
+  </div>
+
+  <fit-page-help key="clubs"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  @if (loading) {
+    <div class="fit-rows">
+      @for (i of [1,2]; track i) { <div class="fit-skeleton" style="height: 78px"></div> }
+    </div>
+  } @else if (rows.length === 0) {
+    <div class="fit-empty">
+      <span class="material-symbols-outlined fit-empty-icon">business</span>
+      <h3 class="fit-empty-title">No clubs yet</h3>
+      <p class="fit-empty-text">Add your first site and everything else in the app hangs off it.</p>
+      <button type="button" class="btn-primary" (click)="create()">Add a club</button>
+    </div>
+  } @else {
+    <div class="fit-rows">
+      @for (c of rows; track c.id) {
+        <button type="button" class="fit-row" (click)="select(c)">
+          <span class="fit-row-main">
+            <span class="fit-row-title">
+              {{ c.name }}
+              <span class="fit-pill">{{ typeLabels[c.clubType] }}</span>
+              @if (c.isTemporarilyClosed) { <span class="fit-pill cb-closed">closed</span> }
+              @if (!c.isActive) { <span class="fit-pill">inactive</span> }
+            </span>
+            <span class="fit-row-sub">
+              {{ c.city || 'No address' }} · {{ c.currencyCode }}
+              @if (c.hardCapacity) { · holds {{ c.hardCapacity }} }
+              @if (c.isOpenNow) { · open now } @else { · closed now }
+            </span>
+          </span>
+
+          <span class="fit-row-figure">
+            <span class="fit-row-figure-value">{{ c.currentOccupancy }}</span>
+            <span class="fit-row-figure-label">In the club</span>
+          </span>
+
+          <span class="fit-row-figure">
+            <span class="fit-row-figure-value">{{ c.activeMemberCount | number }}</span>
+            <span class="fit-row-figure-label">Members</span>
+          </span>
+
+          <span class="material-symbols-outlined fit-row-go">chevron_right</span>
+        </button>
+      }
+    </div>
+  }
+
+  <!-- ── Editor ─────────────────────────────────────────────────────── -->
+  @if (draft; as d) {
+    <div class="fit-modal-backdrop" (click)="draft = null"></div>
+    <div class="fit-modal cb-modal" role="dialog" aria-modal="true" aria-labelledby="cb-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="cb-title">{{ selected ? selected.name : 'New club' }}</h3>
+          <p class="fit-modal-sub">Details, opening hours and the spaces inside.</p>
+        </div>
+        <button type="button" class="fit-close" (click)="draft = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        <div class="fit-segment cb-tabs" role="tablist" aria-label="Club sections">
+          <button type="button" role="tab" [class.is-active]="tab === 'details'" (click)="tab = 'details'">
+            Details
+          </button>
+          <button type="button" role="tab" [class.is-active]="tab === 'hours'" (click)="tab = 'hours'">
+            Opening hours
+          </button>
+          @if (selected) {
+            <button type="button" role="tab" [class.is-active]="tab === 'spaces'" (click)="tab = 'spaces'">
+              Areas &amp; rooms
+            </button>
+          }
+        </div>
+
+        @if (tab === 'details') {
+          <div class="fit-form-grid">
+            <label class="fit-field">
+              <span>Name</span>
+              <input type="text" [(ngModel)]="d.name" id="cb-name" />
+              <fit-field-error [message]="errors['name']" for="cb-name"></fit-field-error>
+            </label>
+
+            <label class="fit-field">
+              <span>Kind of club</span>
+              <select [(ngModel)]="d.clubType">
+                @for (o of typeOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+              </select>
+            </label>
+
+            <label class="fit-field">
+              <span>Phone</span>
+              <input type="tel" [(ngModel)]="d.phone" />
+            </label>
+
+            <label class="fit-field">
+              <span>Email</span>
+              <input type="email" [(ngModel)]="d.email" />
+            </label>
+
+            <label class="fit-field cb-wide">
+              <span>Address</span>
+              <input type="text" [(ngModel)]="d.addressLine" />
+            </label>
+
+            <label class="fit-field">
+              <span>Town or city</span>
+              <input type="text" [(ngModel)]="d.city" />
+            </label>
+
+            <label class="fit-field">
+              <span>Currency</span>
+              <input type="text" [(ngModel)]="d.currencyCode" maxlength="3" id="cb-ccy" />
+              <fit-field-error [message]="errors['currencyCode']" for="cb-ccy"></fit-field-error>
+            </label>
+
+            <label class="fit-field">
+              <span>Units</span>
+              <select [(ngModel)]="d.unitSystem">
+                @for (o of unitOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+              </select>
+            </label>
+
+            <label class="fit-field">
+              <span>Comfortable capacity</span>
+              <input type="number" min="0" [(ngModel)]="d.softCapacity" />
+            </label>
+
+            <label class="fit-field">
+              <span>Hard limit</span>
+              <input type="number" min="0" [(ngModel)]="d.hardCapacity" />
+            </label>
+          </div>
+
+          <h4 class="cb-group">Getting through the door</h4>
+          <div class="fit-form-grid">
+            <label class="fit-field">
+              <span>Let them in if they owe less than</span>
+              <input type="number" step="0.01" min="0" [(ngModel)]="d.accessBalanceThreshold" />
+            </label>
+
+            <label class="fit-field">
+              <span>Anti-passback</span>
+              <select [(ngModel)]="d.antiPassback">
+                @for (o of passbackOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+              </select>
+            </label>
+
+            <label class="fit-field">
+              <span>If the network drops</span>
+              <select [(ngModel)]="d.offlinePolicy">
+                @for (o of offlineOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+              </select>
+            </label>
+
+            <label class="fit-field">
+              <span>Minimum age</span>
+              <input type="number" min="0" [(ngModel)]="d.minimumAge" />
+            </label>
+          </div>
+
+          <div class="cb-checks">
+            <label class="fit-check">
+              <input type="checkbox" [(ngModel)]="d.requiresWaiver" />
+              <span>A signed waiver is needed before the barrier opens</span>
+            </label>
+            <label class="fit-check">
+              <input type="checkbox" [(ngModel)]="d.requiresHealthScreening" />
+              <span>Health screening at join</span>
+            </label>
+            <label class="fit-check">
+              <input type="checkbox" [(ngModel)]="d.allowsCrossClubVisits" />
+              <span>Members from other clubs may use this one</span>
+            </label>
+            <label class="fit-check">
+              <input type="checkbox" [(ngModel)]="d.isTemporarilyClosed" />
+              <span>Temporarily closed</span>
+            </label>
+          </div>
+        }
+
+        @if (tab === 'hours') {
+          <p class="fit-quiet cb-hours-note">
+            Opening hours are when the doors work. Staffed hours are when somebody is here — a
+            24-hour club is open at 3am and unstaffed, and several rules depend on knowing that.
+          </p>
+
+          <div class="fit-table-wrap">
+            <table class="fit-table cb-hours">
+              <thead>
+                <tr>
+                  <th>Day</th><th>Opens</th><th>Closes</th>
+                  <th>Staffed from</th><th>Staffed to</th><th>Closed</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (s of schedules; track s.dayOfWeek) {
+                  <tr [class.is-closed]="s.isClosed">
+                    <td>{{ dayNames[s.dayOfWeek] }}</td>
+                    <td><input type="time" [(ngModel)]="s.opensAt" [disabled]="s.isClosed" /></td>
+                    <td><input type="time" [(ngModel)]="s.closesAt" [disabled]="s.isClosed" /></td>
+                    <td><input type="time" [(ngModel)]="s.staffedFrom" [disabled]="s.isClosed" /></td>
+                    <td><input type="time" [(ngModel)]="s.staffedTo" [disabled]="s.isClosed" /></td>
+                    <td class="ta-c"><input type="checkbox" [(ngModel)]="s.isClosed" /></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+        @if (tab === 'spaces') {
+          <h4 class="cb-group">Areas</h4>
+          @if (areas.length === 0) {
+            <p class="fit-quiet">No areas defined.</p>
+          } @else {
+            <div class="fit-rows">
+              @for (a of areas; track a.id) {
+                <div class="fit-row cb-space">
+                  <span class="fit-row-main">
+                    <span class="fit-row-title">
+                      {{ a.name }}
+                      <span class="fit-pill">{{ areaLabels[a.kind] }}</span>
+                      @if (a.isOutOfService) { <span class="fit-pill cb-closed">out of service</span> }
+                    </span>
+                    @if (a.capacity) {
+                      <span class="fit-row-sub">
+                        Holds {{ a.capacity }} · {{ a.currentOccupancy }} in there now
+                      </span>
+                    }
+                  </span>
+                </div>
+              }
+            </div>
+          }
+
+          <h4 class="cb-group">Rooms</h4>
+          @if (rooms.length === 0) {
+            <p class="fit-quiet">No rooms defined. Classes need a room before they can be scheduled.</p>
+          } @else {
+            <div class="fit-rows">
+              @for (r of rooms; track r.id) {
+                <div class="fit-row cb-space">
+                  <span class="fit-row-main">
+                    <span class="fit-row-title">
+                      {{ r.name }}
+                      @if (r.hasSpotMap) { <span class="fit-pill">spot map</span> }
+                      @if (r.isOutOfService) { <span class="fit-pill cb-closed">out of service</span> }
+                    </span>
+                    <span class="fit-row-sub">
+                      Holds {{ r.capacity }}
+                      @if (r.areaName) { · {{ r.areaName }} }
+                      @if (r.equipmentNote) { · {{ r.equipmentNote }} }
+                    </span>
+                  </span>
+                </div>
+              }
+            </div>
+          }
+        }
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="draft = null">Cancel</button>
+        <button type="button" class="btn-primary" [disabled]="saving" (click)="save()">
+          {{ saving ? 'Saving…' : 'Save club' }}
+        </button>
+      </footer>
+    </div>
+  }
+</div>

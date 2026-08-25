@@ -1,0 +1,58 @@
+.ac-tabs { margin-bottom: 14px; }
+.ac-filters { margin-bottom: 14px; }
+
+.ac-offline {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ── Event log ───────────────────────────────────────────────────────
+   Timestamps first and monospaced, because this list is read down the
+   left edge when somebody is looking for "about half past six".       */
+.ac-event { min-height: 56px; cursor: default; }
+
+.ac-event-time {
+  min-width: 132px;
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--text-secondary, #64748b);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.ac-online { background: var(--success-bg, #dcfce7); color: var(--success-text, #15803d); }
+.ac-down { background: var(--danger-bg, #fee2e2); color: var(--danger-text, #b91c1c); }
+.ac-held { background: var(--warning-bg, #fef3c7); color: var(--warning-text, #b45309); }
+
+.ac-controllers { margin-bottom: 8px; }
+.ac-doors-title { margin-top: 24px; }
+
+.ac-windows-title {
+  margin: 16px 0 8px;
+  font-size: 11px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ac-windows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+
+.ac-windows li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 11px;
+  border-radius: 8px;
+  background: var(--bg-muted, #f8fafc);
+  font-size: 11.5px;
+  color: var(--text-secondary, #64748b);
+}
+
+.ac-windows strong { font-size: 12px; color: var(--text-heading, #0f172a); }
+
+@media (max-width: 720px) {
+  .ac-event { flex-wrap: wrap; }
+  .ac-event-time { min-width: 0; width: 100%; }
+}

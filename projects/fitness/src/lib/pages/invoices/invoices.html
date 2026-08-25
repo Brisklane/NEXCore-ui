@@ -1,0 +1,279 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Invoices</h2>
+      <p class="subtitle">
+        @if (!loading) { {{ total | number }} invoice{{ total === 1 ? '' : 's' }} }
+        @else { Everything raised, and what has been paid against it. }
+      </p>
+    </div>
+    <div class="page-header-actions">
+      <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+      <button type="button" class="btn-secondary" (click)="go('/fitness/collections')">Collections</button>
+    </div>
+  </div>
+
+  <fit-page-help key="invoices"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <div class="fit-toolbar iv-filters">
+    <label class="fit-field fit-field-inline">
+      <span>Status</span>
+      <select [(ngModel)]="status" (ngModelChange)="page = 1; load()">
+        <option [ngValue]="null">Any</option>
+        @for (o of statusOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+      </select>
+    </label>
+
+    <label class="fit-check">
+      <input type="checkbox" [(ngModel)]="overdueOnly" (ngModelChange)="page = 1; load()" />
+      <span>Overdue only</span>
+    </label>
+
+    @if (memberId) {
+      <button type="button" class="btn-link" (click)="memberId = null; page = 1; load()">
+        Show all members
+      </button>
+    }
+  </div>
+
+  @if (loading) {
+    <div class="fit-rows">
+      @for (i of [1,2,3,4,5]; track i) { <div class="fit-skeleton" style="height: 62px"></div> }
+    </div>
+  } @else if (rows.length === 0) {
+    <div class="fit-empty">
+      <span class="material-symbols-outlined fit-empty-icon">receipt_long</span>
+      <h3 class="fit-empty-title">No invoices</h3>
+      <p class="fit-empty-text">Nothing matches those filters.</p>
+    </div>
+  } @else {
+    <div class="fit-rows">
+      @for (r of rows; track r.id) {
+        <div class="fit-row" [class]="statusClass(r)">
+          <span class="fit-row-main">
+            <span class="fit-row-title">
+              {{ r.invoiceNumber }}
+              <span class="fit-pill">{{ statusLabels[r.status] }}</span>
+              @if (r.daysOverdue > 0) {
+                <span class="fit-pill iv-overdue">{{ r.daysOverdue }} days overdue</span>
+              }
+              @if (r.hasDunningCase) { <span class="fit-pill">in collections</span> }
+            </span>
+            <span class="fit-row-sub">
+              {{ r.memberName }} · {{ r.memberNumber }}
+              @if (r.summaryLine) { · {{ r.summaryLine }} }
+              · issued {{ r.issuedOn | date:'d MMM yyyy' }}
+            </span>
+          </span>
+
+          <span class="fit-row-figure">
+            <span class="fit-row-figure-value">{{ r.total | number:'1.2-2' }}</span>
+            <span class="fit-row-figure-label">{{ r.currencyCode }}</span>
+          </span>
+
+          <span class="fit-row-figure" [class.is-debit]="r.balanceDue > 0">
+            <span class="fit-row-figure-value">{{ r.balanceDue | number:'1.2-2' }}</span>
+            <span class="fit-row-figure-label">Outstanding</span>
+          </span>
+
+          <span class="fit-row-actions">
+            <button type="button" class="btn-secondary" (click)="inspect(r)">Open</button>
+            @if (r.balanceDue > 0) {
+              <button type="button" class="btn-primary" (click)="startPayment(r)">Take payment</button>
+            }
+          </span>
+        </div>
+      }
+    </div>
+
+    @if (totalPages > 1) {
+      <nav class="fit-pager" aria-label="Pages">
+        <button type="button" class="btn-secondary" [disabled]="page === 1" (click)="goPage(page - 1)">
+          Previous
+        </button>
+        <span class="fit-pager-count">Page {{ page }} of {{ totalPages }}</span>
+        <button type="button" class="btn-secondary" [disabled]="page === totalPages" (click)="goPage(page + 1)">
+          Next
+        </button>
+      </nav>
+    }
+  }
+
+  <!-- ── One invoice ────────────────────────────────────────────────── -->
+  @if (open || openLoading) {
+    <div class="fit-modal-backdrop" (click)="open = null"></div>
+    <div class="fit-modal iv-modal" role="dialog" aria-modal="true" aria-labelledby="iv-title">
+      @if (openLoading) {
+        <div class="fit-modal-body"><div class="fit-skeleton" style="height: 240px"></div></div>
+      } @else if (open; as inv) {
+        <header class="fit-modal-head">
+          <div>
+            <h3 class="fit-modal-title" id="iv-title">{{ inv.invoiceNumber }}</h3>
+            <p class="fit-modal-sub">
+              {{ inv.memberName }} ·
+              issued {{ inv.issuedOn | date:'d MMM yyyy' }} ·
+              due {{ inv.dueOn | date:'d MMM yyyy' }}
+              @if (inv.corporateAccountName) { · billed to {{ inv.corporateAccountName }} }
+            </p>
+          </div>
+          <button type="button" class="fit-close" (click)="open = null" aria-label="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </header>
+
+        <div class="fit-modal-body">
+          <div class="fit-table-wrap">
+            <table class="fit-table">
+              <thead>
+                <tr>
+                  <th>What</th><th class="ta-r">Qty</th><th class="ta-r">Each</th><th class="ta-r">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (l of inv.lines; track l.id) {
+                  <tr>
+                    <td>
+                      {{ l.lineDescription }}
+                      @if (l.prorationExplanation) {
+                        <small class="iv-proration">{{ l.prorationExplanation }}</small>
+                      }
+                    </td>
+                    <td class="ta-r">{{ l.quantity }}</td>
+                    <td class="ta-r fit-money">{{ l.unitPrice | number:'1.2-2' }}</td>
+                    <td class="ta-r fit-money">{{ l.lineTotal | number:'1.2-2' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <dl class="fit-dl iv-totals">
+            <div><dt>Subtotal</dt><dd>{{ inv.subtotal | number:'1.2-2' }}</dd></div>
+            @if (inv.discountTotal > 0) {
+              <div><dt>Discount</dt><dd>−{{ inv.discountTotal | number:'1.2-2' }}</dd></div>
+            }
+            @if (inv.taxTotal > 0) {
+              <div><dt>Tax</dt><dd>{{ inv.taxTotal | number:'1.2-2' }}</dd></div>
+            }
+            <div><dt>Total</dt><dd>{{ inv.total | number:'1.2-2' }} {{ inv.currencyCode }}</dd></div>
+            <div><dt>Paid</dt><dd>{{ inv.amountPaid | number:'1.2-2' }}</dd></div>
+            @if (inv.amountRefunded > 0) {
+              <div><dt>Refunded</dt><dd>{{ inv.amountRefunded | number:'1.2-2' }}</dd></div>
+            }
+            <div><dt>Outstanding</dt><dd>{{ inv.balanceDue | number:'1.2-2' }}</dd></div>
+          </dl>
+
+          @if (inv.payments.length > 0) {
+            <h4 class="iv-subhead">Payments</h4>
+            <ul class="fit-rows">
+              @for (p of inv.payments; track p.id) {
+                <li class="fit-row iv-payment">
+                  <span class="fit-row-main">
+                    <span class="fit-row-title">
+                      {{ p.paymentNumber }}
+                      <span class="fit-pill">{{ methodLabels[p.method] }}</span>
+                    </span>
+                    <span class="fit-row-sub">
+                      {{ p.receivedOn | date:'d MMM yyyy, HH:mm' }}
+                      @if (p.cardBrand) { · {{ p.cardBrand }} ••••{{ p.cardLastFour }} }
+                      @if (p.takenByName) { · {{ p.takenByName }} }
+                      @if (p.failureMessage) { · {{ p.failureMessage }} }
+                    </span>
+                  </span>
+                  <span class="fit-row-figure">
+                    <span class="fit-row-figure-value">{{ p.amount | number:'1.2-2' }}</span>
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+
+        <footer class="fit-modal-foot">
+          <button type="button" class="btn-secondary" (click)="go('/fitness/members/' + inv.memberId)">
+            Open member
+          </button>
+          <div class="fit-spacer"></div>
+          <button type="button" class="btn-secondary" (click)="open = null">Close</button>
+          @if (inv.balanceDue > 0) {
+            <button type="button" class="btn-primary" (click)="startPayment(inv); open = null">
+              Take payment
+            </button>
+          }
+        </footer>
+      }
+    </div>
+  }
+
+  <!-- ── Take payment ───────────────────────────────────────────────────
+       No card number, anywhere. What is stored is a reference, a brand and
+       a last four — enough for the desk to recognise it and no more.      -->
+  @if (payingFor; as inv) {
+    <div class="fit-modal-backdrop" (click)="payingFor = null"></div>
+    <div class="fit-modal" role="dialog" aria-modal="true" aria-labelledby="iv-pay-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="iv-pay-title">Take payment</h3>
+          <p class="fit-modal-sub">
+            {{ inv.memberName }} · {{ inv.invoiceNumber }} ·
+            {{ inv.balanceDue | number:'1.2-2' }} outstanding
+          </p>
+        </div>
+        <button type="button" class="fit-close" (click)="payingFor = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        <div class="fit-form-grid">
+          <label class="fit-field">
+            <span>Amount</span>
+            <input type="number" step="0.01" min="0" [(ngModel)]="payAmount" />
+          </label>
+
+          <label class="fit-field">
+            <span>How</span>
+            <select [(ngModel)]="payMethod">
+              @for (o of methodOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+            </select>
+          </label>
+
+          @if (payMethod === PaymentMethod.Cash) {
+            <label class="fit-field">
+              <span>Cash given</span>
+              <input type="number" step="0.01" min="0" [(ngModel)]="payTendered" />
+            </label>
+          } @else {
+            <label class="fit-field">
+              <span>Reference from the terminal</span>
+              <input type="text" [(ngModel)]="payReference" placeholder="Auth code or provider reference" />
+            </label>
+          }
+        </div>
+
+        @if (changeDue > 0) {
+          <div class="iv-change">
+            <span>Change to give back</span>
+            <strong>{{ changeDue | number:'1.2-2' }}</strong>
+          </div>
+        }
+
+        <p class="fit-sensitive">
+          <span class="material-symbols-outlined">credit_card_off</span>
+          Never type a card number here. Take the payment on the terminal and enter its reference —
+          this app does not accept, transmit or store card details.
+        </p>
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="payingFor = null">Cancel</button>
+        <button type="button" class="btn-primary" [disabled]="payAmount <= 0 || paying" (click)="takePayment()">
+          {{ paying ? 'Taking…' : 'Take ' + (payAmount | number:'1.2-2') }}
+        </button>
+      </footer>
+    </div>
+  }
+</div>

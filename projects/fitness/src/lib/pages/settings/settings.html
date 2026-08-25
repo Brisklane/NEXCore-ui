@@ -1,0 +1,252 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Settings</h2>
+      <p class="subtitle">How the app behaves for this company.</p>
+    </div>
+    <button type="button" class="btn-primary" [disabled]="saving || !settings" (click)="save()">
+      {{ saving ? 'Saving…' : 'Save settings' }}
+    </button>
+  </div>
+
+  <fit-page-help key="settings"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  @if (loading) {
+    <div class="fit-grid">
+      @for (i of [1,2,3,4]; track i) { <div class="fit-skeleton" style="height: 260px"></div> }
+    </div>
+  }
+
+  @if (settings; as s) {
+    <div class="fit-grid">
+      <!-- ── Memberships ──────────────────────────────────────────────── -->
+      <section class="fit-card">
+        <header class="fit-card-head"><h3 class="fit-card-title">Memberships</h3></header>
+        <div class="fit-card-body">
+          <label class="st-setting">
+            <span class="st-label">Member number prefix</span>
+            <input type="text" [(ngModel)]="s.memberNumberPrefix" maxlength="6" />
+            <span class="st-note">Numbers look like {{ s.memberNumberPrefix }}-000123.</span>
+          </label>
+
+          <label class="st-setting">
+            <span class="st-label">Default notice period</span>
+            <input type="number" min="0" [(ngModel)]="s.defaultNoticePeriodDays" />
+            <span class="st-note">
+              Days between somebody giving notice and their membership actually ending. Plans can
+              override this.
+            </span>
+          </label>
+
+          <label class="st-setting">
+            <span class="st-label">Cooling-off period</span>
+            <input type="number" min="0" [(ngModel)]="s.defaultCoolingOffDays" />
+            <span class="st-note">
+              Days a new member can change their mind and get everything back. In many places this
+              is set by law rather than by you.
+            </span>
+          </label>
+
+          <label class="st-setting">
+            <span class="st-label">Freeze allowance</span>
+            <input type="number" min="0" [(ngModel)]="s.maxFreezeDaysPerYear" />
+            <span class="st-note">Days a member may freeze in a rolling year before it needs approval.</span>
+          </label>
+
+          <label class="st-setting">
+            <span class="st-label">Freeze fee per month</span>
+            <input type="number" step="0.01" min="0" [(ngModel)]="s.defaultFreezeFeePerMonth" />
+            <span class="st-note">Charged while frozen. Zero means freezing is free.</span>
+          </label>
+        </div>
+      </section>
+
+      <!-- ── Billing ──────────────────────────────────────────────────── -->
+      <section class="fit-card">
+        <header class="fit-card-head"><h3 class="fit-card-title">Billing</h3></header>
+        <div class="fit-card-body">
+          <label class="st-setting">
+            <span class="st-label">When members are billed</span>
+            <select [(ngModel)]="s.defaultBillingAnchor">
+              @for (o of anchorOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+            </select>
+            <span class="st-note">
+              On their join anniversary, or on a fixed day for everybody. A fixed day makes the
+              month's cash predictable; an anniversary spreads failures across the month.
+            </span>
+          </label>
+
+          <label class="st-setting">
+            <span class="st-label">Fixed billing day</span>
+            <input type="number" min="1" max="28" [(ngModel)]="s.fixedBillingDayOfMonth" />
+            <span class="st-note">Capped at 28 so it exists in February.</span>
+          </label>
+
+          <label class="st-setting">
+            <span class="st-label">Proration</span>
+            <select [(ngModel)]="s.defaultProration">
+              @for (o of prorationOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+            </select>
+            <span class="st-note">How a part-month is charged when somebody joins mid-cycle.</span>
+          </label>
+
+          <label class="st-setting">
+            <span class="st-label">Grace period</span>
+            <input type="number" min="0" [(ngModel)]="s.invoiceGraceDays" />
+            <span class="st-note">Days after the due date before an invoice counts as overdue.</span>
+          </label>
+
+          <label class="st-setting">
+            <span class="st-label">Late fee</span>
+            <input type="number" step="0.01" min="0" [(ngModel)]="s.defaultLateFee" />
+          </label>
+
+          <label class="fit-check st-check">
+            <input type="checkbox" [(ngModel)]="s.autoRunBilling" />
+            <span>Run billing automatically overnight</span>
+          </label>
+
+          <label class="st-setting">
+            <span class="st-label">Overnight run time</span>
+            <input type="time" [(ngModel)]="s.billingRunTime" [disabled]="!s.autoRunBilling" />
+          </label>
+        </div>
+      </section>
+
+      <!-- ── The door ─────────────────────────────────────────────────── -->
+      <section class="fit-card">
+        <header class="fit-card-head"><h3 class="fit-card-title">Access control</h3></header>
+        <div class="fit-card-body">
+          <label class="st-setting">
+            <span class="st-label">Controller cache</span>
+            <input type="number" min="0" [(ngModel)]="s.accessCacheSeconds" />
+            <span class="st-note">
+              How long a door controller may rely on its own copy of the entitlement list if the
+              network drops. Longer means the barrier keeps working; shorter means a suspension
+              takes effect sooner.
+            </span>
+          </label>
+
+          <label class="fit-check st-check">
+            <input type="checkbox" [(ngModel)]="s.captureImageOnDenial" />
+            <span>Capture an image when the barrier refuses somebody</span>
+          </label>
+
+          <label class="fit-check st-check">
+            <input type="checkbox" [(ngModel)]="s.requirePinForOverrides" />
+            <span>A manager's PIN is needed to override a refusal</span>
+          </label>
+        </div>
+      </section>
+
+      <!-- ── Retention ────────────────────────────────────────────────── -->
+      <section class="fit-card">
+        <header class="fit-card-head"><h3 class="fit-card-title">Retention</h3></header>
+        <div class="fit-card-body">
+          <label class="st-setting">
+            <span class="st-label">Absence starts to worry us after</span>
+            <input type="number" min="1" [(ngModel)]="s.absenceRiskDays" />
+            <span class="st-note">Days without a visit before somebody moves up a risk band.</span>
+          </label>
+
+          <label class="st-setting">
+            <span class="st-label">Serious absence</span>
+            <input type="number" min="1" [(ngModel)]="s.criticalAbsenceDays" />
+            <span class="st-note">Days without a visit before somebody is treated as about to leave.</span>
+          </label>
+
+          <label class="fit-check st-check">
+            <input type="checkbox" [(ngModel)]="s.autoScoreChurn" />
+            <span>Score everybody's risk overnight, and raise tasks when it worsens</span>
+          </label>
+
+          <label class="st-setting">
+            <span class="st-label">Answer an enquiry within</span>
+            <input type="number" min="1" [(ngModel)]="s.leadResponseSlaMinutes" />
+            <span class="st-note">
+              Minutes. Past this, an enquiry is flagged as overdue on the board and the dashboard.
+            </span>
+          </label>
+        </div>
+      </section>
+
+      <!-- ── Messaging ────────────────────────────────────────────────── -->
+      <section class="fit-card">
+        <header class="fit-card-head"><h3 class="fit-card-title">Messaging</h3></header>
+        <div class="fit-card-body">
+          <label class="fit-check st-check">
+            <input type="checkbox" [(ngModel)]="s.respectQuietHours" />
+            <span>Never send automated messages during quiet hours</span>
+          </label>
+
+          <div class="st-pair">
+            <label class="st-setting">
+              <span class="st-label">Quiet from</span>
+              <input type="time" [(ngModel)]="s.quietHoursFrom" [disabled]="!s.respectQuietHours" />
+            </label>
+            <label class="st-setting">
+              <span class="st-label">Until</span>
+              <input type="time" [(ngModel)]="s.quietHoursTo" [disabled]="!s.respectQuietHours" />
+            </label>
+          </div>
+
+          <p class="st-note st-standalone">
+            Anything that would land inside quiet hours waits until morning rather than being
+            dropped. A gym that texts people at 11pm loses more members than the offer wins.
+          </p>
+
+          <label class="st-setting">
+            <span class="st-label">From name</span>
+            <input type="text" [(ngModel)]="s.fromName" />
+          </label>
+
+          <label class="st-setting">
+            <span class="st-label">From email</span>
+            <input type="email" [(ngModel)]="s.fromEmail" />
+          </label>
+
+          <label class="st-setting">
+            <span class="st-label">Text sender ID</span>
+            <input type="text" [(ngModel)]="s.smsSenderId" maxlength="11" />
+          </label>
+        </div>
+      </section>
+
+      <!-- ── Approvals ────────────────────────────────────────────────── -->
+      <section class="fit-card">
+        <header class="fit-card-head"><h3 class="fit-card-title">What needs a manager</h3></header>
+        <div class="fit-card-body">
+          <label class="st-setting">
+            <span class="st-label">Discount above</span>
+            <input type="number" step="1" min="0" max="100" [(ngModel)]="s.discountApprovalThresholdPercent" />
+            <span class="st-note">Per cent. Above this, a sale needs approving before it goes through.</span>
+          </label>
+
+          <label class="st-setting">
+            <span class="st-label">Refund above</span>
+            <input type="number" step="0.01" min="0" [(ngModel)]="s.refundApprovalThreshold" />
+          </label>
+
+          <label class="st-setting">
+            <span class="st-label">Write-off above</span>
+            <input type="number" step="0.01" min="0" [(ngModel)]="s.writeOffApprovalThreshold" />
+          </label>
+
+          <p class="st-note st-standalone">
+            Each role also has its own limits. These are the company-wide ceilings that apply
+            whatever the role allows.
+          </p>
+        </div>
+      </section>
+    </div>
+
+    <div class="st-foot">
+      <button type="button" class="btn-primary" [disabled]="saving" (click)="save()">
+        {{ saving ? 'Saving…' : 'Save settings' }}
+      </button>
+    </div>
+  }
+</div>

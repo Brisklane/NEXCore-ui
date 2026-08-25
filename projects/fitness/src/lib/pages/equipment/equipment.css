@@ -1,0 +1,38 @@
+.eq-tabs { margin-bottom: 14px; }
+.eq-filters { margin-bottom: 14px; }
+
+.eq-warranty { background: var(--success-bg, #dcfce7); color: var(--success-text, #15803d); }
+.eq-overdue { background: var(--danger-bg, #fee2e2); color: var(--danger-text, #b91c1c); }
+
+/* Open faults, above the tabs. A fault nobody has looked at is somebody's
+   wasted evening, so it is not something to find by clicking around.   */
+.eq-faults { display: flex; flex-direction: column; gap: 8px; }
+
+.eq-faults ul {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.eq-faults li { font-size: 12.5px; line-height: 1.5; }
+
+.eq-faults small {
+  display: block;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.eq-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-weight: 650;
+  color: var(--danger-text, #b91c1c);
+}
+
+.eq-note .material-symbols-outlined { font-size: 15px; }
+
+.eq-instructions { font-style: italic; color: var(--text-muted, #94a3b8); }

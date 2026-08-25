@@ -1,0 +1,268 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Waivers &amp; screening</h2>
+      <p class="subtitle">
+        @if (!loading) {
+          {{ outstanding.length }} member{{ outstanding.length === 1 ? '' : 's' }} cannot get in yet
+        } @else { Waivers, health screening and medical clearances. }
+      </p>
+    </div>
+    <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+  </div>
+
+  <fit-page-help key="waivers"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <div class="fit-segment wv-tabs" role="tablist" aria-label="Waiver sections">
+    <button type="button" role="tab" [class.is-active]="tab === 'outstanding'" (click)="tab = 'outstanding'">
+      <span class="material-symbols-outlined">pending_actions</span>
+      Outstanding ({{ outstanding.length }})
+    </button>
+    <button type="button" role="tab" [class.is-active]="tab === 'templates'" (click)="tab = 'templates'">
+      <span class="material-symbols-outlined">description</span>Waiver versions
+    </button>
+    <button type="button" role="tab" [class.is-active]="tab === 'clearances'" (click)="tab = 'clearances'">
+      <span class="material-symbols-outlined">medical_information</span>
+      Clearances ({{ pendingClearances.length }})
+    </button>
+  </div>
+
+  <!-- ── Outstanding ──────────────────────────────────────────────────
+       The working screen: everybody the barrier is turning away.       -->
+  @if (tab === 'outstanding') {
+    @if (loading) {
+      <div class="fit-rows">
+        @for (i of [1,2,3]; track i) { <div class="fit-skeleton" style="height: 62px"></div> }
+      </div>
+    } @else if (outstanding.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">verified</span>
+        <h3 class="fit-empty-title">Everyone has signed</h3>
+        <p class="fit-empty-text">Nobody is being turned away at the barrier for paperwork.</p>
+      </div>
+    } @else {
+      <div class="fit-rows">
+        @for (m of outstanding; track m.id) {
+          <div class="fit-row is-alert">
+            <span class="fit-row-main">
+              <span class="fit-row-title">
+                {{ m.preferredName || m.fullName }}
+                <span class="fit-pill wv-blocked">blocked at the door</span>
+              </span>
+              <span class="fit-row-sub">
+                {{ m.memberNumber }}
+                @if (m.planName) { · {{ m.planName }} }
+                @if (m.joinedOn) { · joined {{ m.joinedOn | date:'d MMM yyyy' }} }
+              </span>
+            </span>
+
+            <span class="fit-row-actions">
+              @if (m.phone) {
+                <a class="fit-icon-btn" [href]="'tel:' + m.phone" aria-label="Call">
+                  <span class="material-symbols-outlined">call</span>
+                </a>
+              }
+              <button type="button" class="btn-primary" (click)="go('/fitness/members/' + m.id)">
+                Open and sign
+              </button>
+            </span>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ── Versions ─────────────────────────────────────────────────────── -->
+  @if (tab === 'templates') {
+    @if (templates.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">description</span>
+        <h3 class="fit-empty-title">No waiver on file</h3>
+        <p class="fit-empty-text">
+          Without one, nobody can be signed up — the join wizard needs something to present.
+        </p>
+      </div>
+    } @else {
+      <p class="fit-quiet wv-versions-note">
+        Editing a published waiver creates the next version. What somebody signed stays as they
+        signed it, and anyone on an older version is asked to sign again.
+      </p>
+
+      <div class="fit-rows">
+        @for (t of templates; track t.id) {
+          <div class="fit-row" [class.is-good]="t.isPublished && t.isActive">
+            <span class="fit-row-main">
+              <span class="fit-row-title">
+                {{ t.name }}
+                <span class="fit-pill">v{{ t.version }}</span>
+                @if (t.isPublished) { <span class="fit-pill wv-live">published</span> }
+                @else { <span class="fit-pill">draft</span> }
+                @if (t.blocksAccess) { <span class="fit-pill">blocks access</span> }
+                @if (t.requiresGuardianSignature) {
+                  <span class="fit-pill">guardian under {{ t.guardianRequiredBelowAge }}</span>
+                }
+              </span>
+              <span class="fit-row-sub">
+                @if (t.activityScope) { {{ t.activityScope }} · }
+                in force from {{ t.effectiveFrom | date:'d MMM yyyy' }}
+                @if (t.validForDays > 0) { · valid {{ t.validForDays }} days }
+              </span>
+            </span>
+
+            <span class="fit-row-figure">
+              <span class="fit-row-figure-value">{{ t.signedCount | number }}</span>
+              <span class="fit-row-figure-label">signed</span>
+            </span>
+
+            @if (t.outstandingCount > 0) {
+              <span class="fit-row-figure is-debit">
+                <span class="fit-row-figure-value">{{ t.outstandingCount | number }}</span>
+                <span class="fit-row-figure-label">still to sign</span>
+              </span>
+            }
+
+            <span class="fit-row-actions">
+              <button type="button" class="btn-secondary" (click)="preview = t">Read it</button>
+              @if (!t.isPublished) {
+                <button type="button" class="btn-primary" (click)="publish(t)">Publish</button>
+              }
+            </span>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ── Clearances ───────────────────────────────────────────────────── -->
+  @if (tab === 'clearances') {
+    @if (clearances.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">medical_information</span>
+        <h3 class="fit-empty-title">No clearances outstanding</h3>
+        <p class="fit-empty-text">
+          One is raised automatically when somebody answers yes to a gating screening question.
+        </p>
+      </div>
+    } @else {
+      <div class="fit-rows">
+        @for (c of clearances; track c.id) {
+          <div class="fit-row" [class]="clearanceClass(c)">
+            <span class="fit-row-main">
+              <span class="fit-row-title">
+                {{ c.memberName }}
+                <span class="fit-pill">{{ clearanceLabels[c.status] }}</span>
+                @if (c.blocksParticipation) { <span class="fit-pill wv-blocked">access closed</span> }
+                @if (c.isExpired) { <span class="fit-pill wv-blocked">expired</span> }
+              </span>
+              <span class="fit-row-sub">
+                Requested {{ c.requestedOn | date:'d MMM yyyy' }}
+                @if (c.practitionerName) { · {{ c.practitionerName }} }
+                @if (c.practiceName) { , {{ c.practiceName }} }
+                @if (c.expiresOn) { · valid to {{ c.expiresOn | date:'d MMM yyyy' }} }
+              </span>
+              @if (c.restrictions) {
+                <span class="fit-row-sub wv-restrictions">
+                  <span class="material-symbols-outlined">warning</span>{{ c.restrictions }}
+                </span>
+              }
+            </span>
+
+            <span class="fit-row-actions">
+              <button type="button" class="btn-secondary" (click)="go('/fitness/members/' + c.memberId)">
+                Open member
+              </button>
+              @if (c.status === ClearanceStatus.Submitted) {
+                <button type="button" class="btn-primary" (click)="startReview(c)">Review</button>
+              }
+            </span>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ── Read a waiver ────────────────────────────────────────────────── -->
+  @if (preview; as t) {
+    <div class="fit-modal-backdrop" (click)="preview = null"></div>
+    <div class="fit-modal wv-modal" role="dialog" aria-modal="true" aria-labelledby="wv-preview-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="wv-preview-title">{{ t.name }}</h3>
+          <p class="fit-modal-sub">
+            Version {{ t.version }} · {{ t.signedCount }} people have signed this one
+          </p>
+        </div>
+        <button type="button" class="fit-close" (click)="preview = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        <div class="wv-body" [innerHTML]="t.bodyHtml"></div>
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="preview = null">Close</button>
+      </footer>
+    </div>
+  }
+
+  <!-- ── Review a clearance ───────────────────────────────────────────── -->
+  @if (reviewing; as c) {
+    <div class="fit-modal-backdrop" (click)="reviewing = null"></div>
+    <div class="fit-modal" role="dialog" aria-modal="true" aria-labelledby="wv-review-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="wv-review-title">Review {{ c.memberName }}'s clearance</h3>
+          <p class="fit-modal-sub">Requested {{ c.requestedOn | date:'d MMM yyyy' }}</p>
+        </div>
+        <button type="button" class="fit-close" (click)="reviewing = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        <p class="fit-sensitive">
+          <span class="material-symbols-outlined">health_and_safety</span>
+          This decision opens or keeps closed somebody's access to the club. It is recorded against
+          your name.
+        </p>
+
+        @if (c.practitionerName) {
+          <dl class="fit-dl wv-practitioner">
+            <div><dt>Practitioner</dt><dd>{{ c.practitionerName }}</dd></div>
+            @if (c.practitionerRegistration) {
+              <div><dt>Registration</dt><dd>{{ c.practitionerRegistration }}</dd></div>
+            }
+            @if (c.practiceName) { <div><dt>Practice</dt><dd>{{ c.practiceName }}</dd></div> }
+          </dl>
+        }
+
+        <div class="fit-segment wv-decision" role="group" aria-label="Decision">
+          <button type="button" [class.is-active]="reviewApproved" (click)="reviewApproved = true">
+            <span class="material-symbols-outlined">check_circle</span>Cleared to train
+          </button>
+          <button type="button" [class.is-active]="!reviewApproved" (click)="reviewApproved = false">
+            <span class="material-symbols-outlined">block</span>Not yet
+          </button>
+        </div>
+
+        <label class="fit-field">
+          <span>{{ reviewApproved ? 'Any restrictions to record?' : 'Why not?' }}</span>
+          <textarea rows="3" [(ngModel)]="reviewNote"
+            placeholder="Instructors see restrictions on class rosters."></textarea>
+        </label>
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="reviewing = null">Cancel</button>
+        <button type="button" class="btn-primary" [disabled]="busy" (click)="confirmReview()">
+          {{ busy ? 'Saving…' : 'Record the decision' }}
+        </button>
+      </footer>
+    </div>
+  }
+</div>

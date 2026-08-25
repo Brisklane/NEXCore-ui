@@ -73,6 +73,11 @@ export const routes: Routes = [
         loadChildren: () => import('@nexcore/restaurant').then(m => m.restaurantRoutes),
       },
       {
+        path: 'fitness',
+        canMatch: [appInstalledGuard],
+        loadChildren: () => import('@nexcore/fitness').then(m => m.fitnessRoutes),
+      },
+      {
         path: 'distribution',
         canMatch: [appInstalledGuard],
         loadChildren: () => import('@nexcore/distribution').then(m => m.distributionRoutes),

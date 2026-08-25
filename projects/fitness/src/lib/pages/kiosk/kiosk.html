@@ -1,0 +1,69 @@
+<div class="fit-kiosk">
+  <div class="fit-kiosk-panel">
+    @if (decision; as d) {
+      <!-- ── The answer ──────────────────────────────────────────────
+           Enormous, and worded for the member rather than for staff.  -->
+      <div class="kiosk-result" [class]="decisionClass(d)" role="status" aria-live="assertive">
+        <span class="material-symbols-outlined kiosk-result-icon">{{ decisionIcon(d) }}</span>
+
+        <h1 class="kiosk-result-title">{{ headline(d) }}</h1>
+        <p class="kiosk-result-message">{{ d.message }}</p>
+
+        @if (d.decision !== AccessDecision.Denied && d.nextBooking; as b) {
+          <p class="kiosk-result-next">
+            <span class="material-symbols-outlined">event</span>
+            {{ b.title }} at {{ b.startsAt | date:'HH:mm' }}
+          </p>
+        }
+
+        @if (d.decision === AccessDecision.Denied) {
+          <p class="kiosk-result-help">Please see a member of staff at the desk.</p>
+        }
+
+        <button type="button" class="kiosk-again" (click)="dismiss()">Done</button>
+      </div>
+    } @else {
+      <!-- ── The prompt ─────────────────────────────────────────────── -->
+      <header class="kiosk-head">
+        <span class="material-symbols-outlined kiosk-logo">fitness_center</span>
+        <h1 class="kiosk-title">Check in</h1>
+        @if (clubName) { <p class="kiosk-club">{{ clubName }}</p> }
+        <p class="kiosk-hint">Scan your card, or type your member number</p>
+      </header>
+
+      <input
+        type="text"
+        class="fit-kiosk-input"
+        [(ngModel)]="entry"
+        (keyup.enter)="submit()"
+        placeholder="Member number"
+        aria-label="Member number"
+        inputmode="numeric"
+        autocomplete="off"
+        autofocus
+      />
+
+      <div class="fit-kiosk-pad">
+        @for (k of ['1','2','3','4','5','6','7','8','9']; track k) {
+          <button type="button" class="fit-kiosk-key" (click)="press(k)">{{ k }}</button>
+        }
+        <button type="button" class="fit-kiosk-key" (click)="clear()" aria-label="Clear">
+          <span class="material-symbols-outlined">backspace</span>
+        </button>
+        <button type="button" class="fit-kiosk-key" (click)="press('0')">0</button>
+        <button type="button" class="fit-kiosk-key" (click)="backspace()" aria-label="Delete one">
+          <span class="material-symbols-outlined">west</span>
+        </button>
+      </div>
+
+      <button
+        type="button"
+        class="kiosk-go"
+        [disabled]="!entry.trim() || busy"
+        (click)="submit()"
+      >
+        {{ busy ? 'Checking…' : 'Check in' }}
+      </button>
+    }
+  </div>
+</div>

@@ -1,0 +1,141 @@
+/* ── Prompt ──────────────────────────────────────────────────────────
+   Every size here is a step up from the rest of the app, because this
+   screen is read from further away than any other.                     */
+.kiosk-head { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+
+.kiosk-logo { font-size: 44px; color: var(--accent, #2b7fff); margin-bottom: 4px; }
+
+.kiosk-title {
+  margin: 0;
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-heading, #0f172a);
+}
+
+.kiosk-club {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+  color: var(--text-secondary, #64748b);
+}
+
+.kiosk-hint {
+  margin: 6px 0 0;
+  font-size: 15px;
+  color: var(--text-muted, #94a3b8);
+}
+
+.kiosk-go {
+  min-height: 68px;
+  border-radius: 16px;
+  border: none;
+  background: var(--accent, #2b7fff);
+  color: #fff;
+  font-size: 20px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.kiosk-go:disabled { opacity: 0.45; cursor: not-allowed; }
+.kiosk-go:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.kiosk-go:not(:disabled):active { transform: translateY(1px); }
+
+/* ── Result ──────────────────────────────────────────────────────────
+   Colour, an icon and a word. Never colour alone: a member who cannot
+   distinguish red from green still has to know whether to walk through. */
+.kiosk-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 44px 32px;
+  border-radius: 24px;
+  border: 3px solid transparent;
+  animation: kiosk-in 0.22s ease-out;
+}
+
+@keyframes kiosk-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kiosk-result { animation: none; }
+}
+
+.kiosk-result.is-allowed {
+  color: var(--success-text, #15803d);
+  background: var(--success-bg, #dcfce7);
+  border-color: var(--success-border, rgba(21, 128, 61, 0.35));
+}
+
+.kiosk-result.is-warned {
+  color: var(--warning-text, #b45309);
+  background: var(--warning-bg, #fef3c7);
+  border-color: var(--warning-border, rgba(180, 83, 9, 0.35));
+}
+
+.kiosk-result.is-denied {
+  color: var(--danger-text, #b91c1c);
+  background: var(--danger-bg, #fee2e2);
+  border-color: var(--danger-border, rgba(185, 28, 28, 0.4));
+}
+
+.kiosk-result-icon { font-size: 76px; }
+
+.kiosk-result-title {
+  margin: 0;
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.kiosk-result-message {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.5;
+  font-weight: 500;
+  max-width: 34ch;
+}
+
+.kiosk-result-next {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.kiosk-result-next .material-symbols-outlined { font-size: 21px; }
+
+.kiosk-result-help {
+  margin: 4px 0 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.kiosk-again {
+  margin-top: 14px;
+  min-height: 52px;
+  padding: 0 34px;
+  border-radius: 999px;
+  border: 2px solid currentColor;
+  background: transparent;
+  color: inherit;
+  font-size: 16px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.kiosk-again:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+@media (max-width: 640px) {
+  .kiosk-title { font-size: 27px; }
+  .kiosk-result { padding: 32px 20px; }
+  .kiosk-result-icon { font-size: 58px; }
+  .kiosk-result-title { font-size: 26px; }
+  .kiosk-result-message { font-size: 16px; }
+}

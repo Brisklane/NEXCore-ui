@@ -1,0 +1,242 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Programming</h2>
+      <p class="subtitle">
+        @if (unpublished > 0) {
+          {{ unpublished }} day{{ unpublished === 1 ? '' : 's' }} still unpublished this week
+        } @else { What the club is training, by track. }
+      </p>
+    </div>
+    <div class="page-header-actions">
+      <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+      <button type="button" class="btn-secondary" (click)="go('/fitness/leaderboards')">Leaderboards</button>
+    </div>
+  </div>
+
+  <fit-page-help key="programming"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <div class="fit-segment pg-tabs" role="tablist" aria-label="Programming sections">
+    <button type="button" role="tab" [class.is-active]="tab === 'week'" (click)="tab = 'week'">
+      <span class="material-symbols-outlined">calendar_view_week</span>The week
+    </button>
+    <button type="button" role="tab" [class.is-active]="tab === 'board'" (click)="tab = 'board'">
+      <span class="material-symbols-outlined">dashboard</span>Today's board
+    </button>
+    <button type="button" role="tab" [class.is-active]="tab === 'library'" (click)="tab = 'library'">
+      <span class="material-symbols-outlined">menu_book</span>Workout library
+    </button>
+  </div>
+
+  <!-- ── The week ─────────────────────────────────────────────────────── -->
+  @if (tab === 'week') {
+    <div class="fit-toolbar pg-toolbar">
+      <div class="pg-week">
+        <button type="button" class="fit-icon-btn" (click)="shiftWeek(-1)" aria-label="Previous week">
+          <span class="material-symbols-outlined">chevron_left</span>
+        </button>
+        <button type="button" class="btn-secondary pg-week-label" (click)="thisWeek()">
+          {{ weekDays[0] | date:'d MMM' }} – {{ weekDays[6] | date:'d MMM yyyy' }}
+        </button>
+        <button type="button" class="fit-icon-btn" (click)="shiftWeek(1)" aria-label="Next week">
+          <span class="material-symbols-outlined">chevron_right</span>
+        </button>
+      </div>
+
+      <label class="fit-field fit-field-inline">
+        <span>Track</span>
+        <select [(ngModel)]="trackId" (ngModelChange)="load()">
+          <option [ngValue]="null">All tracks</option>
+          @for (t of tracks; track t.id) { <option [ngValue]="t.id">{{ t.name }}</option> }
+        </select>
+      </label>
+    </div>
+
+    @if (loading) {
+      <div class="fit-timetable">
+        @for (i of [1,2,3,4,5,6,7]; track i) { <div class="fit-skeleton" style="height: 260px"></div> }
+      </div>
+    } @else {
+      <div class="fit-timetable">
+        @for (day of weekDays; track day.getTime()) {
+          <div class="fit-timetable-day">
+            <div class="fit-timetable-head" [class.is-today]="isToday(day)">
+              <span class="fit-timetable-dayname">{{ day | date:'EEE' }}</span>
+              <span class="fit-timetable-date">{{ day | date:'d' }}</span>
+            </div>
+
+            @for (d of daysOn(day); track d.id) {
+              <div class="pg-day" [class.is-draft]="!d.isPublished"
+                [style.border-left-color]="d.trackColour || 'var(--accent, #2b7fff)'">
+                <span class="pg-day-track">{{ d.trackName }}</span>
+                <span class="pg-day-workout">{{ d.workoutName || 'Not written yet' }}</span>
+
+                @if (d.coachBrief) { <span class="pg-day-brief">{{ d.coachBrief }}</span> }
+
+                <span class="pg-day-foot">
+                  @if (d.isPublished) {
+                    <span class="pg-day-state is-live">
+                      <span class="material-symbols-outlined">visibility</span>published
+                    </span>
+                    @if (d.resultCount > 0) { <span class="pg-day-results">{{ d.resultCount }} scores</span> }
+                  } @else {
+                    <span class="pg-day-state">
+                      <span class="material-symbols-outlined">visibility_off</span>draft
+                    </span>
+                    <button type="button" class="btn-link" [disabled]="busy" (click)="publish(d)">
+                      Publish
+                    </button>
+                  }
+                </span>
+              </div>
+            } @empty {
+              <div class="fit-timetable-empty">Nothing written</div>
+            }
+          </div>
+        }
+      </div>
+
+      @if (unpublished > 0) {
+        <p class="fit-quiet pg-note">
+          Drafts are visible to staff only. Members see nothing until a day is published, which is
+          why somebody writing Thursday's session on Tuesday can leave it here safely.
+        </p>
+      }
+    }
+  }
+
+  <!-- ── Today's board ────────────────────────────────────────────────── -->
+  @if (tab === 'board') {
+    @if (!board) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">dashboard</span>
+        <p class="fit-empty-text">Nothing programmed for today.</p>
+      </div>
+    } @else {
+      <div class="pg-board">
+        <div class="pg-board-main">
+          @for (t of board.tracks; track t.id) {
+            <section class="pg-board-track" [style.border-left-color]="t.trackColour || 'var(--accent, #2b7fff)'">
+              <h3 class="pg-board-name">{{ t.trackName }}</h3>
+              <p class="pg-board-workout">{{ t.workoutName || 'Not written' }}</p>
+
+              @if (t.workout; as w) {
+                @if (w.summary) { <p class="pg-board-summary">{{ w.summary }}</p> }
+
+                @for (s of w.sections; track s.id) {
+                  <div class="pg-section">
+                    <h4>
+                      {{ s.title }}
+                      <small>{{ sectionLabels[s.kind] }}</small>
+                      @if (s.rounds) { <small>{{ s.rounds }} rounds</small> }
+                      @if (s.durationSeconds) { <small>{{ s.durationSeconds / 60 | number:'1.0-0' }} min</small> }
+                    </h4>
+
+                    <ul class="pg-movements">
+                      @for (m of s.movements; track m.id) {
+                        <li>
+                          <span class="pg-move-prescription">
+                            @if (m.sets) { {{ m.sets }} × }
+                            @if (m.reps) { {{ m.reps }} }
+                            @if (m.distanceMetres) { {{ m.distanceMetres }}m }
+                            @if (m.calories) { {{ m.calories }} cal }
+                            @if (m.durationSeconds) { {{ m.durationSeconds }}s }
+                          </span>
+                          <span class="pg-move-name">{{ m.movementName }}</span>
+                          @if (m.loadKg) { <span class="pg-move-load">@ {{ m.loadKg }}kg</span> }
+                          @else if (m.loadPercentOfMax) {
+                            <span class="pg-move-load">@ {{ m.loadPercentOfMax }}% of max</span>
+                          }
+                          @if (m.scalingNote) { <span class="pg-move-scale">{{ m.scalingNote }}</span> }
+                        </li>
+                      }
+                    </ul>
+
+                    @if (s.instructions) { <p class="pg-section-note">{{ s.instructions }}</p> }
+                  </div>
+                }
+
+                @if (w.timeCapSeconds) {
+                  <p class="pg-cap">Time cap: {{ w.timeCapSeconds / 60 | number:'1.0-0' }} minutes</p>
+                }
+              }
+
+              @if (t.coachBrief) {
+                <p class="pg-brief">
+                  <span class="material-symbols-outlined">campaign</span>{{ t.coachBrief }}
+                </p>
+              }
+            </section>
+          }
+        </div>
+
+        @if (board.todaysLeaderboard.length > 0) {
+          <aside class="pg-board-side">
+            <h3 class="fit-section-title">
+              <span class="material-symbols-outlined">leaderboard</span>
+              Today so far
+            </h3>
+
+            <ol class="pg-scores">
+              @for (e of board.todaysLeaderboard; track e.id) {
+                <li>
+                  <span class="pg-score-rank">{{ e.rank }}</span>
+                  <span class="pg-score-name">
+                    {{ e.memberDisplayName }}
+                    @if (e.wasScaled) { <small>scaled</small> }
+                  </span>
+                  <span class="pg-score-value">{{ e.scoreDisplay }}</span>
+                </li>
+              }
+            </ol>
+
+            <p class="fit-quiet pg-optout">
+              Members who have opted out of leaderboards do not appear here.
+            </p>
+          </aside>
+        }
+      </div>
+    }
+  }
+
+  <!-- ── Library ──────────────────────────────────────────────────────── -->
+  @if (tab === 'library') {
+    @if (workouts.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">menu_book</span>
+        <h3 class="fit-empty-title">No workouts saved</h3>
+        <p class="fit-empty-text">
+          Save the sessions you run often and benchmarks you retest, then drop them onto a day.
+        </p>
+      </div>
+    } @else {
+      <div class="fit-rows">
+        @for (w of workouts; track w.id) {
+          <div class="fit-row" [class.is-good]="w.isBenchmark">
+            <span class="fit-row-main">
+              <span class="fit-row-title">
+                {{ w.name }}
+                @if (w.isBenchmark) { <span class="fit-pill pg-benchmark">benchmark</span> }
+                @if (w.isTemplate) { <span class="fit-pill">template</span> }
+                @if (w.scoreType != null) { <span class="fit-pill">{{ scoreLabels[w.scoreType] }}</span> }
+              </span>
+              <span class="fit-row-sub">
+                {{ w.summary || w.sections.length + ' sections' }}
+                @if (w.estimatedMinutes) { · about {{ w.estimatedMinutes }} min }
+                @if (w.lastPerformedOn) { · last run {{ w.lastPerformedOn | date:'d MMM yyyy' }} }
+              </span>
+            </span>
+
+            <span class="fit-row-figure">
+              <span class="fit-row-figure-value">{{ w.resultCount | number }}</span>
+              <span class="fit-row-figure-label">scores logged</span>
+            </span>
+          </div>
+        }
+      </div>
+    }
+  }
+</div>

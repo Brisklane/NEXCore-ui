@@ -1,0 +1,341 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>Lockers &amp; courts</h2>
+      <p class="subtitle">
+        @if (grid && tab === 'courts') {
+          {{ grid.bookedSlots }} of {{ grid.totalSlots }} slots booked · {{ grid.utilisationPercent }}% used
+        } @else { Lockers, courts and anything else booked by the hour. }
+      </p>
+    </div>
+    <fit-club-picker (clubChange)="onClub($event)"></fit-club-picker>
+  </div>
+
+  <fit-page-help key="lockers"></fit-page-help>
+
+  @if (error) { <div class="alert alert-error">{{ error }}</div> }
+  @if (notice) { <div class="alert alert-success">{{ notice }}</div> }
+
+  <div class="fit-segment fc-tabs" role="tablist" aria-label="Facility sections">
+    <button type="button" role="tab" [class.is-active]="tab === 'lockers'" (click)="tab = 'lockers'">
+      <span class="material-symbols-outlined">lock</span>Lockers
+    </button>
+    <button type="button" role="tab" [class.is-active]="tab === 'courts'" (click)="tab = 'courts'">
+      <span class="material-symbols-outlined">sports_tennis</span>Courts &amp; resources
+    </button>
+  </div>
+
+  <!-- ── Lockers ──────────────────────────────────────────────────────── -->
+  @if (tab === 'lockers') {
+    @if (loading) {
+      <div class="fit-grid">
+        @for (i of [1,2]; track i) { <div class="fit-skeleton" style="height: 260px"></div> }
+      </div>
+    } @else if (banks.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">lock</span>
+        <h3 class="fit-empty-title">No locker banks</h3>
+        <p class="fit-empty-text">Add a bank and its lockers appear here as a wall you can tap.</p>
+      </div>
+    } @else {
+      <div class="fit-grid fit-grid-wide">
+        @for (b of banks; track b.id) {
+          <section class="fit-card">
+            <header class="fit-card-head">
+              <h3 class="fit-card-title">{{ b.name }}</h3>
+              <span class="fit-section-note">{{ b.location }}</span>
+            </header>
+
+            <div class="fit-card-body">
+              <div class="fc-bank-stats">
+                <div><strong>{{ b.rentedCount }}</strong> rented</div>
+                <div><strong>{{ b.freeCount }}</strong> free</div>
+                @if (b.outOfOrderCount > 0) {
+                  <div class="is-warn"><strong>{{ b.outOfOrderCount }}</strong> out of order</div>
+                }
+                <div><strong>{{ b.monthlyRentalRevenue | number:'1.0-0' }}</strong> a month</div>
+              </div>
+
+              <div class="fit-bar-track fc-bank-bar">
+                <span class="fit-bar-fill" [style.width.%]="bankUsage(b)"></span>
+              </div>
+              <p class="fc-bank-usage">{{ bankUsage(b) }}% let</p>
+
+              @if (b.expiringThisMonth > 0) {
+                <p class="fc-expiring">
+                  {{ b.expiringThisMonth }} rental{{ b.expiringThisMonth === 1 ? '' : 's' }} ends this month.
+                </p>
+              }
+
+              <!-- The wall, laid out as a wall. Tapping a free one lets it. -->
+              <div class="fc-wall">
+                @for (l of b.lockers; track l.id) {
+                  <button
+                    type="button"
+                    class="fc-locker"
+                    [class]="lockerClass(l)"
+                    [disabled]="l.status !== LockerStatus.Free"
+                    [attr.title]="l.rentedByName
+                      ? l.number + ' — ' + l.rentedByName
+                      : l.outOfOrderNote || (l.number + ' — free')"
+                    (click)="startAssign(b, l)"
+                  >{{ l.number }}</button>
+                }
+              </div>
+
+              <div class="fc-legend">
+                <span><span class="fc-swatch is-free"></span>Free</span>
+                <span><span class="fc-swatch is-taken"></span>Rented</span>
+                <span><span class="fc-swatch is-inuse"></span>In use today</span>
+                <span><span class="fc-swatch is-out"></span>Out of order</span>
+              </div>
+            </div>
+          </section>
+        }
+      </div>
+
+      @if (assignments.length > 0) {
+        <h3 class="fit-section-title fc-rentals-title">
+          <span class="material-symbols-outlined">assignment</span>
+          Current rentals
+        </h3>
+
+        <div class="fit-rows">
+          @for (a of assignments; track a.id) {
+            <div class="fit-row" [class.is-warn]="a.isExpired">
+              <span class="fit-row-main">
+                <span class="fit-row-title">
+                  Locker {{ a.lockerNumber }}
+                  <span class="fit-pill">{{ a.bankName }}</span>
+                  @if (a.isExpired) { <span class="fit-pill fc-expired">expired</span> }
+                  @if (a.autoRenews) { <span class="fit-pill">renews</span> }
+                </span>
+                <span class="fit-row-sub">
+                  {{ a.memberName }} · since {{ a.startsOn | date:'d MMM yyyy' }}
+                  @if (a.endsOn) { · until {{ a.endsOn | date:'d MMM yyyy' }} }
+                  @if (a.daysToExpiry != null && a.daysToExpiry >= 0) { · {{ a.daysToExpiry }} days left }
+                  @if (a.keyIssued) { · key {{ a.keyIssued }} }
+                </span>
+              </span>
+
+              <span class="fit-row-figure">
+                <span class="fit-row-figure-value">{{ a.rate | number:'1.2-2' }}</span>
+                <span class="fit-row-figure-label">a month</span>
+              </span>
+
+              <span class="fit-row-actions">
+                <button type="button" class="btn-secondary" (click)="go('/fitness/members/' + a.memberId)">
+                  Open
+                </button>
+                <button type="button" class="btn-link" (click)="release(a)">Release</button>
+              </span>
+            </div>
+          }
+        </div>
+      }
+    }
+  }
+
+  <!-- ── Courts ───────────────────────────────────────────────────────── -->
+  @if (tab === 'courts') {
+    <div class="fit-toolbar fc-toolbar">
+      <div class="fc-day">
+        <button type="button" class="fit-icon-btn" (click)="shiftDay(-1)" aria-label="Previous day">
+          <span class="material-symbols-outlined">chevron_left</span>
+        </button>
+        <span class="fc-day-label">{{ forDate | date:'EEEE d MMMM' }}</span>
+        <button type="button" class="fit-icon-btn" (click)="shiftDay(1)" aria-label="Next day">
+          <span class="material-symbols-outlined">chevron_right</span>
+        </button>
+      </div>
+
+      <label class="fit-field fit-field-inline">
+        <span>Kind</span>
+        <select [(ngModel)]="resourceKind" (ngModelChange)="load()">
+          <option [ngValue]="null">All</option>
+          @for (o of kindOptions; track o.value) { <option [ngValue]="o.value">{{ o.label }}</option> }
+        </select>
+      </label>
+
+      @if (grid) {
+        <div class="fit-spacer"></div>
+        <span class="fc-revenue">{{ grid.revenueToday | number:'1.0-0' }} taken today</span>
+      }
+    </div>
+
+    @if (!grid || grid.rows.length === 0) {
+      <div class="fit-empty">
+        <span class="material-symbols-outlined fit-empty-icon">sports_tennis</span>
+        <h3 class="fit-empty-title">No bookable resources</h3>
+        <p class="fit-empty-text">Courts, lanes and studios set up for hire appear here as a grid.</p>
+      </div>
+    } @else {
+      <div class="fc-grid-wrap">
+        <div class="fc-grid">
+          @for (row of grid.rows; track row.resourceId) {
+            <div class="fc-grid-row" [class.is-out]="row.isOutOfService">
+              <div class="fc-grid-name" [style.border-left-color]="row.colourHex || 'var(--accent, #2b7fff)'">
+                <span>{{ row.resourceName }}</span>
+                <small>
+                  {{ kindLabels[row.kind] }}@if (row.isOutOfService) { · out of service }
+                </small>
+              </div>
+
+              <div class="fc-grid-slots">
+                @for (s of row.slots; track s.startsAt) {
+                  <button
+                    type="button"
+                    class="fc-slot"
+                    [class]="slotClass(s)"
+                    [class.is-peak]="s.isPeak"
+                    [disabled]="!!s.bookingId || !!s.blockReason || row.isOutOfService"
+                    [attr.title]="s.bookedByName
+                      ? (s.startsAt | date:'HH:mm') + ' — ' + s.bookedByName
+                      : s.blockReason || ((s.startsAt | date:'HH:mm') + ' — free, ' + s.rate)"
+                    (click)="bookingSlot = s; bookingResourceId = row.resourceId;
+                             bookingResourceName = row.resourceName"
+                  >
+                    <span class="fc-slot-time">{{ s.startsAt | date:'HH:mm' }}</span>
+                    @if (s.bookedByName) { <span class="fc-slot-who">{{ s.bookedByName }}</span> }
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="fc-legend fc-grid-legend">
+        <span><span class="fc-swatch is-free"></span>Free</span>
+        <span><span class="fc-swatch is-taken"></span>Booked</span>
+        <span><span class="fc-swatch is-out"></span>Not bookable</span>
+        <span><span class="fc-swatch is-peak"></span>Peak rate</span>
+      </div>
+    }
+  }
+
+  <!-- ── Assign a locker ──────────────────────────────────────────────── -->
+  @if (assigning; as l) {
+    <div class="fit-modal-backdrop" (click)="assigning = null"></div>
+    <div class="fit-modal" role="dialog" aria-modal="true" aria-labelledby="fc-assign-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="fc-assign-title">Let locker {{ l.number }}</h3>
+          <p class="fit-modal-sub">
+            {{ assignBank?.name }} · {{ sizeLabels[l.size] }} ·
+            {{ l.monthlyRate | number:'1.2-2' }} a month
+            @if (l.deposit > 0) { · {{ l.deposit | number:'1.2-2' }} deposit }
+          </p>
+        </div>
+        <button type="button" class="fit-close" (click)="assigning = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        @if (member; as m) {
+          <div class="fc-member">
+            <span class="material-symbols-outlined">person</span>
+            <span>{{ m.preferredName || m.fullName }}</span>
+            <button type="button" class="fit-icon-btn" (click)="member = null" aria-label="Change member">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+        } @else {
+          <div class="fc-search">
+            <div class="fit-search">
+              <span class="material-symbols-outlined">person_search</span>
+              <input type="text" placeholder="Who is renting it?" aria-label="Find a member"
+                [(ngModel)]="memberSearch" (ngModelChange)="onMemberSearch()" />
+            </div>
+            @if (memberResults.length > 0) {
+              <ul class="fc-results">
+                @for (m of memberResults; track m.id) {
+                  <li>
+                    <button type="button" (click)="chooseMember(m)">
+                      <strong>{{ m.preferredName || m.fullName }}</strong>
+                      <span>{{ m.memberNumber }}</span>
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        }
+
+        <label class="fit-field fc-months">
+          <span>How long</span>
+          <select [(ngModel)]="assignMonths">
+            <option [ngValue]="1">1 month</option>
+            <option [ngValue]="3">3 months</option>
+            <option [ngValue]="6">6 months</option>
+            <option [ngValue]="12">12 months</option>
+          </select>
+        </label>
+
+        <div class="fit-explain">
+          <div class="fit-explain-lines">
+            <div class="fit-explain-line">
+              <span>Rental</span>
+              <strong>{{ l.monthlyRate * assignMonths | number:'1.2-2' }}</strong>
+            </div>
+            @if (l.deposit > 0) {
+              <div class="fit-explain-line">
+                <span>Deposit (returned at the end)</span>
+                <strong>{{ l.deposit | number:'1.2-2' }}</strong>
+              </div>
+            }
+            <div class="fit-explain-line is-total">
+              <span>To take now</span>
+              <strong>{{ (l.monthlyRate * assignMonths) + l.deposit | number:'1.2-2' }}</strong>
+            </div>
+          </div>
+
+          <p class="fit-explain-text">
+            The rental renews automatically unless it is released. They will be told before it
+            renews, and the locker is not reclaimed without notice.
+          </p>
+        </div>
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="assigning = null">Cancel</button>
+        <button type="button" class="btn-primary" [disabled]="!member || busy" (click)="confirmAssign()">
+          {{ busy ? 'Assigning…' : 'Let it' }}
+        </button>
+      </footer>
+    </div>
+  }
+
+  <!-- ── Book a slot ──────────────────────────────────────────────────── -->
+  @if (bookingSlot; as s) {
+    <div class="fit-modal-backdrop" (click)="bookingSlot = null"></div>
+    <div class="fit-modal" role="dialog" aria-modal="true" aria-labelledby="fc-book-title">
+      <header class="fit-modal-head">
+        <div>
+          <h3 class="fit-modal-title" id="fc-book-title">{{ bookingResourceName }}</h3>
+          <p class="fit-modal-sub">
+            {{ s.startsAt | date:'EEEE d MMMM, HH:mm' }}–{{ s.endsAt | date:'HH:mm' }}
+            @if (s.isPeak) { · peak rate }
+            · {{ s.rate | number:'1.2-2' }}
+          </p>
+        </div>
+        <button type="button" class="fit-close" (click)="bookingSlot = null" aria-label="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="fit-modal-body">
+        <p class="fit-quiet">
+          Court and resource bookings are made from the member's own record so the charge lands on
+          the right account. Open the member and book it from there.
+        </p>
+      </div>
+
+      <footer class="fit-modal-foot">
+        <button type="button" class="btn-secondary" (click)="bookingSlot = null">Close</button>
+        <button type="button" class="btn-primary" (click)="go('/fitness/members')">Find the member</button>
+      </footer>
+    </div>
+  }
+</div>

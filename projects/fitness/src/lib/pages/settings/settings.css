@@ -1,0 +1,69 @@
+/* ── One setting ─────────────────────────────────────────────────────
+   Label, control, then a sentence explaining what it actually does. The
+   sentence is the point: a settings screen full of unexplained numbers
+   is one nobody touches, and then the defaults become the product.     */
+.st-setting {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border-subtle, #f1f5f9);
+}
+
+.st-setting:last-child { border-bottom: none; }
+
+.st-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+}
+
+.st-setting input,
+.st-setting select {
+  max-width: 220px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--border-strong, #cbd5e1);
+  background: var(--input-bg, #fff);
+  color: var(--input-text, #1e293b);
+  font-size: 13px;
+}
+
+.st-setting input:focus-visible,
+.st-setting select:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-color: var(--accent, #2b7fff);
+}
+
+.st-setting input:disabled,
+.st-setting select:disabled { opacity: 0.5; }
+
+.st-note {
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--text-secondary, #64748b);
+  max-width: 60ch;
+}
+
+.st-standalone {
+  margin: 13px 0 0;
+  padding: 10px 13px;
+  border-radius: 9px;
+  background: var(--bg-muted, #f8fafc);
+}
+
+.st-check { padding: 13px 0; border-bottom: 1px solid var(--border-subtle, #f1f5f9); }
+.st-check:last-child { border-bottom: none; }
+
+.st-pair { display: flex; gap: 16px; flex-wrap: wrap; }
+.st-pair .st-setting { border-bottom: none; }
+
+.st-foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-default, #e6eaf0);
+}

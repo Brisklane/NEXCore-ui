@@ -1,0 +1,221 @@
+/* ── Bands ───────────────────────────────────────────────────────────
+   The summary and the filter in one control. Each band carries its own
+   word, so the four are distinguishable without relying on colour.     */
+.rt-bands {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 9px;
+  margin-bottom: 14px;
+}
+
+.rt-band {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 13px 15px;
+  min-height: 74px;
+  border-radius: 13px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  border-top: 4px solid var(--border-strong, #cbd5e1);
+  background: var(--bg-surface, #fff);
+  text-align: left;
+  cursor: pointer;
+}
+
+.rt-band:hover { box-shadow: var(--shadow-sm, 0 1px 3px rgba(15, 23, 42, 0.08)); }
+.rt-band:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.rt-band.is-selected { background: var(--bg-muted, #f1f5f9); border-color: var(--accent, #2b7fff); }
+
+.rt-band.is-healthy { border-top-color: var(--success, #16a34a); }
+.rt-band.is-watch { border-top-color: var(--info, #3b82f6); }
+.rt-band.is-atrisk { border-top-color: var(--warning, #f59e0b); }
+.rt-band.is-critical { border-top-color: var(--danger, #dc2626); }
+
+.rt-band-value {
+  font-size: 25px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.rt-band-label { font-size: 12px; font-weight: 650; color: var(--text-secondary, #64748b); }
+
+/* ── Summary strip ───────────────────────────────────────────────────── */
+.rt-summary {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 11px 16px;
+  margin-bottom: 14px;
+  border-radius: 12px;
+  background: var(--bg-muted, #f8fafc);
+  border: 1px solid var(--border-default, #e6eaf0);
+  font-size: 12.5px;
+  color: var(--text-secondary, #64748b);
+}
+
+.rt-summary-item strong {
+  color: var(--text-heading, #0f172a);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.rt-summary-item.is-alert,
+.rt-summary-item.is-alert strong { color: var(--danger-text, #b91c1c); }
+
+.rt-tabs { margin-bottom: 14px; }
+
+/* ── Member rows ─────────────────────────────────────────────────────
+   Collapsed by default; the reasons are one tap away because that is
+   what the conversation is actually built on.                          */
+.rt-member {
+  border-radius: 13px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-surface, #fff);
+  overflow: hidden;
+}
+
+.rt-member.is-open { border-color: var(--accent-border, rgba(43, 127, 255, 0.35)); }
+
+.rt-member-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 12px 16px;
+  min-height: 66px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rt-member-head:hover { background: var(--bg-muted, #f8fafc); }
+.rt-member-head:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.rt-member-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+
+.rt-member-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+}
+
+.rt-member-reason { font-size: 12px; color: var(--text-secondary, #64748b); line-height: 1.45; }
+
+.rt-member-figures {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.rt-member-value {
+  font-size: 13px;
+  font-weight: 750;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.rt-member-value small { font-size: 10.5px; font-weight: 600; color: var(--text-muted, #94a3b8); }
+
+.rt-chevron { font-size: 20px; color: var(--text-muted, #94a3b8); flex-shrink: 0; }
+
+/* ── Expanded reasons ────────────────────────────────────────────────── */
+.rt-member-detail {
+  padding: 4px 16px 16px 70px;
+  border-top: 1px solid var(--border-subtle, #f1f5f9);
+}
+
+.rt-detail-facts {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 12px 0 16px;
+}
+
+.rt-detail-facts span {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--bg-muted, #f1f5f9);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+}
+
+.rt-detail-title {
+  margin: 0 0 9px;
+  font-size: 11.5px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.rt-factors { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+
+.rt-factors li { position: relative; padding: 8px 12px 8px 14px; border-radius: 9px; background: var(--bg-muted, #f8fafc); }
+
+/* The weight of a factor, as a bar behind the sentence. Subtle on purpose:
+   the words are what matters, the width is a hint about which words most. */
+.rt-factor-weight {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 9px 0 0 9px;
+  background: var(--accent-soft, rgba(43, 127, 255, 0.14));
+  max-width: 100%;
+}
+
+.rt-factor-text {
+  position: relative;
+  display: block;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-primary, #1e293b);
+}
+
+.rt-factor-text em {
+  display: block;
+  margin-top: 2px;
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 650;
+  color: var(--accent, #2b7fff);
+}
+
+.rt-suggested {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  background: var(--accent-soft, rgba(43, 127, 255, 0.08));
+  border: 1px solid var(--accent-border, rgba(43, 127, 255, 0.25));
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-primary, #1e293b);
+}
+
+.rt-suggested .material-symbols-outlined { font-size: 18px; color: var(--accent, #2b7fff); flex-shrink: 0; }
+
+.rt-detail-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.rt-detail-actions a { text-decoration: none; }
+
+.fit-pill.is-alert {
+  background: var(--danger-bg, #fee2e2);
+  color: var(--danger-text, #b91c1c);
+}
+
+@media (max-width: 640px) {
+  .rt-member-detail { padding-left: 16px; }
+  .rt-member-figures { align-items: flex-start; }
+}
