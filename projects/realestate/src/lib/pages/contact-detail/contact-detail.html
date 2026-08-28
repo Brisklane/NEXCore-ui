@@ -1,0 +1,176 @@
+<re-detail-page
+  backRoute="/realestate/contacts"
+  backLabel="All contacts"
+  icon="person"
+  [title]="data()?.displayName ?? ''"
+  [subtitle]="data()?.occupation ?? data()?.industry ?? null"
+  [reference]="data()?.reference ?? null"
+  [photoUrl]="data()?.photoUrl ?? null"
+  [pills]="pills()"
+  [figures]="figures()"
+  [actions]="actions()"
+  [tabs]="tabs()"
+  [activeTab]="tab()"
+  [loading]="loading()"
+  [error]="error()"
+  [notFound]="notFound()"
+  (tabChange)="tab.set($event)"
+  (action)="act($event)"
+  (retry)="load()">
+
+  @if (data(); as d) {
+
+    @if (blockingCautions().length) {
+      <div class="alert alert-error" role="alert">
+        <span class="material-symbols-outlined">block</span>
+        <span>
+          On the caution list — {{ blockingCautions()[0].reason }}. No new business should be
+          taken with this contact until it is cleared.
+        </span>
+      </div>
+    }
+
+    @switch (tab()) {
+
+      @case ('overview') {
+        <re-section title="Who they are" icon="person">
+          <re-facts [items]="personal()" />
+        </re-section>
+
+        @if (d.notes) {
+          <re-section title="Notes" icon="sticky_note_2">
+            <p class="re-notes">{{ d.notes }}</p>
+          </re-section>
+        }
+
+        @if (relationships().length) {
+          <re-section title="Related people"
+                      icon="group"
+                      note="Co-applicants, nominees and anybody holding a power of attorney. An
+                            expired power of attorney is flagged, because signing on it would be
+                            void.">
+            <re-mini-list [rows]="relationships()" />
+          </re-section>
+        }
+      }
+
+      @case ('contact') {
+        <re-section title="Numbers and addresses"
+                    icon="contacts"
+                    note="A number marked unreachable stops the dialler and the SMS sender using
+                          it, so bad numbers do not silently absorb the follow-ups.">
+          <re-mini-list [rows]="contacts()"
+                        emptyMessage="No telephone number or email is recorded. This contact cannot be reached." />
+        </re-section>
+
+        <re-section title="Addresses" icon="location_on">
+          <re-mini-list [rows]="addresses()" emptyMessage="No address is recorded." />
+        </re-section>
+
+        <re-section title="Marketing consent"
+                    icon="mark_email_read"
+                    note="What they have agreed to be contacted about, and when they said so.
+                          A withdrawn consent removes them from broadcasts immediately.">
+          <re-mini-list [rows]="consents()"
+                        emptyMessage="No consent has been recorded. Marketing broadcasts will skip this contact." />
+        </re-section>
+      }
+
+      @case ('identity') {
+        <re-section title="Know your customer"
+                    icon="badge"
+                    note="In most jurisdictions a sale cannot complete without verified identity,
+                          and the verification itself expires.">
+          <re-facts [items]="kyc()" />
+        </re-section>
+
+        <re-section title="Identity documents" icon="description">
+          <re-mini-list [rows]="identities()"
+                        emptyMessage="No identity document has been recorded." />
+        </re-section>
+
+        @if (cautions().length) {
+          <re-section title="Caution list"
+                      icon="flag"
+                      note="Entries raised against this contact — a bounced cheque, a fraud
+                            concern, a court matter. Kept after clearing so the history survives.">
+            <re-mini-list [rows]="cautions()" />
+          </re-section>
+        }
+      }
+
+      @case ('business') {
+        <re-section title="Bookings" icon="sell">
+          @if (!bookings().length) {
+            <p class="re-mini-empty">This contact has never bought anything.</p>
+          } @else {
+            <div class="re-rows">
+              @for (b of d.bookings; track b.id) {
+                <button type="button" class="re-row"
+                        [class.is-alert]="b.overdueAmount > 0"
+                        (click)="openBooking(b.id)">
+                  <div class="re-row-main">
+                    <span class="re-row-title">{{ b.reference }} · {{ b.projectName }}</span>
+                    <span class="re-row-sub">
+                      {{ b.unitNumber ?? b.fileNumber }}
+                      · booked {{ b.bookingDate | date:'mediumDate' }}
+                    </span>
+                  </div>
+                  <span class="re-row-figure">
+                    <span class="re-row-figure-value">{{ money(b.totalConsideration) }}</span>
+                    <span class="re-row-figure-label">
+                      {{ b.collectionPercent | number:'1.0-0' }}% collected
+                    </span>
+                  </span>
+                  <span class="material-symbols-outlined re-row-go">chevron_right</span>
+                </button>
+              }
+            </div>
+          }
+        </re-section>
+
+        <re-section title="Tenancies" icon="real_estate_agent">
+          <re-mini-list [rows]="tenancies()" emptyMessage="No tenancy is recorded." />
+        </re-section>
+
+        <re-section title="Property they own" icon="home_work">
+          <re-mini-list [rows]="properties()"
+                        emptyMessage="No property is registered to this contact." />
+        </re-section>
+
+        <re-section title="Enquiries" icon="contact_support">
+          <re-mini-list [rows]="enquiries()" emptyMessage="No enquiry has been logged." />
+        </re-section>
+      }
+
+      @case ('money') {
+        <re-section title="Where they stand"
+                    icon="payments"
+                    note="Everything owed across bookings, tenancies and maintenance, in one
+                          place. This is what to look at before agreeing anything new.">
+          <re-facts [items]="moneyFacts()" />
+        </re-section>
+
+        @if (d.money.isDefaulter) {
+          <p class="re-money-warning">
+            <span class="material-symbols-outlined">money_off</span>
+            This contact is in default. Any new booking, transfer or agreement should be cleared
+            with collections first.
+          </p>
+        }
+      }
+
+      @case ('history') {
+        <re-section title="Everything that has happened" icon="history">
+          @if (!timeline().length) {
+            <p class="re-mini-empty">Nothing has been recorded against this contact yet.</p>
+          } @else {
+            <re-timeline [items]="timeline()" />
+          }
+        </re-section>
+      }
+    }
+  }
+</re-detail-page>
+
+<re-toast [message]="toast()" (dismissed)="toast.set(null)" />

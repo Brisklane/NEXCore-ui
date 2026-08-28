@@ -1,0 +1,173 @@
+<re-detail-page
+  backRoute="/realestate/partners"
+  backLabel="All partners"
+  icon="handshake"
+  [title]="data()?.name ?? ''"
+  [subtitle]="data() ? [data()!.tradingName, data()!.city].join(' · ') : null"
+  [reference]="data()?.reference ?? null"
+  [pills]="pills()"
+  [figures]="figures()"
+  [actions]="actions()"
+  [tabs]="tabs()"
+  [activeTab]="tab()"
+  [loading]="loading()"
+  [error]="error()"
+  [notFound]="notFound()"
+  (tabChange)="tab.set($event)"
+  (action)="act($event)"
+  (retry)="load()">
+
+  @if (data(); as d) {
+
+    @if (conflicts().length) {
+      <div class="alert alert-error" role="alert">
+        <span class="material-symbols-outlined">warning</span>
+        <span>
+          {{ conflicts().length === 1 ? 'One registration conflicts' : conflicts().length + ' registrations conflict' }}
+          with another partner’s. These are the disputes that turn into arguments at payout time —
+          settle them now, on the Registrations tab, not when the commission falls due.
+        </span>
+      </div>
+    }
+
+    @switch (tab()) {
+
+      @case ('overview') {
+        <re-section title="How they are performing"
+                    icon="insights"
+                    note="Conversion is bookings over registrations. A partner registering many
+                          and converting few is holding the registration window on leads another
+                          partner might have closed.">
+          <re-progress [value]="d.conversionPercent"
+                       label="Registrations that became bookings"
+                       [tone]="d.conversionPercent >= 10 ? 'positive'
+                               : d.conversionPercent >= 3 ? 'warning' : 'danger'" />
+
+          <div class="re-partner-counts">
+            <div><span>Registered</span><strong>{{ d.leadsRegistered | number }}</strong></div>
+            <div><span>Site visits</span><strong>{{ d.siteVisitsDone | number }}</strong></div>
+            <div><span>Bookings</span><strong>{{ d.bookingsMade | number }}</strong></div>
+            <div [class.is-bad]="d.cancellationCount > 0">
+              <span>Cancelled</span><strong>{{ d.cancellationCount | number }}</strong>
+            </div>
+          </div>
+        </re-section>
+
+        <re-section title="The partner" icon="handshake">
+          <re-facts [items]="summary()" />
+        </re-section>
+      }
+
+      @case ('registrations') {
+        <re-section title="Lead registrations"
+                    icon="how_to_reg"
+                    note="A registration protects this partner’s commission on a named prospect
+                          for a fixed window. Once it lapses, the same buyer walking in belongs to
+                          whoever registers next — which is why the days remaining matter.">
+          <re-mini-list [rows]="registrations()"
+                        emptyMessage="This partner has not registered any leads." />
+        </re-section>
+      }
+
+      @case ('bookings') {
+        <re-section title="Bookings they produced" icon="sell">
+          <re-mini-list [rows]="bookings()"
+                        emptyMessage="No booking has come from this partner yet." />
+        </re-section>
+      }
+
+      @case ('money') {
+        <re-section title="Commission position" icon="percent">
+          <re-facts [items]="moneyFacts()" />
+        </re-section>
+
+        <re-section title="Bank details"
+                    icon="account_balance"
+                    note="Unverified bank details are the commonest route for a payout to go to
+                          the wrong account. Nothing should be paid until they are checked against
+                          a document.">
+          <re-facts [items]="banking()" [tight]="true" />
+        </re-section>
+
+        <re-section title="Statements"
+                    icon="summarize"
+                    note="Period statements showing what was earned, what was withheld, what was
+                          recovered against advances, and what was clawed back on cancellations.">
+          <re-mini-list [rows]="statements()"
+                        emptyMessage="No statement has been generated for this partner." />
+        </re-section>
+
+        <re-section title="Advances"
+                    icon="account_balance_wallet"
+                    note="Money paid before it was earned, recovered from later commission at the
+                          agreed rate. An advance that never recovers is a bad debt in waiting.">
+          <re-mini-list [rows]="advances()"
+                        emptyMessage="No advance has been given to this partner." />
+        </re-section>
+      }
+
+      @case ('access') {
+        <re-section title="Their people"
+                    icon="group"
+                    note="Who at this partner can do what in the portal. Somebody who can see
+                          commission can see what every one of their colleagues earned, so it is
+                          usually kept to the principal.">
+          <re-mini-list [rows]="users()"
+                        emptyMessage="Nobody from this partner has portal access." />
+        </re-section>
+
+        <re-section title="What they may sell"
+                    icon="apartment"
+                    note="A partner is authorised project by project, on a named commission plan
+                          and for a period. Selling outside an authorisation earns nothing.">
+          <re-mini-list [rows]="authorisations()"
+                        emptyMessage="This partner is not authorised on any project, so they cannot register leads." />
+        </re-section>
+      }
+
+      @case ('compliance') {
+        <re-section title="Documents"
+                    icon="verified"
+                    note="Trade licence, registration, tax certificate and the signed agreement.
+                          An expired licence usually means commission cannot lawfully be paid.">
+          @if (!d.documents.length) {
+            <p class="re-mini-empty">No document requirements have been set for partners.</p>
+          } @else {
+            <ul class="re-checklist">
+              @for (c of d.documents; track c.id) {
+                <li [class.is-done]="c.isSatisfied" [class.is-required]="c.isMandatory">
+                  <span class="material-symbols-outlined">
+                    {{ c.isSatisfied ? 'check_circle' : c.isMandatory ? 'error' : 'radio_button_unchecked' }}
+                  </span>
+                  <span>
+                    <strong>{{ c.label }}</strong>
+                    @if (c.note) { <small>{{ c.note }}</small> }
+                    @if (c.satisfiedOn) {
+                      <small>provided {{ c.satisfiedOn | date:'mediumDate' }}</small>
+                    }
+                  </span>
+                  @if (!c.isMandatory) { <re-pill tone="muted">Optional</re-pill> }
+                </li>
+              }
+            </ul>
+          }
+        </re-section>
+      }
+
+      @case ('history') {
+        <re-section title="Everything that has happened"
+                    icon="history"
+                    note="Newest first. Money, status changes, documents and activity in one
+                          stream, so the story reads in order.">
+          @if (!timeline().length) {
+            <p class="re-mini-empty">Nothing has been recorded yet.</p>
+          } @else {
+            <re-timeline [items]="timeline()" />
+          }
+        </re-section>
+      }
+    }
+  }
+</re-detail-page>
+
+<re-toast [message]="toast()" (dismissed)="toast.set(null)" />

@@ -439,6 +439,36 @@
           }
         }
       }
+    },
+    "realestate": {
+      "projectType": "library",
+      "root": "projects/realestate",
+      "sourceRoot": "projects/realestate/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "options": {
+            "project": "projects/realestate/ng-package.json"
+          },
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/realestate/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/realestate/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/realestate/tsconfig.spec.json",
+            "runner": "vitest"
+          }
+        }
+      }
     }
   }
 }

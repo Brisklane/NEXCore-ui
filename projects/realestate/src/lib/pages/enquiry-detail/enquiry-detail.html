@@ -1,0 +1,257 @@
+<re-detail-page
+  backRoute="/realestate/enquiries"
+  backLabel="All enquiries"
+  icon="contact_support"
+  [title]="data()?.contactName ?? ''"
+  [subtitle]="data()?.contactPhone ?? data()?.contactEmail ?? null"
+  [reference]="data()?.reference ?? null"
+  [pills]="pills()"
+  [figures]="figures()"
+  [actions]="actions()"
+  [tabs]="tabs()"
+  [activeTab]="tab()"
+  [loading]="loading()"
+  [error]="error()"
+  [notFound]="notFound()"
+  (tabChange)="tab.set($event)"
+  (action)="act($event)"
+  (retry)="load()">
+
+  @if (data(); as d) {
+
+    <!-- While a lead is unanswered, nothing else on the screen matters as much. -->
+    @if (unanswered()) {
+      <div class="alert" [class.alert-error]="d.slaBreached" [class.alert-warning]="!d.slaBreached"
+           role="alert">
+        <span class="material-symbols-outlined">timer</span>
+        <span>
+          Nobody has replied to this yet.
+          @if (d.minutesToSlaDeadline !== undefined && d.minutesToSlaDeadline < 0) {
+            It is {{ duration(-d.minutesToSlaDeadline) }} past the time we promised.
+          } @else if (d.minutesToSlaDeadline !== undefined) {
+            {{ duration(d.minutesToSlaDeadline) }} left before it breaches the promise.
+          }
+          Replying first is the single largest predictor of winning this business.
+        </span>
+      </div>
+    }
+
+    @switch (tab()) {
+
+      @case ('overview') {
+        <re-section title="The enquiry" icon="contact_support">
+          <re-facts [items]="summary()" />
+        </re-section>
+
+        @if (d.scoreBreakdown) {
+          <re-section title="Why this score"
+                      icon="calculate"
+                      note="Scores exist to order a call list, not to make a decision. The
+                            components are shown so a person can disagree with the machine.">
+            <p class="re-prose">{{ d.scoreBreakdown }}</p>
+            <re-progress [value]="d.score" label="Lead score" tone="accent" />
+          </re-section>
+        }
+
+        @if (d.requirement; as r) {
+          <re-section title="What they are looking for" icon="search">
+            <re-facts [items]="[
+              { label: 'Profile', value: r.name },
+              { label: 'Interest', value: listingKind(r.interest) },
+              { label: 'Bedrooms', value: r.minBedrooms },
+              { label: 'Must have', value: r.mustHaveFeatures.join(', '), wide: true },
+              { label: 'Areas', value: areaNames(r), wide: true },
+              { label: 'Budget from', value: money(r.budgetMin) },
+              { label: 'Budget to', value: money(r.budgetMax) }
+            ]" [tight]="true" />
+          </re-section>
+        }
+
+        @if (outcome().length) {
+          <re-section title="How it ended"
+                      icon="cancel"
+                      note="A lead recorded as lost with an honest reason is worth more than one
+                            left open forever. The reasons are what tune the next campaign.">
+            <re-facts [items]="outcome()" />
+          </re-section>
+        }
+      }
+
+      @case ('activity') {
+        <re-section title="Every contact"
+                    icon="forum"
+                    note="Calls, messages and notes in order. A failed delivery is shown rather
+                          than hidden, because an unanswered lead is often just a bad number.">
+          <re-mini-list [rows]="activities()"
+                        emptyMessage="Nobody has contacted this lead yet." />
+        </re-section>
+      }
+
+      @case ('tasks') {
+        <re-section title="Follow-ups"
+                    icon="task_alt"
+                    note="What has been promised and when. Overdue items are shown first on the
+                          agent’s own day screen too.">
+          <re-mini-list [rows]="tasks()"
+                        emptyMessage="Nothing is scheduled. A lead with no next action is a lead that has been dropped." />
+        </re-section>
+      }
+
+      @case ('appointments') {
+        <re-section title="Viewings" icon="visibility">
+          <re-mini-list [rows]="viewings()" emptyMessage="No viewing has been booked." />
+        </re-section>
+
+        <re-section title="Site visits" icon="map">
+          <re-mini-list [rows]="siteVisits()" emptyMessage="No site visit has been booked." />
+        </re-section>
+      }
+
+      @case ('matches') {
+        <re-section title="What fits"
+                    icon="join_inner"
+                    note="Stock measured against what this person said they want. The factors
+                          under each score say why it scored what it did — including what it
+                          missed on, which is usually the more useful half.">
+          @if (!matches().length) {
+            <p class="re-mini-empty">
+              Nothing matches yet. Record what they are looking for, and matches appear as stock
+              comes in.
+            </p>
+          } @else {
+            <div class="re-matches">
+              @for (m of matches(); track m.id) {
+                <article class="re-match" [class.is-sent]="m.wasSent">
+                  @if (m.heroImageUrl) {
+                    <img [src]="m.heroImageUrl" [alt]="m.title" loading="lazy" />
+                  } @else {
+                    <div class="re-match-blank">
+                      <span class="material-symbols-outlined">home_work</span>
+                    </div>
+                  }
+
+                  <div class="re-match-body">
+                    <header>
+                      <strong>{{ m.title }}</strong>
+                      <span class="re-match-score" [class.is-strong]="m.score >= 80">
+                        {{ m.score }}%
+                      </span>
+                    </header>
+
+                    @if (m.addressOneLine) { <p>{{ m.addressOneLine }}</p> }
+
+                    <p class="re-match-meta">
+                      @if (m.price) { {{ money(m.price) }} }
+                      @if (m.area) { · {{ m.area.displayText }} }
+                      @if (m.bedrooms) { · {{ m.bedrooms }} bed }
+                    </p>
+
+                    @if (m.factors?.length) {
+                      <ul class="re-match-factors">
+                        @for (f of m.factors; track f.criterion) {
+                          <li [class.is-miss]="f.points <= 0"
+                              [class.is-must]="f.isMustHave">
+                            <span class="material-symbols-outlined">
+                              {{ f.points > 0 ? 'check' : 'close' }}
+                            </span>
+                            {{ f.criterion }} — {{ f.outcome }}
+                          </li>
+                        }
+                      </ul>
+                    }
+
+                    <footer>
+                      @if (m.wasSent) {
+                        <re-pill tone="positive" icon="send">
+                          Sent {{ m.sentAt | date:'shortDate' }}
+                        </re-pill>
+                        @if (m.openedAt) { <re-pill tone="accent">Opened</re-pill> }
+                        @if (m.ledToViewing) { <re-pill tone="positive">Led to a viewing</re-pill> }
+                      } @else {
+                        <button type="button" class="re-touch-btn is-primary"
+                                (click)="sendMatch(m)">
+                          <span class="material-symbols-outlined">send</span>Send it
+                        </button>
+                      }
+                    </footer>
+                  </div>
+                </article>
+              }
+            </div>
+          }
+        </re-section>
+      }
+
+      @case ('history') {
+        <re-section title="How it moved"
+                    icon="history"
+                    note="Days spent in each stage. A lead stuck in one stage for weeks is
+                          usually a lead nobody has been honest about.">
+          <re-mini-list [rows]="stageHistory()"
+                        emptyMessage="This enquiry has not changed stage." />
+        </re-section>
+      }
+    }
+  }
+</re-detail-page>
+
+<!-- Logging contact always offers the next follow-up, pre-filled. -->
+<re-drawer [open]="logging()"
+           title="Log contact"
+           [subtitle]="data()?.contactName ?? null"
+           size="md"
+           [busy]="saving()"
+           (closed)="logging.set(false)">
+  <div class="re-form-grid">
+    <div class="re-field">
+      <label for="e-kind">What happened</label>
+      <select id="e-kind" [ngModel]="logKind()" (ngModelChange)="logKind.set(+$event)">
+        @for (k of kinds; track k.value) {
+          <option [ngValue]="k.value">{{ k.label }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="re-field">
+      <label for="e-outcome">Outcome</label>
+      <input id="e-outcome" type="text" [ngModel]="logOutcome()"
+             (ngModelChange)="logOutcome.set($event)"
+             placeholder="Spoke — thinking about it" />
+    </div>
+
+    <div class="re-field is-full">
+      <label for="e-subject">Subject</label>
+      <input id="e-subject" type="text" [ngModel]="logSubject()"
+             (ngModelChange)="logSubject.set($event)" />
+    </div>
+
+    <div class="re-field is-full">
+      <label for="e-body">What was said</label>
+      <textarea id="e-body" rows="4" [ngModel]="logBody()"
+                (ngModelChange)="logBody.set($event)"></textarea>
+    </div>
+
+    <div class="re-field">
+      <label for="e-next">Next follow-up</label>
+      <input id="e-next" type="date" [ngModel]="nextDate()"
+             (ngModelChange)="nextDate.set($event)" />
+      <small>Clear this only if the lead is genuinely finished.</small>
+    </div>
+
+    <div class="re-field">
+      <label for="e-next-title">What for</label>
+      <input id="e-next-title" type="text" [ngModel]="nextTitle()"
+             (ngModelChange)="nextTitle.set($event)" />
+    </div>
+  </div>
+
+  <div class="re-drawer-actions">
+    <button type="button" class="re-touch-btn" (click)="logging.set(false)">Cancel</button>
+    <button type="button" class="re-touch-btn is-primary" [disabled]="saving()"
+            (click)="saveLog()">
+      {{ saving() ? 'Saving…' : 'Record it' }}
+    </button>
+  </div>
+</re-drawer>
+
+<re-toast [message]="toast()" (dismissed)="toast.set(null)" />

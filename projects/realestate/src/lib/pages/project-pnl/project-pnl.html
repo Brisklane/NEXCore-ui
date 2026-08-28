@@ -1,0 +1,207 @@
+<div class="page-container">
+
+  <div class="page-header">
+    <div>
+      <h2>Project profit and loss</h2>
+      <p class="subtitle">
+        @if (data()) {
+          {{ data()!.projectName }} as at {{ data()!.asOfDate | date:'mediumDate' }}
+        } @else {
+          Is this scheme making money?
+        }
+      </p>
+    </div>
+
+    <div class="page-header-actions">
+      <re-project-picker (projectChange)="onProject()" />
+
+      <label class="re-asof">
+        <span>As at</span>
+        <input type="date" [ngModel]="asOf()" (ngModelChange)="asOf.set($event); load()" />
+      </label>
+
+      @if (units().length) {
+        <button type="button" class="btn-secondary" (click)="exportUnits()">
+          <span class="material-symbols-outlined">download</span>Export units
+        </button>
+      }
+    </div>
+  </div>
+
+  <re-page-help key="finance/pnl" />
+
+  @if (error()) {
+    <div class="alert alert-error" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <span>{{ error() }}</span>
+      <button type="button" class="btn-link" (click)="load()">Try again</button>
+    </div>
+  }
+
+  @if (loading()) {
+    <re-skeleton [rowCount]="8" [colCount]="5" />
+  } @else if (!data()) {
+    <re-empty icon="analytics"
+              title="No project selected"
+              message="Pick a project above and its profit and loss appears here." />
+  } @else if (data(); as d) {
+
+    <re-stats [items]="headline()" />
+
+    @if (d.forecastMargin < 0) {
+      <div class="alert alert-error" role="alert">
+        <span class="material-symbols-outlined">trending_down</span>
+        <span>
+          This project is forecast to lose {{ exact(-d.forecastMargin) }} at completion. The unit
+          table below shows where it is being lost.
+        </span>
+      </div>
+    }
+
+    <div class="re-pnl-grid">
+      <re-section title="Where the money is"
+                  icon="account_balance"
+                  note="Cash, not revenue. Escrow money is legally the buyers’ until the
+                        construction it is tied to has been certified, so a healthy escrow
+                        balance is not spendable cash.">
+        <re-facts [items]="cash()" />
+      </re-section>
+
+      <re-section title="How revenue is recognised"
+                  icon="rule"
+                  note="This is the difference between what has been collected and what may be
+                        reported as income. On an off-plan scheme the two can be very far apart in
+                        either direction.">
+        <re-facts [items]="accounting()" />
+      </re-section>
+    </div>
+
+    <re-section title="How far along"
+                icon="donut_large"
+                note="Absorption is units taken; physical progress is the building. Selling far
+                      ahead of building is a cash-rich, risk-heavy position; the reverse ties up
+                      capital in unsold stock.">
+      <re-progress [value]="d.absorptionPercent" label="Units sold" tone="accent" />
+      <re-progress [value]="d.physicalProgressPercent" label="Built" tone="positive" />
+
+      <div class="re-pnl-counts">
+        <div><span>Total units</span><strong>{{ d.unitsTotal | number }}</strong></div>
+        <div><span>Sold</span><strong>{{ d.unitsSold | number }}</strong></div>
+        <div><span>Available</span><strong>{{ d.unitsAvailable | number }}</strong></div>
+      </div>
+    </re-section>
+
+    <div class="re-pnl-grid">
+      @if (revenueTrend().length > 1) {
+        <re-section title="Revenue over time"
+                    note="Recognised revenue by month, with collections as the faint line.">
+          <re-trend [points]="revenueTrend()" label="Revenue over time" />
+        </re-section>
+      }
+
+      @if (costBreakdown().length) {
+        <re-section title="Where the cost goes"
+                    note="Forecast total cost by head. Anything shown in red is already running
+                          over its budget.">
+          <re-breakdown [slices]="costBreakdown()" />
+        </re-section>
+      }
+    </div>
+
+    <!-- Unit-level margin: where the outturn is actually decided. -->
+    <re-section title="Margin by unit"
+                icon="table_rows"
+                note="Sorted worst first. Discounts given at launch to get a scheme moving are
+                      the commonest single explanation for a forecast margin that never arrives."
+                [flush]="true">
+      <div section-actions>
+        <select [ngModel]="unitSort()" (ngModelChange)="unitSort.set($event)"
+                aria-label="Sort units">
+          <option value="margin">Worst margin first</option>
+          <option value="marginPercent">Worst margin percentage first</option>
+          <option value="discount">Biggest discount first</option>
+          <option value="unit">By unit number</option>
+        </select>
+      </div>
+
+      @if (!units().length) {
+        <p class="re-mini-empty">
+          No units have been sold on this project yet, so there is no realised margin to analyse.
+        </p>
+      } @else {
+        <div class="re-pnl-summary">
+          <div>
+            <span>Units</span><strong>{{ unitTotals().count | number }}</strong>
+          </div>
+          <div>
+            <span>List price</span><strong>{{ money(unitTotals().listPrice) }}</strong>
+          </div>
+          <div [class.is-bad]="unitTotals().discount > 0">
+            <span>Discount given</span><strong>{{ money(unitTotals().discount) }}</strong>
+          </div>
+          <div>
+            <span>Revenue</span><strong>{{ money(unitTotals().revenue) }}</strong>
+          </div>
+          <div>
+            <span>Cost</span><strong>{{ money(unitTotals().cost) }}</strong>
+          </div>
+          <div [class.is-bad]="unitTotals().margin < 0" [class.is-good]="unitTotals().margin > 0">
+            <span>Margin</span><strong>{{ money(unitTotals().margin) }}</strong>
+          </div>
+          <div [class.is-bad]="unitTotals().lossMakers > 0">
+            <span>Sold at a loss</span><strong>{{ unitTotals().lossMakers }}</strong>
+          </div>
+        </div>
+
+        <div class="re-table-wrap">
+          <table class="re-table">
+            <thead>
+              <tr>
+                <th>Unit</th>
+                <th style="text-align:right">List</th>
+                <th style="text-align:right">Discount</th>
+                <th style="text-align:right">Revenue</th>
+                <th style="text-align:right">Cost</th>
+                <th style="text-align:right">Margin</th>
+                <th style="text-align:right">Margin %</th>
+                <th style="text-align:right">Per sq ft</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (u of sortedUnits(); track u.unitId) {
+                <tr [class.is-loss]="u.grossMargin < 0">
+                  <td>
+                    <strong>{{ u.unitNumber }}</strong>
+                    <small>
+                      @if (u.blockName) { {{ u.blockName }} · }
+                      {{ u.area.displayText }}
+                    </small>
+                  </td>
+                  <td style="text-align:right">{{ exact(u.listPrice) }}</td>
+                  <td style="text-align:right" [class.is-bad]="u.discountGiven > 0">
+                    {{ u.discountGiven ? exact(u.discountGiven) : '—' }}
+                  </td>
+                  <td style="text-align:right">{{ exact(u.totalRevenue) }}</td>
+                  <td style="text-align:right">{{ exact(u.totalCost) }}</td>
+                  <td style="text-align:right"
+                      [class.is-bad]="u.grossMargin < 0"
+                      [class.is-good]="u.grossMargin > 0">
+                    {{ exact(u.grossMargin) }}
+                  </td>
+                  <td style="text-align:right"
+                      [class.is-bad]="u.marginPercent < 0"
+                      [class.is-good]="u.marginPercent >= 15">
+                    {{ u.marginPercent | number:'1.1-1' }}%
+                  </td>
+                  <td style="text-align:right">{{ exact(u.marginPerSqFt) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </re-section>
+  }
+
+  <re-toast [message]="toast()" (dismissed)="toast.set(null)" />
+</div>

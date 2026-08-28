@@ -1,0 +1,318 @@
+<div class="page-container">
+
+  <div class="page-header">
+    <div>
+      <h2>Real Estate settings</h2>
+      <p class="subtitle">What this company does, and the rules the software enforces for it.</p>
+    </div>
+
+    <div class="page-header-actions">
+      <button type="button" class="btn-primary"
+              [disabled]="!dirty() || saving() || !linesValid()"
+              (click)="save()">
+        <span class="material-symbols-outlined">save</span>
+        {{ saving() ? 'Saving…' : 'Save changes' }}
+      </button>
+    </div>
+  </div>
+
+  @if (error()) {
+    <div class="alert alert-error" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <span>{{ error() }}</span>
+    </div>
+  }
+
+  @if (loading()) {
+    <re-skeleton [rowCount]="6" [colCount]="2" />
+  } @else if (model(); as m) {
+
+    <re-section title="What this company does"
+                icon="business_center"
+                note="These four switches decide which screens exist. Turning one off hides its
+                      menus and reports for everybody — it does not delete anything, and turning it
+                      back on restores the lot.">
+      <div class="re-lines">
+        <label class="re-line" [class.is-on]="m.linesOfBusiness.brokerage">
+          <input type="checkbox" [ngModel]="m.linesOfBusiness.brokerage"
+                 (ngModelChange)="setLine('brokerage', $event)" />
+          <span class="material-symbols-outlined">handshake</span>
+          <span>
+            <strong>Brokerage</strong>
+            <small>Selling and letting other people’s property for a fee. Listings, viewings,
+                   offers, chains and commission.</small>
+          </span>
+        </label>
+
+        <label class="re-line" [class.is-on]="m.linesOfBusiness.development">
+          <input type="checkbox" [ngModel]="m.linesOfBusiness.development"
+                 (ngModelChange)="setLine('development', $event)" />
+          <span class="material-symbols-outlined">apartment</span>
+          <span>
+            <strong>Development</strong>
+            <small>Your own schemes — towers, plot societies, malls. Inventory, payment plans,
+                   demands, transfers, possession and escrow.</small>
+          </span>
+        </label>
+
+        <label class="re-line" [class.is-on]="m.linesOfBusiness.contracting">
+          <input type="checkbox" [ngModel]="m.linesOfBusiness.contracting"
+                 (ngModelChange)="setLine('contracting', $event)" />
+          <span class="material-symbols-outlined">construction</span>
+          <span>
+            <strong>Contracting</strong>
+            <small>Building to order on somebody else’s land. Bills of quantities, programme,
+                   certificates, retention and variations.</small>
+          </span>
+        </label>
+
+        <label class="re-line" [class.is-on]="m.linesOfBusiness.estateManagement">
+          <input type="checkbox" [ngModel]="m.linesOfBusiness.estateManagement"
+                 (ngModelChange)="setLine('estateManagement', $event)" />
+          <span class="material-symbols-outlined">real_estate_agent</span>
+          <span>
+            <strong>Estate management</strong>
+            <small>Running property after the sale — tenancies, rent, service charge, societies,
+                   the gate and maintenance.</small>
+          </span>
+        </label>
+      </div>
+
+      @if (!linesValid()) {
+        <p class="re-settings-error">
+          <span class="material-symbols-outlined">error</span>
+          At least one line has to stay switched on. With all four off there would be no screens
+          left to show.
+        </p>
+      }
+    </re-section>
+
+    <re-section title="Money and measurement"
+                icon="payments"
+                note="The display currency is what people see. The reporting currency is what
+                      consolidated reports are converted into — set them the same unless you
+                      genuinely report in a second currency.">
+      <div class="re-form-grid">
+        <div class="re-field">
+          <label for="s-currency">Currency</label>
+          <input id="s-currency" type="text" maxlength="3"
+                 [ngModel]="m.currencyCode"
+                 (ngModelChange)="set('currencyCode', $event)" />
+          <small>Three-letter code, such as AED, PKR or GBP.</small>
+        </div>
+
+        <div class="re-field">
+          <label for="s-reporting">Reporting currency</label>
+          <input id="s-reporting" type="text" maxlength="3"
+                 [ngModel]="m.reportingCurrencyCode"
+                 (ngModelChange)="set('reportingCurrencyCode', $event)" />
+        </div>
+
+        <div class="re-field">
+          <label for="s-decimals">Decimal places</label>
+          <input id="s-decimals" type="number" min="0" max="4"
+                 [ngModel]="m.currencyDecimals"
+                 (ngModelChange)="set('currencyDecimals', +$event)" />
+          <small>Set to 0 where fractions of a unit are not used.</small>
+        </div>
+
+        <div class="re-field">
+          <label for="s-area">Area unit</label>
+          <select id="s-area" [ngModel]="m.displayAreaUnit"
+                  (ngModelChange)="set('displayAreaUnit', +$event)">
+            @for (o of areaUnits; track o.value) {
+              <option [ngValue]="o.value">{{ o.label }}</option>
+            }
+          </select>
+          <small>Areas are stored in square feet and shown in this unit everywhere.</small>
+        </div>
+
+        <div class="re-field is-full">
+          <label for="s-allocation">How a receipt is applied</label>
+          <select id="s-allocation" [ngModel]="m.defaultAllocationOrder"
+                  (ngModelChange)="set('defaultAllocationOrder', +$event)">
+            @for (o of allocationOrders; track o.value) {
+              <option [ngValue]="o.value">{{ o.label }}</option>
+            }
+          </select>
+          <small>
+            When somebody pays less than they owe, this decides what the money clears first.
+            Oldest-first is the usual choice; surcharge-first collects penalties but annoys
+            customers who thought they were paying down the principal.
+          </small>
+        </div>
+      </div>
+    </re-section>
+
+    <re-section title="Selling"
+                icon="sell"
+                note="Holds and discounts are where a sales floor and a finance department
+                      disagree. These two numbers settle it in advance.">
+      <div class="re-form-grid">
+        <div class="re-field">
+          <label for="s-hold">Default hold</label>
+          <div class="re-field-inline">
+            <input id="s-hold" type="number" min="1" max="720"
+                   [ngModel]="m.defaultHoldHours"
+                   (ngModelChange)="set('defaultHoldHours', +$event)" />
+            <span>hours</span>
+          </div>
+          <small>A unit held for this long releases itself and goes back on sale.</small>
+        </div>
+
+        <div class="re-field">
+          <label for="s-hold-max">Longest hold without approval</label>
+          <div class="re-field-inline">
+            <input id="s-hold-max" type="number" min="1" max="720"
+                   [ngModel]="m.maxHoldHoursWithoutApproval"
+                   (ngModelChange)="set('maxHoldHoursWithoutApproval', +$event)" />
+            <span>hours</span>
+          </div>
+          <small>Beyond this, a manager has to agree to it.</small>
+        </div>
+
+        <div class="re-field">
+          <label for="s-discount">Discount without approval</label>
+          <div class="re-field-inline">
+            <input id="s-discount" type="number" min="0" max="100" step="0.5"
+                   [ngModel]="m.maxDiscountPercentWithoutApproval"
+                   (ngModelChange)="set('maxDiscountPercentWithoutApproval', +$event)" />
+            <span>%</span>
+          </div>
+          <small>A cost sheet beyond this cannot be issued until it has been approved.</small>
+        </div>
+
+        <div class="re-field">
+          <label for="s-sla">Reply to a lead within</label>
+          <div class="re-field-inline">
+            <input id="s-sla" type="number" min="1" max="2880"
+                   [ngModel]="m.leadResponseSlaMinutes"
+                   (ngModelChange)="set('leadResponseSlaMinutes', +$event)" />
+            <span>minutes</span>
+          </div>
+          <small>After this, the enquiry is flagged as breached and appears on the dashboard.</small>
+        </div>
+
+        <div class="re-field">
+          <label for="s-demand">Raise demands</label>
+          <div class="re-field-inline">
+            <input id="s-demand" type="number" min="0" max="90"
+                   [ngModel]="m.demandLeadDays"
+                   (ngModelChange)="set('demandLeadDays', +$event)" />
+            <span>days ahead</span>
+          </div>
+          <small>How far before the due date an instalment demand is issued.</small>
+        </div>
+
+        <div class="re-field">
+          <label for="s-partner">Partner lead validity</label>
+          <div class="re-field-inline">
+            <input id="s-partner" type="number" min="1" max="365"
+                   [ngModel]="m.partnerLeadValidityDays"
+                   (ngModelChange)="set('partnerLeadValidityDays', +$event)" />
+            <span>days</span>
+          </div>
+          <small>
+            How long a channel partner’s registration of a buyer protects their commission.
+            Disputes over this are the single commonest argument with brokers.
+          </small>
+        </div>
+      </div>
+    </re-section>
+
+    <re-section title="Rules the software will enforce"
+                icon="gavel"
+                note="Each of these stops somebody doing something, later, when they are in a
+                      hurry. Written as the sentence it will produce when it fires.">
+      <div class="re-rules">
+        <label class="re-rule">
+          <input type="checkbox" [ngModel]="m.escrowEnforced"
+                 (ngModelChange)="set('escrowEnforced', $event)" />
+          <span>
+            <strong>Buyer money must go into escrow</strong>
+            <small>A receipt against an off-plan booking cannot be recorded to a general account.
+                   Withdrawals are limited to the certified construction progress.</small>
+          </span>
+        </label>
+
+        <div class="re-field re-rule-field" [class.is-off]="!m.escrowEnforced">
+          <label for="s-escrow">Escrow share of each receipt</label>
+          <div class="re-field-inline">
+            <input id="s-escrow" type="number" min="0" max="100" step="1"
+                   [disabled]="!m.escrowEnforced"
+                   [ngModel]="m.defaultEscrowPercent"
+                   (ngModelChange)="set('defaultEscrowPercent', +$event)" />
+            <span>%</span>
+          </div>
+        </div>
+
+        <label class="re-rule">
+          <input type="checkbox" [ngModel]="m.requireKycBeforeCompletion"
+                 (ngModelChange)="set('requireKycBeforeCompletion', $event)" />
+          <span>
+            <strong>Identity must be verified before a sale completes</strong>
+            <small>A booking cannot reach completion while the buyer’s KYC case is unverified.
+                   In most jurisdictions this is a legal obligation, not a preference.</small>
+          </span>
+        </label>
+
+        <label class="re-rule">
+          <input type="checkbox" [ngModel]="m.clientMoneySegregated"
+                 (ngModelChange)="set('clientMoneySegregated', $event)" />
+          <span>
+            <strong>Client money is held separately</strong>
+            <small>Rent and deposits collected for landlords are kept in a designated client
+                   account and reconciled three ways — bank, ledger and liability.</small>
+          </span>
+        </label>
+
+        <label class="re-rule">
+          <input type="checkbox" [ngModel]="m.blockTransferOnDues"
+                 (ngModelChange)="set('blockTransferOnDues', $event)" />
+          <span>
+            <strong>No transfer while money is owed</strong>
+            <small>A plot or unit cannot be transferred to a new owner while any instalment or
+                   surcharge on it is outstanding.</small>
+          </span>
+        </label>
+      </div>
+    </re-section>
+
+    <re-section title="Presentation" icon="palette">
+      <div class="re-form-grid">
+        <div class="re-field">
+          <label for="s-lang">Default language</label>
+          <input id="s-lang" type="text" [ngModel]="m.defaultLanguage"
+                 (ngModelChange)="set('defaultLanguage', $event)" />
+          <small>Used for customer documents where the buyer has not stated a preference.</small>
+        </div>
+
+        <div class="re-field">
+          <label for="s-brand">Brand colour</label>
+          <div class="re-field-inline">
+            <input id="s-brand" type="color"
+                   [ngModel]="m.brandPrimaryColor ?? '#2b7fff'"
+                   (ngModelChange)="set('brandPrimaryColor', $event)" />
+            <span>{{ m.brandPrimaryColor ?? 'not set' }}</span>
+          </div>
+          <small>Appears on generated documents and the customer portal, not on this interface.</small>
+        </div>
+      </div>
+    </re-section>
+
+    @if (dirty()) {
+      <div class="re-settings-bar" role="status">
+        <span>
+          <span class="material-symbols-outlined">edit</span>
+          You have unsaved changes.
+        </span>
+        <button type="button" class="re-touch-btn is-primary"
+                [disabled]="saving() || !linesValid()" (click)="save()">
+          {{ saving() ? 'Saving…' : 'Save changes' }}
+        </button>
+      </div>
+    }
+  }
+
+  <re-toast [message]="toast()" (dismissed)="toast.set(null)" />
+</div>

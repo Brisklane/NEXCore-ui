@@ -1,0 +1,132 @@
+/* =====================================================================
+   The bill of quantities.
+   ===================================================================== */
+
+.re-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 12px;
+  padding: 5px 10px 5px 6px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+  cursor: pointer;
+}
+
+.re-back:hover { color: var(--accent, #2b7fff); background: var(--bg-muted, #f1f5f9); }
+.re-back:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.re-back .material-symbols-outlined { font-size: 18px; }
+
+.page-header-actions select {
+  min-height: 36px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--input-bg, #fff);
+  color: var(--text-primary, #1e293b);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+re-progress { display: block; }
+
+.re-boq-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 12px;
+  padding: 11px 14px;
+  border-radius: 11px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--card-bg, #fff);
+}
+
+.re-boq-controls .re-search { flex: 1 1 240px; min-width: 200px; }
+
+.re-boq-controls select {
+  min-height: 36px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--input-bg, #fff);
+  color: var(--text-primary, #1e293b);
+  font-size: 13px;
+}
+
+/* ── The table ─────────────────────────────────────────────────────── */
+
+.re-boq-table { max-height: 70vh; overflow: auto; scrollbar-width: thin; }
+.re-boq-table thead th { position: sticky; top: 0; z-index: 1; }
+
+.re-table td strong {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.re-table td small {
+  display: block;
+  font-size: 12.5px;
+  color: var(--text-primary, #1e293b);
+  line-height: 1.45;
+  margin-top: 1px;
+  max-width: 60ch;
+}
+
+.re-boq-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+
+.re-boq-section td {
+  background: var(--bg-muted, #f8fafc);
+  border-top: 1px solid var(--border-default, #e6eaf0);
+  font-variant-numeric: tabular-nums;
+}
+
+.re-boq-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--text-heading, #0f172a);
+}
+
+.re-boq-toggle:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 6px; }
+.re-boq-toggle .material-symbols-outlined { font-size: 19px; color: var(--text-secondary, #64748b); }
+.re-boq-toggle strong { font-size: 13px; font-weight: 700; }
+
+.re-table tr.is-allowance { background: var(--warning-soft, #fffbeb); }
+.re-table tr.is-variation td:first-child { border-left: 3px solid var(--accent, #2b7fff); }
+.re-table td.is-warn { color: var(--warning, #b45309); font-weight: 600; }
+
+.re-table tfoot td {
+  position: sticky;
+  bottom: 0;
+  background: var(--card-bg, #fff);
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+  border-top: 2px solid var(--border-default, #e6eaf0);
+  font-variant-numeric: tabular-nums;
+}
+
+.re-boq-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 14px 0 0;
+  padding: 12px 13px;
+  border-radius: 10px;
+  background: var(--bg-muted, #f1f5f9);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-secondary, #64748b);
+  max-width: 90ch;
+}
+
+.re-boq-note .material-symbols-outlined { font-size: 19px; flex-shrink: 0; }

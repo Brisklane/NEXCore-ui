@@ -181,6 +181,18 @@ export const APP_REGISTRY: AppDefinition[] = [
   },
 
   {
+    key: 'realestate',
+    name: 'Real Estate',
+    tagline: 'Projects, inventory, sales, leasing and construction',
+    icon: 'home_work',
+    accent: 'linear-gradient(135deg, #7dd3fc, #0369a1)',
+    status: 'available',
+    prefixes: ['/realestate'],
+    home: '/realestate/dashboard',
+    sidebarLabel: 'Real Estate',
+  },
+
+  {
     key: 'distribution',
     name: 'Distribution',
     tagline: 'Field force, van sales, trade schemes and route settlement',
@@ -199,16 +211,6 @@ export const APP_REGISTRY: AppDefinition[] = [
     tagline: 'Storefront, catalogue and web orders',
     icon: 'shopping_bag',
     accent: 'linear-gradient(135deg, #c084fc, #9333ea)',
-    status: 'coming-soon',
-    prefixes: [],
-    home: '',
-  },
-  {
-    key: 'realestate',
-    name: 'Real Estate',
-    tagline: 'Listings, viewings and client matching',
-    icon: 'home_work',
-    accent: 'linear-gradient(135deg, #7dd3fc, #0369a1)',
     status: 'coming-soon',
     prefixes: [],
     home: '',

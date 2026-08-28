@@ -1,0 +1,135 @@
+<div class="page-container">
+
+  <div class="page-header">
+    <div>
+      <h2>{{ greeting() }}</h2>
+      <p class="subtitle">
+        @if (data()) {
+          @if (critical() > 0) {
+            {{ critical() }} thing{{ critical() === 1 ? '' : 's' }} needs you today.
+          } @else {
+            Nothing is on fire. Here is where the business stands.
+          }
+        } @else {
+          Bringing the numbers together…
+        }
+      </p>
+    </div>
+
+    <div class="page-header-actions">
+      <re-project-picker (projectChange)="onProject()" />
+      <a class="btn-secondary" routerLink="/realestate/my-day">
+        <span class="material-symbols-outlined">today</span>My day
+      </a>
+      <a class="btn-primary" routerLink="/realestate/bookings/new">
+        <span class="material-symbols-outlined">add</span>New booking
+      </a>
+    </div>
+  </div>
+
+  @if (error()) {
+    <div class="alert alert-error" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <span>{{ error() }}</span>
+      <button type="button" class="btn-link" (click)="load()">Try again</button>
+    </div>
+  }
+
+  @if (loading()) {
+    <re-skeleton [rowCount]="7" [colCount]="4" />
+  } @else if (data()) {
+
+    <!-- What will go wrong today if nobody looks. Ranked by cost, not by recency. -->
+    <section class="re-attention">
+      <div class="re-attention-head">
+        <h3>Needs attention</h3>
+        <span class="re-attention-count">{{ attention().length }}</span>
+      </div>
+
+      @if (attention().length) {
+        <div class="re-attention-grid">
+          @for (a of attention(); track a.key) {
+            <button type="button"
+                    class="re-attention-card"
+                    [class]="'sev-' + a.severity"
+                    [disabled]="!a.route"
+                    (click)="go(a)">
+              <span class="material-symbols-outlined re-attention-icon">
+                {{ a.icon ?? 'priority_high' }}
+              </span>
+              <span class="re-attention-body">
+                <span class="re-attention-title">{{ a.title }}</span>
+                @if (a.detail) { <span class="re-attention-detail">{{ a.detail }}</span> }
+                <span class="re-attention-meta">
+                  <re-pill [tone]="severityTone(a.severity)">{{ severityLabel(a.severity) }}</re-pill>
+                  @if (a.count > 0) { <span>{{ a.count | number }} item{{ a.count === 1 ? '' : 's' }}</span> }
+                  @if (a.amount) { <span>{{ money(a.amount) }}</span> }
+                </span>
+              </span>
+              @if (a.route) {
+                <span class="material-symbols-outlined re-attention-go">chevron_right</span>
+              }
+            </button>
+          }
+        </div>
+      } @else {
+        <p class="re-attention-clear">
+          <span class="material-symbols-outlined">check_circle</span>
+          Nothing is overdue, unanswered or about to expire. This list is computed fresh each time,
+          so it is empty because the work is done — not because it has not been checked.
+        </p>
+      }
+    </section>
+
+    <!-- Today -->
+    <h3 class="re-section-title">Today</h3>
+    <re-stats [items]="today()" />
+
+    <!-- One band per line of business -->
+    @for (b of bands(); track b.key) {
+      <re-section [title]="b.title" [note]="b.note">
+        <re-stats [items]="b.stats" [compact]="true" />
+      </re-section>
+    }
+
+    <div class="re-dash-charts">
+      <re-section title="Collections"
+                  note="Received against demanded, month by month. The faint line is what was
+                        demanded; the solid one is what actually arrived.">
+        <re-trend [points]="collectionTrend()" label="Collections over twelve months" />
+        <re-progress [value]="collectionEfficiency()"
+                     label="Collection efficiency this month"
+                     [tone]="collectionEfficiency() >= 90 ? 'positive'
+                             : collectionEfficiency() >= 70 ? 'warning' : 'danger'" />
+      </re-section>
+
+      <re-section title="Bookings"
+                  note="Booked value by month, net of cancellations, so a month that sold well and
+                        then unwound does not read as a good month.">
+        <re-trend [points]="bookingTrend()" label="Bookings over twelve months" />
+      </re-section>
+    </div>
+
+    <div class="re-dash-charts">
+      @if (data()!.developmentEnabled) {
+        <re-section title="Inventory"
+                    note="Every unit in the selected scheme, by where it stands right now.">
+          <re-breakdown [slices]="inventory()" [money]="false" />
+        </re-section>
+      }
+
+      @if (data()!.brokerageEnabled) {
+        <re-section title="Where leads come from"
+                    note="By count, not by value — the source that produces the most enquiries is
+                          rarely the source that produces the most completions.">
+          <re-breakdown [slices]="leadSources()" [money]="false" />
+        </re-section>
+      }
+    </div>
+
+  } @else {
+    <re-empty icon="dashboard"
+              title="Nothing to show yet"
+              message="Once a project, a property or a listing exists, this screen fills itself in." />
+  }
+</div>

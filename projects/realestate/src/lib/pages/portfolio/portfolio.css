@@ -1,0 +1,125 @@
+/* =====================================================================
+   The portfolio.
+
+   Cards rather than a table: a project is four numbers and three bars,
+   and a table row cannot carry three bars legibly.
+   ===================================================================== */
+
+.re-portfolio {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+}
+
+.re-pf-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--card-bg, #fff);
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color .12s ease, box-shadow .12s ease, transform .12s ease;
+}
+
+.re-pf-card:hover {
+  border-color: var(--accent, #2b7fff);
+  box-shadow: 0 6px 20px rgb(15 23 42 / 9%);
+  transform: translateY(-2px);
+}
+
+.re-pf-card:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.re-pf-hero {
+  width: 100%;
+  height: 132px;
+  object-fit: cover;
+  background: var(--bg-muted, #f1f5f9);
+}
+
+.re-pf-hero-blank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary, #94a3b8);
+}
+
+.re-pf-hero-blank .material-symbols-outlined { font-size: 42px; }
+
+.re-pf-body { display: flex; flex-direction: column; gap: 11px; padding: 14px 15px 15px; }
+
+.re-pf-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+
+.re-pf-titles { min-width: 0; }
+
+.re-pf-titles h3 {
+  margin: 0;
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+  line-height: 1.3;
+}
+
+.re-pf-titles p {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  color: var(--text-secondary, #64748b);
+}
+
+.re-pf-figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 12px;
+  padding: 11px 0;
+  border-top: 1px solid var(--border-subtle, #f1f5f9);
+  border-bottom: 1px solid var(--border-subtle, #f1f5f9);
+}
+
+.re-pf-figures > div { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+
+.re-pf-figures span {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .045em;
+  color: var(--text-secondary, #64748b);
+}
+
+.re-pf-figures strong {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.re-pf-figures small { font-size: 11.5px; color: var(--text-secondary, #64748b); }
+
+.re-pf-card re-progress { display: block; }
+
+.re-pf-foot {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 2px;
+  padding-top: 11px;
+  border-top: 1px solid var(--border-subtle, #f1f5f9);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+}
+
+.re-pf-foot .material-symbols-outlined { font-size: 18px; }
+.re-pf-foot.tone-positive { color: var(--success, #16a34a); }
+.re-pf-foot.tone-warning { color: var(--warning, #b45309); }
+.re-pf-foot.tone-danger { color: var(--danger, #dc2626); }
+
+.re-pf-jv {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  color: var(--text-secondary, #64748b);
+  font-weight: 600;
+}
+
+.re-pf-jv .material-symbols-outlined { font-size: 16px; }

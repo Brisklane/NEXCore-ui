@@ -1,0 +1,211 @@
+<div class="page-container">
+
+  <div class="page-header">
+    <div>
+      <h2>Reports</h2>
+      <p class="subtitle">
+        @if (chosen()) { {{ chosen()!.title }} }
+        @else { Everything this company can be asked to account for. }
+      </p>
+    </div>
+
+    <div class="page-header-actions">
+      @if (result()) {
+        <button type="button" class="btn-secondary" (click)="print()">
+          <span class="material-symbols-outlined">print</span>Print
+        </button>
+        <button type="button" class="btn-primary" (click)="exportCsv()">
+          <span class="material-symbols-outlined">download</span>Export CSV
+        </button>
+      }
+    </div>
+  </div>
+
+  <re-page-help key="reports" />
+
+  @if (error()) {
+    <div class="alert alert-error" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <span>{{ error() }}</span>
+      @if (chosen()) { <button type="button" class="btn-link" (click)="run()">Try again</button> }
+    </div>
+  }
+
+  <div class="re-split">
+
+    <!-- The catalogue -->
+    <aside class="re-report-list">
+      <div class="re-search">
+        <span class="material-symbols-outlined">search</span>
+        <input type="search"
+               placeholder="Find a report"
+               [ngModel]="search()"
+               (ngModelChange)="search.set($event)"
+               aria-label="Find a report" />
+      </div>
+
+      @if (loadingCatalogue()) {
+        <re-skeleton [rowCount]="8" [colCount]="1" />
+      } @else if (!grouped().length) {
+        <p class="re-mini-empty">No report matches that.</p>
+      } @else {
+        @for (g of grouped(); track g.category) {
+          <div class="re-report-group">
+            <h4>{{ g.category }}</h4>
+            @for (r of g.items; track r.key) {
+              <button type="button"
+                      class="re-report-item"
+                      [class.is-active]="chosen()?.key === r.key"
+                      (click)="choose(r)">
+                <span class="material-symbols-outlined">{{ r.icon ?? 'summarize' }}</span>
+                <span>
+                  <strong>{{ r.title }}</strong>
+                  @if (r.description) { <small>{{ r.description }}</small> }
+                </span>
+              </button>
+            }
+          </div>
+        }
+      }
+    </aside>
+
+    <!-- The result -->
+    <div class="re-report-pane">
+      @if (!chosen()) {
+        <re-empty icon="summarize"
+                  title="Pick a report"
+                  message="Choose one from the list. Only the parameters it actually uses will be asked for." />
+      } @else {
+
+        <!-- Only the parameters this report declares. -->
+        <div class="re-report-filters">
+          @if (takes().has('fromDate')) {
+            <label>
+              <span>From</span>
+              <input type="date" [ngModel]="fromDate()" (ngModelChange)="fromDate.set($event)" />
+            </label>
+          }
+          @if (takes().has('toDate')) {
+            <label>
+              <span>To</span>
+              <input type="date" [ngModel]="toDate()" (ngModelChange)="toDate.set($event)" />
+            </label>
+          }
+          @if (chosen()!.supportsGrouping) {
+            <label>
+              <span>Group by</span>
+              <select [ngModel]="groupBy()" (ngModelChange)="groupBy.set($event)">
+                <option value="">Nothing</option>
+                <option value="project">Project</option>
+                <option value="office">Office</option>
+                <option value="agent">Agent</option>
+                <option value="month">Month</option>
+              </select>
+            </label>
+          }
+          @if (takes().has('projectId') && ctx.projectName()) {
+            <span class="re-report-scope">
+              <span class="material-symbols-outlined">apartment</span>{{ ctx.projectName() }}
+            </span>
+          }
+
+          <button type="button" class="re-touch-btn is-primary" [disabled]="running()"
+                  (click)="run()">
+            <span class="material-symbols-outlined">play_arrow</span>
+            {{ running() ? 'Running…' : 'Run' }}
+          </button>
+        </div>
+
+        @if (running()) {
+          <re-skeleton [rowCount]="8" [colCount]="6" />
+        } @else if (result(); as r) {
+
+          <div class="re-report-head">
+            <div>
+              <h3>{{ r.title }}</h3>
+              @if (r.subtitle) { <p>{{ r.subtitle }}</p> }
+              <p class="re-report-stamp">
+                {{ r.rowCount | number }} row{{ r.rowCount === 1 ? '' : 's' }} ·
+                generated {{ r.generatedAt | date:'medium' }}
+              </p>
+            </div>
+
+            @if (appliedFilters().length) {
+              <ul class="re-report-applied">
+                @for (f of appliedFilters(); track f.label) {
+                  <li><span>{{ f.label }}</span>{{ f.value }}</li>
+                }
+              </ul>
+            }
+          </div>
+
+          @if (r.isTruncated) {
+            <div class="alert alert-warning" role="status">
+              <span class="material-symbols-outlined">content_cut</span>
+              <span>
+                This is the first {{ r.rows.length | number }} rows of {{ r.rowCount | number }}.
+                Narrow the dates or the scope before using it to reconcile anything.
+              </span>
+            </div>
+          }
+
+          @if (trend().length > 1 || breakdown().length) {
+            <div class="re-report-charts">
+              @if (trend().length > 1) {
+                <re-section title="Over time">
+                  <re-trend [points]="trend()" [label]="r.title + ' over time'" />
+                </re-section>
+              }
+              @if (breakdown().length) {
+                <re-section title="Broken down">
+                  <re-breakdown [slices]="breakdown()" />
+                </re-section>
+              }
+            </div>
+          }
+
+          @if (!r.rows.length) {
+            <re-empty icon="table_rows"
+                      title="No rows"
+                      message="This report ran and found nothing for the period and scope you asked for. That is an answer, not a failure." />
+          } @else {
+            <div class="re-table-wrap">
+              <table class="re-table">
+                <thead>
+                  <tr>
+                    @for (c of r.columns; track c.key) {
+                      <th [style.text-align]="align(c)"
+                          [style.min-width.px]="c.width || null">{{ c.label }}</th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of r.rows; track $index) {
+                    <tr>
+                      @for (c of r.columns; track c.key) {
+                        <td [style.text-align]="align(c)">{{ cell(row, c) }}</td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+                @if (totalled().length) {
+                  <tfoot>
+                    <tr>
+                      @for (c of r.columns; track c.key) {
+                        <td [style.text-align]="align(c)">
+                          {{ c.isTotalled ? total(c) : ($first ? 'Total' : '') }}
+                        </td>
+                      }
+                    </tr>
+                  </tfoot>
+                }
+              </table>
+            </div>
+          }
+        }
+      }
+    </div>
+  </div>
+
+  <re-toast [message]="toast()" (dismissed)="toast.set(null)" />
+</div>

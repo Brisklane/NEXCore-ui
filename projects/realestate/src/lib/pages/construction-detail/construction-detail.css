@@ -1,0 +1,43 @@
+/* =====================================================================
+   A construction project.
+   ===================================================================== */
+
+re-progress { display: block; margin-bottom: 12px; }
+
+.re-gap-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 12px 0 0;
+  padding: 11px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--warning-border, #fde68a);
+  background: var(--warning-soft, #fffbeb);
+  color: var(--warning-text, #92400e);
+  font-size: 12.5px;
+  line-height: 1.55;
+  max-width: 82ch;
+}
+
+.re-gap-note .material-symbols-outlined { font-size: 19px; flex-shrink: 0; }
+
+/* ── The work breakdown table ──────────────────────────────────────── */
+
+.re-table td strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-heading, #0f172a);
+}
+
+.re-table td small {
+  display: block;
+  font-size: 11.5px;
+  color: var(--text-secondary, #94a3b8);
+  margin-top: 1px;
+}
+
+.re-table .is-bad { color: var(--danger, #dc2626); font-weight: 600; }
+.re-table .is-good { color: var(--success, #16a34a); font-weight: 600; }
+.re-table td.is-bad { color: var(--danger, #dc2626); font-weight: 600; }
+.re-table td.is-good { color: var(--success, #16a34a); font-weight: 600; }

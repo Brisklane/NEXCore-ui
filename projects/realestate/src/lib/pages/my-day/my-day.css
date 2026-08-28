@@ -1,0 +1,110 @@
+/* =====================================================================
+   My day.
+   ===================================================================== */
+
+.re-day { display: flex; flex-direction: column; gap: 16px; }
+
+.re-tasks { display: flex; flex-direction: column; gap: 8px; }
+
+.re-task {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 13px;
+  border-radius: 11px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--card-bg, #fff);
+}
+
+.re-task.is-late { border-left: 3px solid var(--danger, #dc2626); }
+
+.re-task-icon {
+  font-size: 21px;
+  color: var(--text-secondary, #64748b);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.re-task.is-late .re-task-icon { color: var(--danger, #dc2626); }
+
+.re-task-body { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+
+.re-task-body strong {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+  line-height: 1.35;
+}
+
+.re-task-context { font-size: 12.5px; color: var(--text-secondary, #64748b); }
+.re-task-body small { font-size: 12px; color: var(--text-secondary, #64748b); line-height: 1.45; }
+
+.re-task-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+}
+
+.re-task-meta .is-late { color: var(--danger, #dc2626); }
+
+.re-task-snoozed { color: var(--warning, #b45309); }
+
+.re-task-actions { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+
+/* ── Appointments ──────────────────────────────────────────────────── */
+
+.re-appointments { display: flex; flex-direction: column; gap: 8px; }
+
+.re-appt {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 13px;
+  border-radius: 11px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--card-bg, #fff);
+}
+
+.re-appt-time {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent, #2b7fff);
+  font-variant-numeric: tabular-nums;
+}
+
+.re-appt-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+
+.re-appt-body strong {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+}
+
+.re-appt-body span { font-size: 12.5px; color: var(--text-secondary, #64748b); }
+.re-appt-body small { font-size: 11.5px; color: var(--text-secondary, #94a3b8); }
+
+.re-appt-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+  white-space: nowrap;
+}
+
+.re-drawer-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+@media (max-width: 700px) {
+  .re-task { flex-wrap: wrap; }
+  .re-task-actions { width: 100%; justify-content: flex-end; }
+  .re-appt { grid-template-columns: 52px 1fr; }
+  .re-appt-meta { grid-column: 2; align-items: flex-start; }
+}

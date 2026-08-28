@@ -1,0 +1,117 @@
+/* =====================================================================
+   Settings.
+   ===================================================================== */
+
+.re-lines {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 10px;
+}
+
+.re-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--card-bg, #fff);
+  cursor: pointer;
+  transition: border-color .12s ease, background .12s ease;
+}
+
+.re-line:hover { border-color: var(--accent, #2b7fff); }
+.re-line:focus-within { box-shadow: var(--focus-ring); }
+
+.re-line.is-on {
+  border-color: var(--accent, #2b7fff);
+  background: var(--accent-soft, #f5f9ff);
+}
+
+.re-line input { margin-top: 2px; flex-shrink: 0; width: 17px; height: 17px; }
+
+.re-line > .material-symbols-outlined {
+  font-size: 23px;
+  color: var(--text-secondary, #64748b);
+  flex-shrink: 0;
+}
+
+.re-line.is-on > .material-symbols-outlined { color: var(--accent, #2b7fff); }
+
+.re-line > span:last-child { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+
+.re-line strong {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+}
+
+.re-line small { font-size: 12px; line-height: 1.5; color: var(--text-secondary, #64748b); }
+
+/* ── Rules ─────────────────────────────────────────────────────────── */
+
+.re-rules { display: flex; flex-direction: column; gap: 9px; }
+
+.re-rule {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 12px 13px;
+  border-radius: 11px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  cursor: pointer;
+}
+
+.re-rule:hover { border-color: var(--accent, #2b7fff); }
+.re-rule:focus-within { box-shadow: var(--focus-ring); }
+.re-rule input { margin-top: 2px; flex-shrink: 0; width: 17px; height: 17px; }
+.re-rule > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+.re-rule strong {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+}
+
+.re-rule small { font-size: 12px; line-height: 1.5; color: var(--text-secondary, #64748b); }
+
+.re-rule-field { margin-left: 39px; max-width: 260px; }
+.re-rule-field.is-off { opacity: .45; }
+
+.re-settings-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 11px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--danger-border, #fecaca);
+  background: var(--danger-soft, #fef2f2);
+  color: var(--danger-text, #991b1b);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.re-settings-error .material-symbols-outlined { font-size: 19px; }
+
+/* A save bar that follows you down the page, because this screen is long. */
+.re-settings-bar {
+  position: sticky;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--accent, #2b7fff);
+  background: var(--card-bg, #fff);
+  box-shadow: 0 6px 22px rgb(15 23 42 / 12%);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #1e293b);
+}
+
+.re-settings-bar > span { display: inline-flex; align-items: center; gap: 7px; }
+.re-settings-bar .material-symbols-outlined { font-size: 18px; color: var(--accent, #2b7fff); }

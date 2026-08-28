@@ -1,0 +1,138 @@
+<re-detail-page
+  backRoute="/realestate/landlords"
+  backLabel="All landlords"
+  icon="person"
+  [title]="data()?.name ?? ''"
+  [subtitle]="data() ? data()!.propertyCount + ' properties, ' + data()!.tenancyCount + ' let' : null"
+  [reference]="data()?.reference ?? null"
+  [pills]="pills()"
+  [figures]="figures()"
+  [actions]="actions()"
+  [tabs]="tabs()"
+  [activeTab]="tab()"
+  [loading]="loading()"
+  [error]="error()"
+  [notFound]="notFound()"
+  (tabChange)="tab.set($event)"
+  (action)="act($event)"
+  (retry)="load()">
+
+  @if (data(); as d) {
+
+    @if (d.payoutsOnHold) {
+      <div class="alert alert-error" role="alert">
+        <span class="material-symbols-outlined">pause_circle</span>
+        <span>
+          Payouts to this landlord are on hold{{ d.holdReason ? ': ' + d.holdReason : '' }}.
+          Rent is still being collected and held in the client account — nothing is being paid
+          out until the hold is lifted.
+        </span>
+      </div>
+    }
+
+    @if (!d.bankDetailsVerified) {
+      <div class="alert alert-warning" role="status">
+        <span class="material-symbols-outlined">account_balance</span>
+        <span>
+          Their bank details have not been verified against a document. Paying out on unverified
+          details is the commonest way money goes to the wrong account.
+        </span>
+      </div>
+    }
+
+    @switch (tab()) {
+
+      @case ('overview') {
+        <re-section title="The landlord" icon="person">
+          <re-facts [items]="summary()" />
+        </re-section>
+
+        <re-section title="How they are paid"
+                    icon="account_balance"
+                    note="The float is money kept back between payouts so a repair can be paid for
+                          without waiting for the landlord to send funds. It is theirs, not ours.">
+          <re-facts [items]="payoutFacts()" />
+        </re-section>
+      }
+
+      @case ('portfolio') {
+        <re-section title="Properties" icon="home_work">
+          <re-mini-list [rows]="properties()"
+                        emptyMessage="No property is registered to this landlord." />
+        </re-section>
+
+        <re-section title="Tenancies" icon="real_estate_agent">
+          <re-mini-list [rows]="tenancies()"
+                        emptyMessage="None of their properties is currently let." />
+        </re-section>
+      }
+
+      @case ('money') {
+        <re-section title="Where they stand"
+                    icon="payments"
+                    note="The balance we hold is client money — their funds in a designated
+                          account, not our income. It appears as a liability in our books until
+                          it is paid over.">
+          <re-facts [items]="moneyFacts()" />
+        </re-section>
+
+        @if (d.arrearsOnPortfolio > 0) {
+          <p class="re-arrears-note">
+            <span class="material-symbols-outlined">money_off</span>
+            {{ money(d.arrearsOnPortfolio) }} is in arrears across their tenancies. Their next
+            payout will be smaller than the contracted rent roll suggests, and it is worth telling
+            them before the statement arrives rather than after.
+          </p>
+        }
+      }
+
+      @case ('statements') {
+        <re-section title="Owner statements"
+                    icon="summarize"
+                    note="Each period’s collection, less the management fee, repairs, tax
+                          withholding and any float retained. The net payable is what actually
+                          left the client account.">
+          <re-mini-list [rows]="statements()"
+                        emptyMessage="No statement has been generated for this landlord." />
+        </re-section>
+      }
+
+      @case ('agreements') {
+        <re-section title="Management agreements"
+                    icon="gavel"
+                    note="One per property, or one covering the portfolio. The repair authority is
+                          the figure that decides whether we can instruct a contractor without
+                          telephoning first — get it wrong and either nothing gets fixed, or
+                          somebody gets an invoice they did not agree to.">
+          <re-mini-list [rows]="agreements()"
+                        emptyMessage="No management agreement is on file. Without one, our authority to act is unclear." />
+        </re-section>
+      }
+
+      @case ('repairs') {
+        <re-section title="Repairs"
+                    icon="build"
+                    note="Anything above the repair authority needs the landlord to agree before
+                          it can proceed — those are flagged.">
+          <re-mini-list [rows]="workOrders()"
+                        emptyMessage="No repairs have been raised on their properties." />
+        </re-section>
+      }
+
+      @case ('history') {
+        <re-section title="Everything that has happened"
+                    icon="history"
+                    note="Newest first. Money, status changes, documents and activity in one
+                          stream, so the story reads in order.">
+          @if (!timeline().length) {
+            <p class="re-mini-empty">Nothing has been recorded yet.</p>
+          } @else {
+            <re-timeline [items]="timeline()" />
+          }
+        </re-section>
+      }
+    }
+  }
+</re-detail-page>
+
+<re-toast [message]="toast()" (dismissed)="toast.set(null)" />

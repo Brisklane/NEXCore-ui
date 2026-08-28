@@ -1,0 +1,271 @@
+<re-detail-page
+  backRoute="/realestate/client-builds"
+  backLabel="All client builds"
+  icon="home_work"
+  [title]="data()?.name ?? ''"
+  [subtitle]="data() ? data()!.clientName + (data()!.siteAddress ? ' · ' + data()!.siteAddress : '') : null"
+  [reference]="data()?.reference ?? null"
+  [pills]="pills()"
+  [figures]="figures()"
+  [actions]="actions()"
+  [tabs]="tabs()"
+  [activeTab]="tab()"
+  [loading]="loading()"
+  [error]="error()"
+  [notFound]="notFound()"
+  (tabChange)="tab.set($event)"
+  (action)="act($event)"
+  (retry)="load()">
+
+  @if (data(); as d) {
+
+    @if (!specFrozen()) {
+      <div class="alert alert-warning" role="status">
+        <span class="material-symbols-outlined">lock_open</span>
+        <span>
+          The specification has not been frozen. Until it is, every conversation with the client
+          is a variation waiting to happen and none of them can be priced.
+        </span>
+      </div>
+    }
+
+    @if (lateMaterials().length) {
+      <div class="alert alert-error" role="alert">
+        <span class="material-symbols-outlined">inventory</span>
+        <span>
+          {{ lateMaterials().length === 1 ? 'A material the client agreed to supply is'
+             : lateMaterials().length + ' materials the client agreed to supply are' }}
+          late. Record the delay now — a client-caused delay recorded at the time is an extension
+          of time; recorded three months later it is an argument.
+        </span>
+      </div>
+    }
+
+    @if (expiredQuotes().length) {
+      <div class="alert alert-warning" role="status">
+        <span class="material-symbols-outlined">timer_off</span>
+        <span>
+          {{ expiredQuotes().length }} variation
+          {{ expiredQuotes().length === 1 ? 'quote has' : 'quotes have' }} expired without a
+          decision. Rates and materials have moved since they were priced — requote before
+          proceeding.
+        </span>
+      </div>
+    }
+
+    @switch (tab()) {
+
+      @case ('overview') {
+        <re-section title="Progress" icon="engineering">
+          <re-progress [value]="d.progressPercent" label="Built" tone="accent" />
+          <re-progress [value]="d.revisedContractValue
+                                 ? (d.totalReceived / d.revisedContractValue) * 100 : 0"
+                       label="Received against the contract"
+                       [tone]="d.outstanding > 0 ? 'warning' : 'positive'" />
+        </re-section>
+
+        <re-section title="The contract" icon="home_work">
+          <re-facts [items]="summary()" />
+        </re-section>
+
+        <re-section title="Commercial terms"
+                    icon="gavel"
+                    note="A guaranteed maximum price transfers the overrun risk to us. Liquidated
+                          damages transfer the delay risk to us. Both are worth reading before
+                          agreeing an extension of time to anybody."
+                    >
+          <re-facts [items]="commercial()" />
+        </re-section>
+
+        <re-section title="Milestones"
+                    icon="flag"
+                    note="On a milestone-linked plan, reaching one raises the money beside it.">
+          <re-mini-list [rows]="milestones()"
+                        emptyMessage="No milestones are defined on this contract." />
+        </re-section>
+      }
+
+      @case ('scope') {
+        <re-section title="What is included"
+                    icon="check_circle"
+                    note="What was agreed to be built for the contract price.">
+          @if (!included().length) {
+            <p class="re-mini-empty">No scope has been recorded.</p>
+          } @else {
+            <ul class="re-scope is-included">
+              @for (s of included(); track s.description) {
+                <li>
+                  <span class="material-symbols-outlined">check</span>
+                  <span>
+                    <strong>{{ s.description }}</strong>
+                    <small>{{ s.category }}{{ s.note ? ' · ' + s.note : '' }}</small>
+                  </span>
+                  @if (s.value) { <span class="re-scope-value">{{ money(s.value) }}</span> }
+                </li>
+              }
+            </ul>
+          }
+        </re-section>
+
+        <re-section title="What is excluded"
+                    icon="cancel"
+                    note="Exclusions are worth more than inclusions. Every item here is one the
+                          client will otherwise assume was covered, and every argument on a build
+                          contract starts with something that was never written down.">
+          @if (!excluded().length) {
+            <p class="re-mini-empty">
+              Nothing has been recorded as excluded. That is unusual and worth checking — a
+              contract with no exclusions is a contract that includes everything.
+            </p>
+          } @else {
+            <ul class="re-scope is-excluded">
+              @for (s of excluded(); track s.description) {
+                <li>
+                  <span class="material-symbols-outlined">close</span>
+                  <span>
+                    <strong>{{ s.description }}</strong>
+                    <small>{{ s.category }}{{ s.note ? ' · ' + s.note : '' }}</small>
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+        </re-section>
+      }
+
+      @case ('money') {
+        @if (data()!.costSheet) {
+          <re-section title="Cost and margin"
+                      icon="payments"
+                      [note]="'As at ' + (data()!.costSheet!.asOfDate | date:'mediumDate')
+                              + (data()!.costSheet!.preparedByName ? ', prepared by ' + data()!.costSheet!.preparedByName : '')
+                              + '.'">
+            <re-facts [items]="costFacts()" />
+          </re-section>
+
+          @if (erosion().length) {
+            <re-section title="Where the margin went"
+                        icon="trending_down"
+                        note="Margin is not lost all at once. Each of these has a different cure:
+                              absorbed variations mean the commercial process is weak; wastage
+                              and rework mean the site is; rate increases usually mean
+                              procurement was too slow.">
+              <re-breakdown [slices]="erosion()" />
+
+              <p class="re-erosion-note">
+                <span class="material-symbols-outlined">lightbulb</span>
+                {{ money(data()!.costSheet!.marginErosion) }} of budgeted margin has gone. The
+                largest single cause above is the one to fix before the next contract is signed —
+                it will otherwise happen again in exactly the same way.
+              </p>
+            </re-section>
+          }
+        } @else {
+          <p class="re-mini-empty">
+            No cost sheet has been prepared for this contract, so there is no margin position to
+            report.
+          </p>
+        }
+      }
+
+      @case ('payments') {
+        @if (planInstalments().length) {
+          <re-section title="Payment plan"
+                      icon="calendar_month"
+                      note="What the client owes and when."
+                      [flush]="true">
+            <div class="re-schedule">
+              @for (i of planInstalments(); track i.id) {
+                <div class="re-sched-row" [class]="instalmentClass(i)">
+                  <span class="re-sched-seq">{{ i.sequenceNumber }}</span>
+                  <span class="re-sched-label">
+                    {{ i.label }}
+                    <span class="re-sched-sub">
+                      @if (i.milestoneName) { on {{ i.milestoneName }} }
+                      @else if (i.dueDate) { due {{ i.dueDate | date:'mediumDate' }} }
+                      · {{ instalmentStatus(i) }}
+                    </span>
+                  </span>
+                  <span class="re-sched-amount">{{ money(i.totalAmount) }}</span>
+                  <span class="re-sched-balance">{{ money(i.balance) }}</span>
+                </div>
+              }
+            </div>
+          </re-section>
+        }
+
+        <re-section title="Certificates"
+                    icon="receipt_long"
+                    note="What has been certified as done and become payable.">
+          <re-mini-list [rows]="certificates()"
+                        emptyMessage="No certificates have been raised on this contract." />
+        </re-section>
+      }
+
+      @case ('variations') {
+        <re-section title="Variations"
+                    icon="edit_note"
+                    note="A variation quoted and not decided is work nobody has authorised and
+                          nobody will pay for. Quotes expire deliberately, because material
+                          prices move."
+                    >
+          <re-mini-list [rows]="variations()"
+                        emptyMessage="No variations have been requested on this contract." />
+        </re-section>
+      }
+
+      @case ('materials') {
+        <re-section title="Materials the client is supplying"
+                    icon="inventory"
+                    note="Where the client supplies materials, our rate excludes them — the
+                          excluded amount is shown against each line. If they arrive late, the
+                          delay is the client’s, but only if it was recorded when it happened.">
+          <re-mini-list [rows]="materials()"
+                        emptyMessage="The client is not supplying any materials on this contract." />
+        </re-section>
+      }
+
+      @case ('spec') {
+        @if (d.specification; as spec) {
+          <re-section [title]="spec.name"
+                      icon="palette"
+                      [note]="spec.isFrozen
+                              ? 'Frozen. Every change from here is a priced variation, which is exactly as it should be.'
+                              : 'Not frozen. Until it is, the client can change their mind for nothing and the cost lands on us.'">
+            <re-facts [items]="[
+              { label: 'Version', value: spec.version },
+              { label: 'Grade', value: gradeLabel(spec.grade) },
+              { label: 'Frozen', value: spec.isFrozen ? 'Yes' : 'No',
+                tone: spec.isFrozen ? 'positive' : 'warning' },
+              { label: 'Frozen on', value: spec.frozenOn ? (spec.frozenOn | date:'mediumDate') : null },
+              { label: 'Approved by', value: spec.approvedByName },
+              { label: 'Items', value: spec.itemCount },
+              { label: 'Client chooses', value: spec.clientSelectableCount },
+              { label: 'Awaiting a decision', value: spec.pendingSelectionCount,
+                tone: spec.pendingSelectionCount ? 'warning' : 'positive',
+                hint: spec.pendingSelectionCount
+                  ? 'work stops at these until the client picks' : 'nothing outstanding' }
+            ]" [tight]="true" />
+          </re-section>
+        } @else {
+          <p class="re-mini-empty">
+            No specification schedule is attached. Without one there is nothing written down about
+            what is being built, and every finish becomes a conversation.
+          </p>
+        }
+      }
+
+      @case ('drawings') {
+        <re-section title="Drawing register"
+                    icon="architecture"
+                    note="A drawing that has not been approved by the client and issued to site is
+                          a drawing the site should not be building from.">
+          <re-mini-list [rows]="drawings()"
+                        emptyMessage="No drawings are registered against this contract." />
+        </re-section>
+      }
+    }
+  }
+</re-detail-page>
+
+<re-toast [message]="toast()" (dismissed)="toast.set(null)" />

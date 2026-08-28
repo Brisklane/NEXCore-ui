@@ -1,0 +1,225 @@
+<re-detail-page
+  backRoute="/realestate/deals"
+  backLabel="All deals"
+  icon="handshake"
+  [title]="data()?.addressOneLine ?? ''"
+  [subtitle]="data() ? data()!.buyerName + ' buying from ' + (data()!.sellerName ?? 'the owner') : null"
+  [reference]="data()?.reference ?? null"
+  [photoUrl]="data()?.heroImageUrl ?? null"
+  [pills]="pills()"
+  [figures]="figures()"
+  [actions]="actions()"
+  [tabs]="tabs()"
+  [activeTab]="tab()"
+  [loading]="loading()"
+  [error]="error()"
+  [notFound]="notFound()"
+  (tabChange)="tab.set($event)"
+  (action)="act($event)"
+  (retry)="load()">
+
+  @if (data(); as d) {
+
+    <!-- Deals do not fail suddenly. They stall, and then somebody pulls out. -->
+    @if (d.isStalled) {
+      <div class="alert alert-error" role="alert">
+        <span class="material-symbols-outlined">pause_circle</span>
+        <span>
+          Nothing has moved on this deal for {{ d.daysSinceLastMilestone }} days.
+          @if (d.nextStepLabel) { Everyone is waiting on: <strong>{{ d.nextStepLabel }}</strong>. }
+          @if (unresponsive().length) {
+            {{ unresponsive().length }} of the parties are not responding.
+          }
+          This is the call to make today.
+        </span>
+      </div>
+    } @else if (d.nextStepOverdue && d.nextStepLabel) {
+      <div class="alert alert-warning" role="status">
+        <span class="material-symbols-outlined">schedule</span>
+        <span>
+          <strong>{{ d.nextStepLabel }}</strong> is past its date
+          @if (d.nextStepDue) { ({{ d.nextStepDue | date:'mediumDate' }}) }.
+        </span>
+      </div>
+    }
+
+    @switch (tab()) {
+
+      @case ('progress') {
+        <re-section title="How far along"
+                    icon="checklist"
+                    note="A step marked blocking stops everything behind it. The order matters —
+                          searches cannot start before the contract pack goes out.">
+          <re-progress [value]="d.progressPercent"
+                       [label]="d.completedSteps + ' of ' + d.totalSteps + ' steps done'"
+                       [tone]="d.isStalled ? 'danger' : 'accent'" />
+
+          @if (!d.checklist.length) {
+            <p class="re-mini-empty">No steps have been set up for this deal.</p>
+          } @else {
+            <ul class="re-steps-list">
+              @for (c of d.checklist; track c.id) {
+                <li [class.is-done]="c.isCompleted"
+                    [class.is-overdue]="c.isOverdue && !c.isCompleted"
+                    [class.is-blocking]="c.isBlocking && !c.isCompleted">
+                  <span class="material-symbols-outlined">
+                    {{ c.isCompleted ? 'check_circle'
+                       : c.isBlocking ? 'block'
+                       : c.isOverdue ? 'error' : 'radio_button_unchecked' }}
+                  </span>
+                  <span class="re-step-body">
+                    <strong>{{ c.label }}</strong>
+                    <span>
+                      @if (c.ownerName) { {{ c.ownerName }} }
+                      @if (c.responsibleParty !== undefined) { · with the {{ c.responsibleParty }} }
+                      @if (c.note) { · {{ c.note }} }
+                    </span>
+                  </span>
+                  <span class="re-step-when">
+                    @if (c.completedOn) {
+                      {{ c.completedOn | date:'shortDate' }}
+                    } @else if (c.dueDate) {
+                      <span [class.is-late]="c.isOverdue">
+                        due {{ c.dueDate | date:'shortDate' }}
+                      </span>
+                    }
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+        </re-section>
+
+        <re-section title="Milestones"
+                    icon="flag"
+                    note="Target against actual. The variance column is where the delay actually
+                          happened, which is rarely where people remember it happening.">
+          <re-mini-list [rows]="milestones()"
+                        emptyMessage="No milestones have been recorded." />
+        </re-section>
+
+        <re-section title="The deal" icon="handshake">
+          <re-facts [items]="summary()" />
+        </re-section>
+      }
+
+      @case ('parties') {
+        <re-section title="Everyone in the transaction"
+                    icon="group"
+                    note="Solicitors, surveyors, lenders and both sides. Days since last contact
+                          is the number that predicts a stall — a party nobody has spoken to in a
+                          fortnight is usually the party holding things up.">
+          <re-mini-list [rows]="parties()"
+                        emptyMessage="Nobody has been recorded against this deal." />
+        </re-section>
+      }
+
+      @case ('chain') {
+        @if (d.chain; as chain) {
+          <re-section [title]="'Chain of ' + chain.linkCount"
+                      icon="link"
+                      [note]="chain.isBroken
+                              ? 'This chain is broken. Every deal in it is at risk until the break is fixed or the party is replaced.'
+                              : 'A chain completes at the speed of its slowest link. Ours is starred; the rest are other agents’ deals we depend on.'">
+            @if (chain.isBroken) {
+              <div class="alert alert-error" role="alert">
+                <span class="material-symbols-outlined">link_off</span>
+                <span>
+                  Broken at position {{ chain.brokenAtPosition }}
+                  @if (chain.brokenOn) { on {{ chain.brokenOn | date:'mediumDate' }} }.
+                </span>
+              </div>
+            }
+
+            <re-mini-list [rows]="chainLinks()"
+                          emptyMessage="No links have been recorded in this chain." />
+
+            @if (chain.targetCompletionDate) {
+              <p class="re-chain-target">
+                <span class="material-symbols-outlined">event</span>
+                The whole chain is aiming to complete on
+                {{ chain.targetCompletionDate | date:'mediumDate' }}. Every link has to be ready
+                on the same day.
+              </p>
+            }
+          </re-section>
+        } @else {
+          <p class="re-mini-empty">
+            This deal is not in a chain. Neither side is dependent on another transaction, which
+            makes it considerably more likely to complete.
+          </p>
+        }
+      }
+
+      @case ('conveyancing') {
+        @if (d.conveyancing) {
+          <re-section title="Conveyancing"
+                      icon="gavel"
+                      note="The legal transfer and what it costs. Duty is charged on the higher of
+                            the price and the government valuation, which regularly surprises
+                            buyers who budgeted on the price alone.">
+            <re-facts [items]="conveyancingFacts()" />
+          </re-section>
+
+          @if (d.conveyancing.note) {
+            <re-section title="Notes" icon="sticky_note_2">
+              <p class="re-prose">{{ d.conveyancing.note }}</p>
+            </re-section>
+          }
+        } @else {
+          <p class="re-mini-empty">
+            Conveyancing has not been opened on this deal. It has to be before contracts can be
+            exchanged.
+          </p>
+        }
+      }
+
+      @case ('commission') {
+        @if (commission(); as c) {
+          <re-section title="The calculation" icon="percent">
+            <re-facts [items]="commissionFacts()" />
+          </re-section>
+
+          @if (c.calculationTrace?.length) {
+            <re-section title="How it was worked out"
+                        icon="calculate"
+                        note="Every step, in order. An agent whose fee looks wrong will read this
+                              line by line, so it is written to be read that way.">
+              <ol class="re-trace">
+                @for (line of c.calculationTrace; track line) { <li>{{ line }}</li> }
+              </ol>
+            </re-section>
+          }
+
+          <re-section title="Who gets what"
+                      icon="group"
+                      note="Splits after deductions and withholding. Where a cap has been reached
+                            it is said so, because that is the commonest surprise on a payslip.">
+            <re-mini-list [rows]="splits()"
+                          emptyMessage="No splits have been calculated." />
+          </re-section>
+        } @else {
+          <re-section title="Our fee" icon="percent">
+            <re-facts [items]="feeFacts()" />
+            <p class="re-mini-empty">
+              No commission has been calculated yet. It is computed when the trigger condition is
+              met — usually exchange or completion, depending on the instruction.
+            </p>
+          </re-section>
+        }
+      }
+
+      @case ('history') {
+        <re-section title="Everything that has happened" icon="history">
+          @if (!timeline().length) {
+            <p class="re-mini-empty">Nothing recorded yet.</p>
+          } @else {
+            <re-timeline [items]="timeline()" />
+          }
+        </re-section>
+      }
+    }
+  }
+</re-detail-page>
+
+<re-toast [message]="toast()" (dismissed)="toast.set(null)" />

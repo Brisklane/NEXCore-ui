@@ -1,0 +1,86 @@
+/* =====================================================================
+   A listing.
+   ===================================================================== */
+
+.re-sub-title {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-secondary, #64748b);
+}
+
+.re-sub-title:not(:first-child) { margin-top: 18px; }
+
+.re-prose {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--text-primary, #1e293b);
+  white-space: pre-wrap;
+  max-width: 85ch;
+}
+
+/* Features beyond the fifth are dimmed, because that is where portals stop reading. */
+.re-key-features {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13.5px;
+  color: var(--text-secondary, #94a3b8);
+}
+
+.re-key-features li.is-shown { color: var(--text-primary, #1e293b); font-weight: 500; }
+
+/* ── Gallery ───────────────────────────────────────────────────────── */
+
+.re-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.re-gallery-item { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+
+.re-gallery-item img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background: var(--bg-muted, #f1f5f9);
+}
+
+.re-gallery-item.is-hero img { border-color: var(--accent, #2b7fff); }
+
+.re-gallery-item figcaption {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+}
+
+.re-gallery-item figcaption > span:first-child {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.re-drawer-note {
+  margin: 14px 0 0;
+  padding: 11px 12px;
+  border-radius: 10px;
+  background: var(--bg-muted, #f1f5f9);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-secondary, #64748b);
+}
+
+.re-drawer-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }

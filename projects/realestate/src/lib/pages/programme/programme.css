@@ -1,0 +1,204 @@
+/* =====================================================================
+   The programme.
+
+   A Gantt chart drawn with positioned divs. The baseline sits under the
+   current plan so slip is visible rather than inferred.
+   ===================================================================== */
+
+.re-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 12px;
+  padding: 5px 10px 5px 6px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+  cursor: pointer;
+}
+
+.re-back:hover { color: var(--accent, #2b7fff); background: var(--bg-muted, #f1f5f9); }
+.re-back:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.re-back .material-symbols-outlined { font-size: 18px; }
+
+.re-prog-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border-radius: 11px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--card-bg, #fff);
+}
+
+.re-prog-legend { display: flex; flex-wrap: wrap; gap: 14px; }
+
+.re-prog-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+}
+
+.re-prog-legend i { width: 16px; height: 8px; border-radius: 3px; }
+.re-prog-legend i.is-critical { background: var(--warning, #d97706); }
+.re-prog-legend i.is-late { background: var(--danger, #dc2626); }
+.re-prog-legend i.is-complete { background: var(--success, #16a34a); }
+
+.re-prog-legend i.is-baseline {
+  height: 4px;
+  background: var(--text-secondary, #94a3b8);
+  opacity: .5;
+}
+
+/* ── The chart ─────────────────────────────────────────────────────── */
+
+.re-gantt-wrap {
+  border-radius: 13px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--card-bg, #fff);
+  overflow: hidden;
+}
+
+.re-gantt-axis {
+  display: grid;
+  grid-template-columns: 240px 1fr 90px;
+  gap: 12px;
+  padding: 8px 14px 6px;
+  border-bottom: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-muted, #f8fafc);
+}
+
+.re-gantt-axis .re-gantt-track { position: relative; height: 18px; }
+
+.re-gantt-tick {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-secondary, #94a3b8);
+  white-space: nowrap;
+}
+
+.re-gantt { display: flex; flex-direction: column; }
+
+.re-gantt-row {
+  display: grid;
+  grid-template-columns: 240px 1fr 90px;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 14px;
+  border-bottom: 1px solid var(--border-subtle, #f1f5f9);
+  cursor: pointer;
+  transition: background .12s ease;
+}
+
+.re-gantt-row:last-child { border-bottom: none; }
+.re-gantt-row:hover { background: var(--bg-muted, #f8fafc); }
+.re-gantt-row:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.re-gantt-row.is-selected { background: var(--accent-soft, #f5f9ff); }
+
+.re-gantt-name { display: flex; align-items: center; gap: 6px; min-width: 0; }
+
+.re-gantt-flag { font-size: 16px; color: var(--warning, #d97706); flex-shrink: 0; }
+
+.re-gantt-name > span { display: flex; flex-direction: column; gap: 0; min-width: 0; }
+
+.re-gantt-name strong {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-heading, #0f172a);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.re-gantt-name small { font-size: 11px; color: var(--text-secondary, #94a3b8); }
+
+.re-gantt-track { position: relative; height: 22px; }
+
+.re-gantt-track::before {
+  content: '';
+  position: absolute;
+  inset: 9px 0;
+  border-radius: 3px;
+  background: var(--bg-muted, #f1f5f9);
+}
+
+.re-gantt-baseline {
+  position: absolute;
+  bottom: 1px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--text-secondary, #94a3b8);
+  opacity: .45;
+}
+
+.re-gantt-bar {
+  position: absolute;
+  top: 4px;
+  height: 13px;
+  border-radius: 4px;
+  background: var(--accent, #2b7fff);
+  overflow: hidden;
+}
+
+.re-gantt-bar.is-critical { background: var(--warning, #d97706); }
+.re-gantt-bar.is-late { background: var(--danger, #dc2626); }
+.re-gantt-bar.is-complete { background: var(--success, #16a34a); }
+
+.re-gantt-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: rgb(255 255 255 / 35%);
+}
+
+.re-gantt-milestone {
+  position: absolute;
+  top: 5px;
+  width: 11px;
+  height: 11px;
+  transform: translateX(-50%) rotate(45deg);
+  background: var(--accent, #2b7fff);
+}
+
+.re-gantt-milestone.is-critical { background: var(--warning, #d97706); }
+.re-gantt-milestone.is-late { background: var(--danger, #dc2626); }
+.re-gantt-milestone.is-complete { background: var(--success, #16a34a); }
+
+.re-gantt-today {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  background: var(--danger, #dc2626);
+  opacity: .55;
+}
+
+.re-gantt-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.re-gantt-meta span {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-primary, #1e293b);
+}
+
+.re-gantt-meta small { font-size: 11px; color: var(--text-secondary, #94a3b8); }
+.re-gantt-meta small.is-late { color: var(--danger, #dc2626); font-weight: 600; }
+
+@media (max-width: 860px) {
+  .re-gantt-axis,
+  .re-gantt-row { grid-template-columns: 140px 1fr 70px; }
+}

@@ -1,0 +1,29 @@
+/* =====================================================================
+   A contact.
+   ===================================================================== */
+
+.re-notes {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--text-primary, #1e293b);
+  white-space: pre-wrap;
+  max-width: 85ch;
+}
+
+.re-money-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 0;
+  padding: 12px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--danger-border, #fecaca);
+  background: var(--danger-soft, #fef2f2);
+  color: var(--danger-text, #991b1b);
+  font-size: 12.5px;
+  line-height: 1.55;
+  max-width: 80ch;
+}
+
+.re-money-warning .material-symbols-outlined { font-size: 19px; flex-shrink: 0; }

@@ -1,0 +1,289 @@
+<re-detail-page
+  backRoute="/realestate/tenancies"
+  backLabel="All tenancies"
+  icon="real_estate_agent"
+  [title]="data()?.tenantName ?? ''"
+  [subtitle]="data()?.addressOneLine ?? null"
+  [reference]="data()?.reference ?? null"
+  [pills]="pills()"
+  [figures]="figures()"
+  [actions]="actions()"
+  [tabs]="tabs()"
+  [activeTab]="tab()"
+  [loading]="loading()"
+  [error]="error()"
+  [notFound]="notFound()"
+  (tabChange)="tab.set($event)"
+  (action)="act($event)"
+  (retry)="load()">
+
+  @if (data(); as d) {
+
+    @if (d.deposit && !d.deposit.isRegistered) {
+      <div class="alert alert-error" role="alert">
+        <span class="material-symbols-outlined">gpp_bad</span>
+        <span>
+          The deposit of {{ money(d.deposit.amount) }} has not been protected.
+          @if (d.deposit.daysToRegistrationDeadline !== undefined) {
+            @if (d.deposit.registrationOverdue) {
+              The statutory deadline has passed.
+            } @else {
+              {{ d.deposit.daysToRegistrationDeadline }} days remain.
+            }
+          }
+          In several markets this carries a penalty of a multiple of the deposit and blocks
+          possession proceedings entirely.
+        </span>
+      </div>
+    }
+
+    @if (expiredCertificates().length) {
+      <div class="alert alert-error" role="alert">
+        <span class="material-symbols-outlined">verified</span>
+        <span>
+          {{ expiredCertificates().length === 1 ? 'A safety certificate has' : expiredCertificates().length + ' safety certificates have' }}
+          expired. Letting a property without current certificates is an offence in most
+          jurisdictions.
+        </span>
+      </div>
+    }
+
+    @switch (tab()) {
+
+      @case ('overview') {
+        <re-section title="The tenancy" icon="real_estate_agent">
+          <re-facts [items]="summary()" />
+        </re-section>
+
+        <re-section title="Who is on it"
+                    icon="group"
+                    note="Joint and several liability means each tenant can be pursued for the
+                          whole rent, not merely their share. It is the difference between one
+                          bad tenant and one bad tenancy.">
+          <re-mini-list [rows]="parties()"
+                        emptyMessage="No tenants are recorded on this tenancy." />
+        </re-section>
+
+        @if (d.referencing; as ref) {
+          <re-section title="Referencing" icon="fact_check">
+            <re-facts [items]="[
+              { label: 'Outcome', value: referencingLabel(ref.outcome) },
+              { label: 'Started', value: ref.startedOn | date:'mediumDate' },
+              { label: 'Completed', value: ref.completedOn ? (ref.completedOn | date:'mediumDate') : 'Still open' },
+              { label: 'Declared income', value: money(ref.declaredIncome) },
+              { label: 'Income multiple', value: ref.incomeMultiple ? (ref.incomeMultiple | number:'1.1-1') + '×' : null,
+                hint: 'annual income over annual rent' },
+              { label: 'Guarantor required', value: ref.guarantorRequired ? 'Yes' : 'No' },
+              { label: 'Conditions', value: ref.conditions, wide: true },
+              { label: 'Failed because', value: ref.failureReason, tone: 'danger', wide: true }
+            ]" [tight]="true" />
+          </re-section>
+        }
+      }
+
+      @case ('rent') {
+        <re-section title="Rent schedule"
+                    icon="payments"
+                    note="Every period, what was due and what arrived. Late fees accrue separately
+                          from the rent so a disputed figure can always be taken apart."
+                    [flush]="true">
+          @if (!rentCharges().length) {
+            <p class="re-mini-empty">No rent has been scheduled on this tenancy.</p>
+          } @else {
+            <div class="re-schedule">
+              @for (c of rentCharges(); track c.id) {
+                <div class="re-sched-row" [class]="chargeClass(c)">
+                  <span class="re-sched-seq">{{ c.sequenceNumber }}</span>
+                  <span class="re-sched-label">
+                    {{ c.periodFrom | date:'mediumDate' }} – {{ c.periodTo | date:'mediumDate' }}
+                    <span class="re-sched-sub">
+                      due {{ c.dueDate | date:'mediumDate' }} · {{ chargeStatus(c) }}
+                      @if (c.isProRated) { · pro-rated }
+                    </span>
+                  </span>
+                  <span class="re-sched-amount">{{ money(c.totalAmount) }}</span>
+                  <span class="re-sched-paid">
+                    {{ c.paidAmount ? money(c.paidAmount) : '—' }}
+                    @if (c.lateFeeAccrued > 0) {
+                      <span class="re-sched-surcharge">
+                        +{{ money(c.lateFeeAccrued) }} late fee
+                      </span>
+                    }
+                  </span>
+                  <span class="re-sched-balance">{{ money(c.balance) }}</span>
+                </div>
+              }
+            </div>
+          }
+        </re-section>
+
+        @if (d.ageing) {
+          <re-section title="How old the arrears are"
+                      icon="hourglass_bottom"
+                      note="Arrears over ninety days rarely recover on their own.">
+            <re-facts [items]="[
+              { label: 'Current', value: money(d.ageing.current) },
+              { label: '1 to 30 days', value: money(d.ageing.days1To30) },
+              { label: '31 to 60 days', value: money(d.ageing.days31To60), tone: 'warning' },
+              { label: '61 to 90 days', value: money(d.ageing.days61To90), tone: 'warning' },
+              { label: 'Over 90 days', value: money(d.ageing.days90Plus), tone: 'danger' },
+              { label: 'Late fees outstanding', value: money(d.ageing.surchargeOutstanding) }
+            ]" [tight]="true" />
+          </re-section>
+        }
+
+        <re-section title="Other charges"
+                    icon="receipt"
+                    note="Service charge, utilities, parking and anything else recovered from the
+                          tenant alongside the rent.">
+          <re-mini-list [rows]="recoveries()"
+                        emptyMessage="Nothing beyond the rent is recovered on this tenancy." />
+        </re-section>
+      }
+
+      @case ('terms') {
+        <re-section title="Rent and escalation" icon="payments">
+          <re-facts [items]="rentTerms()" />
+        </re-section>
+
+        <re-section title="Escalation rules"
+                    icon="trending_up"
+                    note="A compounding escalation applies to the escalated rent, not the original
+                          one. Over a ten-year lease the difference is substantial.">
+          <re-mini-list [rows]="escalations()"
+                        emptyMessage="Rent is fixed for the term." />
+        </re-section>
+
+        <re-section title="What was agreed" icon="gavel">
+          <re-facts [items]="obligations()" />
+        </re-section>
+
+        @if (d.turnoverRent; as t) {
+          <re-section title="Turnover rent"
+                      icon="storefront"
+                      note="Rent geared to the tenant’s sales above a breakpoint. Whether the base
+                            rent is offset against it is the term that matters most.">
+            <re-facts [items]="[
+              { label: 'Breakpoint', value: money(t.breakpointAmount) },
+              { label: 'Rate above it', value: t.percent + '%' },
+              { label: 'Period', value: t.calculationPeriod },
+              { label: 'Base rent offset', value: t.offsetBaseRent ? 'Yes' : 'No',
+                hint: t.offsetBaseRent
+                  ? 'turnover rent is reduced by base rent already paid'
+                  : 'turnover rent is charged on top of base rent' },
+              { label: 'Audited figures required', value: t.requiresAuditedFigures ? 'Yes' : 'No' },
+              { label: 'Declaration due', value: t.declarationDueDays + ' days after each period' }
+            ]" [tight]="true" />
+          </re-section>
+        }
+      }
+
+      @case ('deposit') {
+        @if (d.deposit) {
+          <re-section title="The deposit"
+                      icon="savings"
+                      note="Protecting the money is only half of it — the prescribed information
+                            has to be served on the tenant as well, and the penalty for missing
+                            either is the same.">
+            <re-facts [items]="depositFacts()" />
+          </re-section>
+
+          @if (d.deposit.deductions?.length) {
+            <re-section title="Proposed deductions"
+                        icon="content_cut"
+                        note="Each has to be evidenced against the inventory. Fair wear and tear
+                              is not deductible, and a deduction that cannot be evidenced is one
+                              an adjudicator will refuse.">
+              <ul class="re-deductions">
+                @for (dd of d.deposit.deductions; track dd.description) {
+                  <li>
+                    <span>
+                      <strong>{{ dd.description }}</strong>
+                      <small>
+                        {{ dd.category }}
+                        @if (dd.evidenceUrl) { · evidence attached }
+                        @else { · <span class="is-bad">no evidence attached</span> }
+                        @if (dd.tenantResponse) { · tenant {{ dd.tenantResponse | lowercase }} }
+                      </small>
+                      @if (dd.adjudicatorNote) { <small>{{ dd.adjudicatorNote }}</small> }
+                    </span>
+                    <span class="re-deduction-amount">
+                      {{ money(dd.agreedAmount || dd.proposedAmount) }}
+                      @if (dd.agreedAmount && dd.agreedAmount !== dd.proposedAmount) {
+                        <small>proposed {{ money(dd.proposedAmount) }}</small>
+                      }
+                    </span>
+                  </li>
+                }
+              </ul>
+            </re-section>
+          }
+        } @else {
+          <p class="re-mini-empty">
+            No deposit is recorded on this tenancy.
+          </p>
+        }
+      }
+
+      @case ('dates') {
+        <re-section title="Critical dates"
+                    icon="event"
+                    note="Break clauses, option windows, review dates and renewal deadlines. A
+                          missed break notice commits a landlord to years of rent they had
+                          planned to escape.">
+          <re-mini-list [rows]="criticalDates()"
+                        emptyMessage="No critical dates are set on this tenancy." />
+        </re-section>
+
+        <re-section title="Options"
+                    icon="flag"
+                    note="A break or renewal option has a notice window that opens and closes. Miss
+                          the window and the option is gone for the rest of the term.">
+          <re-mini-list [rows]="options()"
+                        emptyMessage="No options are held by either party." />
+        </re-section>
+      }
+
+      @case ('condition') {
+        <re-section title="Inspections"
+                    icon="photo_camera"
+                    note="The check-in inventory is what every later deposit deduction is measured
+                          against. Without one, a deduction is very hard to defend.">
+          <re-mini-list [rows]="inspections()"
+                        emptyMessage="No inspection has been carried out. A tenancy with no check-in inventory is a deposit dispute waiting to happen." />
+        </re-section>
+
+        <re-section title="Repairs" icon="build">
+          <re-mini-list [rows]="workOrders()"
+                        emptyMessage="No repairs have been raised on this tenancy." />
+        </re-section>
+      }
+
+      @case ('compliance') {
+        <re-section title="Safety certificates"
+                    icon="verified"
+                    note="Gas, electrical, fire and energy. Serving them on the tenant matters as
+                          much as holding them — in some markets an unserved certificate voids a
+                          possession notice.">
+          <re-mini-list [rows]="certificates()"
+                        emptyMessage="No certificates are recorded against this tenancy." />
+        </re-section>
+      }
+
+      @case ('history') {
+        <re-section title="Everything that has happened"
+                    icon="history"
+                    note="Newest first. Money, status changes, documents and activity in one
+                          stream, so the story reads in order.">
+          @if (!timeline().length) {
+            <p class="re-mini-empty">Nothing has been recorded yet.</p>
+          } @else {
+            <re-timeline [items]="timeline()" />
+          }
+        </re-section>
+      }
+    }
+  }
+</re-detail-page>
+
+<re-toast [message]="toast()" (dismissed)="toast.set(null)" />

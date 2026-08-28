@@ -1,0 +1,173 @@
+<div class="page-container">
+
+  <a class="re-back" (click)="back()" tabindex="0" (keydown.enter)="back()">
+    <span class="material-symbols-outlined">arrow_back</span>The project
+  </a>
+
+  <div class="page-header">
+    <div>
+      <h2>Programme</h2>
+      <p class="subtitle">
+        @if (activities().length) {
+          {{ visible().length }} of {{ activities().length }} activities
+        } @else {
+          The build schedule, against the baseline it started from.
+        }
+      </p>
+    </div>
+
+    <div class="page-header-actions">
+      <button type="button" class="btn-secondary" [disabled]="working()" (click)="recalculate()">
+        <span class="material-symbols-outlined">route</span>Recalculate critical path
+      </button>
+      <button type="button" class="btn-primary" [disabled]="working()"
+              (click)="baselining.set(true)">
+        <span class="material-symbols-outlined">flag</span>Set baseline
+      </button>
+    </div>
+  </div>
+
+  @if (error()) {
+    <div class="alert alert-error" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <span>{{ error() }}</span>
+      <button type="button" class="btn-link" (click)="load()">Try again</button>
+    </div>
+  }
+
+  @if (loading()) {
+    <re-skeleton [rowCount]="10" [colCount]="4" />
+  } @else if (!activities().length) {
+    <re-empty icon="timeline"
+              title="No programme yet"
+              message="Add activities to the programme and they appear here as a chart, measured against whatever baseline you set." />
+  } @else {
+
+    <re-stats [items]="stats()" [compact]="true" />
+
+    <div class="re-prog-controls">
+      <label class="re-check">
+        <input type="checkbox" [ngModel]="criticalOnly()"
+               (ngModelChange)="criticalOnly.set($event)" />
+        Critical path only
+      </label>
+      <label class="re-check">
+        <input type="checkbox" [ngModel]="lateOnly()" (ngModelChange)="lateOnly.set($event)" />
+        Behind schedule only
+      </label>
+
+      <span class="re-spacer"></span>
+
+      <div class="re-prog-legend">
+        <span><i class="is-critical"></i>Critical</span>
+        <span><i class="is-late"></i>Behind</span>
+        <span><i class="is-complete"></i>Finished</span>
+        <span><i class="is-baseline"></i>Baseline</span>
+      </div>
+    </div>
+
+    @if (!visible().length) {
+      <re-empty icon="filter_alt_off"
+                [filtered]="true"
+                title="Nothing matches"
+                message="No activity fits those filters." />
+    } @else {
+      <div class="re-gantt-wrap">
+        <!-- Month ticks, so a bar can be read against a date without hovering. -->
+        <div class="re-gantt-axis">
+          <div class="re-gantt-name"></div>
+          <div class="re-gantt-track">
+            @for (t of ticks(); track t.percent) {
+              <span class="re-gantt-tick" [style.left.%]="t.percent">{{ t.label }}</span>
+            }
+          </div>
+        </div>
+
+        <div class="re-gantt">
+          @for (b of bars(); track b.activity.id) {
+            <div class="re-gantt-row"
+                 [class.is-selected]="selected()?.id === b.activity.id"
+                 tabindex="0"
+                 role="button"
+                 (click)="select(b.activity)"
+                 (keydown.enter)="select(b.activity)">
+
+              <div class="re-gantt-name" [title]="b.activity.name">
+                @if (b.activity.isCritical) {
+                  <span class="material-symbols-outlined re-gantt-flag">priority_high</span>
+                }
+                <span>
+                  <strong>{{ b.activity.name }}</strong>
+                  <small>
+                    {{ b.activity.code }}
+                    @if (b.activity.subcontractorName) { · {{ b.activity.subcontractorName }} }
+                  </small>
+                </span>
+              </div>
+
+              <div class="re-gantt-track">
+                @if (todayPercent() !== null) {
+                  <span class="re-gantt-today" [style.left.%]="todayPercent()"></span>
+                }
+
+                @if (b.baselineLeftPercent !== null) {
+                  <span class="re-gantt-baseline"
+                        [style.left.%]="b.baselineLeftPercent"
+                        [style.width.%]="b.baselineWidthPercent"></span>
+                }
+
+                @if (b.activity.isMilestone) {
+                  <span class="re-gantt-milestone"
+                        [class]="barClass(b)"
+                        [style.left.%]="b.leftPercent"
+                        [title]="b.activity.name"></span>
+                } @else {
+                  <span class="re-gantt-bar"
+                        [class]="barClass(b)"
+                        [style.left.%]="b.leftPercent"
+                        [style.width.%]="b.widthPercent">
+                    @if (b.activity.progressPercent > 0) {
+                      <span class="re-gantt-fill"
+                            [style.width.%]="b.activity.progressPercent"></span>
+                    }
+                  </span>
+                }
+              </div>
+
+              <div class="re-gantt-meta">
+                <span>{{ b.activity.progressPercent | number:'1.0-0' }}%</span>
+                @if (b.activity.varianceDays) {
+                  <small [class.is-late]="b.activity.varianceDays > 0">
+                    {{ b.activity.varianceDays > 0 ? '+' : '' }}{{ b.activity.varianceDays }}d
+                  </small>
+                } @else if (b.activity.totalFloatDays !== undefined) {
+                  <small>{{ b.activity.totalFloatDays }}d float</small>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      @if (selected(); as a) {
+        <re-section [title]="a.name"
+                    icon="timeline"
+                    [note]="a.isCritical
+                            ? 'On the critical path. Any delay here delays the whole project by the same amount.'
+                            : 'Not on the critical path. It has float, so a short delay costs nothing overall.'">
+          <re-facts [items]="selectedFacts()" [tight]="true" />
+        </re-section>
+      }
+    }
+  }
+
+  <re-confirm [open]="baselining()"
+              title="Set the baseline?"
+              message="Today's plan becomes the yardstick every future slip is measured against. The previous baseline is replaced, so a project that has slipped will appear to be on programme again until it slips further."
+              confirmLabel="Yes, baseline it"
+              tone="accent"
+              (confirmed)="setBaseline()"
+              (cancelled)="baselining.set(false)" />
+
+  <re-toast [message]="toast()" (dismissed)="toast.set(null)" />
+</div>

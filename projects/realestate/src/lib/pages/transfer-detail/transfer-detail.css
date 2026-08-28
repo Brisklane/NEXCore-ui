@@ -1,0 +1,73 @@
+/* =====================================================================
+   A transfer.
+   ===================================================================== */
+
+.re-fee-total {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 2px solid var(--border-default, #e6eaf0);
+}
+
+.re-fee-total > div { display: flex; flex-direction: column; gap: 2px; }
+
+.re-fee-total span {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-secondary, #64748b);
+}
+
+.re-fee-total strong {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.re-fee-total > div.is-bad strong { color: var(--danger, #dc2626); }
+
+/* ── Checklist ─────────────────────────────────────────────────────── */
+
+.re-checklist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+
+.re-checklist li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 2px;
+  border-bottom: 1px solid var(--border-subtle, #f1f5f9);
+}
+
+.re-checklist li:last-child { border-bottom: none; }
+
+.re-checklist .material-symbols-outlined {
+  font-size: 20px;
+  flex-shrink: 0;
+  color: var(--text-secondary, #94a3b8);
+}
+
+.re-checklist li.is-done .material-symbols-outlined { color: var(--success, #16a34a); }
+.re-checklist li.is-required:not(.is-done) .material-symbols-outlined { color: var(--danger, #dc2626); }
+
+.re-checklist li > span:nth-child(2) {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.re-checklist strong { font-size: 13.5px; font-weight: 600; color: var(--text-heading, #0f172a); }
+
+.re-checklist li.is-done strong {
+  color: var(--text-secondary, #64748b);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.re-checklist small { font-size: 12px; color: var(--text-secondary, #64748b); line-height: 1.45; }
+.re-checklist small.is-override { color: var(--warning, #b45309); font-weight: 600; }

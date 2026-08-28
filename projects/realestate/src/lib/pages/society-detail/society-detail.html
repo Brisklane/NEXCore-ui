@@ -1,0 +1,162 @@
+<re-detail-page
+  backRoute="/realestate/societies"
+  backLabel="All societies"
+  icon="location_city"
+  [title]="data()?.name ?? ''"
+  [subtitle]="data()?.projectName ?? null"
+  [reference]="data()?.code ?? null"
+  [pills]="pills()"
+  [figures]="figures()"
+  [actions]="actions()"
+  [tabs]="tabs()"
+  [activeTab]="tab()"
+  [loading]="loading()"
+  [error]="error()"
+  [notFound]="notFound()"
+  (tabChange)="tab.set($event)"
+  (action)="act($event)"
+  (retry)="load()">
+
+  @if (data(); as d) {
+
+    @if (handoverIncomplete()) {
+      <div class="alert alert-warning" role="status">
+        <span class="material-symbols-outlined">move_down</span>
+        <span>
+          This society has been handed over, but
+          @if (!d.commonAreasTransferred && !d.documentsTransferred) {
+            neither the common areas nor the documents have been transferred.
+          } @else if (!d.commonAreasTransferred) {
+            the common areas have not been transferred.
+          } @else {
+            the documents have not been transferred.
+          }
+          Until that is done the committee cannot lawfully maintain what it is billing residents
+          to maintain.
+        </span>
+      </div>
+    }
+
+    @switch (tab()) {
+
+      @case ('overview') {
+        <re-section title="Right now"
+                    icon="dashboard"
+                    note="Live figures — visitors inside, complaints open, jobs outstanding. This
+                          is what the gate and the facility office look at all day.">
+          <re-stats [items]="todayStats()" [compact]="true" />
+        </re-section>
+
+        @if (complaintBreakdown().length) {
+          <re-section title="What residents complain about"
+                      icon="report"
+                      note="By count over the last period. The largest category is usually where
+                            the maintenance budget is under-spent.">
+            <re-breakdown [slices]="complaintBreakdown()" [money]="false" />
+          </re-section>
+        }
+
+        <re-section title="The society" icon="location_city">
+          <re-facts [items]="summary()" />
+        </re-section>
+      }
+
+      @case ('money') {
+        <re-section title="This month" icon="payments">
+          <re-stats [items]="moneyStats()" [compact]="true" />
+          <re-progress [value]="collectionEfficiency()"
+                       label="Collected against billed"
+                       [tone]="collectionEfficiency() >= 85 ? 'positive'
+                               : collectionEfficiency() >= 65 ? 'warning' : 'danger'" />
+        </re-section>
+
+        @if (collectionTrend().length > 1) {
+          <re-section title="Collections over time"
+                      icon="trending_up"
+                      note="Billed against collected, month by month. A widening gap is a society
+                            heading for a cash problem well before the corpus runs down.">
+            <re-trend [points]="collectionTrend()" label="Collections over twelve months" />
+          </re-section>
+        }
+
+        <re-section title="The funds"
+                    icon="savings"
+                    note="The corpus is the fund handed across at transfer. The sinking fund is
+                          what is being set aside for major works — lifts, roofs, resurfacing.
+                          A society with neither will have to levy residents when the lift fails.">
+          <re-facts [items]="[
+            { label: 'Corpus fund', value: money(d.corpusFundBalance) },
+            { label: 'Sinking fund', value: money(d.sinkingFundBalance) },
+            { label: 'Outstanding from residents', value: money(d.outstandingTotal),
+              tone: d.outstandingTotal > 0 ? 'warning' : 'positive' },
+            { label: 'Collection efficiency', value: (d.collectionEfficiencyPercent | number:'1.0-1') + '%' }
+          ]" [tight]="true" />
+        </re-section>
+      }
+
+      @case ('charges') {
+        <re-section title="Maintenance charge schemes"
+                    icon="receipt_long"
+                    note="How each unit’s bill is worked out. Charging by area is the fairest and
+                          the commonest; a flat charge per unit is simpler but means a studio
+                          subsidises a penthouse.">
+          <re-mini-list [rows]="schemes()"
+                        emptyMessage="No charge scheme is defined, so nothing can be billed." />
+        </re-section>
+      }
+
+      @case ('amenities') {
+        <re-section title="Amenities"
+                    icon="pool"
+                    note="What residents can book, when, and what it costs. Utilisation is the
+                          number to watch — an amenity nobody books is a maintenance cost
+                          everybody pays for.">
+          <re-mini-list [rows]="amenities()"
+                        emptyMessage="No amenities have been set up for this society." />
+        </re-section>
+      }
+
+      @case ('committee') {
+        <re-section title="The committee"
+                    icon="groups"
+                    note="Who may authorise spending, and up to what. Above a member’s limit the
+                          expenditure needs the committee as a whole.">
+          <re-mini-list [rows]="committee()"
+                        emptyMessage="No committee members are recorded. Nobody can authorise spending." />
+        </re-section>
+      }
+
+      @case ('notices') {
+        <re-section title="Recent notices"
+                    icon="campaign"
+                    note="Read counts tell you whether a notice actually reached anybody. A
+                          critical notice read by twelve people out of four hundred has not been
+                          communicated.">
+          <re-mini-list [rows]="notices()"
+                        emptyMessage="No notices have been posted." />
+        </re-section>
+      }
+
+      @case ('handover') {
+        <re-section title="Handover from the developer"
+                    icon="move_down"
+                    note="Three separate transfers, and all three have to happen. Units without
+                          common areas leaves nobody responsible for the lifts; common areas
+                          without documents leaves the committee maintaining equipment whose
+                          warranties and manuals it has never seen.">
+          <re-facts [items]="handoverFacts()" />
+
+          @if (!d.isHandedOver) {
+            <p class="re-handover-note">
+              <span class="material-symbols-outlined">info</span>
+              This society is still managed by the developer. Residents are being billed and
+              served, but the committee has no legal standing until handover is complete.
+            </p>
+          }
+        </re-section>
+      }
+    }
+  }
+</re-detail-page>
+
+<re-toast [message]="toast()" (dismissed)="toast.set(null)" />

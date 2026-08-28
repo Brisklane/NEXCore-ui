@@ -1,0 +1,78 @@
+/* =====================================================================
+   A tenancy.
+   ===================================================================== */
+
+/* The rent schedule grows a paid column, with late fees stated under it
+   rather than folded into the rent. */
+.re-sched-row {
+  grid-template-columns: 34px minmax(0, 1fr) 120px 150px 120px;
+}
+
+.re-sched-paid {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #1e293b);
+  font-variant-numeric: tabular-nums;
+}
+
+.re-sched-surcharge { font-size: 11.5px; font-weight: 600; color: var(--danger, #dc2626); }
+
+/* ── Deposit deductions ────────────────────────────────────────────── */
+
+.re-deductions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.re-deductions li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 11px 2px;
+  border-bottom: 1px solid var(--border-subtle, #f1f5f9);
+}
+
+.re-deductions li:last-child { border-bottom: none; }
+
+.re-deductions li > span:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.re-deductions strong {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-heading, #0f172a);
+}
+
+.re-deductions small { font-size: 12px; color: var(--text-secondary, #64748b); line-height: 1.45; }
+.re-deductions .is-bad { color: var(--danger, #dc2626); font-weight: 600; }
+
+.re-deduction-amount {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.re-deduction-amount small { font-weight: 500; }
+
+@media (max-width: 860px) {
+  .re-sched-row { grid-template-columns: 30px 1fr auto; row-gap: 4px; }
+  .re-sched-paid, .re-sched-balance { grid-column: 2 / -1; text-align: left; }
+}

@@ -1,0 +1,212 @@
+<div class="page-container">
+
+  <div class="page-header">
+    <div>
+      <h2>Inventory</h2>
+      <p class="subtitle">
+        @if (board()) {
+          {{ board()!.projectName }} — {{ filtered().length | number }} of
+          {{ board()!.totalUnits | number }} units
+        } @else {
+          Every unit in the scheme, laid out the way the building is.
+        }
+      </p>
+    </div>
+
+    <div class="page-header-actions">
+      <re-project-picker (projectChange)="onProject()" />
+
+      <div class="re-segment" role="group" aria-label="View">
+        <button type="button" [class.is-active]="view() === 'stack'" (click)="setView('stack')">
+          <span class="material-symbols-outlined">view_week</span>Stack
+        </button>
+        <button type="button" [class.is-active]="view() === 'grid'" (click)="setView('grid')">
+          <span class="material-symbols-outlined">grid_view</span>Grid
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <re-page-help key="inventory" />
+
+  @if (error()) {
+    <div class="alert alert-error" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <span>{{ error() }}</span>
+      <button type="button" class="btn-link" (click)="load()">Try again</button>
+    </div>
+  }
+
+  @if (!loading() && board()) {
+    <re-stats [items]="stats()" [compact]="true" />
+
+    <!-- Filters. A sales desk narrows by hand while a buyer is talking, so everything is
+         one click away and nothing is hidden behind an "advanced" disclosure. -->
+    <div class="re-inv-filters">
+      <div class="re-search">
+        <span class="material-symbols-outlined">search</span>
+        <input type="search"
+               placeholder="Unit, block or buyer"
+               [ngModel]="search()"
+               (ngModelChange)="search.set($event)"
+               aria-label="Search units" />
+      </div>
+
+      @if (blocks().length > 1) {
+        <select [ngModel]="blockId()" (ngModelChange)="blockId.set($event)" aria-label="Block">
+          <option [ngValue]="null">Every block</option>
+          @for (b of blocks(); track b.id) {
+            <option [ngValue]="b.id">{{ b.name }}</option>
+          }
+        </select>
+      }
+
+      <select [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)"
+              aria-label="Status">
+        <option [ngValue]="null">Any status</option>
+        @for (o of statusOptions; track o.value) {
+          <option [ngValue]="o.value">{{ o.label }}</option>
+        }
+      </select>
+
+      <select [ngModel]="subTypeFilter()" (ngModelChange)="subTypeFilter.set($event)"
+              aria-label="Type">
+        <option [ngValue]="null">Any type</option>
+        @for (o of subTypeOptions; track o.value) {
+          <option [ngValue]="o.value">{{ o.label }}</option>
+        }
+      </select>
+
+      <select [ngModel]="bedroomsFilter()" (ngModelChange)="bedroomsFilter.set($event)"
+              aria-label="Bedrooms">
+        <option [ngValue]="null">Any beds</option>
+        @for (n of [1, 2, 3, 4, 5]; track n) {
+          <option [ngValue]="n">{{ n }} bed{{ n === 1 ? '' : 's' }}</option>
+        }
+      </select>
+
+      <select [ngModel]="facingFilter()" (ngModelChange)="facingFilter.set($event)"
+              aria-label="Facing">
+        <option [ngValue]="null">Any aspect</option>
+        @for (o of facingOptions; track o.value) {
+          <option [ngValue]="o.value">{{ o.label }}</option>
+        }
+      </select>
+
+      <label class="re-check">
+        <input type="checkbox" [ngModel]="cornerOnly()" (ngModelChange)="cornerOnly.set($event)" />
+        Corner only
+      </label>
+
+      @if (isFiltered()) {
+        <button type="button" class="btn-link re-clear" (click)="clearFilters()">
+          <span class="material-symbols-outlined">close</span>Clear
+        </button>
+      }
+    </div>
+
+    <!-- Legend. Colour is a shortcut for people who already know it, never the only signal. -->
+    <div class="re-inv-legend">
+      <span><i class="is-available"></i>Available</span>
+      <span><i class="is-held"></i>Held</span>
+      <span><i class="is-booked"></i>Booked</span>
+      <span><i class="is-sold"></i>Sold</span>
+      <span><i class="is-blocked"></i>Blocked</span>
+    </div>
+  }
+
+  @if (loading()) {
+    <re-skeleton [rowCount]="8" [colCount]="6" />
+  } @else if (!board()) {
+    <re-empty icon="domain_add"
+              title="No project selected"
+              message="Create a project, or pick one above, and its units appear here." />
+  } @else if (!filtered().length) {
+    <re-empty icon="filter_alt_off"
+              [filtered]="isFiltered()"
+              title="No units match"
+              message="Nothing in this scheme fits what you have asked for. Widen the filters and try again."
+              actionLabel="Clear the filters"
+              actionIcon="close"
+              (action)="clearFilters()" />
+  } @else {
+
+    <div class="re-inv" [class.is-grid]="view() === 'grid'">
+      @for (f of floors(); track f.key) {
+        <div class="re-inv-floor">
+          <div class="re-inv-floor-label">
+            <strong>{{ f.label }}</strong>
+            @if (f.block !== 'Units') { <span>{{ f.block }}</span> }
+            <span class="re-inv-floor-count">{{ f.units.length }}</span>
+          </div>
+
+          <div class="re-inv-units">
+            @for (u of f.units; track u.id) {
+              <button type="button"
+                      class="re-unit"
+                      [class]="statusClass(u)"
+                      [class.is-selected]="selected()?.id === u.id"
+                      [class.is-expiring]="isExpiring(u)"
+                      (click)="pick(u)"
+                      [attr.aria-label]="u.unitNumber + ', ' + statusLabel(u.status)
+                                         + ', ' + u.areaDisplay">
+                <span class="re-unit-number">{{ u.unitNumber }}</span>
+                <span class="re-unit-meta">{{ u.areaDisplay }}</span>
+                <span class="re-unit-price">{{ money(u.totalPrice) }}</span>
+                <span class="re-unit-status">{{ statusLabel(u.status) }}</span>
+
+                @if (u.holdMinutesRemaining !== undefined && u.holdMinutesRemaining > 0) {
+                  <span class="re-unit-flag">{{ remaining(u.holdMinutesRemaining) }}</span>
+                } @else if (u.isCorner) {
+                  <span class="re-unit-flag">Corner</span>
+                }
+              </button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- The unit panel. Read-only: everything that changes a unit's state has its own screen,
+       with its own confirmation and its own audit trail. -->
+  <re-drawer [open]="!!selected()"
+             [title]="selected()?.unitNumber ?? ''"
+             [subtitle]="selected() ? statusLabel(selected()!.status) : null"
+             size="md"
+             (closed)="close()">
+    @if (selected(); as u) {
+      <re-section title="The unit">
+        <re-facts [items]="selectedFacts()" [tight]="true" />
+      </re-section>
+
+      <div class="re-drawer-actions">
+        <button type="button" class="re-touch-btn" (click)="open(u)">
+          <span class="material-symbols-outlined">open_in_new</span>Open the unit
+        </button>
+
+        @if (canBook(u)) {
+          <button type="button" class="re-touch-btn is-primary" (click)="book(u)">
+            <span class="material-symbols-outlined">sell</span>Start a booking
+          </button>
+        }
+
+        @if (u.holdId) {
+          <button type="button" class="re-touch-btn is-danger" (click)="releaseHold(u)">
+            <span class="material-symbols-outlined">lock_open</span>Release the hold
+          </button>
+        }
+      </div>
+
+      @if (u.hasLitigation || u.isMortgaged || u.isLandownerShare) {
+        <p class="re-inv-warning">
+          <span class="material-symbols-outlined">gpp_maybe</span>
+          This unit carries an encumbrance. Sales approval is required before a booking on it will
+          be accepted, and the reason is recorded against the file.
+        </p>
+      }
+    }
+  </re-drawer>
+
+  <re-toast [message]="toast()" (dismissed)="toast.set(null)" />
+</div>

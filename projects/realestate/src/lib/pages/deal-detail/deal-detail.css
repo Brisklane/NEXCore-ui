@@ -1,0 +1,104 @@
+/* =====================================================================
+   A deal.
+   ===================================================================== */
+
+.re-steps-list {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.re-steps-list li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 110px;
+  align-items: start;
+  gap: 11px;
+  padding: 10px 2px;
+  border-bottom: 1px solid var(--border-subtle, #f1f5f9);
+}
+
+.re-steps-list li:last-child { border-bottom: none; }
+
+.re-steps-list .material-symbols-outlined {
+  font-size: 20px;
+  color: var(--text-secondary, #94a3b8);
+}
+
+.re-steps-list li.is-done .material-symbols-outlined { color: var(--success, #16a34a); }
+.re-steps-list li.is-overdue .material-symbols-outlined { color: var(--danger, #dc2626); }
+.re-steps-list li.is-blocking .material-symbols-outlined { color: var(--danger, #dc2626); }
+.re-steps-list li.is-blocking { background: var(--danger-soft, #fef2f2); }
+
+.re-step-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+.re-step-body strong {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-heading, #0f172a);
+}
+
+.re-steps-list li.is-done .re-step-body strong {
+  color: var(--text-secondary, #64748b);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.re-step-body span { font-size: 12px; color: var(--text-secondary, #64748b); }
+
+.re-step-when {
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.re-step-when .is-late { color: var(--danger, #dc2626); font-weight: 600; }
+
+.re-chain-target {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 14px 0 0;
+  padding: 11px 13px;
+  border-radius: 10px;
+  background: var(--bg-muted, #f1f5f9);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-secondary, #64748b);
+  max-width: 82ch;
+}
+
+.re-chain-target .material-symbols-outlined { font-size: 18px; flex-shrink: 0; }
+
+/* ── The calculation trace ─────────────────────────────────────────── */
+
+.re-trace {
+  margin: 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-primary, #1e293b);
+  font-variant-numeric: tabular-nums;
+}
+
+.re-trace li { padding-left: 4px; }
+.re-trace li::marker { color: var(--text-secondary, #94a3b8); font-weight: 600; }
+
+.re-prose {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--text-primary, #1e293b);
+  white-space: pre-wrap;
+  max-width: 85ch;
+}
+
+@media (max-width: 720px) {
+  .re-steps-list li { grid-template-columns: 22px 1fr; row-gap: 4px; }
+  .re-step-when { grid-column: 2; text-align: left; }
+}

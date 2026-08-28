@@ -1,0 +1,233 @@
+<re-detail-page
+  backRoute="/realestate/properties"
+  backLabel="All properties"
+  icon="home_work"
+  [title]="data()?.name || data()?.address?.oneLine || ''"
+  [subtitle]="data()?.areaPath ?? null"
+  [reference]="data()?.reference ?? null"
+  [photoUrl]="hero()?.thumbnailUrl ?? hero()?.url ?? null"
+  [pills]="pills()"
+  [figures]="figures()"
+  [actions]="actions()"
+  [tabs]="tabs()"
+  [activeTab]="tab()"
+  [loading]="loading()"
+  [error]="error()"
+  [notFound]="notFound()"
+  (tabChange)="tab.set($event)"
+  (action)="act($event)"
+  (retry)="load()">
+
+  @if (data(); as d) {
+
+    <!-- An encumbrance that blocks a transaction is a fact about the whole record,
+         not a detail on a tab, so it is stated once at the top and nowhere else. -->
+    @if (blockingEncumbrances().length) {
+      <div class="alert alert-error" role="alert">
+        <span class="material-symbols-outlined">block</span>
+        <span>
+          This property cannot be sold or transferred while
+          {{ blockingEncumbrances().length === 1
+             ? 'an encumbrance is' : blockingEncumbrances().length + ' encumbrances are' }}
+          outstanding. See the Title tab for what has to be cleared.
+        </span>
+      </div>
+    }
+
+    @switch (tab()) {
+
+      @case ('overview') {
+        <div class="re-grid">
+          <re-section title="What it is" icon="home">
+            <re-facts [items]="identity()" />
+          </re-section>
+
+          @if (measurements().length) {
+            <re-section title="Measurements"
+                        icon="straighten"
+                        note="Areas are stored in square feet and shown in your chosen unit.
+                              Where a loading factor is recorded, saleable area is carpet area
+                              plus the share of common space you are selling.">
+              <re-facts [items]="measurements()" [tight]="true" />
+            </re-section>
+          }
+        </div>
+
+        @if (accommodation().length) {
+          <re-section title="Accommodation" icon="king_bed">
+            <re-facts [items]="accommodation()" [tight]="true" />
+          </re-section>
+        }
+
+        @if (moneyFacts().length) {
+          <re-section title="Money" icon="payments">
+            <re-facts [items]="moneyFacts()" />
+          </re-section>
+        }
+
+        @if (highlights().length || otherFeatures().length) {
+          <re-section title="Features" icon="star">
+            @if (highlights().length) {
+              <div class="re-features is-highlight">
+                @for (f of highlights(); track f.featureKey) {
+                  <re-pill tone="accent" icon="star">{{ f.label ?? f.featureKey }}</re-pill>
+                }
+              </div>
+            }
+            @if (otherFeatures().length) {
+              <div class="re-features">
+                @for (f of otherFeatures(); track f.featureKey) {
+                  <re-pill>{{ f.label ?? f.featureKey }}{{ f.value ? ': ' + f.value : '' }}</re-pill>
+                }
+              </div>
+            }
+          </re-section>
+        }
+
+        @if (d.currentTenantName || d.currentBuyerName) {
+          <re-section title="Who is in it" icon="person">
+            <re-facts [items]="[
+              { label: 'Tenant', value: d.currentTenantName },
+              { label: 'Buyer', value: d.currentBuyerName },
+              { label: 'Outstanding', value: money(d.outstandingDues),
+                tone: d.outstandingDues > 0 ? 'danger' : 'positive' }
+            ]" />
+          </re-section>
+        }
+
+        @if (d.notes) {
+          <re-section title="Notes" icon="sticky_note_2">
+            <p class="re-notes">{{ d.notes }}</p>
+          </re-section>
+        }
+      }
+
+      @case ('title') {
+        <re-section title="Current owners"
+                    icon="badge"
+                    note="Shares must add to 100%. Where they do not, the register is wrong and a
+                          transfer will be refused.">
+          <re-mini-list [rows]="owners()"
+                        emptyMessage="No owner is recorded against this property yet." />
+        </re-section>
+
+        <re-section title="Encumbrances"
+                    icon="lock"
+                    note="A charge, a lien, a court order or an unpaid due. Anything marked as
+                          blocking prevents a sale until it is cleared.">
+          <re-mini-list [rows]="encumbrances()"
+                        emptyMessage="Nothing is registered against this property. The title is clear." />
+        </re-section>
+
+        <re-section title="Chain of ownership"
+                    icon="history"
+                    note="Every transfer this property has been through, in order. Gaps in the
+                          chain are the commonest reason a title search fails.">
+          <re-mini-list [rows]="ownershipHistory()"
+                        emptyMessage="No earlier owners are recorded." />
+        </re-section>
+      }
+
+      @case ('media') {
+        @if (!d.media.length) {
+          <re-section title="Photographs"
+                      note="A listing without photographs gets a fraction of the enquiries of one
+                            with them. This is usually the highest-value thing left undone.">
+            <p class="re-mini-empty">No photographs have been uploaded.</p>
+          </re-section>
+        } @else {
+          <re-section title="Photographs" [note]="d.media.length + ' images and files.'" [flush]="true">
+            <div class="re-gallery">
+              @for (m of d.media; track m.id; let i = $index) {
+                <figure class="re-gallery-item"
+                        [class.is-hero]="m.isHero"
+                        [class.is-current]="i === heroIndex()">
+                  <img [src]="m.thumbnailUrl ?? m.url"
+                       [alt]="m.caption ?? 'Photograph of the property'"
+                       loading="lazy"
+                       (click)="heroIndex.set(i)" />
+                  <figcaption>
+                    <span>{{ m.caption ?? m.roomTag ?? 'Untitled' }}</span>
+                    @if (m.isHero) { <re-pill tone="accent">Main</re-pill> }
+                    @if (m.excludeFromPortals) { <re-pill tone="warning">Not on portals</re-pill> }
+                  </figcaption>
+                </figure>
+              }
+            </div>
+          </re-section>
+        }
+      }
+
+      @case ('listings') {
+        <re-section title="Listings"
+                    icon="storefront"
+                    note="Every time this property has been put on the market, current and past.">
+          @if (!d.listings.length) {
+            <p class="re-mini-empty">
+              This property has never been listed. It is in the register, not on the market.
+            </p>
+          } @else {
+            <div class="re-rows">
+              @for (l of d.listings; track l.id) {
+                <button type="button" class="re-row" (click)="openListing(l.id)">
+                  <div class="re-row-main">
+                    <span class="re-row-title">{{ l.reference }}</span>
+                    <span class="re-row-sub">
+                      {{ l.headline ?? l.addressOneLine }}
+                      @if (l.daysOnMarket) { · {{ l.daysOnMarket }} days on market }
+                    </span>
+                  </div>
+                  <span class="re-row-figure">
+                    <span class="re-row-figure-value">
+                      {{ l.askingPrice ? money(l.askingPrice) : 'On application' }}
+                    </span>
+                    <span class="re-row-figure-label">
+                      {{ l.enquiryCount }} enquiries · {{ l.viewingCount }} viewings
+                    </span>
+                  </span>
+                  <span class="material-symbols-outlined re-row-go">chevron_right</span>
+                </button>
+              }
+            </div>
+          }
+        </re-section>
+      }
+
+      @case ('documents') {
+        <re-section title="Documents"
+                    icon="folder"
+                    note="Title deeds, mutations, approvals and anything else attached to this
+                          property. Expired documents are flagged rather than hidden.">
+          <re-mini-list [rows]="documents()"
+                        emptyMessage="No documents have been attached." />
+        </re-section>
+      }
+
+      @case ('compliance') {
+        <re-section title="Certificates"
+                    icon="verified"
+                    note="Gas, electrical, fire, lift and energy certificates. In most
+                          jurisdictions letting a property without a current certificate is an
+                          offence, so an expired one is shown in red rather than filed away.">
+          <re-mini-list [rows]="certificates()"
+                        emptyMessage="No certificates are recorded against this property." />
+        </re-section>
+      }
+
+      @case ('history') {
+        <re-section title="Everything that has happened"
+                    icon="history"
+                    note="Newest first. Money, status changes, documents and activity in one
+                          stream, so the story reads in order.">
+          @if (!timeline().length) {
+            <p class="re-mini-empty">Nothing has happened to this property yet.</p>
+          } @else {
+            <re-timeline [items]="timeline()" />
+          }
+        </re-section>
+      }
+    }
+  }
+</re-detail-page>
+
+<re-toast [message]="toast()" (dismissed)="toast.set(null)" />

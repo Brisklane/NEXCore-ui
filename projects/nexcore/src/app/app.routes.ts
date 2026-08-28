@@ -82,6 +82,11 @@ export const routes: Routes = [
         canMatch: [appInstalledGuard],
         loadChildren: () => import('@nexcore/distribution').then(m => m.distributionRoutes),
       },
+      {
+        path: 'realestate',
+        canMatch: [appInstalledGuard],
+        loadChildren: () => import('@nexcore/realestate').then(m => m.realEstateRoutes),
+      },
 
       /**
        * POS Back Office.

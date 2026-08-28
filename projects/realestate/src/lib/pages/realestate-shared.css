@@ -1,0 +1,2078 @@
+/* =====================================================================
+   Shared Real Estate styles
+   ---------------------------------------------------------------------
+   Imported by every page in this library. Only tokens from the platform
+   design system are used — no hard-coded colours — so all five themes
+   (Light, Slate, Carbon, Obsidian, Sepia) work without a second stylesheet.
+
+   Site-facing screens (the gate, snagging, the meter round, the site
+   diary) are touch-first: 44px minimum hit targets and nothing that
+   depends on hover, because half of them are used on a tablet in
+   daylight with one hand.
+   ===================================================================== */
+
+/* ── Project switcher, shown on every Real Estate screen ─────────── */
+.re-context {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.re-context label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.re-context select {
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong, #cbd5e1);
+  background: var(--input-bg, #fff);
+  color: var(--input-text, #1e293b);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.re-context select:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-color: var(--accent, #2b7fff);
+}
+
+/* ── Segmented control ──────────────────────────────────────────────── */
+.re-segment {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border-radius: 12px;
+  background: var(--bg-muted, #f1f5f9);
+  border: 1px solid var(--border-default, #e6eaf0);
+}
+
+.re-segment button {
+  min-height: 38px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-secondary, #64748b);
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transition: background 0.14s ease, color 0.14s ease;
+  white-space: nowrap;
+}
+
+.re-segment button:hover:not(.is-active) { color: var(--text-heading, #0f172a); }
+
+.re-segment button.is-active {
+  background: var(--bg-surface, #fff);
+  color: var(--accent, #2b7fff);
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(15, 23, 42, 0.08));
+}
+
+.re-segment button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.re-segment .material-symbols-outlined { font-size: 18px; }
+
+/* ── Stat strip ─────────────────────────────────────────────────────── */
+.re-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.re-stat {
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-default, #e6eaf0);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.re-stat::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--re-accent, var(--accent, #2b7fff));
+}
+
+.re-stat-label {
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted, #94a3b8);
+}
+
+.re-stat-value {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.re-stat-foot,
+.re-stat-meta { font-size: 11.5px; color: var(--text-muted, #94a3b8); }
+.re-stat-foot strong,
+.re-stat-meta strong { color: var(--re-accent, var(--accent, #2b7fff)); font-weight: 700; }
+
+.re-stat.tone-brand   { --re-accent: var(--accent, #2b7fff); }
+.re-stat.tone-success { --re-accent: var(--success, #16a34a); }
+.re-stat.tone-warning { --re-accent: var(--warning, #f59e0b); }
+.re-stat.tone-danger  { --re-accent: var(--danger, #ef4444); }
+.re-stat.tone-violet  { --re-accent: var(--brand-violet, #7c5cff); }
+.re-stat.tone-cyan    { --re-accent: var(--brand-cyan, #22c7e6); }
+
+/* ── Pills ──────────────────────────────────────────────────────────── */
+.re-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.re-pill.tone-neutral { background: var(--neutral-soft, #f1f5f9); color: var(--neutral-text, #64748b); border-color: var(--neutral-border, #e2e8f0); }
+.re-pill.tone-success { background: var(--success-soft, #dcfce7); color: var(--success-text, #15803d); border-color: var(--success-border, #bbf7d0); }
+.re-pill.tone-warning { background: var(--warning-soft, #fef3c7); color: var(--warning-text, #92400e); border-color: var(--warning-border, #fde68a); }
+.re-pill.tone-danger  { background: var(--danger-soft, #fef2f2);  color: var(--danger-text, #b91c1c);  border-color: var(--danger-border, #fecaca); }
+.re-pill.tone-info    { background: var(--info-soft, #dbeafe);    color: var(--info-text, #1d4ed8);    border-color: var(--info-border, #bfdbfe); }
+.re-pill.tone-violet  { background: var(--violet-soft, #ede9fe);  color: var(--violet-text, #6d28d9);  border-color: var(--violet-border, #ddd6fe); }
+
+/* ── Empty state ────────────────────────────────────────────────────── */
+.re-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 60px 24px;
+  text-align: center;
+}
+
+.re-empty-icon {
+  width: 62px;
+  height: 62px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft, rgba(43, 127, 255, 0.1));
+  color: var(--accent, #2b7fff);
+}
+
+.re-empty-icon .material-symbols-outlined { font-size: 30px; }
+.re-empty-title { font-size: 15.5px; font-weight: 750; color: var(--text-heading, #0f172a); }
+.re-empty-text { font-size: 13px; color: var(--text-muted, #94a3b8); max-width: 380px; line-height: 1.55; }
+
+/* ── Cards ──────────────────────────────────────────────────────────── */
+.re-card {
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-default, #e6eaf0);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.re-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-light, #eef1f5);
+  flex-wrap: wrap;
+}
+
+.re-card-title {
+  font-size: 14.5px;
+  font-weight: 750;
+  color: var(--text-heading, #0f172a);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.re-card-title .material-symbols-outlined { font-size: 19px; color: var(--text-secondary, #64748b); }
+.re-card-body { padding: 16px 18px; }
+.re-card-body.is-flush { padding: 0; }
+
+/* ── Money ──────────────────────────────────────────────────────────── */
+.re-money { font-variant-numeric: tabular-nums; font-weight: 650; }
+.re-money.is-total { font-size: 20px; font-weight: 800; color: var(--text-heading, #0f172a); }
+.re-money.is-negative { color: var(--danger, #ef4444); }
+
+/* ── Touch-friendly buttons for operational screens ─────────────────── */
+.re-touch-btn {
+  min-height: 46px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  border: 1px solid var(--border-strong, #cbd5e1);
+  background: var(--bg-surface, #fff);
+  color: var(--text-heading, #0f172a);
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.13s ease, border-color 0.13s ease, transform 0.08s ease;
+}
+
+.re-touch-btn:hover:not(:disabled) { background: var(--bg-subtle, #f8fafc); border-color: var(--accent, #2b7fff); }
+.re-touch-btn:active:not(:disabled) { transform: translateY(1px); }
+.re-touch-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.re-touch-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.re-touch-btn.is-primary {
+  background: var(--accent, #2b7fff);
+  border-color: transparent;
+  color: var(--accent-contrast, #fff);
+  box-shadow: 0 4px 12px rgba(43, 127, 255, 0.26);
+}
+
+.re-touch-btn.is-primary:hover:not(:disabled) { filter: brightness(1.06); background: var(--accent, #2b7fff); }
+
+.re-touch-btn.is-success {
+  background: var(--success, #16a34a);
+  border-color: transparent;
+  color: #fff;
+}
+
+.re-touch-btn.is-danger {
+  background: var(--danger, #ef4444);
+  border-color: transparent;
+  color: #fff;
+}
+
+.re-touch-btn .material-symbols-outlined { font-size: 20px; }
+
+/* ── Modal ──────────────────────────────────────────────────────────── */
+.re-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: var(--bg-overlay, rgba(15, 23, 42, 0.45));
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  backdrop-filter: blur(2px);
+}
+
+.re-modal {
+  width: min(680px, 100%);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elevated, #fff);
+  border: 1px solid var(--border-default, #e6eaf0);
+  border-radius: 18px;
+  box-shadow: var(--shadow-lg, 0 24px 60px rgba(15, 23, 42, 0.22));
+  overflow: hidden;
+}
+
+.re-modal.is-wide { width: min(1000px, 100%); }
+.re-modal.is-narrow { width: min(440px, 100%); }
+
+.re-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-light, #eef1f5);
+}
+
+.re-modal-title {
+  font-size: 16px;
+  font-weight: 780;
+  letter-spacing: -0.01em;
+  color: var(--text-heading, #0f172a);
+}
+
+.re-modal-sub { font-size: 12.5px; color: var(--text-muted, #94a3b8); margin-top: 2px; }
+.re-modal-body { padding: 18px 20px; overflow-y: auto; flex: 1; }
+
+.re-modal-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border-light, #eef1f5);
+  background: var(--bg-subtle, #f8fafc);
+  flex-wrap: wrap;
+}
+
+.re-modal-foot .re-foot-spacer { flex: 1; }
+
+.re-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted, #94a3b8);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.re-close:hover { background: var(--bg-muted, #f1f5f9); color: var(--text-heading, #0f172a); }
+.re-close:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* ── Form grid ──────────────────────────────────────────────────────── */
+.re-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.re-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.re-field.is-full { grid-column: 1 / -1; }
+
+/* Pages write the caption as a <span> inside the <label> — nesting a second <label> would be
+   invalid markup — so both spellings carry the caption styling. */
+.re-field > label,
+.re-field > span {
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--input-label, #334155);
+}
+
+.re-field input,
+.re-field select,
+.re-field textarea {
+  min-height: 40px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--input-border, #cbd5e1);
+  background: var(--input-bg, #fff);
+  color: var(--input-text, #1e293b);
+  font-size: 13.5px;
+  font-family: inherit;
+  width: 100%;
+}
+
+.re-field textarea { min-height: 78px; resize: vertical; }
+
+.re-field input:focus,
+.re-field select:focus,
+.re-field textarea:focus {
+  outline: none;
+  border-color: var(--input-border-focus, #2b7fff);
+  box-shadow: 0 0 0 3px var(--input-ring, rgba(43, 127, 255, 0.15));
+}
+
+.re-field .re-hint { font-size: 11.5px; color: var(--input-hint, #94a3b8); line-height: 1.45; }
+
+/* An invalid field is marked by a red border AND the message underneath — the colour alone
+   would be invisible to anyone who cannot separate red from grey. */
+.re-field input.is-invalid,
+.re-field select.is-invalid,
+.re-field textarea.is-invalid {
+  border-color: var(--input-error-border, #ef4444);
+  background: var(--input-error-bg, #fff6f6);
+}
+
+.re-field input.is-invalid:focus,
+.re-field select.is-invalid:focus,
+.re-field textarea.is-invalid:focus {
+  border-color: var(--input-error-border, #ef4444);
+  box-shadow: 0 0 0 3px var(--input-error-ring, rgba(239, 68, 68, 0.15));
+}
+
+.re-check {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  color: var(--text-primary, #1e293b);
+  cursor: pointer;
+  padding: 7px 0;
+  min-height: 36px;
+}
+
+.re-check input { width: 17px; height: 17px; min-height: 0; accent-color: var(--accent, #2b7fff); cursor: pointer; }
+
+/* ── Toolbar ────────────────────────────────────────────────────────── */
+.re-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.re-toolbar .re-spacer { flex: 1; }
+
+.re-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1 1 220px;
+  max-width: 340px;
+}
+
+.re-search .material-symbols-outlined {
+  position: absolute;
+  left: 11px;
+  font-size: 19px;
+  color: var(--text-muted, #94a3b8);
+  pointer-events: none;
+}
+
+.re-search input {
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 12px 9px 38px;
+  border-radius: 10px;
+  border: 1px solid var(--input-border, #cbd5e1);
+  background: var(--input-bg, #fff);
+  color: var(--input-text, #1e293b);
+  font-size: 13.5px;
+}
+
+.re-search input:focus {
+  outline: none;
+  border-color: var(--accent, #2b7fff);
+  box-shadow: 0 0 0 3px var(--input-ring, rgba(43, 127, 255, 0.15));
+}
+
+/* ── Table ──────────────────────────────────────────────────────────── */
+.re-table-wrap {
+  border: 1px solid var(--border-default, #e6eaf0);
+  border-radius: 14px;
+  overflow: auto;
+  background: var(--bg-surface, #fff);
+}
+
+.re-table { width: 100%; border-collapse: collapse; min-width: 560px; }
+
+.re-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 11px 14px;
+  text-align: left;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--table-head-text, #64748b);
+  background: var(--table-head-bg, #f8fafc);
+  border-bottom: 1px solid var(--border-default, #e6eaf0);
+  white-space: nowrap;
+}
+
+.re-table tbody td {
+  padding: 11px 14px;
+  font-size: 13.5px;
+  color: var(--text-primary, #1e293b);
+  border-bottom: 1px solid var(--border-light, #eef1f5);
+  vertical-align: middle;
+}
+
+.re-table tbody tr:last-child td { border-bottom: none; }
+.re-table tbody tr:hover { background: color-mix(in srgb, var(--accent, #2b7fff) 4%, transparent); }
+.re-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.re-table .strong { font-weight: 700; color: var(--text-heading, #0f172a); }
+.re-table .muted { color: var(--text-muted, #94a3b8); }
+.re-table .actions { text-align: right; white-space: nowrap; }
+
+.re-icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary, #64748b);
+  cursor: pointer;
+  display: inline-grid;
+  place-items: center;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.re-icon-btn .material-symbols-outlined { font-size: 18px; }
+.re-icon-btn:hover { background: var(--accent-soft, rgba(43, 127, 255, 0.1)); color: var(--accent, #2b7fff); }
+.re-icon-btn.is-danger:hover { background: var(--danger-soft, #fef2f2); color: var(--danger, #ef4444); }
+.re-icon-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* ── Skeleton ───────────────────────────────────────────────────────── */
+.re-skeleton {
+  border-radius: 10px;
+  background: linear-gradient(
+    90deg,
+    var(--bg-muted, #f1f5f9) 25%,
+    var(--bg-inset, #e9eef5) 37%,
+    var(--bg-muted, #f1f5f9) 63%
+  );
+  background-size: 400% 100%;
+  animation: re-shimmer 1.3s ease-in-out infinite;
+}
+
+@keyframes re-shimmer {
+  from { background-position: 100% 50%; }
+  to { background-position: 0 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .re-skeleton { animation: none; }
+}
+
+/* ── Medical flag ───────────────────────────────────────────────────
+   Shown beside a name on a class roster or a PT diary. Deliberately
+   loud: an instructor needs to see it before the session, not after. */
+.re-medical {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--danger-soft, #fef2f2);
+  color: var(--danger-text, #b91c1c);
+  border: 1px solid var(--danger-border, #fecaca);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.re-medical .material-symbols-outlined { font-size: 14px; }
+
+/* ── Member tag ─────────────────────────────────────────────────────
+   Free-form labels a project puts on a member: "corporate", "referrer",
+   "PT client". Quieter than a medical flag, on purpose.             */
+.re-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 750;
+  letter-spacing: 0.03em;
+  background: var(--success-soft, #dcfce7);
+  color: var(--success-text, #15803d);
+}
+
+.re-tag.is-spice { background: var(--warning-soft, #fef3c7); color: var(--warning-text, #92400e); }
+.re-tag.is-alcohol { background: var(--violet-soft, #ede9fe); color: var(--violet-text, #6d28d9); }
+
+/* =====================================================================
+   Real Estate-specific patterns
+   ---------------------------------------------------------------------
+   Everything below exists because a gym screen has to answer questions a
+   restaurant screen never asks: is this person allowed in, are they about
+   to leave, and is this class going to fill.
+   ===================================================================== */
+
+/* ── Member status pill ─────────────────────────────────────────────
+   Status is never colour alone. Every pill carries its own word, because
+   a receptionist who is colour-blind still has to tell "Active" from
+   "In arrears" at a glance, and both are green-ish in some themes.      */
+.re-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.re-status::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.re-status.is-active {
+  color: var(--success-text, #15803d);
+  background: var(--success-bg, #dcfce7);
+  border-color: var(--success-border, rgba(21, 128, 61, 0.2));
+}
+
+.re-status.is-trial {
+  color: var(--info-text, #1d4ed8);
+  background: var(--info-bg, #dbeafe);
+  border-color: var(--info-border, rgba(29, 78, 216, 0.2));
+}
+
+.re-status.is-frozen {
+  color: var(--text-secondary, #64748b);
+  background: var(--bg-muted, #f1f5f9);
+  border-color: var(--border-default, #e6eaf0);
+}
+
+.re-status.is-arrears {
+  color: var(--warning-text, #b45309);
+  background: var(--warning-bg, #fef3c7);
+  border-color: var(--warning-border, rgba(180, 83, 9, 0.2));
+}
+
+.re-status.is-blocked {
+  color: var(--danger-text, #b91c1c);
+  background: var(--danger-bg, #fee2e2);
+  border-color: var(--danger-border, rgba(185, 28, 28, 0.25));
+}
+
+/* ── Risk band ──────────────────────────────────────────────────────
+   Four bands, ordered. Deliberately the same shape as the status pill so
+   the two read as the same kind of fact about a member.                 */
+.re-risk { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700; }
+.re-risk-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.re-risk.is-healthy  { color: var(--success-text, #15803d); }
+.re-risk.is-watch    { color: var(--info-text, #1d4ed8); }
+.re-risk.is-atrisk   { color: var(--warning-text, #b45309); }
+.re-risk.is-critical { color: var(--danger-text, #b91c1c); }
+.re-risk.is-healthy  .re-risk-dot { background: var(--success, #16a34a); }
+.re-risk.is-watch    .re-risk-dot { background: var(--info, #3b82f6); }
+.re-risk.is-atrisk   .re-risk-dot { background: var(--warning, #f59e0b); }
+.re-risk.is-critical .re-risk-dot { background: var(--danger, #dc2626); }
+
+/* ── Access decision banner ─────────────────────────────────────────
+   The biggest, plainest thing on the front desk. It has to be readable
+   from a metre away, at an angle, by somebody mid-conversation.         */
+.re-decision {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  border-radius: 16px;
+  border: 2px solid transparent;
+  min-height: 88px;
+}
+
+.re-decision .material-symbols-outlined { font-size: 40px; flex-shrink: 0; }
+
+.re-decision-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.re-decision-reason {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 500;
+  max-width: 62ch;
+}
+
+.re-decision.is-allowed {
+  color: var(--success-text, #15803d);
+  background: var(--success-bg, #dcfce7);
+  border-color: var(--success-border, rgba(21, 128, 61, 0.3));
+}
+
+.re-decision.is-warned {
+  color: var(--warning-text, #b45309);
+  background: var(--warning-bg, #fef3c7);
+  border-color: var(--warning-border, rgba(180, 83, 9, 0.3));
+}
+
+.re-decision.is-denied {
+  color: var(--danger-text, #b91c1c);
+  background: var(--danger-bg, #fee2e2);
+  border-color: var(--danger-border, rgba(185, 28, 28, 0.35));
+}
+
+/* ── Occupancy dial ─────────────────────────────────────────────────
+   A count plus a bar. The number is the fact; the bar is the feel.      */
+.re-occupancy { display: flex; flex-direction: column; gap: 8px; }
+
+.re-occupancy-figure { display: flex; align-items: baseline; gap: 8px; }
+
+.re-occupancy-now {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.re-occupancy-cap {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+  font-variant-numeric: tabular-nums;
+}
+
+.re-occupancy-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--bg-muted, #f1f5f9);
+  overflow: hidden;
+}
+
+.re-occupancy-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--success, #16a34a);
+  transition: width 0.4s ease, background 0.3s ease;
+}
+
+.re-occupancy-fill.is-busy { background: var(--warning, #f59e0b); }
+.re-occupancy-fill.is-full { background: var(--danger, #dc2626); }
+
+/* ── Timetable grid ─────────────────────────────────────────────────
+   Seven columns on a desk, one scrolling column on a phone.             */
+.re-timetable {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(148px, 1fr));
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+
+.re-timetable-day { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+
+.re-timetable-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: var(--bg-muted, #f1f5f9);
+  border: 1px solid var(--border-default, #e6eaf0);
+  text-align: center;
+}
+
+.re-timetable-head.is-today {
+  background: var(--accent-soft, rgba(43, 127, 255, 0.1));
+  border-color: var(--accent-border, rgba(43, 127, 255, 0.3));
+}
+
+.re-timetable-dayname {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary, #64748b);
+}
+
+.re-timetable-date {
+  display: block;
+  margin-top: 2px;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.re-timetable-empty {
+  padding: 14px 10px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted, #94a3b8);
+  border: 1px dashed var(--border-default, #e6eaf0);
+  border-radius: 10px;
+}
+
+/* ── Class card ─────────────────────────────────────────────────────
+   Fill is shown as a bar and as "14/20", because "nearly full" means
+   different things to a manager and to a member trying to book.         */
+.re-class {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 11px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  border-left: 4px solid var(--accent, #2b7fff);
+  background: var(--bg-surface, #fff);
+  min-height: 44px;
+  text-align: left;
+  cursor: pointer;
+  transition: box-shadow 0.14s ease, transform 0.14s ease;
+}
+
+.re-class:hover { box-shadow: var(--shadow-md, 0 4px 12px rgba(15, 23, 42, 0.1)); }
+.re-class:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.re-class:active { transform: translateY(1px); }
+
+.re-class.is-cancelled { opacity: 0.55; border-left-color: var(--danger, #dc2626); }
+.re-class.is-cancelled .re-class-name { text-decoration: line-through; }
+.re-class.is-booked { border-left-width: 6px; background: var(--accent-soft, rgba(43, 127, 255, 0.06)); }
+
+.re-class-time {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary, #64748b);
+  font-variant-numeric: tabular-nums;
+}
+
+.re-class-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+  line-height: 1.3;
+}
+
+.re-class-meta { font-size: 11.5px; color: var(--text-muted, #94a3b8); line-height: 1.4; }
+
+.re-class-fill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-secondary, #64748b);
+  font-variant-numeric: tabular-nums;
+}
+
+.re-class-fill-bar {
+  flex: 1;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--bg-muted, #f1f5f9);
+  overflow: hidden;
+}
+
+.re-class-fill-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent, #2b7fff);
+}
+
+.re-class-fill.is-full { color: var(--danger-text, #b91c1c); }
+.re-class-fill.is-full .re-class-fill-bar span { background: var(--danger, #dc2626); }
+.re-class-fill.is-quiet { color: var(--warning-text, #b45309); }
+.re-class-fill.is-quiet .re-class-fill-bar span { background: var(--warning, #f59e0b); }
+
+/* ── Spot map ───────────────────────────────────────────────────────
+   Bike numbers, mat positions, rig stations. Laid out the way the room
+   actually is, so the number told at the desk matches the floor.        */
+.re-spots { display: grid; gap: 8px; justify-content: center; }
+
+.re-spot {
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong, #cbd5e1);
+  background: var(--bg-surface, #fff);
+  color: var(--text-primary, #1e293b);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+
+.re-spot:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.re-spot.is-taken {
+  background: var(--accent, #2b7fff);
+  border-color: var(--accent, #2b7fff);
+  color: #fff;
+  cursor: not-allowed;
+}
+
+.re-spot.is-mine {
+  background: var(--success, #16a34a);
+  border-color: var(--success, #16a34a);
+  color: #fff;
+}
+
+.re-spot.is-out {
+  background: var(--bg-muted, #f1f5f9);
+  color: var(--text-muted, #94a3b8);
+  border-style: dashed;
+  cursor: not-allowed;
+}
+
+/* ── Attendance heat map ────────────────────────────────────────────
+   Intensity is carried by opacity over one hue, and every cell has a
+   title, so the map is still usable without colour perception.          */
+.re-heat {
+  display: grid;
+  grid-template-columns: 46px repeat(24, minmax(20px, 1fr));
+  gap: 2px;
+  overflow-x: auto;
+}
+
+.re-heat-cell {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  background: var(--accent, #2b7fff);
+  min-height: 20px;
+}
+
+.re-heat-label {
+  display: flex;
+  align-items: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-secondary, #64748b);
+  text-transform: uppercase;
+}
+
+/* ── Explained figure ───────────────────────────────────────────────
+   Every costly action — a freeze, a plan change, a cancellation — shows
+   its arithmetic and then a sentence. The sentence is what gets read out
+   to the member, so it is styled to be read, not skimmed.               */
+.re-explain {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--accent-soft, rgba(43, 127, 255, 0.07));
+  border: 1px solid var(--accent-border, rgba(43, 127, 255, 0.22));
+}
+
+.re-explain-lines { display: flex; flex-direction: column; gap: 6px; margin-bottom: 11px; }
+
+.re-explain-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+}
+
+.re-explain-line strong {
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.re-explain-line.is-total {
+  padding-top: 8px;
+  border-top: 1px solid var(--accent-border, rgba(43, 127, 255, 0.22));
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+}
+
+.re-explain-text {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-primary, #1e293b);
+  max-width: 76ch;
+}
+
+/* ── Sensitive-data notice ──────────────────────────────────────────
+   Shown above anything medical. Not decoration: staff should know that
+   opening this screen is recorded against their name.                   */
+.re-sensitive {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--warning-bg, #fef3c7);
+  border: 1px solid var(--warning-border, rgba(180, 83, 9, 0.25));
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--warning-text, #b45309);
+  max-width: 84ch;
+}
+
+.re-sensitive .material-symbols-outlined { font-size: 17px; flex-shrink: 0; margin-top: 1px; }
+
+/* ── Kiosk ──────────────────────────────────────────────────────────
+   Bigger than everything else on purpose. Used at arm's length, often
+   by someone in a hurry with cold hands.                                */
+.re-kiosk {
+  display: grid;
+  place-items: center;
+  min-height: calc(100vh - 120px);
+  padding: 24px;
+}
+
+.re-kiosk-panel {
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  text-align: center;
+}
+
+.re-kiosk-input {
+  width: 100%;
+  min-height: 68px;
+  padding: 16px 22px;
+  border-radius: 16px;
+  border: 2px solid var(--border-strong, #cbd5e1);
+  background: var(--input-bg, #fff);
+  color: var(--input-text, #1e293b);
+  font-size: 24px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+
+.re-kiosk-input:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-color: var(--accent, #2b7fff);
+}
+
+.re-kiosk-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+
+.re-kiosk-key {
+  min-height: 72px;
+  border-radius: 14px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-surface, #fff);
+  color: var(--text-heading, #0f172a);
+  font-size: 26px;
+  font-weight: 700;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+
+.re-kiosk-key:active { background: var(--bg-muted, #f1f5f9); }
+.re-kiosk-key:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* ── Responsive ─────────────────────────────────────────────────────
+   A phone gets one day at a time rather than a squashed week, because a
+   seven-column timetable at 380px is unreadable in any design.          */
+@media (max-width: 900px) {
+  .re-timetable { grid-template-columns: 1fr; }
+  .re-timetable-head { position: static; }
+  .re-heat { grid-template-columns: 40px repeat(24, 18px); }
+}
+
+@media (max-width: 640px) {
+  .re-decision { flex-direction: column; align-items: flex-start; gap: 10px; text-align: left; }
+  .re-decision-title { font-size: 19px; }
+  .re-kiosk-key { min-height: 60px; font-size: 22px; }
+}
+
+/* =====================================================================
+   Small utilities this library needs and the platform does not provide
+   ===================================================================== */
+
+/* Right-hand side of a page header, when there is more than one control. */
+.page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* A quiet action that is genuinely a link, not a button dressed as one. */
+.btn-link {
+  padding: 0;
+  min-height: 34px;
+  border: none;
+  background: none;
+  color: var(--accent, #2b7fff);
+  font-size: 12.5px;
+  font-weight: 650;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn-link:hover { text-decoration: underline; }
+.btn-link:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 6px; }
+
+/* For an action that is allowed but consequential — an override, a waiver. */
+.btn-warning {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--warning-border, rgba(180, 83, 9, 0.4));
+  background: var(--warning-bg, #fef3c7);
+  color: var(--warning-text, #b45309);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-warning:hover { filter: brightness(0.97); }
+.btn-warning:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.btn-warning:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.alert-warning {
+  padding: 11px 15px;
+  border-radius: 10px;
+  background: var(--warning-bg, #fef3c7);
+  border: 1px solid var(--warning-border, rgba(180, 83, 9, 0.25));
+  color: var(--warning-text, #b45309);
+  font-size: 13px;
+  line-height: 1.55;
+  margin-bottom: 14px;
+}
+
+/* A label and its control side by side, for filter bars. */
+.re-field-inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.re-field-inline > span {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #94a3b8);
+  white-space: nowrap;
+}
+
+/* Pagination. Deliberately just previous / next / position: page numbers
+   are a lot of hit targets for very little, on a list nobody memorises. */
+.re-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.re-pager-count {
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--text-secondary, #64748b);
+  font-variant-numeric: tabular-nums;
+}
+
+/* =====================================================================
+   Repeated page patterns
+   ---------------------------------------------------------------------
+   Every screen in this app is one of a small number of shapes: a board of
+   columns, a list of rows, a grid of cards, a form, or a report. Defining
+   those shapes once means a new screen inherits the spacing, the focus
+   rings and the responsive behaviour rather than reinventing them —
+   and it means the whole app moves together when one of them changes.
+   ===================================================================== */
+
+/* ── Section heading inside a page ───────────────────────────────────── */
+.re-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 13px;
+  font-size: 14px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  color: var(--text-heading, #0f172a);
+}
+
+.re-section-title .material-symbols-outlined {
+  font-size: 19px;
+  color: var(--text-secondary, #64748b);
+}
+
+.re-section-note {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+}
+
+/* ── Card grid ───────────────────────────────────────────────────────── */
+.re-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.re-grid-wide { grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); }
+.re-grid-tight { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+
+/* ── List rows ───────────────────────────────────────────────────────
+   The default shape for anything that is a list of things you can open. */
+.re-rows { display: flex; flex-direction: column; gap: 6px; }
+
+.re-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 11px 15px;
+  min-height: 62px;
+  border-radius: 12px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-surface, #fff);
+  text-align: left;
+  transition: box-shadow 0.14s ease;
+}
+
+button.re-row { cursor: pointer; }
+button.re-row:hover { box-shadow: var(--shadow-md, 0 4px 12px rgba(15, 23, 42, 0.1)); }
+button.re-row:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.re-row.is-alert { border-left: 4px solid var(--danger, #dc2626); }
+.re-row.is-warn { border-left: 4px solid var(--warning, #f59e0b); }
+.re-row.is-good { border-left: 4px solid var(--success, #16a34a); }
+
+.re-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+
+.re-row-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+}
+
+.re-row-sub {
+  font-size: 11.5px;
+  color: var(--text-secondary, #64748b);
+  line-height: 1.45;
+}
+
+.re-row-figure {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  flex-shrink: 0;
+}
+
+.re-row-figure-value {
+  font-size: 14px;
+  font-weight: 750;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.re-row-figure-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.re-row-actions { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+
+.re-row-go { font-size: 19px; color: var(--text-muted, #94a3b8); flex-shrink: 0; }
+
+/* ── Kanban board ────────────────────────────────────────────────────
+   Used by the enquiry pipeline and the retention board. Columns scroll
+   horizontally rather than shrinking, because a squashed column stops
+   being readable long before it stops fitting.                          */
+.re-board {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(268px, 1fr);
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  align-items: start;
+}
+
+.re-board-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--bg-muted, #f8fafc);
+  border: 1px solid var(--border-default, #e6eaf0);
+  min-height: 120px;
+}
+
+.re-board-head { display: flex; align-items: baseline; gap: 8px; }
+
+.re-board-title {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 750;
+  color: var(--text-heading, #0f172a);
+}
+
+.re-board-count {
+  margin-left: auto;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-muted, #94a3b8);
+  font-variant-numeric: tabular-nums;
+}
+
+.re-board-value {
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--text-secondary, #64748b);
+  font-variant-numeric: tabular-nums;
+}
+
+.re-board-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 11px 13px;
+  border-radius: 11px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-surface, #fff);
+  text-align: left;
+  cursor: pointer;
+  transition: box-shadow 0.14s ease, transform 0.14s ease;
+}
+
+.re-board-card:hover { box-shadow: var(--shadow-md, 0 4px 12px rgba(15, 23, 42, 0.1)); }
+.re-board-card:active { transform: translateY(1px); }
+.re-board-card:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.re-board-card.is-alert {
+  border-color: var(--danger-border, rgba(185, 28, 28, 0.35));
+  background: var(--danger-bg, #fee2e2);
+}
+
+.re-board-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+}
+
+.re-board-card-meta { font-size: 11.5px; color: var(--text-secondary, #64748b); line-height: 1.45; }
+
+/* ── Wizard ──────────────────────────────────────────────────────────
+   The join flow and anything else with real steps. The stepper is a list
+   of numbered states rather than a progress bar, because a person needs
+   to know which step they are on and what is still to come.             */
+.re-steps {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 18px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.re-step {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 15px;
+  min-height: 48px;
+  border-radius: 11px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-surface, #fff);
+  color: var(--text-muted, #94a3b8);
+  font-size: 12.5px;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.re-step.is-done { color: var(--success-text, #15803d); border-color: var(--success-border, rgba(21, 128, 61, 0.3)); }
+.re-step.is-current {
+  color: var(--accent, #2b7fff);
+  border-color: var(--accent, #2b7fff);
+  background: var(--accent-soft, rgba(43, 127, 255, 0.07));
+  font-weight: 750;
+}
+
+.re-step-num {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--bg-muted, #f1f5f9);
+  color: inherit;
+  font-size: 11.5px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.re-step.is-current .re-step-num { background: var(--accent, #2b7fff); color: #fff; }
+.re-step.is-done .re-step-num { background: var(--success, #16a34a); color: #fff; }
+
+.re-wizard-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-default, #e6eaf0);
+}
+
+.re-wizard-foot .re-spacer { flex: 1; }
+
+/* ── Report layout ───────────────────────────────────────────────────── */
+.re-report-filters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  border-radius: 14px;
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-default, #e6eaf0);
+}
+
+.re-bars { display: flex; flex-direction: column; gap: 10px; }
+
+.re-bar-row { display: flex; flex-direction: column; gap: 4px; }
+
+.re-bar-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+
+.re-bar-label { font-size: 12.5px; font-weight: 650; color: var(--text-primary, #1e293b); }
+
+.re-bar-value {
+  font-size: 12.5px;
+  font-weight: 750;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.re-bar-value small { margin-left: 6px; font-size: 11px; font-weight: 600; color: var(--text-muted, #94a3b8); }
+
+.re-bar-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg-muted, #f1f5f9);
+  overflow: hidden;
+}
+
+.re-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent, #2b7fff);
+}
+
+.re-bar-fill.is-good { background: var(--success, #16a34a); }
+.re-bar-fill.is-warn { background: var(--warning, #f59e0b); }
+.re-bar-fill.is-bad { background: var(--danger, #dc2626); }
+
+/* ── Definition list ─────────────────────────────────────────────────── */
+.re-dl { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+
+.re-dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-subtle, #f1f5f9);
+}
+
+.re-dl > div:last-child { border-bottom: none; padding-bottom: 0; }
+.re-dl dt { font-size: 12px; color: var(--text-secondary, #64748b); }
+
+.re-dl dd {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.re-dl dd small {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted, #94a3b8);
+}
+
+/* ── Avatar ──────────────────────────────────────────────────────────── */
+.re-avatar {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--bg-muted, #f1f5f9);
+  color: var(--text-secondary, #64748b);
+  font-size: 13px;
+  font-weight: 800;
+  overflow: hidden;
+}
+
+.re-avatar.has-photo { background: none; }
+.re-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.re-avatar-lg { width: 60px; height: 60px; font-size: 19px; }
+.re-avatar-sm { width: 32px; height: 32px; font-size: 11.5px; }
+
+/* ── Numbers in tables ───────────────────────────────────────────────── */
+.ta-r { text-align: right; }
+.ta-c { text-align: center; }
+.is-credit { color: var(--success-text, #15803d); }
+.is-debit { color: var(--danger-text, #b91c1c); }
+
+/* ── Misc ────────────────────────────────────────────────────────────── */
+.re-quiet { margin: 0; font-size: 13px; color: var(--text-muted, #94a3b8); line-height: 1.55; }
+.re-full { width: 100%; }
+.re-spacer { flex: 1; }
+
+@media (max-width: 640px) {
+  .re-grid,
+  .re-grid-wide,
+  .re-grid-tight { grid-template-columns: 1fr; }
+  .re-row { flex-wrap: wrap; }
+  .re-board { grid-auto-flow: row; grid-auto-columns: auto; }
+}
+
+/* =====================================================================
+   Real Estate specifics
+   ---------------------------------------------------------------------
+   The pieces this app needs that no other module does: the inventory
+   board, the cost sheet, the payment schedule, the site programme, the
+   plot map and the money-flow strip.
+   ===================================================================== */
+
+/* ── Inventory board ────────────────────────────────────────────────
+   The busiest screen in the app. Two people can be looking at the same
+   tower on two screens, so a unit's state has to be legible at a glance
+   and must never rely on colour alone — every state carries a letter as
+   well, because roughly one man in twelve cannot tell the red from the
+   green.
+   ------------------------------------------------------------------- */
+
+.re-inv {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.re-inv-floor {
+  display: grid;
+  grid-template-columns: 62px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.re-inv-floor-label {
+  position: sticky;
+  left: 0;
+  padding: 9px 8px;
+  border-radius: 9px;
+  background: var(--bg-muted, #f1f5f9);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--text-secondary, #64748b);
+}
+
+.re-inv-units {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 7px;
+}
+
+.re-unit {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 74px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border-default, #e6eaf0);
+  background: var(--card-bg, #fff);
+  cursor: pointer;
+  text-align: left;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+
+.re-unit:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(15, 23, 42, .09); }
+.re-unit:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.re-unit-number {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+}
+
+.re-unit-meta {
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--text-secondary, #64748b);
+  font-variant-numeric: tabular-nums;
+}
+
+.re-unit-price {
+  margin-top: auto;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-primary, #1e293b);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The letter in the corner: A vailable, H eld, B ooked, S old, X blocked. */
+.re-unit-flag {
+  position: absolute;
+  top: 6px;
+  right: 7px;
+  width: 15px;
+  height: 15px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9.5px;
+  font-weight: 800;
+}
+
+.re-unit.is-available { border-color: var(--success-border, #a7f3d0); background: var(--success-bg, #ecfdf5); }
+.re-unit.is-available .re-unit-flag { background: var(--success, #059669); color: #fff; }
+
+.re-unit.is-held { border-color: var(--warning-border, #fde68a); background: var(--warning-bg, #fffbeb); }
+.re-unit.is-held .re-unit-flag { background: var(--warning, #d97706); color: #fff; }
+
+.re-unit.is-booked { border-color: var(--accent-border, #bfdbfe); background: var(--accent-bg, #eff6ff); }
+.re-unit.is-booked .re-unit-flag { background: var(--accent, #2b7fff); color: #fff; }
+
+.re-unit.is-sold { border-color: var(--border-strong, #cbd5e1); background: var(--bg-muted, #f1f5f9); opacity: .78; }
+.re-unit.is-sold .re-unit-flag { background: var(--text-secondary, #64748b); color: #fff; }
+
+.re-unit.is-blocked { border-color: var(--danger-border, #fecaca); background: var(--danger-bg, #fef2f2); }
+.re-unit.is-blocked .re-unit-flag { background: var(--danger, #dc2626); color: #fff; }
+
+.re-unit.is-selected { border-color: var(--accent, #2b7fff); box-shadow: 0 0 0 2px var(--accent-bg, #eff6ff); }
+
+/* A hold that is nearly up — the one thing on this screen that is genuinely urgent. */
+.re-unit.is-expiring::after {
+  content: '';
+  position: absolute;
+  inset: -1.5px;
+  border-radius: 10px;
+  border: 1.5px solid var(--warning, #d97706);
+  animation: re-pulse 1.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes re-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .re-unit.is-expiring::after { animation: none; } }
+
+.re-inv-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 13px;
+  padding: 10px 13px;
+  border-radius: 10px;
+  background: var(--bg-subtle, #fafbfc);
+  border: 1px solid var(--border-default, #e6eaf0);
+}
+
+.re-inv-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+}
+
+.re-inv-legend i {
+  width: 13px;
+  height: 13px;
+  border-radius: 4px;
+  font-style: normal;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8.5px;
+  font-weight: 800;
+  color: #fff;
+}
+
+/* ── Cost sheet ─────────────────────────────────────────────────────
+   What a customer is shown before they sign. Every line has to be
+   readable aloud over a telephone, so the layout is a plain list of
+   label and amount rather than a grid — and the total is unmissable.
+   ------------------------------------------------------------------- */
+
+.re-sheet {
+  border-radius: 14px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--card-bg, #fff);
+  overflow: hidden;
+}
+
+.re-sheet-head {
+  padding: 15px 19px;
+  border-bottom: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-subtle, #fafbfc);
+}
+
+.re-sheet-head h4 { margin: 0; font-size: 14.5px; font-weight: 700; color: var(--text-heading, #0f172a); }
+.re-sheet-head p { margin: 3px 0 0; font-size: 12.5px; color: var(--text-secondary, #64748b); }
+
+.re-sheet-lines { padding: 6px 0; }
+
+.re-sheet-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 8px 19px;
+  font-size: 13px;
+}
+
+.re-sheet-line.is-group {
+  padding-top: 14px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--text-tertiary, #94a3b8);
+}
+
+.re-sheet-label { color: var(--text-primary, #1e293b); }
+.re-sheet-note { display: block; font-size: 11.5px; color: var(--text-secondary, #64748b); }
+
+.re-sheet-amount {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--text-primary, #1e293b);
+}
+
+.re-sheet-line.is-deduction .re-sheet-amount { color: var(--danger-text, #b91c1c); }
+
+.re-sheet-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 15px 19px;
+  border-top: 2px solid var(--border-strong, #cbd5e1);
+  background: var(--bg-subtle, #fafbfc);
+}
+
+.re-sheet-total .re-sheet-label { font-size: 14px; font-weight: 700; color: var(--text-heading, #0f172a); }
+.re-sheet-total .re-sheet-amount { font-size: 19px; font-weight: 800; color: var(--text-heading, #0f172a); }
+
+.re-sheet-words {
+  padding: 10px 19px 15px;
+  font-size: 12px;
+  font-style: italic;
+  line-height: 1.6;
+  color: var(--text-secondary, #64748b);
+  border-top: 1px dashed var(--border-default, #e6eaf0);
+}
+
+/* ── Payment schedule ───────────────────────────────────────────── */
+
+.re-schedule { display: flex; flex-direction: column; gap: 1px; }
+
+.re-sched-row {
+  display: grid;
+  grid-template-columns: 34px 1fr auto auto auto;
+  align-items: center;
+  gap: 13px;
+  padding: 11px 14px;
+  background: var(--card-bg, #fff);
+  border-left: 3px solid transparent;
+}
+
+.re-sched-row:nth-child(even) { background: var(--bg-subtle, #fafbfc); }
+.re-sched-row.is-paid { border-left-color: var(--success, #059669); }
+.re-sched-row.is-due { border-left-color: var(--warning, #d97706); }
+.re-sched-row.is-overdue { border-left-color: var(--danger, #dc2626); background: var(--danger-bg, #fef2f2); }
+
+.re-sched-seq {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--bg-muted, #f1f5f9);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-secondary, #64748b);
+}
+
+.re-sched-label { font-size: 13px; font-weight: 600; color: var(--text-primary, #1e293b); }
+.re-sched-sub { display: block; font-size: 11.5px; color: var(--text-secondary, #64748b); }
+
+.re-sched-amount, .re-sched-paid, .re-sched-balance {
+  font-size: 12.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  min-width: 88px;
+}
+
+.re-sched-balance { color: var(--danger-text, #b91c1c); }
+.re-sched-row.is-paid .re-sched-balance { color: var(--success-text, #047857); }
+
+/* ── Site programme (Gantt) ─────────────────────────────────────── */
+
+.re-gantt { overflow-x: auto; padding-bottom: 6px; }
+
+.re-gantt-row {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  align-items: center;
+  gap: 12px;
+  min-height: 34px;
+  border-bottom: 1px solid var(--border-subtle, #f1f5f9);
+}
+
+.re-gantt-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary, #1e293b);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: 8px;
+}
+
+.re-gantt-track { position: relative; height: 20px; min-width: 640px; }
+
+.re-gantt-bar {
+  position: absolute;
+  top: 4px;
+  height: 12px;
+  border-radius: 4px;
+  background: var(--accent, #2b7fff);
+}
+
+.re-gantt-bar.is-critical { background: var(--danger, #dc2626); }
+.re-gantt-bar.is-complete { background: var(--success, #059669); }
+
+.re-gantt-baseline {
+  position: absolute;
+  top: 17px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--text-tertiary, #94a3b8);
+  opacity: .55;
+}
+
+.re-gantt-today {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 1.5px;
+  background: var(--danger, #dc2626);
+  z-index: 2;
+}
+
+/* ── Site plan ──────────────────────────────────────────────────── */
+
+.re-plan {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border-default, #e6eaf0);
+}
+
+.re-plan img, .re-plan svg { display: block; width: 100%; height: auto; }
+
+.re-plan-shape { cursor: pointer; transition: opacity .12s ease; }
+.re-plan-shape:hover { opacity: .82; }
+.re-plan-shape.is-available { fill: var(--success, #059669); fill-opacity: .34; stroke: var(--success, #059669); }
+.re-plan-shape.is-held { fill: var(--warning, #d97706); fill-opacity: .34; stroke: var(--warning, #d97706); }
+.re-plan-shape.is-sold { fill: var(--text-secondary, #64748b); fill-opacity: .34; stroke: var(--text-secondary, #64748b); }
+
+/* ── Money-flow strip ───────────────────────────────────────────── */
+
+.re-flow {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  border-radius: 11px;
+  overflow: hidden;
+  border: 1px solid var(--border-default, #e6eaf0);
+}
+
+.re-flow-seg {
+  flex: 1;
+  padding: 12px 14px;
+  background: var(--card-bg, #fff);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: relative;
+  min-width: 0;
+}
+
+.re-flow-seg:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: -1px;
+  top: 50%;
+  transform: translateY(-50%) rotate(45deg);
+  width: 9px;
+  height: 9px;
+  border-top: 1px solid var(--border-default, #e6eaf0);
+  border-right: 1px solid var(--border-default, #e6eaf0);
+  background: var(--card-bg, #fff);
+  z-index: 1;
+}
+
+.re-flow-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--text-secondary, #64748b);
+}
+
+.re-flow-value {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.re-flow-hint { font-size: 11px; color: var(--text-tertiary, #94a3b8); }
+
+/* ── Workings ───────────────────────────────────────────────────────
+   Wherever the software has computed something a person will query — an
+   interim certificate, a service-charge reconciliation, a commission
+   split — it shows its arithmetic in words beside the answer. A figure
+   nobody can follow is a figure that gets disputed.
+   ------------------------------------------------------------------- */
+
+.re-workings {
+  padding: 13px 16px;
+  border-radius: 11px;
+  background: var(--bg-subtle, #fafbfc);
+  border: 1px dashed var(--border-strong, #cbd5e1);
+}
+
+.re-workings-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--text-secondary, #64748b);
+}
+
+.re-workings-title .material-symbols-outlined { font-size: 15px; }
+
+.re-workings ol { margin: 0; padding-left: 19px; display: flex; flex-direction: column; gap: 5px; }
+
+.re-workings li {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-primary, #1e293b);
+  max-width: 90ch;
+}
+
+/* ── Detail header ──────────────────────────────────────────────── */
+
+.re-detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 18px 20px;
+  border-radius: 14px;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-default, #e6eaf0);
+  margin-bottom: 16px;
+}
+
+.re-detail-id { display: flex; align-items: flex-start; gap: 15px; min-width: 0; }
+
+.re-detail-photo {
+  width: 74px;
+  height: 74px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: var(--bg-muted, #f1f5f9);
+  flex-shrink: 0;
+}
+
+.re-detail-titles { min-width: 0; }
+
+.re-detail-titles h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+  line-height: 1.25;
+}
+
+.re-detail-sub {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+}
+
+.re-detail-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+
+.re-detail-figures { display: flex; gap: 26px; flex-wrap: wrap; }
+
+.re-detail-figure { display: flex; flex-direction: column; gap: 1px; }
+
+.re-detail-figure span:first-child {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--text-secondary, #64748b);
+}
+
+.re-detail-figure span:last-child {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Split view: a list on the left, the selected thing on the right ── */
+
+.re-split {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .re-split { grid-template-columns: 1fr; }
+}
+
+/* ── Responsive ─────────────────────────────────────────────────── */
+
+@media (max-width: 780px) {
+  .re-inv-floor { grid-template-columns: 1fr; }
+  .re-inv-floor-label { position: static; text-align: left; }
+  .re-inv-units { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
+  .re-sched-row { grid-template-columns: 30px 1fr auto; row-gap: 4px; }
+  .re-sched-paid, .re-sched-balance { grid-column: 2 / -1; text-align: left; min-width: 0; }
+  .re-flow { flex-direction: column; }
+  .re-flow-seg:not(:last-child)::after { display: none; }
+  .re-detail-figures { gap: 18px; }
+  .re-gantt-row { grid-template-columns: 130px 1fr; }
+}

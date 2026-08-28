@@ -1,0 +1,110 @@
+/* =====================================================================
+   Project profit and loss.
+   ===================================================================== */
+
+.re-asof { display: flex; align-items: center; gap: 7px; }
+
+.re-asof span {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .045em;
+  color: var(--text-secondary, #64748b);
+}
+
+.re-asof input {
+  min-height: 36px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--input-bg, #fff);
+  color: var(--text-primary, #1e293b);
+  font-size: 13px;
+}
+
+.re-pnl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+re-progress { display: block; margin-bottom: 12px; }
+
+.re-pnl-counts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 14px;
+  margin-top: 6px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-subtle, #f1f5f9);
+}
+
+.re-pnl-counts > div { display: flex; flex-direction: column; gap: 1px; }
+
+.re-pnl-counts span,
+.re-pnl-summary span {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .045em;
+  color: var(--text-secondary, #64748b);
+}
+
+.re-pnl-counts strong {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── The unit table ────────────────────────────────────────────────── */
+
+.re-pnl-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 14px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-default, #e6eaf0);
+  background: var(--bg-muted, #f8fafc);
+}
+
+.re-pnl-summary > div { display: flex; flex-direction: column; gap: 1px; }
+
+.re-pnl-summary strong {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.re-pnl-summary > div.is-bad strong { color: var(--danger, #dc2626); }
+.re-pnl-summary > div.is-good strong { color: var(--success, #16a34a); }
+
+.re-table td strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-heading, #0f172a);
+}
+
+.re-table td small {
+  display: block;
+  font-size: 11.5px;
+  color: var(--text-secondary, #94a3b8);
+  margin-top: 1px;
+}
+
+.re-table td.is-bad { color: var(--danger, #dc2626); font-weight: 600; }
+.re-table td.is-good { color: var(--success, #16a34a); font-weight: 600; }
+.re-table tr.is-loss { background: var(--danger-soft, #fef2f2); }
+
+[section-actions] select {
+  min-height: 34px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--input-bg, #fff);
+  color: var(--text-primary, #1e293b);
+  font-size: 12.5px;
+  font-weight: 500;
+}
