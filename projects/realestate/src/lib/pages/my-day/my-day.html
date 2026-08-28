@@ -1,0 +1,288 @@
+<div class="page-container">
+
+  <div class="page-header">
+    <div>
+      <h2>My day</h2>
+      <p class="subtitle">
+        @if (day()) {
+          {{ day()!.agentName }} — {{ date() | date:'EEEE d MMMM' }}
+        } @else {
+          Everything you personally have to do today.
+        }
+      </p>
+    </div>
+
+    <div class="page-header-actions">
+      <div class="re-segment" role="group" aria-label="Day">
+        <button type="button" (click)="shift(-1)" aria-label="Previous day">
+          <span class="material-symbols-outlined">chevron_left</span>
+        </button>
+        <button type="button" [class.is-active]="isToday()" (click)="goToday()">
+          Today
+        </button>
+        <button type="button" (click)="shift(1)" aria-label="Next day">
+          <span class="material-symbols-outlined">chevron_right</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <re-page-help key="my-day" />
+
+  @if (error()) {
+    <div class="alert alert-error" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <span>{{ error() }}</span>
+      <button type="button" class="btn-link" (click)="load()">Try again</button>
+    </div>
+  }
+
+  @if (loading()) {
+    <re-skeleton [rowCount]="7" [colCount]="3" />
+  } @else if (day(); as d) {
+
+    <re-stats [items]="stats()" [compact]="true" />
+
+    @if (!hasAnything()) {
+      <re-empty icon="beach_access"
+                title="Your day is clear"
+                message="No overdue follow-ups, nothing due, no appointments and no leads waiting. Worth checking the enquiry board for anything unassigned." />
+    }
+
+    <div class="re-day">
+
+      <!-- Late first. Nothing else on this screen matters until these are dealt with. -->
+      @if (d.overdue.length) {
+        <re-section title="Overdue"
+                    icon="error"
+                    note="These were promised for a date that has passed. The longer one sits here
+                          the less likely it is ever to be picked up.">
+          <div class="re-tasks">
+            @for (t of d.overdue; track t.id) {
+              <ng-container *ngTemplateOutlet="task; context: { $implicit: t, late: true }" />
+            }
+          </div>
+        </re-section>
+      }
+
+      @if (d.dueToday.length) {
+        <re-section title="Due today" icon="task_alt">
+          <div class="re-tasks">
+            @for (t of d.dueToday; track t.id) {
+              <ng-container *ngTemplateOutlet="task; context: { $implicit: t, late: false }" />
+            }
+          </div>
+        </re-section>
+      }
+
+      @if (d.viewings.length || d.siteVisits.length) {
+        <re-section title="Appointments"
+                    icon="event"
+                    note="In time order, with travel between them already allowed for.">
+          <div class="re-appointments">
+            @for (v of d.viewings; track v.id) {
+              <div class="re-appt">
+                <span class="re-appt-time">{{ v.scheduledAt | date:'HH:mm' }}</span>
+                <div class="re-appt-body">
+                  <strong>{{ v.applicantName ?? 'Viewing' }}</strong>
+                  <span>{{ v.propertySummary }}</span>
+                  @if (v.firstAddress) { <small>{{ v.firstAddress }}</small> }
+                </div>
+                <div class="re-appt-meta">
+                  <span>{{ v.durationMinutes }} min</span>
+                  @if (v.travelMinutes) { <small>+{{ v.travelMinutes }} travel</small> }
+                  @if (!v.vendorNotified) { <re-pill tone="warning">Vendor not told</re-pill> }
+                </div>
+              </div>
+            }
+
+            @for (s of d.siteVisits; track s.id) {
+              <div class="re-appt">
+                <span class="re-appt-time">{{ s.scheduledAt | date:'HH:mm' }}</span>
+                <div class="re-appt-body">
+                  <strong>{{ s.visitorName ?? 'Site visit' }}</strong>
+                  <span>{{ s.projectName }}</span>
+                  @if (s.pickupAddress) { <small>Pick up from {{ s.pickupAddress }}</small> }
+                </div>
+                <div class="re-appt-meta">
+                  <span>{{ s.guestCount }} guest{{ s.guestCount === 1 ? '' : 's' }}</span>
+                  @if (s.isRevisit) { <re-pill tone="accent">Visit {{ s.visitNumber }}</re-pill> }
+                  @if (s.driverName) { <small>{{ s.driverName }} · {{ s.vehicleNumber }}</small> }
+                </div>
+              </div>
+            }
+          </div>
+        </re-section>
+      }
+
+      @if (d.unansweredLeads.length) {
+        <re-section title="Waiting on you"
+                    icon="forum"
+                    note="Enquiries that have arrived and not yet had a human reply. Speed to first
+                          contact is the single largest predictor of whether a lead converts.">
+          <div class="re-rows">
+            @for (e of d.unansweredLeads; track e.id) {
+              <button type="button" class="re-row" [class.is-alert]="e.slaBreached"
+                      (click)="goEnquiry(e)">
+                <div class="re-row-main">
+                  <span class="re-row-title">{{ e.contactName }}</span>
+                  <span class="re-row-sub">
+                    {{ e.reference }}
+                    @if (e.projectName) { · {{ e.projectName }} }
+                    @if (e.contactPhone) { · {{ e.contactPhone }} }
+                  </span>
+                </div>
+                <span class="re-row-figure">
+                  <span class="re-row-figure-value">
+                    @if (e.minutesToSlaDeadline !== undefined && e.minutesToSlaDeadline < 0) {
+                      {{ -e.minutesToSlaDeadline }} min over
+                    } @else if (e.minutesToSlaDeadline !== undefined) {
+                      {{ e.minutesToSlaDeadline }} min left
+                    } @else {
+                      waiting
+                    }
+                  </span>
+                  <span class="re-row-figure-label">score {{ e.score }}</span>
+                </span>
+                <span class="material-symbols-outlined re-row-go">chevron_right</span>
+              </button>
+            }
+          </div>
+        </re-section>
+      }
+
+      @if (d.awaitingMyApproval.length) {
+        <re-section title="Waiting for your approval"
+                    icon="approval"
+                    note="Nothing below has been actioned. Somebody is held up until you decide.">
+          <div class="re-rows">
+            @for (a of d.awaitingMyApproval; track a.id) {
+              <button type="button" class="re-row" [class.is-alert]="a.isOverdue"
+                      (click)="goApproval()">
+                <div class="re-row-main">
+                  <span class="re-row-title">{{ a.summary ?? a.documentType }}</span>
+                  <span class="re-row-sub">
+                    {{ a.entityReference }} · asked by {{ a.requestedByName }}
+                    · level {{ a.currentLevel }} of {{ a.requiredLevels }}
+                  </span>
+                </div>
+                <span class="re-row-figure">
+                  <span class="re-row-figure-value">{{ money(a.amount) }}</span>
+                  @if (a.isOverdue) { <span class="re-row-figure-label">overdue</span> }
+                </span>
+                <span class="material-symbols-outlined re-row-go">chevron_right</span>
+              </button>
+            }
+          </div>
+        </re-section>
+      }
+
+      @if (d.upcoming.length) {
+        <re-section title="Coming up"
+                    icon="upcoming"
+                    note="Not yours to do today. Here so nothing arrives as a surprise.">
+          <div class="re-tasks">
+            @for (t of d.upcoming; track t.id) {
+              <ng-container *ngTemplateOutlet="task; context: { $implicit: t, late: false }" />
+            }
+          </div>
+        </re-section>
+      }
+    </div>
+  }
+
+  <!-- One task row, used by all three lists. -->
+  <ng-template #task let-t let-late="late">
+    <div class="re-task" [class.is-late]="late">
+      <span class="material-symbols-outlined re-task-icon">{{ actionIcon(t.suggestedAction) }}</span>
+
+      <div class="re-task-body">
+        <strong>{{ t.title }}</strong>
+        <span class="re-task-context">
+          @if (t.partyName) { {{ t.partyName }} }
+          @if (t.contextLabel) { · {{ t.contextLabel }} }
+          @if (t.amount) { · {{ money(t.amount) }} }
+        </span>
+        @if (t.note) { <small>{{ t.note }}</small> }
+        <span class="re-task-meta">
+          <re-pill [tone]="priorityTone(t.priority)">{{ priorityLabel(t.priority) }}</re-pill>
+          <span [class.is-late]="late">{{ lateness(t) }}</span>
+          @if (t.snoozeCount > 2) {
+            <span class="re-task-snoozed">moved {{ t.snoozeCount }} times</span>
+          }
+          @if (t.isAutoGenerated) { <span>raised by the system</span> }
+        </span>
+      </div>
+
+      <div class="re-task-actions">
+        @if (t.partyPhone) {
+          <button type="button" class="re-icon-btn" (click)="call(t)"
+                  [attr.aria-label]="'Call ' + t.partyName">
+            <span class="material-symbols-outlined">call</span>
+          </button>
+        }
+        @if (t.route) {
+          <button type="button" class="re-icon-btn" (click)="open(t)" aria-label="Open">
+            <span class="material-symbols-outlined">open_in_new</span>
+          </button>
+        }
+        <button type="button" class="re-icon-btn" (click)="snooze(t, 1)" aria-label="Tomorrow">
+          <span class="material-symbols-outlined">snooze</span>
+        </button>
+        <button type="button" class="re-touch-btn is-primary" (click)="startComplete(t)">
+          Done
+        </button>
+      </div>
+    </div>
+  </ng-template>
+
+  <!-- Completing a task always asks what happened, and offers the next one. -->
+  <re-drawer [open]="!!completing()"
+             title="What happened?"
+             [subtitle]="completing()?.title ?? null"
+             size="md"
+             [busy]="saving()"
+             (closed)="completing.set(null)">
+    @if (completing(); as t) {
+      <div class="re-form-grid">
+        <div class="re-field is-full">
+          <label for="md-outcome">Outcome</label>
+          <select id="md-outcome" [ngModel]="outcome()" (ngModelChange)="outcome.set($event)">
+            <option value="">Choose one…</option>
+            @for (o of outcomes; track o) { <option [value]="o">{{ o }}</option> }
+          </select>
+          <small>Recorded against {{ t.partyName ?? 'this record' }} so the next person can see it.</small>
+        </div>
+
+        <div class="re-field is-full">
+          <label for="md-note">Anything worth remembering</label>
+          <textarea id="md-note" rows="3" [ngModel]="note()"
+                    (ngModelChange)="note.set($event)"></textarea>
+        </div>
+
+        <div class="re-field">
+          <label for="md-next">Next follow-up</label>
+          <input id="md-next" type="date" [ngModel]="nextDate()"
+                 (ngModelChange)="nextDate.set($event)" />
+          <small>Clear this only if the lead is genuinely finished.</small>
+        </div>
+
+        <div class="re-field">
+          <label for="md-next-title">What for</label>
+          <input id="md-next-title" type="text" [ngModel]="nextTitle()"
+                 (ngModelChange)="nextTitle.set($event)" />
+        </div>
+      </div>
+
+      <div class="re-drawer-actions">
+        <button type="button" class="re-touch-btn" (click)="completing.set(null)">Cancel</button>
+        <button type="button" class="re-touch-btn is-primary"
+                [disabled]="!outcome() || saving()" (click)="complete()">
+          {{ saving() ? 'Saving…' : 'Record it' }}
+        </button>
+      </div>
+    }
+  </re-drawer>
+
+  <re-toast [message]="toast()" (dismissed)="toast.set(null)" />
+</div>

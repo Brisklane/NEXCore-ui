@@ -1,0 +1,216 @@
+<re-detail-page
+  backRoute="/realestate/listings"
+  backLabel="All listings"
+  icon="storefront"
+  [title]="data()?.headline || data()?.addressOneLine || ''"
+  [subtitle]="data()?.addressOneLine ?? null"
+  [reference]="data()?.reference ?? null"
+  [photoUrl]="data()?.heroImageUrl ?? null"
+  [pills]="pills()"
+  [figures]="figures()"
+  [actions]="actions()"
+  [tabs]="tabs()"
+  [activeTab]="tab()"
+  [loading]="loading()"
+  [error]="error()"
+  [notFound]="notFound()"
+  (tabChange)="tab.set($event)"
+  (action)="act($event)"
+  (retry)="load()">
+
+  @if (data(); as d) {
+
+    <!-- The earliest honest signal that a price is wrong. -->
+    @if (isStale()) {
+      <div class="alert alert-warning" role="status">
+        <span class="material-symbols-outlined">trending_down</span>
+        <span>
+          No viewing for {{ d.daysSinceLastViewing }} days at this price, after
+          {{ d.enquiryCount }} enquiries. Interest has stopped, which usually means the price
+          rather than the property. This shows up here weeks before days-on-market looks bad.
+        </span>
+      </div>
+    }
+
+    @switch (tab()) {
+
+      @case ('overview') {
+        @if (blockers().length) {
+          <re-gate [conditions]="publishGate()"
+                   clearTitle="Ready to publish"
+                   blockedTitle="Portals would reject this listing" />
+        }
+
+        <re-section title="The listing" icon="storefront">
+          <re-facts [items]="summary()" />
+        </re-section>
+
+        @if (d.keyFeatures.length) {
+          <re-section title="Key features"
+                      icon="star"
+                      note="These are what portals show as bullet points. Most portals take the
+                            first five and drop the rest, so put the strongest first.">
+            <ol class="re-key-features">
+              @for (f of d.keyFeatures; track f; let i = $index) {
+                <li [class.is-shown]="i < 5">{{ f }}</li>
+              }
+            </ol>
+          </re-section>
+        }
+      }
+
+      @case ('marketing') {
+        <re-section title="Description" icon="article">
+          @if (d.shortDescription) {
+            <h4 class="re-sub-title">Summary</h4>
+            <p class="re-prose">{{ d.shortDescription }}</p>
+          }
+          @if (d.longDescription) {
+            <h4 class="re-sub-title">Full description</h4>
+            <p class="re-prose">{{ d.longDescription }}</p>
+          }
+          @if (!d.shortDescription && !d.longDescription) {
+            <p class="re-mini-empty">
+              No copy has been written. A listing with no description gets a fraction of the
+              enquiries of one with it.
+            </p>
+          }
+        </re-section>
+
+        <re-section title="Photographs"
+                    icon="photo_library"
+                    [note]="d.media.length + ' images. Portals typically require at least three, and rank listings with more.'"
+                    [flush]="d.media.length > 0">
+          @if (!d.media.length) {
+            <p class="re-mini-empty">No photographs have been uploaded.</p>
+          } @else {
+            <div class="re-gallery">
+              @for (m of d.media; track m.id) {
+                <figure class="re-gallery-item" [class.is-hero]="m.isHero">
+                  <img [src]="m.thumbnailUrl ?? m.url" [alt]="m.caption ?? 'Listing photograph'"
+                       loading="lazy" />
+                  <figcaption>
+                    <span>{{ m.caption ?? m.roomTag ?? 'Untitled' }}</span>
+                    @if (m.isHero) { <re-pill tone="accent">Main</re-pill> }
+                    @if (m.excludeFromPortals) { <re-pill tone="warning">Held back</re-pill> }
+                  </figcaption>
+                </figure>
+              }
+            </div>
+          }
+        </re-section>
+
+        <re-section title="Where it may go" icon="public">
+          <re-facts [items]="[
+            { label: 'Portals', value: d.allowPortalPublish ? 'Allowed' : 'Not allowed',
+              tone: d.allowPortalPublish ? 'positive' : 'muted' },
+            { label: 'Our website', value: d.allowWebsitePublish ? 'Allowed' : 'Not allowed',
+              tone: d.allowWebsitePublish ? 'positive' : 'muted' },
+            { label: 'Language', value: d.languageCode },
+            { label: 'Published', value: d.publishedAt ? (d.publishedAt | date:'medium') : 'Never',
+              hint: d.publishedByName },
+            { label: 'Withdrawn', value: d.withdrawnAt ? (d.withdrawnAt | date:'medium') : null }
+          ]" [tight]="true" />
+        </re-section>
+      }
+
+      @case ('portals') {
+        <re-section title="Portal pushes"
+                    icon="hub"
+                    note="What each portal did with the last push, and what it produced. A failing
+                          push is a listing nobody can see, so the error is shown in full rather
+                          than logged somewhere.">
+          <re-mini-list [rows]="publications()"
+                        emptyMessage="This listing has never been pushed to a portal." />
+        </re-section>
+      }
+
+      @case ('interest') {
+        <re-section title="Viewings" icon="visibility">
+          <re-mini-list [rows]="viewings()" emptyMessage="Nobody has viewed it yet." />
+        </re-section>
+
+        <re-section title="Offers"
+                    icon="gavel"
+                    note="Ordered as received. Strength combines price, funding, chain and
+                          conditions — which is why a lower cash offer can be the better one.">
+          <re-mini-list [rows]="offers()" emptyMessage="No offer has been made." />
+        </re-section>
+      }
+
+      @case ('price') {
+        <re-section title="Price history"
+                    icon="trending_down"
+                    note="Every change, with how many viewings the previous price produced. That
+                          last figure is the one that says whether the reduction was justified.">
+          <re-mini-list [rows]="priceHistory()"
+                        emptyMessage="The price has never changed." />
+        </re-section>
+      }
+
+      @case ('instruction') {
+        @if (d.instruction) {
+          <re-section title="The instruction"
+                      icon="gavel"
+                      note="What was agreed with the owner: on what basis, for how long, and for
+                            what fee. The tail period is the one that causes arguments — a fee is
+                            still owed if a buyer we introduced completes after the instruction
+                            has ended.">
+            <re-facts [items]="instructionFacts()" />
+          </re-section>
+        } @else {
+          <p class="re-mini-empty">
+            This listing has no instruction attached. Without one there is no agreed fee, and
+            nothing to invoice against on completion.
+          </p>
+        }
+      }
+    }
+  }
+</re-detail-page>
+
+<re-drawer [open]="repricing()"
+           title="Change the price"
+           [subtitle]="data()?.reference ?? null"
+           size="sm"
+           [busy]="saving()"
+           (closed)="repricing.set(false)">
+  <div class="re-form-grid">
+    <div class="re-field is-full">
+      <label for="l-price">New price</label>
+      <input id="l-price" type="number" min="0" [ngModel]="newPrice()"
+             (ngModelChange)="newPrice.set(+$event)" />
+      @if (data()?.askingPrice) {
+        <small>Currently {{ money(data()!.askingPrice) }}.</small>
+      }
+    </div>
+
+    <div class="re-field is-full">
+      <label for="l-reason">Why</label>
+      <input id="l-reason" type="text" [ngModel]="priceReason()"
+             (ngModelChange)="priceReason.set($event)"
+             placeholder="Reduced after four weeks with no offers" />
+    </div>
+
+    <label class="re-check is-full">
+      <input type="checkbox" [ngModel]="notifyApplicants()"
+             (ngModelChange)="notifyApplicants.set($event)" />
+      Tell everybody whose saved search now matches
+    </label>
+  </div>
+
+  <p class="re-drawer-note">
+    A price reduction alert to matched applicants is the fastest source of new viewings an agency
+    has. It goes only to people who have consented to be contacted.
+  </p>
+
+  <div class="re-drawer-actions">
+    <button type="button" class="re-touch-btn" (click)="repricing.set(false)">Cancel</button>
+    <button type="button" class="re-touch-btn is-primary"
+            [disabled]="saving() || newPrice() === null" (click)="reprice()">
+      {{ saving() ? 'Saving…' : 'Change it' }}
+    </button>
+  </div>
+</re-drawer>
+
+<re-toast [message]="toast()" (dismissed)="toast.set(null)" />

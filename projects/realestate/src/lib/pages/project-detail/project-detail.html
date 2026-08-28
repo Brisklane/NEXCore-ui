@@ -1,0 +1,203 @@
+<re-detail-page
+  backRoute="/realestate/projects"
+  backLabel="All projects"
+  icon="apartment"
+  [title]="data()?.name ?? ''"
+  [subtitle]="data() ? (data()!.areaName ? data()!.areaName + ', ' + (data()!.city ?? '') : data()!.city ?? null) : null"
+  [reference]="data()?.code ?? null"
+  [photoUrl]="data()?.heroImageUrl ?? null"
+  [pills]="pills()"
+  [figures]="figures()"
+  [actions]="actions()"
+  [tabs]="tabs()"
+  [activeTab]="tab()"
+  [loading]="loading()"
+  [error]="error()"
+  [notFound]="notFound()"
+  (tabChange)="tab.set($event)"
+  (action)="act($event)"
+  (retry)="load()">
+
+  @if (data(); as d) {
+
+    @if (blockingApprovals().length) {
+      <div class="alert alert-error" role="alert">
+        <span class="material-symbols-outlined">gavel</span>
+        <span>
+          {{ blockingApprovals().length === 1 ? 'An approval is' : blockingApprovals().length + ' approvals are' }}
+          outstanding and blocking work on this project. See the Approvals tab.
+        </span>
+      </div>
+    }
+
+    @switch (tab()) {
+
+      @case ('overview') {
+        <re-section title="How it is going"
+                    icon="insights"
+                    note="Absorption is units taken out of the market. Collection is money actually
+                          received against what has been sold. The two drift apart when bookings
+                          are being cancelled or when customers stop paying.">
+          <div class="re-project-bars">
+            <re-progress [value]="d.absorptionPercent" label="Sold and booked" tone="accent" />
+            <re-progress [value]="d.totalSalesValue ? (d.totalCollected / d.totalSalesValue) * 100 : 0"
+                         label="Collected against sold value"
+                         [tone]="d.outstanding > d.totalCollected ? 'warning' : 'positive'" />
+            <re-progress [value]="d.physicalProgressPercent" label="Built" tone="positive" />
+          </div>
+
+          <div class="re-project-counts">
+            <div><span>Total units</span><strong>{{ d.totalUnits | number }}</strong></div>
+            <div><span>Available</span><strong>{{ d.unitsAvailable | number }}</strong></div>
+            <div><span>Booked</span><strong>{{ d.unitsBooked | number }}</strong></div>
+            <div><span>Sold</span><strong>{{ d.unitsSold | number }}</strong></div>
+          </div>
+        </re-section>
+
+        <div class="re-grid">
+          <re-section title="The scheme" icon="apartment">
+            <re-facts [items]="identity()" />
+          </re-section>
+
+          <re-section title="Dates" icon="calendar_month">
+            <re-facts [items]="dates()" [tight]="true" />
+          </re-section>
+        </div>
+
+        <re-section title="Commercial terms"
+                    icon="payments"
+                    note="How revenue is recognised decides when a sale becomes income. Over time
+                          means it accrues as the building goes up; at a point in time means it
+                          waits for handover. Auditors care about this more than anybody else does.">
+          <re-facts [items]="commercial()" />
+        </re-section>
+      }
+
+      @case ('structure') {
+        <re-section title="Blocks, floors and units"
+                    icon="account_tree"
+                    note="How the scheme is divided. Progress on a block is weighted by its share
+                          of the whole, so a finished car park does not read as half the project.">
+          @if (!flatStructure().length) {
+            <p class="re-mini-empty">
+              No structure has been defined. Add blocks and floors before creating units.
+            </p>
+          } @else {
+            <div class="re-tree">
+              @for (n of flatStructure(); track n.id) {
+                <div class="re-tree-row" [style.padding-left.px]="12 + n.depth * 22">
+                  <span class="material-symbols-outlined">
+                    {{ n.depth === 0 ? 'domain' : n.floorNumber !== undefined ? 'layers' : 'grid_view' }}
+                  </span>
+                  <div class="re-tree-main">
+                    <strong>{{ n.name }}</strong>
+                    <span>
+                      {{ nodeKind(n) }}
+                      @if (n.code) { · {{ n.code }} }
+                      @if (n.area) { · {{ n.area.displayText }} }
+                    </span>
+                  </div>
+                  <div class="re-tree-units">
+                    <span>{{ n.actualUnitCount || n.plannedUnitCount }} units</span>
+                    <small>
+                      {{ n.unitsAvailable }} free · {{ n.unitsBooked }} booked · {{ n.unitsSold }} sold
+                    </small>
+                  </div>
+                  <div class="re-tree-progress">
+                    <re-progress [value]="n.progressPercent" label="Built" [showValue]="true" />
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </re-section>
+      }
+
+      @case ('milestones') {
+        <re-section title="Construction milestones"
+                    icon="flag"
+                    note="On a construction-linked plan, certifying a milestone raises money. The
+                          figure on the right is what would be demanded the moment it is certified,
+                          so nobody signs one off without knowing what it invoices.">
+          <re-mini-list [rows]="milestones()"
+                        emptyMessage="No milestones are defined for this project." />
+        </re-section>
+      }
+
+      @case ('approvals') {
+        <re-section title="Statutory approvals"
+                    icon="gavel"
+                    note="Planning permissions, environmental clearances, commencement and
+                          completion certificates. A blocking approval stops the milestone it is
+                          attached to, whatever the site says.">
+          <re-mini-list [rows]="approvals()"
+                        emptyMessage="No approvals are recorded for this project." />
+        </re-section>
+      }
+
+      @case ('area') {
+        <re-section title="Area statement"
+                    icon="straighten"
+                    note="The regulator-facing breakdown of the site. Every square foot has to be
+                          accounted for as saleable, common, road, park, amenity or utility.">
+          <re-facts [items]="areaFacts()" />
+
+          @if (d.areaStatement.unaccountedSqFt) {
+            <p class="re-area-warning">
+              <span class="material-symbols-outlined">error</span>
+              {{ d.areaStatement.unaccountedSqFt | number:'1.0-0' }} sq ft is unaccounted for. The
+              parts do not sum to the total land area, and a regulator will pick this up.
+            </p>
+          }
+        </re-section>
+      }
+
+      @case ('team') {
+        <re-section title="Who is on it"
+                    icon="groups"
+                    note="The people a question about this project should go to.">
+          <re-facts [items]="[
+            { label: 'Project manager', value: d.projectManagerName },
+            { label: 'Sales head', value: d.salesHeadName }
+          ]" [tight]="true" />
+
+          <re-mini-list [rows]="team()" emptyMessage="Nobody else is assigned to this project." />
+        </re-section>
+      }
+
+      @case ('marketing') {
+        <re-section title="How it is sold" icon="campaign">
+          @if (d.tagline) { <p class="re-tagline">{{ d.tagline }}</p> }
+
+          <re-facts [items]="[
+            { label: 'Brochure', value: d.brochureUrl ? 'Attached' : null },
+            { label: 'Price lists', value: d.priceLists.length || null },
+            { label: 'Site plans', value: d.sitePlans.length || null }
+          ]" [tight]="true" />
+
+          @if (d.longDescription) {
+            <h4 class="re-sub-title">Description</h4>
+            <p class="re-prose">{{ d.longDescription }}</p>
+          }
+          @if (d.uniqueSellingPoints) {
+            <h4 class="re-sub-title">Selling points</h4>
+            <p class="re-prose">{{ d.uniqueSellingPoints }}</p>
+          }
+          @if (d.locationAdvantages) {
+            <h4 class="re-sub-title">Location</h4>
+            <p class="re-prose">{{ d.locationAdvantages }}</p>
+          }
+
+          @if (!d.longDescription && !d.uniqueSellingPoints && !d.locationAdvantages) {
+            <p class="re-mini-empty">
+              No marketing copy has been written. Listings for this project will be published
+              without a description.
+            </p>
+          }
+        </re-section>
+      }
+    }
+  }
+</re-detail-page>
+
+<re-toast [message]="toast()" (dismissed)="toast.set(null)" />

@@ -1,0 +1,121 @@
+/* =====================================================================
+   A project.
+   ===================================================================== */
+
+.re-project-bars { display: flex; flex-direction: column; gap: 12px; }
+
+.re-project-counts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-subtle, #f1f5f9);
+}
+
+.re-project-counts > div { display: flex; flex-direction: column; gap: 1px; }
+
+.re-project-counts span {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .045em;
+  color: var(--text-secondary, #64748b);
+}
+
+.re-project-counts strong {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── The structure tree ────────────────────────────────────────────── */
+
+.re-tree { display: flex; flex-direction: column; }
+
+.re-tree-row {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1.4fr) minmax(0, 1fr) 150px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-subtle, #f1f5f9);
+}
+
+.re-tree-row:last-child { border-bottom: none; }
+.re-tree-row:hover { background: var(--bg-muted, #f8fafc); }
+
+.re-tree-row > .material-symbols-outlined {
+  font-size: 19px;
+  color: var(--text-secondary, #94a3b8);
+}
+
+.re-tree-main { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+
+.re-tree-main strong {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-heading, #0f172a);
+}
+
+.re-tree-main span { font-size: 12px; color: var(--text-secondary, #64748b); }
+
+.re-tree-units { display: flex; flex-direction: column; gap: 1px; }
+
+.re-tree-units span {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #1e293b);
+  font-variant-numeric: tabular-nums;
+}
+
+.re-tree-units small { font-size: 11.5px; color: var(--text-secondary, #64748b); }
+
+.re-area-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 11px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--danger-border, #fecaca);
+  background: var(--danger-soft, #fef2f2);
+  color: var(--danger-text, #991b1b);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.re-area-warning .material-symbols-outlined { font-size: 19px; flex-shrink: 0; }
+
+.re-tagline {
+  margin: 0 0 14px;
+  font-size: 16px;
+  font-weight: 600;
+  font-style: italic;
+  color: var(--accent, #2b7fff);
+  line-height: 1.45;
+}
+
+.re-sub-title {
+  margin: 18px 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-secondary, #64748b);
+}
+
+.re-prose {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--text-primary, #1e293b);
+  white-space: pre-wrap;
+  max-width: 85ch;
+}
+
+@media (max-width: 900px) {
+  .re-tree-row { grid-template-columns: 22px 1fr; row-gap: 6px; }
+  .re-tree-units, .re-tree-progress { grid-column: 2; }
+}

@@ -1,0 +1,171 @@
+<div class="page-container">
+
+  <div class="page-header">
+    <div>
+      <h2>Portfolio</h2>
+      <p class="subtitle">
+        @if (!loading() && rows().length) {
+          {{ visible().length | number }} of {{ rows().length | number }} projects
+        } @else {
+          Every project side by side.
+        }
+      </p>
+    </div>
+  </div>
+
+  <re-page-help key="portfolio" />
+
+  @if (error()) {
+    <div class="alert alert-error" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <span>{{ error() }}</span>
+      <button type="button" class="btn-link" (click)="load()">Try again</button>
+    </div>
+  }
+
+  @if (!loading() && rows().length) {
+    <re-stats [items]="stats()" [compact]="true" />
+
+    <div class="re-toolbar">
+      <div class="re-search">
+        <span class="material-symbols-outlined">search</span>
+        <input type="search"
+               placeholder="Project, code or city"
+               [ngModel]="search()"
+               (ngModelChange)="search.set($event)"
+               aria-label="Search projects" />
+      </div>
+
+      <select [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)"
+              aria-label="Status">
+        <option [ngValue]="null">Any status</option>
+        @for (o of statusOptions; track o.value) {
+          <option [ngValue]="o.value">{{ o.label }}</option>
+        }
+      </select>
+
+      <select [ngModel]="sort()" (ngModelChange)="sort.set($event)" aria-label="Order">
+        <option value="name">By name</option>
+        <option value="absorption">Most sold first</option>
+        <option value="outstanding">Most owed first</option>
+        <option value="slip">Most delayed first</option>
+        <option value="progress">Furthest built first</option>
+      </select>
+
+      <label class="re-check">
+        <input type="checkbox" [ngModel]="lateOnly()" (ngModelChange)="lateOnly.set($event)" />
+        Running late only
+      </label>
+
+      @if (isFiltered()) {
+        <button type="button" class="btn-link re-clear" (click)="clear()">
+          <span class="material-symbols-outlined">close</span>Clear
+        </button>
+      }
+    </div>
+  }
+
+  @if (loading()) {
+    <re-skeleton [rowCount]="4" [colCount]="5" />
+  } @else if (!rows().length) {
+    <re-empty icon="apartment"
+              title="No projects yet"
+              message="A project is a scheme you are selling or building — a tower, a plot society, a mall. Create one and it appears here." />
+  } @else if (!visible().length) {
+    <re-empty icon="filter_alt_off"
+              [filtered]="true"
+              title="No projects match"
+              message="Nothing fits what you have asked for."
+              actionLabel="Clear the filters"
+              actionIcon="close"
+              (action)="clear()" />
+  } @else {
+
+    <div class="re-portfolio">
+      @for (p of visible(); track p.id) {
+        <article class="re-pf-card"
+                 tabindex="0"
+                 role="button"
+                 (click)="open(p)"
+                 (keydown.enter)="open(p)"
+                 (keydown.space)="open(p)">
+
+          @if (p.heroImageUrl) {
+            <img class="re-pf-hero" [src]="p.heroImageUrl" [alt]="p.name" loading="lazy" />
+          } @else {
+            <div class="re-pf-hero re-pf-hero-blank">
+              <span class="material-symbols-outlined">apartment</span>
+            </div>
+          }
+
+          <div class="re-pf-body">
+            <header class="re-pf-head">
+              <div class="re-pf-titles">
+                <h3>{{ p.name }}</h3>
+                <p>
+                  {{ kindLabel(p) }}
+                  @if (where(p)) { <span>· {{ where(p) }}</span> }
+                  @if (p.code) { <span>· {{ p.code }}</span> }
+                </p>
+              </div>
+              <re-pill tone="neutral">{{ statusLabel(p) }}</re-pill>
+            </header>
+
+            <div class="re-pf-figures">
+              <div>
+                <span>Units</span>
+                <strong>{{ p.totalUnits | number }}</strong>
+                <small>{{ p.unitsAvailable | number }} available</small>
+              </div>
+              <div>
+                <span>Sold value</span>
+                <strong>{{ money(p.totalSalesValue) }}</strong>
+                <small>{{ p.unitsSold | number }} sold, {{ p.unitsBooked | number }} booked</small>
+              </div>
+              <div>
+                <span>Collected</span>
+                <strong>{{ money(p.totalCollected) }}</strong>
+                <small>{{ money(p.outstanding) }} still owed</small>
+              </div>
+              @if (p.escrowBalance !== undefined && p.escrowBalance !== null) {
+                <div>
+                  <span>Escrow</span>
+                  <strong>{{ money(p.escrowBalance) }}</strong>
+                  <small>held for buyers</small>
+                </div>
+              }
+            </div>
+
+            <re-progress [value]="p.absorptionPercent"
+                         label="Absorption"
+                         tone="accent" />
+
+            <re-progress [value]="collectedPercent(p)"
+                         label="Collected against sold value"
+                         [tone]="collectedPercent(p) >= 80 ? 'positive'
+                                 : collectedPercent(p) >= 50 ? 'warning' : 'danger'" />
+
+            @if (p.physicalProgressPercent > 0) {
+              <re-progress [value]="p.physicalProgressPercent"
+                           label="Built"
+                           tone="positive" />
+            }
+
+            <footer class="re-pf-foot" [class]="'tone-' + schedule(p).tone">
+              <span class="material-symbols-outlined">
+                {{ schedule(p).tone === 'positive' ? 'check_circle'
+                   : schedule(p).tone === 'neutral' ? 'help' : 'schedule' }}
+              </span>
+              <span>{{ schedule(p).text }}</span>
+              @if (p.hasJointVenture) {
+                <span class="re-pf-jv">
+                  <span class="material-symbols-outlined">handshake</span>Joint venture
+                </span>
+              }
+            </footer>
+          </div>
+        </article>
+      }
+    </div>
+  }
+</div>

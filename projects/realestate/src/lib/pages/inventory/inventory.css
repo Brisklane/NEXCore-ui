@@ -1,0 +1,83 @@
+/* =====================================================================
+   The inventory board.
+
+   The tile grid itself lives in realestate-shared.css, because the plot
+   board and the site plan reuse it. What is here is the filter bar, the
+   floor labels and the unit panel.
+   ===================================================================== */
+
+.re-inv-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--card-bg, #fff);
+}
+
+.re-inv-filters .re-search { flex: 1 1 220px; min-width: 180px; }
+
+.re-inv-filters select {
+  min-height: 36px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--input-bg, #fff);
+  color: var(--text-primary, #1e293b);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.re-inv-filters select:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.re-inv-floor-count {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--bg-muted, #f1f5f9);
+  color: var(--text-secondary, #64748b);
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Status in words on every tile, so the board is readable without colour vision. */
+.re-unit-status {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  opacity: .75;
+}
+
+/* The grid view drops the floor structure and packs the tiles — useful for plot schemes
+   where "floor" means nothing and there are eight hundred of them. */
+.re-inv.is-grid .re-inv-floor { display: block; }
+.re-inv.is-grid .re-inv-floor-label { margin-bottom: 7px; }
+
+.re-drawer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.re-inv-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 16px 0 0;
+  padding: 12px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--danger-border, #fecaca);
+  background: var(--danger-soft, #fef2f2);
+  color: var(--danger-text, #991b1b);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.re-inv-warning .material-symbols-outlined { font-size: 19px; flex-shrink: 0; }

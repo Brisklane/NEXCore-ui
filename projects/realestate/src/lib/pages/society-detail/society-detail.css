@@ -1,0 +1,21 @@
+/* =====================================================================
+   A society.
+   ===================================================================== */
+
+re-progress { display: block; margin-top: 14px; }
+
+.re-handover-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 14px 0 0;
+  padding: 11px 13px;
+  border-radius: 10px;
+  background: var(--bg-muted, #f1f5f9);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-secondary, #64748b);
+  max-width: 82ch;
+}
+
+.re-handover-note .material-symbols-outlined { font-size: 19px; flex-shrink: 0; }

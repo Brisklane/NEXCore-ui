@@ -1,0 +1,240 @@
+<re-detail-page
+  backRoute="/realestate/exit/snagging"
+  backLabel="All inspections"
+  icon="fact_check"
+  [title]="data() ? (data()!.unitNumber ?? 'Inspection') : ''"
+  [subtitle]="data() ? data()!.projectName + ' · ' + data()!.inspectionType : null"
+  [reference]="data()?.reference ?? null"
+  [pills]="pills()"
+  [figures]="figures()"
+  [actions]="actions()"
+  [tabs]="tabs()"
+  [activeTab]="tab()"
+  [loading]="loading()"
+  [error]="error()"
+  [notFound]="notFound()"
+  (tabChange)="tab.set($event)"
+  (action)="act($event)"
+  (retry)="load()">
+
+  @if (data(); as d) {
+
+    @if (d.criticalCount > 0) {
+      <div class="alert alert-error" role="alert">
+        <span class="material-symbols-outlined">block</span>
+        <span>
+          {{ d.criticalCount === 1 ? 'One critical defect' : d.criticalCount + ' critical defects' }}
+          remain{{ d.criticalCount === 1 ? 's' : '' }} open. Handover cannot proceed until they
+          are fixed and re-inspected — a critical snag is one that makes the unit unusable or
+          unsafe, not merely unfinished.
+        </span>
+      </div>
+    }
+
+    @switch (tab()) {
+
+      @case ('snags') {
+        <re-section title="How far the list has been worked through"
+                    icon="donut_large"
+                    note="A defect only counts as closed once it has been fixed and re-inspected.
+                          Marked as fixed by the contractor is not the same thing.">
+          <re-progress [value]="d.percentClosed"
+                       label="Verified closed"
+                       [tone]="d.criticalCount ? 'danger'
+                               : d.percentClosed >= 90 ? 'positive' : 'accent'" />
+        </re-section>
+
+        <div class="re-snag-filters">
+          <div class="re-segment" role="group" aria-label="Severity">
+            <button type="button" [class.is-active]="severityFilter() === null"
+                    (click)="severityFilter.set(null)">All</button>
+            @for (s of severities; track s.value) {
+              <button type="button" [class.is-active]="severityFilter() === s.value"
+                      (click)="severityFilter.set(s.value)">{{ s.label }}</button>
+            }
+          </div>
+
+          <label class="re-check">
+            <input type="checkbox" [ngModel]="openOnly()" (ngModelChange)="openOnly.set($event)" />
+            Hide the ones already verified
+          </label>
+        </div>
+
+        @if (!byZone().length) {
+          <p class="re-mini-empty">
+            @if (openOnly()) {
+              Nothing outstanding. Everything found on this inspection has been fixed and
+              re-inspected.
+            } @else {
+              No defects were recorded on this inspection.
+            }
+          </p>
+        } @else {
+          @for (z of byZone(); track z.zone) {
+            <re-section [title]="z.label" [flush]="true">
+              <div class="re-snags">
+                @for (s of z.snags; track s.id) {
+                  <button type="button"
+                          class="re-snag"
+                          [class]="severityClass(s.severity)"
+                          [class.is-overdue]="s.isOverdue"
+                          (click)="open(s)">
+                    <span class="re-snag-number">#{{ s.snagNumber }}</span>
+
+                    <span class="re-snag-body">
+                      <strong>{{ s.description }}</strong>
+                      <span class="re-snag-meta">
+                        @if (s.location) { {{ s.location }} · }
+                        {{ bearerLabel(s.responsibleParty) }}
+                        @if (s.responsibleName) { — {{ s.responsibleName }} }
+                        @if (s.assignedToName) { · with {{ s.assignedToName }} }
+                      </span>
+                      @if (s.rejectionReason) {
+                        <span class="re-snag-rejected">
+                          Rejected on re-inspection: {{ s.rejectionReason }}
+                        </span>
+                      }
+                    </span>
+
+                    <span class="re-snag-tags">
+                      <re-pill [tone]="s.severity === 1 ? 'danger'
+                                       : s.severity === 2 ? 'warning' : 'neutral'">
+                        {{ severityLabel(s.severity) }}
+                      </re-pill>
+                      <re-pill [tone]="s.status === 5 ? 'positive' : 'muted'">
+                        {{ statusLabel(s.status) }}
+                      </re-pill>
+                      @if (s.photos?.length) {
+                        <span class="re-snag-photos">
+                          <span class="material-symbols-outlined">photo_camera</span>
+                          {{ s.photos.length }}
+                        </span>
+                      }
+                    </span>
+
+                    <span class="re-snag-date">
+                      @if (s.verifiedOn) {
+                        verified {{ s.verifiedOn | date:'shortDate' }}
+                      } @else if (s.fixedOn) {
+                        fixed {{ s.fixedOn | date:'shortDate' }}
+                      } @else if (s.targetDate) {
+                        <span [class.is-late]="s.isOverdue">
+                          due {{ s.targetDate | date:'shortDate' }}
+                        </span>
+                      }
+                    </span>
+                  </button>
+                }
+              </div>
+            </re-section>
+          }
+        }
+      }
+
+      @case ('summary') {
+        <re-section title="The inspection" icon="fact_check">
+          <re-facts [items]="summary()" />
+        </re-section>
+
+        <re-section title="What the counts mean"
+                    icon="help"
+                    note="The three tiers are not degrees of the same thing. They are three
+                          different decisions.">
+          <dl class="re-severity-key">
+            <div>
+              <dt><span class="dot is-critical"></span>Critical</dt>
+              <dd>
+                The unit cannot be handed over. Something is unsafe, missing, or does not work —
+                no water, no power, a door that does not lock.
+              </dd>
+            </div>
+            <div>
+              <dt><span class="dot is-major"></span>Major</dt>
+              <dd>
+                Handover can proceed, but it has to be fixed inside the agreed window. A customer
+                who signs for possession is relying on this window being met.
+              </dd>
+            </div>
+            <div>
+              <dt><span class="dot is-minor"></span>Minor</dt>
+              <dd>
+                Cosmetic. Recorded so it is not forgotten and fixed inside the defect liability
+                period, but nobody is held up by it.
+              </dd>
+            </div>
+          </dl>
+        </re-section>
+      }
+    }
+  }
+</re-detail-page>
+
+<re-drawer [open]="!!selected()"
+           [title]="selected() ? 'Defect #' + selected()!.snagNumber : ''"
+           [subtitle]="selected()?.description ?? null"
+           size="md"
+           [busy]="saving()"
+           (closed)="selected.set(null)">
+  @if (selected(); as s) {
+    <re-facts [items]="[
+      { label: 'Severity', value: severityLabel(s.severity),
+        tone: s.severity === 1 ? 'danger' : s.severity === 2 ? 'warning' : 'neutral' },
+      { label: 'Status', value: statusLabel(s.status) },
+      { label: 'Location', value: s.location },
+      { label: 'Responsible', value: bearerLabel(s.responsibleParty), hint: s.responsibleName },
+      { label: 'Assigned to', value: s.assignedToName },
+      { label: 'Target', value: s.targetDate ? (s.targetDate | date:'mediumDate') : null,
+        tone: s.isOverdue ? 'danger' : 'neutral' },
+      { label: 'Fixed', value: s.fixedOn ? (s.fixedOn | date:'mediumDate') : null },
+      { label: 'Verified', value: s.verifiedOn ? (s.verifiedOn | date:'mediumDate') : null,
+        hint: s.verifiedByName },
+      { label: 'Estimated cost', value: money(s.estimatedCost) },
+      { label: 'Actual cost', value: money(s.actualCost) }
+    ]" [tight]="true" />
+
+    @if (s.photos?.length) {
+      <h4 class="re-sub-title">Evidence</h4>
+      <div class="re-snag-gallery">
+        @for (p of s.photos; track p.url) {
+          <figure>
+            <img [src]="p.url" [alt]="p.caption ?? 'Defect photograph'" loading="lazy" />
+            <figcaption>{{ p.stage }} · {{ p.capturedAt | date:'shortDate' }}</figcaption>
+          </figure>
+        }
+      </div>
+    }
+
+    <h4 class="re-sub-title">Change the status</h4>
+    <div class="re-form-grid">
+      <div class="re-field">
+        <label for="s-status">New status</label>
+        <select id="s-status" [ngModel]="newStatus()" (ngModelChange)="newStatus.set(+$event)">
+          @for (st of statuses; track st.value) {
+            <option [ngValue]="st.value">{{ st.label }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="re-field is-full">
+        <label for="s-note">Note</label>
+        <textarea id="s-note" rows="3" [ngModel]="statusNote()"
+                  (ngModelChange)="statusNote.set($event)"></textarea>
+      </div>
+    </div>
+
+    <p class="re-drawer-note">
+      Photographs are captured on site, where the camera is — changing the status here leaves the
+      evidence the inspector uploaded untouched.
+    </p>
+
+    <div class="re-drawer-actions">
+      <button type="button" class="re-touch-btn" (click)="selected.set(null)">Cancel</button>
+      <button type="button" class="re-touch-btn is-primary" [disabled]="saving()"
+              (click)="changeStatus()">
+        {{ saving() ? 'Saving…' : 'Update' }}
+      </button>
+    </div>
+  }
+</re-drawer>
+
+<re-toast [message]="toast()" (dismissed)="toast.set(null)" />

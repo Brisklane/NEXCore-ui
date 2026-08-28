@@ -1,0 +1,223 @@
+<div class="page-container">
+
+  <a class="re-back" (click)="back()" tabindex="0" (keydown.enter)="back()">
+    <span class="material-symbols-outlined">arrow_back</span>The project
+  </a>
+
+  <div class="page-header">
+    <div>
+      <h2>Progress</h2>
+      <p class="subtitle">
+        @if (measurements().length) {
+          {{ visible().length }} of {{ measurements().length }} measurements
+        } @else {
+          What was built this period, and what it is worth.
+        }
+      </p>
+    </div>
+
+    <div class="page-header-actions">
+      <label class="re-check">
+        <input type="checkbox" [ngModel]="uncertifiedOnly()"
+               (ngModelChange)="uncertifiedOnly.set($event)" />
+        Awaiting certification only
+      </label>
+    </div>
+  </div>
+
+  @if (error()) {
+    <div class="alert alert-error" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <span>{{ error() }}</span>
+      <button type="button" class="btn-link" (click)="load()">Try again</button>
+    </div>
+  }
+
+  @if (loading()) {
+    <re-skeleton [rowCount]="8" [colCount]="5" />
+  } @else if (!measurements().length) {
+    <re-empty icon="straighten"
+              title="Nothing measured yet"
+              message="Progress is recorded on site, against bill lines. Once the first measurement comes in it appears here for certification." />
+  } @else {
+
+    <re-stats [items]="stats()" [compact]="true" />
+
+    @if (uncertified().length) {
+      <div class="alert alert-warning" role="status">
+        <span class="material-symbols-outlined">pending</span>
+        <span>
+          {{ uncertified().length === 1 ? 'One measurement is' : uncertified().length + ' measurements are' }}
+          waiting to be certified, worth {{ money(uncertifiedValue()) }}. Nothing can be claimed
+          on an interim certificate until they are.
+        </span>
+      </div>
+    }
+
+    <div class="re-split">
+      <!-- The list of measurements -->
+      <aside class="re-measure-list">
+        @for (m of visible(); track m.id) {
+          <button type="button"
+                  class="re-measure"
+                  [class.is-active]="selected()?.id === m.id"
+                  [class.is-draft]="!m.isCertified"
+                  (click)="select(m)">
+            <span class="re-measure-head">
+              <strong>{{ m.reference }}</strong>
+              @if (m.isCertified) {
+                <re-pill tone="positive">Certified</re-pill>
+              } @else {
+                <re-pill tone="warning">Draft</re-pill>
+              }
+            </span>
+            <span class="re-measure-period">
+              {{ m.periodFrom | date:'d MMM' }} – {{ m.periodTo | date:'d MMM yyyy' }}
+            </span>
+            <span class="re-measure-meta">
+              {{ money(m.periodValue) }} this period
+              @if (m.measuredByName) { · {{ m.measuredByName }} }
+              @if (m.wasOffline) { · <span class="is-offline">taken offline</span> }
+            </span>
+          </button>
+        }
+      </aside>
+
+      <!-- The selected measurement -->
+      <div class="re-measure-pane">
+        @if (selected(); as m) {
+
+          @if (overMeasured().length) {
+            <div class="alert alert-error" role="alert">
+              <span class="material-symbols-outlined">warning</span>
+              <span>
+                {{ overMeasured().length === 1 ? 'One line has' : overMeasured().length + ' lines have' }}
+                been measured beyond the contract quantity. Either the bill needs remeasuring or
+                the measurement is wrong — certifying it as it stands is an over-payment that has
+                to be clawed back from a later certificate.
+              </span>
+            </div>
+          }
+
+          @if (m.wasOffline && !m.isCertified) {
+            <div class="alert alert-warning" role="status">
+              <span class="material-symbols-outlined">cloud_off</span>
+              <span>
+                This was recorded on site while offline, so the measurer did not have the current
+                cumulative figures in front of them. Worth checking before certifying.
+              </span>
+            </div>
+          }
+
+          <re-section [title]="m.reference"
+                      icon="straighten"
+                      [note]="'Measured by ' + methodLabel(m.method).toLowerCase()
+                              + '. A measurement becomes claimable only once it is certified.'">
+            <re-facts [items]="selectedFacts()" />
+
+            @if (!m.isCertified) {
+              <div class="re-measure-actions">
+                <button type="button" class="re-touch-btn is-success"
+                        [disabled]="working()" (click)="certifying.set(true)">
+                  <span class="material-symbols-outlined">verified</span>
+                  Certify this measurement
+                </button>
+              </div>
+            }
+          </re-section>
+
+          @if (m.photoUrls?.length) {
+            <re-section title="Site photographs"
+                        icon="photo_camera"
+                        note="Evidence taken at the time of measurement."
+                        [flush]="true">
+              <div class="re-measure-photos">
+                @for (url of m.photoUrls; track url) {
+                  <img [src]="url" alt="Site photograph taken at measurement" loading="lazy" />
+                }
+              </div>
+            </re-section>
+          }
+
+          <re-section title="What was measured"
+                      icon="list_alt"
+                      note="Previous plus this period gives cumulative. Where cumulative exceeds
+                            the contract quantity the row is flagged; where certified is behind
+                            cumulative, that is work measured but not yet signed off."
+                      [flush]="true">
+            @if (!m.lines?.length) {
+              <p class="re-mini-empty">No lines were recorded on this measurement.</p>
+            } @else {
+              <div class="re-table-wrap">
+                <table class="re-table">
+                  <thead>
+                    <tr>
+                      <th>Item</th>
+                      <th>Unit</th>
+                      <th style="text-align:right">Contract</th>
+                      <th style="text-align:right">Previous</th>
+                      <th style="text-align:right">This period</th>
+                      <th style="text-align:right">Cumulative</th>
+                      <th style="text-align:right">Certified</th>
+                      <th style="text-align:right">This period value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (l of m.lines; track l.boqLineId) {
+                      <tr [class]="lineTone(l)">
+                        <td>
+                          <strong>{{ l.itemCode }}</strong>
+                          <small>{{ l.description }}</small>
+                          @if (l.location) { <small>{{ l.location }}</small> }
+                          @if (l.measurementNote) {
+                            <small class="is-note">{{ l.measurementNote }}</small>
+                          }
+                        </td>
+                        <td>{{ l.uom }}</td>
+                        <td style="text-align:right">{{ quantity(l.contractQuantity) }}</td>
+                        <td style="text-align:right">{{ quantity(l.previousQuantity) }}</td>
+                        <td style="text-align:right">
+                          <strong>{{ quantity(l.thisPeriodQuantity) }}</strong>
+                        </td>
+                        <td style="text-align:right"
+                            [class.is-bad]="l.cumulativeQuantity > l.contractQuantity">
+                          {{ quantity(l.cumulativeQuantity) }}
+                          <small>{{ linePercent(l) | number:'1.0-0' }}%</small>
+                        </td>
+                        <td style="text-align:right"
+                            [class.is-warn]="l.certifiedQuantity < l.cumulativeQuantity">
+                          {{ quantity(l.certifiedQuantity) }}
+                        </td>
+                        <td style="text-align:right">{{ exact(l.thisPeriodValue) }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colspan="7">This period</td>
+                      <td style="text-align:right">{{ exact(m.periodValue) }}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            }
+          </re-section>
+        } @else {
+          <re-empty icon="straighten"
+                    title="Pick a measurement"
+                    message="Choose one from the list to see what was measured and certify it." />
+        }
+      </div>
+    </div>
+  }
+
+  <re-confirm [open]="certifying()"
+              title="Certify this measurement?"
+              message="It becomes claimable and can be included on an interim payment certificate. Certifying more than has actually been built is an over-payment, and it is recovered only by withholding a later certificate."
+              confirmLabel="Yes, certify it"
+              tone="accent"
+              (confirmed)="certify()"
+              (cancelled)="certifying.set(false)" />
+
+  <re-toast [message]="toast()" (dismissed)="toast.set(null)" />
+</div>

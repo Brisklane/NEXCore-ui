@@ -1,0 +1,102 @@
+/* =====================================================================
+   A booking.
+   ===================================================================== */
+
+.re-notes {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--text-primary, #1e293b);
+  white-space: pre-wrap;
+  max-width: 85ch;
+}
+
+/* The schedule row grows a fifth column here: what has been paid, with the
+   surcharge stated under it rather than folded into the principal. */
+.re-sched-row {
+  grid-template-columns: 34px minmax(0, 1fr) 120px 150px 120px;
+}
+
+.re-sched-paid {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #1e293b);
+  font-variant-numeric: tabular-nums;
+}
+
+.re-sched-surcharge {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--danger, #dc2626);
+}
+
+/* ── Ledger ────────────────────────────────────────────────────────── */
+
+.re-table td small {
+  display: block;
+  font-size: 11px;
+  color: var(--text-secondary, #94a3b8);
+}
+
+.re-table tr.is-reversal td {
+  color: var(--text-secondary, #94a3b8);
+  font-style: italic;
+}
+
+/* ── Checklist ─────────────────────────────────────────────────────── */
+
+.re-checklist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+
+.re-checklist li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 2px;
+  border-bottom: 1px solid var(--border-subtle, #f1f5f9);
+}
+
+.re-checklist li:last-child { border-bottom: none; }
+
+.re-checklist .material-symbols-outlined {
+  font-size: 20px;
+  flex-shrink: 0;
+  color: var(--text-secondary, #94a3b8);
+}
+
+.re-checklist li.is-done .material-symbols-outlined { color: var(--success, #16a34a); }
+
+.re-checklist li.is-required:not(.is-done) .material-symbols-outlined {
+  color: var(--danger, #dc2626);
+}
+
+.re-checklist li > span:nth-child(2) {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.re-checklist strong {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-heading, #0f172a);
+}
+
+.re-checklist li.is-done strong {
+  color: var(--text-secondary, #64748b);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.re-checklist small { font-size: 12px; color: var(--text-secondary, #64748b); line-height: 1.45; }
+.re-checklist small.is-override { color: var(--warning, #b45309); font-weight: 600; }
+
+@media (max-width: 860px) {
+  .re-sched-row { grid-template-columns: 30px 1fr auto; row-gap: 4px; }
+  .re-sched-paid, .re-sched-balance { grid-column: 2 / -1; text-align: left; }
+}

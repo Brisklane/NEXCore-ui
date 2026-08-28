@@ -1,0 +1,184 @@
+<re-detail-page
+  backRoute="/realestate/exit/transfers"
+  backLabel="All transfers"
+  icon="swap_horiz"
+  [title]="data() ? data()!.transferorName + ' → ' + (data()!.transfereeName ?? 'not yet named') : ''"
+  [subtitle]="data() ? data()!.projectName + ' · ' + (data()!.unitNumber ?? data()!.fileNumber ?? '') : null"
+  [reference]="data()?.reference ?? null"
+  [pills]="pills()"
+  [figures]="figures()"
+  [actions]="actions()"
+  [tabs]="tabs()"
+  [activeTab]="tab()"
+  [loading]="loading()"
+  [error]="error()"
+  [notFound]="notFound()"
+  (tabChange)="tab.set($event)"
+  (action)="act($event)"
+  (retry)="load()">
+
+  @if (data(); as d) {
+
+    @if (d.blockedByLitigation) {
+      <div class="alert alert-error" role="alert">
+        <span class="material-symbols-outlined">gavel</span>
+        <span>
+          This file is under litigation. No transfer should be completed on it until the matter is
+          resolved, whatever the parties agree between themselves.
+        </span>
+      </div>
+    }
+
+    @switch (tab()) {
+
+      @case ('gates') {
+        <re-section title="The four gates"
+                    icon="lock"
+                    note="They are passed in order and none can be skipped. This is the sequence
+                          that stops a plot being sold twice, or sold with money still owed on it."
+                    [flush]="true">
+          <re-gate [conditions]="gates()"
+                   clearTitle="All four gates are clear"
+                   blockedTitle="This transfer cannot complete yet" />
+        </re-section>
+
+        <re-section title="The transfer" icon="swap_horiz">
+          <re-facts [items]="summary()" />
+        </re-section>
+
+        @if (duesFacts().length) {
+          <re-section title="Dues clearance"
+                      icon="fact_check"
+                      note="A clearance is a statement of a moment. It expires, because dues carry
+                            on accruing after it is issued — an expired one has to be re-run.">
+            <re-facts [items]="duesFacts()" />
+          </re-section>
+        }
+
+        @if (d.noc; as noc) {
+          <re-section title="No objection certificate" icon="verified">
+            <re-facts [items]="[
+              { label: 'Number', value: noc.nocNumber },
+              { label: 'Issued', value: noc.issuedOn ? (noc.issuedOn | date:'mediumDate') : null },
+              { label: 'Valid until', value: noc.validUntil ? (noc.validUntil | date:'mediumDate') : null },
+              { label: 'Issued by', value: noc.issuedByName }
+            ]" [tight]="true" />
+          </re-section>
+        }
+      }
+
+      @case ('parties') {
+        <re-section title="Who is transferring to whom"
+                    icon="group"
+                    note="Both sides have to appear in person at the session with verified
+                          identity. A transfer executed on a photocopy is the classic way a plot
+                          file is stolen.">
+          <re-mini-list [rows]="parties()"
+                        emptyMessage="No parties have been recorded on this transfer." />
+        </re-section>
+      }
+
+      @case ('fees') {
+        <re-section title="Transfer fees"
+                    icon="payments"
+                    note="Computed from the project’s fee schedule, not agreed at the counter.
+                          Recompute if the schedule or the area has changed since the request.">
+          <re-mini-list [rows]="feeLines()"
+                        emptyMessage="No fees have been computed. Use Recompute fees above." />
+
+          <div class="re-fee-total">
+            <div>
+              <span>Total fee</span>
+              <strong>{{ money(d.totalTransferFee) }}</strong>
+            </div>
+            <div>
+              <span>Paid</span>
+              <strong>{{ money(d.feesPaid) }}</strong>
+            </div>
+            <div [class.is-bad]="d.totalTransferFee - d.feesPaid > 0">
+              <span>Outstanding</span>
+              <strong>{{ money(d.totalTransferFee - d.feesPaid) }}</strong>
+            </div>
+          </div>
+        </re-section>
+      }
+
+      @case ('session') {
+        @if (d.session) {
+          <re-section title="The transfer session"
+                      icon="handshake"
+                      note="The moment ownership actually changes. Both parties, their identities
+                            checked, in front of witnesses, with the deed number recorded.">
+            <re-facts [items]="sessionFacts()" />
+          </re-section>
+
+          <re-section title="Witnesses"
+                      icon="how_to_reg"
+                      note="Most jurisdictions require two. Their details are captured so the
+                            transfer can be defended years later.">
+            <re-mini-list [rows]="witnesses()"
+                          emptyMessage="No witnesses have been recorded — the session cannot be completed without them." />
+          </re-section>
+        } @else {
+          <p class="re-mini-empty">
+            No session has been scheduled. The transfer cannot complete until both parties have
+            attended one.
+          </p>
+        }
+      }
+
+      @case ('documents') {
+        <re-section title="What is needed"
+                    icon="folder"
+                    note="The documents this kind of transfer requires. A sale needs different
+                          papers from an inheritance or a gift, and the list adjusts to the kind.">
+          @if (!d.documentChecklist.length) {
+            <p class="re-mini-empty">No document checklist applies to this transfer.</p>
+          } @else {
+            <ul class="re-checklist">
+              @for (c of d.documentChecklist; track c.id) {
+                <li [class.is-done]="c.isSatisfied" [class.is-required]="c.isMandatory">
+                  <span class="material-symbols-outlined">
+                    {{ c.isSatisfied ? 'check_circle' : c.isMandatory ? 'error' : 'radio_button_unchecked' }}
+                  </span>
+                  <span>
+                    <strong>{{ c.label }}</strong>
+                    @if (c.note) { <small>{{ c.note }}</small> }
+                    @if (c.wasOverridden) {
+                      <small class="is-override">
+                        Overridden{{ c.overrideReason ? ': ' + c.overrideReason : '' }}
+                      </small>
+                    }
+                  </span>
+                  @if (!c.isMandatory) { <re-pill tone="muted">Optional</re-pill> }
+                </li>
+              }
+            </ul>
+          }
+        </re-section>
+      }
+
+      @case ('chain') {
+        <re-section title="Everyone who has owned it"
+                    icon="link"
+                    note="Append-only. Nothing here is ever edited or deleted — a completed
+                          transfer closes the previous owner’s entry and opens a new one, so the
+                          record of who owned what, and when, survives any later dispute.">
+          <re-mini-list [rows]="chainRows()"
+                        emptyMessage="No ownership history has been recorded for this unit." />
+        </re-section>
+      }
+    }
+  }
+</re-detail-page>
+
+<re-confirm [open]="completing()"
+            title="Complete this transfer?"
+            message="Ownership passes to the transferee. The ownership chain gains a permanent entry that cannot be edited afterwards, a new allotment is issued, and the old booking is closed."
+            confirmLabel="Yes, transfer it"
+            tone="accent"
+            [requireReason]="false"
+            (confirmed)="complete()"
+            (cancelled)="completing.set(false)" />
+
+<re-toast [message]="toast()" (dismissed)="toast.set(null)" />

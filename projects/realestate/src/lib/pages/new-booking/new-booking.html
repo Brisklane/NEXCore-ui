@@ -1,0 +1,531 @@
+<div class="page-container">
+
+  <div class="page-header">
+    <div>
+      <h2>New booking</h2>
+      <p class="subtitle">
+        @if (unit()) {
+          {{ unit()!.unitNumber }}
+          @if (buyerName()) { for {{ buyerName() }} }
+        } @else {
+          Nothing is committed until the last step.
+        }
+      </p>
+    </div>
+
+    <div class="page-header-actions">
+      <button type="button" class="btn-secondary" (click)="cancel()">Cancel</button>
+    </div>
+  </div>
+
+  <re-page-help key="new-booking" />
+
+  @if (error()) {
+    <div class="alert alert-error" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <span>{{ error() }}</span>
+    </div>
+  }
+
+  @if (loading()) {
+    <re-skeleton [rowCount]="6" [colCount]="3" />
+  } @else {
+
+    <!-- The step rail. Completed steps are clickable; ones ahead are not. -->
+    <ol class="re-steps">
+      @for (s of steps; track s.n) {
+        <li class="re-step"
+            [class.is-done]="step() > s.n"
+            [class.is-current]="step() === s.n">
+          <button type="button" [disabled]="s.n > step()" (click)="go(s.n)">
+            <span class="re-step-num">
+              @if (step() > s.n) {
+                <span class="material-symbols-outlined">check</span>
+              } @else {
+                {{ s.n }}
+              }
+            </span>
+            <span>{{ s.label }}</span>
+          </button>
+        </li>
+      }
+    </ol>
+
+    <div class="re-wizard">
+
+      <!-- ── 1. The unit ─────────────────────────────────────────── -->
+      @if (step() === 1) {
+        <re-section title="Which unit"
+                    note="Only units on the market are listed. A held or blocked unit has to be
+                          released on the inventory board before it can be booked.">
+          <div class="re-search re-wizard-search">
+            <span class="material-symbols-outlined">search</span>
+            <input type="search" placeholder="Unit or block"
+                   [ngModel]="unitSearch()" (ngModelChange)="unitSearch.set($event)"
+                   aria-label="Search units" />
+          </div>
+
+          @if (!availableUnits().length) {
+            <p class="re-mini-empty">
+              Nothing is available in this project. Release a hold, or unblock a unit, and it
+              will appear here.
+            </p>
+          } @else {
+            <div class="re-inv-units re-wizard-units">
+              @for (u of availableUnits(); track u.id) {
+                <button type="button"
+                        class="re-unit is-available"
+                        [class.is-selected]="unitId() === u.id"
+                        (click)="pickUnit(u)">
+                  <span class="re-unit-number">{{ u.unitNumber }}</span>
+                  <span class="re-unit-meta">
+                    {{ u.areaDisplay }}
+                    @if (u.bedrooms) { · {{ u.bedrooms }} bed }
+                  </span>
+                  <span class="re-unit-price">{{ money(u.totalPrice) }}</span>
+                  @if (u.blockName) { <span class="re-unit-flag">{{ u.blockName }}</span> }
+                </button>
+              }
+            </div>
+          }
+        </re-section>
+      }
+
+      <!-- ── 2. The buyer ────────────────────────────────────────── -->
+      @if (step() === 2) {
+        <re-section title="Who is buying"
+                    note="Search for somebody you already deal with before creating a new record —
+                          duplicate customers are how two people end up chasing the same debt.">
+          <div class="re-segment" role="group" aria-label="Buyer">
+            <button type="button" [class.is-active]="buyerMode() === 'existing'"
+                    (click)="buyerMode.set('existing')">Somebody we know</button>
+            <button type="button" [class.is-active]="buyerMode() === 'new'"
+                    (click)="buyerMode.set('new')">Somebody new</button>
+          </div>
+
+          @if (buyerMode() === 'existing') {
+            <div class="re-search re-wizard-search">
+              <span class="material-symbols-outlined">search</span>
+              <input type="search" placeholder="Name, phone or email"
+                     [ngModel]="partySearch()"
+                     (ngModelChange)="partySearch.set($event); searchPeople()"
+                     aria-label="Search contacts" />
+            </div>
+
+            @if (people().length) {
+              <div class="re-rows">
+                @for (p of people(); track p.id) {
+                  <button type="button" class="re-row"
+                          [class.is-good]="partyId() === p.id"
+                          (click)="partyId.set(p.id)">
+                    <div class="re-row-main">
+                      <span class="re-row-title">{{ p.label }}</span>
+                      @if (p.subLabel) { <span class="re-row-sub">{{ p.subLabel }}</span> }
+                    </div>
+                    @if (partyId() === p.id) {
+                      <span class="material-symbols-outlined re-row-go">check_circle</span>
+                    }
+                  </button>
+                }
+              </div>
+            } @else if (partySearch().length >= 2) {
+              <p class="re-mini-empty">
+                Nobody matches that. Switch to “Somebody new” to create the record here.
+              </p>
+            } @else {
+              <p class="re-mini-empty">Type at least two characters to search.</p>
+            }
+          } @else {
+            <div class="re-form-grid">
+              <div class="re-field">
+                <label for="b-first">First name</label>
+                <input id="b-first" type="text" [ngModel]="firstName()"
+                       (ngModelChange)="firstName.set($event)" />
+              </div>
+              <div class="re-field">
+                <label for="b-last">Last name</label>
+                <input id="b-last" type="text" [ngModel]="lastName()"
+                       (ngModelChange)="lastName.set($event)" />
+              </div>
+              <div class="re-field">
+                <label for="b-guardian">Father’s or guardian’s name</label>
+                <input id="b-guardian" type="text" [ngModel]="guardian()"
+                       (ngModelChange)="guardian.set($event)" />
+                <small>Printed on the allotment letter in most jurisdictions.</small>
+              </div>
+              <div class="re-field">
+                <label for="b-phone">Phone</label>
+                <input id="b-phone" type="tel" [ngModel]="phone()"
+                       (ngModelChange)="phone.set($event)" />
+              </div>
+              <div class="re-field">
+                <label for="b-email">Email</label>
+                <input id="b-email" type="email" [ngModel]="email()"
+                       (ngModelChange)="email.set($event)" />
+              </div>
+            </div>
+
+            <p class="re-wizard-note">
+              <span class="material-symbols-outlined">badge</span>
+              Identity documents are collected on the KYC screen after the booking is created. In
+              most jurisdictions the sale cannot complete until that is done, and the booking will
+              say so.
+            </p>
+          }
+        </re-section>
+      }
+
+      <!-- ── 3. Price and plan ───────────────────────────────────── -->
+      @if (step() === 3) {
+        <re-section title="Price"
+                    note="The cost sheet is priced by the server, from the published price list.
+                          What is shown here is exactly what the ledger will raise.">
+          <div class="re-form-grid">
+            <div class="re-field">
+              <label for="b-disc-amt">Discount</label>
+              <input id="b-disc-amt" type="number" min="0"
+                     [ngModel]="discountAmount()"
+                     (ngModelChange)="setDiscountAmount(+$event)"
+                     (blur)="refreshPreview()" />
+            </div>
+            <div class="re-field">
+              <label for="b-disc-pct">Discount %</label>
+              <input id="b-disc-pct" type="number" min="0" max="100" step="0.25"
+                     [ngModel]="discountPercent()"
+                     (ngModelChange)="setDiscountPercent(+$event)"
+                     (blur)="refreshPreview()" />
+            </div>
+            <div class="re-field is-full">
+              <label for="b-disc-note">Why</label>
+              <input id="b-disc-note" type="text" [ngModel]="discountNote()"
+                     (ngModelChange)="discountNote.set($event)" />
+              <small>Required for anything above the approval threshold.</small>
+            </div>
+          </div>
+        </re-section>
+
+        <re-section title="Where the buyer came from"
+                    note="This decides whose commission it is. Getting it wrong here is the
+                          commonest cause of a broker dispute three months later.">
+          <div class="re-form-grid">
+            <div class="re-field">
+              <label for="b-channel">Source</label>
+              <select id="b-channel" [ngModel]="sourcingChannel()"
+                      (ngModelChange)="sourcingChannel.set(+$event); refreshPreview()">
+                @for (c of channels; track c.value) {
+                  <option [ngValue]="c.value">{{ c.label }}</option>
+                }
+              </select>
+            </div>
+
+            @if (needsPartner()) {
+              <div class="re-field">
+                <label for="b-partner">Channel partner</label>
+                <select id="b-partner" [ngModel]="partnerId()"
+                        (ngModelChange)="partnerId.set($event); refreshPreview()">
+                  <option [ngValue]="null">Choose one…</option>
+                  @for (p of partners(); track p.id) {
+                    <option [ngValue]="p.id">{{ p.label }}</option>
+                  }
+                </select>
+              </div>
+            }
+
+            <div class="re-field">
+              <label for="b-agent">Sales executive</label>
+              <select id="b-agent" [ngModel]="agentId()" (ngModelChange)="agentId.set($event)">
+                <option [ngValue]="null">Nobody in particular</option>
+                @for (a of agents(); track a.id) {
+                  <option [ngValue]="a.id">{{ a.label }}</option>
+                }
+              </select>
+            </div>
+          </div>
+        </re-section>
+
+        <re-section title="Payment plan"
+                    note="Each plan spreads the same total differently. The buyer sees the monthly
+                          figure, so pick the one they actually agreed to.">
+          @if (!templates().length) {
+            <p class="re-mini-empty">
+              This project has no active payment plan. One has to be published before a booking
+              can be taken.
+            </p>
+          } @else {
+            <div class="re-plans">
+              @for (t of templates(); track t.id) {
+                <button type="button" class="re-plan-card"
+                        [class.is-active]="templateId() === t.id"
+                        (click)="templateId.set(t.id); refreshPreview()">
+                  <strong>{{ t.name }}</strong>
+                  <span>
+                    {{ t.instalmentCount }} instalments over {{ t.durationMonths }} months
+                  </span>
+                  @if (t.isDefault) { <small>Usual choice</small> }
+                  @if (!t.isBalanced) {
+                    <small class="is-bad">Does not add to 100% — cannot be used</small>
+                  }
+                </button>
+              }
+            </div>
+          }
+        </re-section>
+
+        @if (previewing()) {
+          <re-skeleton [rowCount]="5" [colCount]="3" />
+        } @else if (costSheet(); as cs) {
+          <ng-container *ngTemplateOutlet="sheet" />
+        }
+      }
+
+      <!-- ── 4. Payment ──────────────────────────────────────────── -->
+      @if (step() === 4) {
+        <re-section title="Booking payment"
+                    note="What is being taken today. It is receipted against the booking the moment
+                          the booking is created, and allocated by the rule set in settings.">
+          <label class="re-check re-wizard-check">
+            <input type="checkbox" [ngModel]="takePayment()"
+                   (ngModelChange)="takePayment.set($event)" />
+            Money is being taken now
+          </label>
+
+          @if (takePayment()) {
+            <div class="re-form-grid">
+              <div class="re-field">
+                <label for="p-amount">Amount</label>
+                <input id="p-amount" type="number" min="0"
+                       [ngModel]="payAmount()" (ngModelChange)="payAmount.set(+$event)" />
+                @if (plan(); as pl) {
+                  <small>The plan asks for {{ money(pl.downPayment) }} down.</small>
+                }
+              </div>
+
+              <div class="re-field">
+                <label for="p-instrument">How</label>
+                <select id="p-instrument" [ngModel]="payInstrument()"
+                        (ngModelChange)="payInstrument.set(+$event)">
+                  @for (i of instruments; track i.value) {
+                    <option [ngValue]="i.value">{{ i.label }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="re-field">
+                <label for="p-date">Received on</label>
+                <input id="p-date" type="date" [ngModel]="payDate()"
+                       (ngModelChange)="payDate.set($event)" />
+              </div>
+
+              <div class="re-field">
+                <label for="p-ref">Reference or cheque number</label>
+                <input id="p-ref" type="text" [ngModel]="payReference()"
+                       (ngModelChange)="payReference.set($event)" />
+              </div>
+
+              <div class="re-field">
+                <label for="p-bank">Bank</label>
+                <input id="p-bank" type="text" [ngModel]="payBank()"
+                       (ngModelChange)="payBank.set($event)" />
+              </div>
+            </div>
+          } @else {
+            <p class="re-wizard-note">
+              <span class="material-symbols-outlined">info</span>
+              The booking will be created with nothing paid against it. The first demand will fall
+              due on the plan’s own schedule.
+            </p>
+          }
+        </re-section>
+
+        <re-section title="Anything else worth recording">
+          <div class="re-field is-full">
+            <label for="b-notes">Notes</label>
+            <textarea id="b-notes" rows="3" [ngModel]="notes()"
+                      (ngModelChange)="notes.set($event)"></textarea>
+          </div>
+        </re-section>
+      }
+
+      <!-- ── 5. Review ───────────────────────────────────────────── -->
+      @if (step() === 5) {
+        @if (previewing()) {
+          <re-skeleton [rowCount]="7" [colCount]="3" />
+        } @else if (preview(); as p) {
+
+          <re-gate [conditions]="gateConditions()"
+                   clearTitle="Everything checks out"
+                   blockedTitle="This booking cannot be taken yet"
+                   (navigate)="goTo($event)" />
+
+          @if (p.requiresApproval) {
+            <div class="alert alert-warning" role="status">
+              <span class="material-symbols-outlined">approval</span>
+              <span>
+                This booking will be created but held for approval:
+                {{ p.approvalsRequired.join(', ') }}. The unit comes off the market immediately;
+                the agreement cannot be issued until it is approved.
+              </span>
+            </div>
+          }
+
+          <ng-container *ngTemplateOutlet="sheet" />
+
+          @if (p.escrowPortion > 0) {
+            <re-section title="Where the money goes"
+                        icon="lock"
+                        note="Buyer money on an off-plan sale is held in escrow and released only
+                              against certified construction progress.">
+              <div class="re-flow">
+                <div class="re-flow-seg">
+                  <span class="re-flow-label">Into escrow</span>
+                  <span class="re-flow-value">{{ money(p.escrowPortion) }}</span>
+                  <span class="re-flow-hint">released against progress</span>
+                </div>
+                <div class="re-flow-seg">
+                  <span class="re-flow-label">Freely available</span>
+                  <span class="re-flow-value">{{ money(p.freePortion) }}</span>
+                  <span class="re-flow-hint">yours on receipt</span>
+                </div>
+              </div>
+            </re-section>
+          }
+
+          @if (p.commissionEstimate > 0) {
+            <re-section title="Commission" icon="percent">
+              <p class="re-wizard-note">
+                <span class="material-symbols-outlined">handshake</span>
+                About {{ money(p.commissionEstimate) }} will accrue
+                @if (p.partnerName) { to {{ p.partnerName }} }
+                once the qualifying condition on the commission rule is met. It is an estimate
+                until then, and nothing is payable yet.
+              </p>
+            </re-section>
+          }
+        }
+      }
+    </div>
+
+    <!-- ── The foot ───────────────────────────────────────────────── -->
+    <div class="re-wizard-foot">
+      <button type="button" class="re-touch-btn" [disabled]="step() === 1" (click)="back()">
+        <span class="material-symbols-outlined">arrow_back</span>Back
+      </button>
+
+      <span class="re-spacer"></span>
+
+      @if (step() < 5) {
+        <button type="button" class="re-touch-btn is-primary"
+                [disabled]="!canAdvance(step())" (click)="next()">
+          Continue<span class="material-symbols-outlined">arrow_forward</span>
+        </button>
+      } @else {
+        <button type="button" class="re-touch-btn is-success"
+                [disabled]="!gatePassed() || submitting()" (click)="submit()">
+          <span class="material-symbols-outlined">check</span>
+          {{ submitting() ? 'Creating…' : 'Create the booking' }}
+        </button>
+      }
+    </div>
+  }
+
+  <!-- The cost sheet, shown on both the pricing and the review step. -->
+  <ng-template #sheet>
+    @if (costSheet(); as cs) {
+      <re-section title="Cost sheet" icon="receipt_long">
+        <div class="re-sheet">
+          <div class="re-sheet-head">
+            <span>{{ cs.projectName }} · {{ cs.unitNumber }}</span>
+            <span>{{ cs.saleableArea.displayText }} at {{ money(cs.ratePerSqFt) }}/sq ft</span>
+          </div>
+
+          <div class="re-sheet-lines">
+            @for (l of cs.salePriceLines; track l.label) {
+              <div class="re-sheet-line">
+                <span class="re-sheet-label">{{ l.label }}</span>
+                <span class="re-sheet-amount">{{ money(l.amount) }}</span>
+              </div>
+            }
+
+            @if (cs.discountAmount > 0) {
+              <div class="re-sheet-line is-deduction">
+                <span class="re-sheet-label">Discount</span>
+                <span class="re-sheet-amount">−{{ money(cs.discountAmount) }}</span>
+              </div>
+            }
+
+            <div class="re-sheet-line is-group">
+              <span class="re-sheet-label">Net sale price</span>
+              <span class="re-sheet-amount">{{ money(cs.netSalePrice) }}</span>
+            </div>
+
+            @for (l of cs.otherChargeLines; track l.label) {
+              <div class="re-sheet-line">
+                <span class="re-sheet-label">
+                  {{ l.label }}
+                  @if (l.isOptional) { <span class="re-sheet-note">optional</span> }
+                </span>
+                <span class="re-sheet-amount">{{ money(l.amount) }}</span>
+              </div>
+            }
+
+            @if (cs.taxTotal > 0) {
+              <div class="re-sheet-line">
+                <span class="re-sheet-label">Tax</span>
+                <span class="re-sheet-amount">{{ money(cs.taxTotal) }}</span>
+              </div>
+            }
+          </div>
+
+          <div class="re-sheet-total">
+            <span>Grand total</span>
+            <span>{{ money(cs.grandTotal) }}</span>
+          </div>
+
+          @if (cs.amountInWords) {
+            <p class="re-sheet-words">{{ cs.amountInWords }}</p>
+          }
+        </div>
+      </re-section>
+
+      @if (plan(); as pl) {
+        <re-section title="Payment plan"
+                    [note]="pl.instalmentCount + ' instalments over ' + pl.durationMonths
+                            + ' months, averaging ' + money(pl.monthlyAverage) + ' a month.'">
+          @if (pl.isDeviation) {
+            <div class="alert alert-warning" role="status">
+              <span class="material-symbols-outlined">rule</span>
+              <span>{{ pl.deviationNote ?? 'This plan departs from the template and will need approval.' }}</span>
+            </div>
+          }
+
+          <div class="re-schedule">
+            @for (i of pl.instalments; track i.sequenceNumber) {
+              <div class="re-sched-row">
+                <span class="re-sched-seq">{{ i.sequenceNumber }}</span>
+                <span class="re-sched-label">
+                  {{ i.label }}
+                  @if (i.milestoneName) {
+                    <span class="re-sched-sub">on {{ i.milestoneName }}</span>
+                  } @else if (i.dueDate) {
+                    <span class="re-sched-sub">{{ i.dueDate | date:'mediumDate' }}</span>
+                  }
+                </span>
+                <span class="re-sched-amount">{{ money(i.totalAmount) }}</span>
+              </div>
+            }
+          </div>
+
+          @if (pl.earlyPaymentRebateAvailable > 0) {
+            <p class="re-wizard-note">
+              <span class="material-symbols-outlined">savings</span>
+              Paying ahead of schedule would earn up to
+              {{ money(pl.earlyPaymentRebateAvailable) }} in rebate over the life of the plan.
+            </p>
+          }
+        </re-section>
+      }
+    }
+  </ng-template>
+
+  <re-toast [message]="toast()" (dismissed)="toast.set(null)" />
+</div>

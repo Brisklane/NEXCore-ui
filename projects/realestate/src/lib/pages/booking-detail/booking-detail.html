@@ -1,0 +1,310 @@
+<re-detail-page
+  backRoute="/realestate/bookings"
+  backLabel="All bookings"
+  icon="sell"
+  [title]="data()?.applicantName ?? ''"
+  [subtitle]="data() ? data()!.projectName + (data()!.unitNumber ? ' · ' + data()!.unitNumber : '') : null"
+  [reference]="data()?.reference ?? null"
+  [pills]="pills()"
+  [figures]="figures()"
+  [actions]="actions()"
+  [tabs]="tabs()"
+  [activeTab]="tab()"
+  [loading]="loading()"
+  [error]="error()"
+  [notFound]="notFound()"
+  (tabChange)="tab.set($event)"
+  (action)="act($event)"
+  (retry)="load()">
+
+  @if (data(); as d) {
+
+    @if (d.pendingApprovals.length) {
+      <div class="alert alert-warning" role="status">
+        <span class="material-symbols-outlined">approval</span>
+        <span>
+          Waiting on approval:
+          {{ d.pendingApprovals[0].summary ?? d.pendingApprovals[0].documentType }}
+          @if (d.pendingApprovals.length > 1) { and {{ d.pendingApprovals.length - 1 }} more }.
+          The unit is off the market, but the agreement cannot be issued until this is decided.
+        </span>
+      </div>
+    }
+
+    @if (d.overdueAmount > 0) {
+      <div class="alert alert-error" role="alert">
+        <span class="material-symbols-outlined">warning</span>
+        <span>
+          {{ money(d.overdueAmount) }} is overdue, {{ d.daysOverdue }} days past due.
+          @if (d.totalSurcharge > 0) {
+            Surcharge of {{ money(d.totalSurcharge) }} has accrued.
+          }
+        </span>
+      </div>
+    }
+
+    @switch (tab()) {
+
+      @case ('overview') {
+        <re-section title="How much has been paid"
+                    icon="donut_large"
+                    note="Against the total consideration, which includes every charge on the cost
+                          sheet — not just the sale price.">
+          <re-progress [value]="d.collectionPercent"
+                       label="Collected"
+                       [tone]="d.overdueAmount > 0 ? 'danger'
+                               : d.collectionPercent >= 80 ? 'positive' : 'accent'" />
+        </re-section>
+
+        <div class="re-grid">
+          <re-section title="The booking" icon="sell">
+            <re-facts [items]="summary()" />
+          </re-section>
+
+          <re-section title="Price" icon="request_quote">
+            <re-facts [items]="pricing()" [tight]="true" />
+          </re-section>
+        </div>
+
+        @if (milestoneDates().length) {
+          <re-section title="Where it has got to" icon="timeline">
+            <re-facts [items]="milestoneDates()" [tight]="true" />
+          </re-section>
+        }
+
+        @if (d.chargeLines.length) {
+          <re-section title="Cost sheet" icon="receipt_long" [flush]="true">
+            <div class="re-sheet">
+              <div class="re-sheet-lines">
+                @for (l of d.chargeLines; track l.label) {
+                  <div class="re-sheet-line" [class.is-deduction]="l.amount < 0">
+                    <span class="re-sheet-label">
+                      {{ l.label }}
+                      @if (l.isOptional) {
+                        <span class="re-sheet-note">
+                          {{ l.isAccepted ? 'optional, taken' : 'optional, declined' }}
+                        </span>
+                      }
+                    </span>
+                    <span class="re-sheet-amount">{{ money(l.amount) }}</span>
+                  </div>
+                }
+              </div>
+              <div class="re-sheet-total">
+                <span>Total consideration</span>
+                <span>{{ money(d.totalConsideration) }}</span>
+              </div>
+            </div>
+          </re-section>
+        }
+
+        @if (d.notes) {
+          <re-section title="Notes" icon="sticky_note_2">
+            <p class="re-notes">{{ d.notes }}</p>
+          </re-section>
+        }
+      }
+
+      @case ('schedule') {
+        @if (d.paymentPlan; as plan) {
+          <re-section [title]="'Payment plan — ' + plan.reference"
+                      icon="calendar_month"
+                      [note]="'Version ' + plan.version
+                              + (plan.isRestructure ? ', restructured' : '')
+                              + (plan.surchargePolicyName ? '. Surcharge policy: ' + plan.surchargePolicyName : '')
+                              + '. Surcharge is shown separately from principal so a disputed figure can always be taken apart.'"
+                      [flush]="true">
+            <div class="re-schedule">
+              @for (i of instalments(); track i.id) {
+                <div class="re-sched-row" [class]="instalmentClass(i)">
+                  <span class="re-sched-seq">{{ i.sequenceNumber }}</span>
+
+                  <span class="re-sched-label">
+                    {{ i.label }}
+                    <span class="re-sched-sub">
+                      @if (i.milestoneName) {
+                        on {{ i.milestoneName }}
+                      } @else if (i.dueDate) {
+                        due {{ i.dueDate | date:'mediumDate' }}
+                      }
+                      · {{ instalmentStatus(i) }}
+                      @if (i.demandNumber) { · demand {{ i.demandNumber }} }
+                    </span>
+                  </span>
+
+                  <span class="re-sched-amount">{{ money(i.totalAmount) }}</span>
+
+                  <span class="re-sched-paid">
+                    {{ i.paidAmount ? money(i.paidAmount) : '—' }}
+                    @if (i.surchargeOutstanding > 0) {
+                      <span class="re-sched-surcharge">
+                        +{{ money(i.surchargeOutstanding) }} surcharge
+                      </span>
+                    }
+                  </span>
+
+                  <span class="re-sched-balance">{{ money(i.balance) }}</span>
+                </div>
+              }
+            </div>
+          </re-section>
+
+          <re-section title="Plan totals" icon="functions">
+            <re-facts [items]="[
+              { label: 'Plan total', value: money(plan.totalAmount) },
+              { label: 'Demanded', value: money(plan.totalDemanded) },
+              { label: 'Paid', value: money(plan.totalPaid), tone: 'positive' },
+              { label: 'Outstanding', value: money(plan.outstanding),
+                tone: plan.outstanding > 0 ? 'warning' : 'positive' },
+              { label: 'Rebate earned', value: money(plan.earlyPaymentRebateEarned),
+                hint: 'for paying ahead of schedule' },
+              { label: 'Restructure fee', value: plan.restructureFee ? money(plan.restructureFee) : 'None' }
+            ]" [tight]="true" />
+          </re-section>
+        } @else {
+          <p class="re-mini-empty">
+            No payment plan is attached to this booking. Nothing can be demanded until one is.
+          </p>
+        }
+      }
+
+      @case ('money') {
+        <re-section title="Demands"
+                    icon="request_quote"
+                    note="What has been asked for, and whether it was sent. A demand that was
+                          raised but never sent is the commonest reason a customer says they were
+                          never told.">
+          <re-mini-list [rows]="demands()"
+                        emptyMessage="Nothing has been demanded on this booking yet." />
+        </re-section>
+
+        <re-section title="Receipts"
+                    icon="payments"
+                    note="Every payment received against this booking, with what went to escrow.">
+          <re-mini-list [rows]="receipts()"
+                        emptyMessage="No money has been received against this booking." />
+        </re-section>
+      }
+
+      @case ('ledger') {
+        <re-section title="Statement of account"
+                    icon="receipt_long"
+                    note="Every debit and credit in order, with the running balance. This is what
+                          a customer should be sent when they dispute a figure."
+                    [flush]="true">
+          @if (!d.ledger.length) {
+            <p class="re-mini-empty">The ledger is empty.</p>
+          } @else {
+            <div class="re-table-wrap">
+              <table class="re-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>What</th>
+                    <th>Reference</th>
+                    <th style="text-align:right">Debit</th>
+                    <th style="text-align:right">Credit</th>
+                    <th style="text-align:right">Balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (e of d.ledger; track e.id) {
+                    <tr [class.is-reversal]="e.isReversal">
+                      <td>{{ e.entryDate | date:'mediumDate' }}</td>
+                      <td>
+                        {{ e.description }}
+                        <small>{{ ledgerKind(e.kind) }}</small>
+                      </td>
+                      <td>{{ e.documentNumber ?? '—' }}</td>
+                      <td style="text-align:right">
+                        {{ e.debitAmount ? money(e.debitAmount) : '' }}
+                      </td>
+                      <td style="text-align:right">
+                        {{ e.creditAmount ? money(e.creditAmount) : '' }}
+                      </td>
+                      <td style="text-align:right"><strong>{{ money(e.runningBalance) }}</strong></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </re-section>
+      }
+
+      @case ('applicants') {
+        <re-section title="Who is on the booking"
+                    icon="group"
+                    note="Shares must add to 100%. Every applicant needs their own verified
+                          identity before the sale can complete.">
+          <re-mini-list [rows]="applicants()" emptyMessage="No applicants are recorded." />
+        </re-section>
+      }
+
+      @case ('documents') {
+        <re-section title="What is still needed"
+                    icon="checklist"
+                    note="The checklist the sale has to satisfy. Anything marked required will
+                          block completion until it is provided.">
+          @if (!checklist().length) {
+            <p class="re-mini-empty">No checklist applies to this booking.</p>
+          } @else {
+            <ul class="re-checklist">
+              @for (c of checklist(); track c.id) {
+                <li [class.is-done]="c.isSatisfied" [class.is-required]="c.isMandatory">
+                  <span class="material-symbols-outlined">
+                    {{ c.isSatisfied ? 'check_circle' : c.isMandatory ? 'error' : 'radio_button_unchecked' }}
+                  </span>
+                  <span>
+                    <strong>{{ c.label }}</strong>
+                    @if (c.note) { <small>{{ c.note }}</small> }
+                    @if (c.wasOverridden) {
+                      <small class="is-override">
+                        Overridden{{ c.overrideReason ? ': ' + c.overrideReason : '' }}
+                      </small>
+                    }
+                  </span>
+                  @if (!c.isMandatory) { <re-pill tone="muted">Optional</re-pill> }
+                </li>
+              }
+            </ul>
+          }
+        </re-section>
+
+        <re-section title="Generated documents"
+                    icon="folder"
+                    note="Allotment letters, agreements, receipts and notices produced against
+                          this booking.">
+          <re-mini-list [rows]="documents()"
+                        emptyMessage="Nothing has been generated yet." />
+        </re-section>
+      }
+
+      @case ('history') {
+        <re-section title="Everything that has happened" icon="history">
+          @if (!timeline().length) {
+            <p class="re-mini-empty">Nothing recorded yet.</p>
+          } @else {
+            <re-timeline [items]="timeline()" />
+          }
+        </re-section>
+
+        <re-section title="Status changes"
+                    icon="swap_horiz"
+                    note="Who moved this booking, when, and why.">
+          <re-mini-list [rows]="statusHistory()" emptyMessage="The status has never changed." />
+        </re-section>
+      }
+    }
+  }
+</re-detail-page>
+
+<re-confirm [open]="confirming()"
+            title="Confirm this booking?"
+            message="The payment plan goes live, demands start being raised on its schedule, and the unit is recorded as sold rather than held. This is not easily undone."
+            confirmLabel="Yes, confirm it"
+            tone="accent"
+            (confirmed)="confirm()"
+            (cancelled)="confirming.set(false)" />
+
+<re-toast [message]="toast()" (dismissed)="toast.set(null)" />

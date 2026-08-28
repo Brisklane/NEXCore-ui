@@ -1,0 +1,111 @@
+<div class="page-container re-detail">
+
+  @if (backRoute) {
+    <a class="re-back" [routerLink]="backRoute">
+      <span class="material-symbols-outlined">arrow_back</span>{{ backLabel }}
+    </a>
+  }
+
+  @if (error) {
+    <div class="alert alert-error" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <span>{{ error }}</span>
+      <button type="button" class="btn-link" (click)="retry.emit()">Try again</button>
+    </div>
+  }
+
+  @if (loading) {
+    <re-skeleton [rowCount]="6" [colCount]="4" />
+  } @else if (notFound) {
+    <div class="re-empty">
+      <span class="material-symbols-outlined re-empty-icon">search_off</span>
+      <p class="re-empty-title">We could not find that record</p>
+      <p class="re-empty-text">{{ notFoundMessage }}</p>
+      @if (backRoute) {
+        <a class="re-touch-btn is-primary" [routerLink]="backRoute">{{ backLabel }}</a>
+      }
+    </div>
+  } @else {
+
+    <header class="re-detail-head">
+      <div class="re-detail-id">
+        @if (photoUrl) {
+          <img class="re-detail-photo" [src]="photoUrl" [alt]="title" />
+        } @else {
+          <span class="re-detail-photo re-detail-icon">
+            <span class="material-symbols-outlined">{{ icon }}</span>
+          </span>
+        }
+
+        <div class="re-detail-titles">
+          @if (reference) { <span class="re-detail-ref">{{ reference }}</span> }
+          <h2>{{ title }}</h2>
+          @if (subtitle) { <p class="re-detail-sub">{{ subtitle }}</p> }
+
+          @if (pills.length) {
+            <div class="re-detail-pills">
+              @for (p of pills; track p.label) {
+                <re-pill [tone]="p.tone ?? 'neutral'" [icon]="p.icon ?? null">{{ p.label }}</re-pill>
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="re-detail-right">
+        @if (figures.length) {
+          <div class="re-detail-figures">
+            @for (f of figures; track f.label) {
+              <div class="re-detail-figure" [title]="f.hint ?? ''">
+                <span>{{ f.label }}</span>
+                <span>{{ f.value }}</span>
+                @if (f.hint) { <span class="re-detail-figure-hint">{{ f.hint }}</span> }
+              </div>
+            }
+          </div>
+        }
+
+        @if (actions.length) {
+          <div class="re-detail-actions">
+            @for (a of actions; track a.key) {
+              <button type="button"
+                      [class]="buttonClass(a)"
+                      [disabled]="a.disabled"
+                      [title]="a.disabled ? (a.reason ?? '') : a.label"
+                      (click)="action.emit(a.key)">
+                @if (a.icon) { <span class="material-symbols-outlined">{{ a.icon }}</span> }
+                {{ a.label }}
+              </button>
+            }
+            <ng-content select="[detail-actions]" />
+          </div>
+        }
+      </div>
+    </header>
+
+    @if (tabs.length > 1) {
+      <div class="re-tabs" role="tablist" [attr.aria-label]="title + ' sections'">
+        @for (t of tabs; track t.key; let i = $index) {
+          <button type="button"
+                  class="re-tab"
+                  role="tab"
+                  [class.is-active]="t.key === activeTab"
+                  [attr.aria-selected]="t.key === activeTab"
+                  [attr.tabindex]="t.key === activeTab ? 0 : -1"
+                  (keydown)="onTabKey($event, i)"
+                  (click)="select(t.key)">
+            @if (t.icon) { <span class="material-symbols-outlined">{{ t.icon }}</span> }
+            {{ t.label }}
+            @if (t.count !== null && t.count !== undefined && t.count > 0) {
+              <span class="re-tab-count" [class]="'tone-' + (t.tone ?? 'neutral')">{{ t.count }}</span>
+            }
+          </button>
+        }
+      </div>
+    }
+
+    <div class="re-detail-body" role="tabpanel">
+      <ng-content />
+    </div>
+  }
+</div>

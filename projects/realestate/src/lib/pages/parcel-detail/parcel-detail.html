@@ -1,0 +1,204 @@
+<re-detail-page
+  backRoute="/realestate/parcels"
+  backLabel="All parcels"
+  icon="terrain"
+  [title]="data()?.name || data()?.reference || ''"
+  [subtitle]="data() ? [data()!.mouza, data()!.district].join(', ') : null"
+  [reference]="data()?.surveyNumber ?? data()?.reference ?? null"
+  [pills]="pills()"
+  [figures]="figures()"
+  [actions]="actions()"
+  [tabs]="tabs()"
+  [activeTab]="tab()"
+  [loading]="loading()"
+  [error]="error()"
+  [notFound]="notFound()"
+  (tabChange)="tab.set($event)"
+  (action)="act($event)"
+  (retry)="load()">
+
+  @if (data(); as d) {
+
+    @if (chainGaps().length) {
+      <div class="alert alert-error" role="alert">
+        <span class="material-symbols-outlined">link_off</span>
+        <span>
+          The chain of title does not link up.
+          {{ chainGaps()[0] }} — the person who received the land in one deed is not the person
+          who transferred it in the next. Until this is explained, a claim from the missing party
+          remains open.
+        </span>
+      </div>
+    }
+
+    @if (failedChecks().length) {
+      <div class="alert alert-error" role="alert">
+        <span class="material-symbols-outlined">cancel</span>
+        <span>
+          {{ failedChecks().length === 1 ? 'A title check has' : failedChecks().length + ' title checks have' }}
+          failed. Nothing should be built or sold on this parcel until they are resolved.
+        </span>
+      </div>
+    }
+
+    @switch (tab()) {
+
+      @case ('overview') {
+        <re-section title="How far the searches have got"
+                    icon="fact_check"
+                    note="Every mandatory check has to be answered before the land is safe to
+                          build on. Skipping one to save a week is the classic false economy in
+                          this business.">
+          <re-progress [value]="verificationProgress()"
+                       label="Verification complete"
+                       [tone]="failedChecks().length ? 'danger'
+                               : verificationProgress() === 100 ? 'positive' : 'warning'" />
+        </re-section>
+
+        <div class="re-grid">
+          <re-section title="The parcel" icon="terrain">
+            <re-facts [items]="identity()" />
+          </re-section>
+
+          <re-section title="Area"
+                      icon="straighten"
+                      note="The recorded area is what the revenue record says. The surveyed area
+                            is what is actually there. They rarely agree exactly, and the
+                            difference matters when the land is sold on.">
+            <re-facts [items]="measurements()" [tight]="true" />
+          </re-section>
+        </div>
+
+        <re-section title="What may be built"
+                    icon="architecture"
+                    note="The planning envelope, which caps how much saleable area this land can
+                          ever produce. Everything in the feasibility model sits under these
+                          three numbers.">
+          <re-facts [items]="planning()" />
+        </re-section>
+      }
+
+      @case ('title') {
+        <re-section title="Chain of title"
+                    icon="link"
+                    note="Every transfer, oldest first. Each entry’s transferor should be the
+                          previous entry’s transferee — where it is not, there is a gap.">
+          <re-mini-list [rows]="titleChain()"
+                        emptyMessage="No chain of title has been recorded. This is the first thing a buyer’s lawyer will ask for." />
+
+          @if (chainGaps().length) {
+            <div class="re-gap-list">
+              <h4>Breaks found</h4>
+              <ul>
+                @for (g of chainGaps(); track g) { <li>{{ g }}</li> }
+              </ul>
+              <p>
+                Each of these is a point where the land appears to have changed hands without a
+                registered instrument connecting the two names.
+              </p>
+            </div>
+          }
+        </re-section>
+      }
+
+      @case ('checks') {
+        <re-section title="Title verification"
+                    icon="fact_check"
+                    note="The searches and confirmations that establish the land can be bought.
+                          A conditional pass means the condition has to be met before completion,
+                          not after.">
+          <re-mini-list [rows]="checks()"
+                        emptyMessage="No verification checks have been raised for this parcel." />
+        </re-section>
+      }
+
+      @case ('encumbrances') {
+        <re-section title="Encumbrances"
+                    icon="lock"
+                    note="Charges, liens, easements, court orders and unpaid dues. Anything
+                          marked blocking prevents a sale until it is cleared.">
+          <re-mini-list [rows]="encumbrances()"
+                        emptyMessage="Nothing is registered against this parcel. The title is clear." />
+        </re-section>
+      }
+
+      @case ('cost') {
+        <re-section title="What it has cost"
+                    icon="payments"
+                    note="Purchase price is rarely the whole cost. Stamp duty, registration,
+                          mutation, brokerage, legal fees and conversion charges all belong in
+                          the land cost that the feasibility is measured against.">
+          <re-mini-list [rows]="costLines()"
+                        emptyMessage="No costs have been recorded against this parcel." />
+
+          <div class="re-cost-total">
+            <span>Total acquisition cost</span>
+            <strong>{{ money(d.totalAcquisitionCost) }}</strong>
+          </div>
+
+          @if (d.monthlyHoldingCost) {
+            <p class="re-holding">
+              <span class="material-symbols-outlined">hourglass_top</span>
+              Holding this land costs {{ money(d.monthlyHoldingCost) }} a month in interest, tax
+              and security. That is {{ money(d.monthlyHoldingCost * 12) }} a year against a scheme
+              that has not started.
+            </p>
+          }
+        </re-section>
+      }
+
+      @case ('acquisition') {
+        @if (d.acquisition) {
+          <re-section title="The acquisition"
+                      icon="handshake"
+                      note="How the purchase is progressing, and what is holding it up.">
+            <re-facts [items]="acquisitionFacts()" />
+          </re-section>
+
+          @if (d.acquisition.stages?.length) {
+            <re-section title="Stages" icon="timeline" [flush]="true">
+              <ol class="re-steps re-steps-vertical">
+                @for (s of d.acquisition.stages; track s.id) {
+                  <li class="re-step"
+                      [class.is-done]="s.actualDate"
+                      [class.is-late]="s.isOverdue && !s.actualDate">
+                    <span class="re-step-num">
+                      @if (s.actualDate) {
+                        <span class="material-symbols-outlined">check</span>
+                      } @else { · }
+                    </span>
+                    <span>
+                      <strong>{{ stageLabel(s.kind) }}</strong>
+                      @if (s.actualDate) {
+                        <small>done {{ s.actualDate | date:'mediumDate' }}</small>
+                      } @else if (s.targetDate) {
+                        <small [class.is-late]="s.isOverdue">
+                          due {{ s.targetDate | date:'mediumDate' }}
+                          @if (s.isOverdue) { — overdue }
+                        </small>
+                      }
+                      @if (s.ownerName) { <small>{{ s.ownerName }}</small> }
+                      @if (s.note) { <small>{{ s.note }}</small> }
+                    </span>
+                    @if (s.actualCost || s.estimatedCost) {
+                      <span class="re-step-cost">
+                        {{ money(s.actualCost ?? s.estimatedCost) }}
+                      </span>
+                    }
+                  </li>
+                }
+              </ol>
+            </re-section>
+          }
+        } @else {
+          <p class="re-mini-empty">
+            No acquisition record exists for this parcel. It may already have been owned, or the
+            purchase may not have been started in the system.
+          </p>
+        }
+      }
+    }
+  }
+</re-detail-page>
+
+<re-toast [message]="toast()" (dismissed)="toast.set(null)" />

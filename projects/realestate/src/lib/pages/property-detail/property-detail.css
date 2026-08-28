@@ -1,0 +1,56 @@
+/* =====================================================================
+   A property.
+   ===================================================================== */
+
+.re-features { display: flex; flex-wrap: wrap; gap: 6px; }
+.re-features.is-highlight { margin-bottom: 10px; }
+
+.re-notes {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--text-primary, #1e293b);
+  white-space: pre-wrap;
+  max-width: 85ch;
+}
+
+/* ── Gallery ───────────────────────────────────────────────────────── */
+
+.re-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+}
+
+.re-gallery-item { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+
+.re-gallery-item img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background: var(--bg-muted, #f1f5f9);
+  cursor: zoom-in;
+  transition: border-color .12s ease, transform .12s ease;
+}
+
+.re-gallery-item img:hover { transform: scale(1.01); }
+.re-gallery-item.is-current img { border-color: var(--accent, #2b7fff); }
+
+.re-gallery-item figcaption {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+}
+
+.re-gallery-item figcaption > span:first-child {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

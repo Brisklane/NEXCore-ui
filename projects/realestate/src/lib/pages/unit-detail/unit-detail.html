@@ -1,0 +1,243 @@
+<re-detail-page
+  backRoute="/realestate/inventory"
+  backLabel="The inventory board"
+  icon="grid_view"
+  [title]="data()?.unitNumber ?? ''"
+  [subtitle]="data() ? [data()!.blockName, data()!.floorLabel].join(' · ') : null"
+  [reference]="sheet()?.projectName ?? null"
+  [pills]="pills()"
+  [figures]="figures()"
+  [actions]="actions()"
+  [tabs]="tabs()"
+  [activeTab]="tab()"
+  [loading]="loading()"
+  [error]="error()"
+  [notFound]="notFound()"
+  (tabChange)="tab.set($event)"
+  (action)="act($event)"
+  (retry)="load()">
+
+  @if (data(); as d) {
+
+    @if (flags().length) {
+      <div class="alert alert-error" role="alert">
+        <span class="material-symbols-outlined">gpp_maybe</span>
+        <span>
+          This unit is {{ flags().join(', ') }}. It should not be sold or held without approval,
+          and the reason will be recorded against the file.
+        </span>
+      </div>
+    }
+
+    @switch (tab()) {
+
+      @case ('overview') {
+        <re-section title="The unit" icon="grid_view">
+          <re-facts [items]="facts()" />
+        </re-section>
+
+        @if (holdFacts().length) {
+          <re-section title="The hold"
+                      icon="timer"
+                      note="A hold releases itself when the clock runs out and the unit goes back
+                            on the market automatically. Nobody has to remember to do it.">
+            <re-facts [items]="holdFacts()" [tight]="true" />
+          </re-section>
+        }
+
+        @if (buyerFacts().length) {
+          <re-section title="Who has it" icon="person">
+            <re-facts [items]="buyerFacts()" [tight]="true" />
+            @if (d.collectionPercent !== undefined) {
+              <re-progress [value]="d.collectionPercent"
+                           label="Collected against the price"
+                           [tone]="d.collectionPercent >= 80 ? 'positive'
+                                   : d.collectionPercent >= 40 ? 'accent' : 'warning'" />
+            }
+          </re-section>
+        }
+      }
+
+      @case ('price') {
+        <re-section title="Quote"
+                    icon="request_quote"
+                    note="Priced by the server against the published price list, so the figure a
+                          customer is quoted is exactly the figure the ledger will raise.">
+          <div class="re-quote-controls">
+            <div class="re-field">
+              <label for="u-plan">Payment plan</label>
+              <select id="u-plan" [ngModel]="templateId()"
+                      (ngModelChange)="templateId.set($event); price()">
+                <option [ngValue]="null">No plan — full price</option>
+                @for (t of templates(); track t.id) {
+                  <option [ngValue]="t.id">
+                    {{ t.name }} ({{ t.instalmentCount }} over {{ t.durationMonths }} months)
+                  </option>
+                }
+              </select>
+            </div>
+
+            <div class="re-field">
+              <label for="u-discount">Discount</label>
+              <input id="u-discount" type="number" min="0"
+                     [ngModel]="discount()" (ngModelChange)="discount.set(+$event)"
+                     (blur)="price()" />
+              <small>Above the threshold this will need approval at booking.</small>
+            </div>
+          </div>
+        </re-section>
+
+        @if (pricing()) {
+          <re-skeleton [rowCount]="6" [colCount]="2" />
+        } @else if (sheet(); as cs) {
+          <re-section title="Cost sheet" icon="receipt_long" [flush]="true">
+            <div class="re-sheet">
+              <div class="re-sheet-head">
+                <span>{{ cs.projectName }} · {{ cs.unitNumber }}</span>
+                <span>{{ cs.saleableArea.displayText }} at {{ money(cs.ratePerSqFt) }}/sq ft</span>
+              </div>
+
+              <div class="re-sheet-lines">
+                @for (l of cs.salePriceLines; track l.label) {
+                  <div class="re-sheet-line">
+                    <span class="re-sheet-label">{{ l.label }}</span>
+                    <span class="re-sheet-amount">{{ money(l.amount) }}</span>
+                  </div>
+                }
+
+                @if (cs.discountAmount > 0) {
+                  <div class="re-sheet-line is-deduction">
+                    <span class="re-sheet-label">Discount</span>
+                    <span class="re-sheet-amount">−{{ money(cs.discountAmount) }}</span>
+                  </div>
+                }
+
+                <div class="re-sheet-line is-group">
+                  <span class="re-sheet-label">Net sale price</span>
+                  <span class="re-sheet-amount">{{ money(cs.netSalePrice) }}</span>
+                </div>
+
+                @for (l of cs.otherChargeLines; track l.label) {
+                  <div class="re-sheet-line">
+                    <span class="re-sheet-label">
+                      {{ l.label }}
+                      @if (l.isOptional) { <span class="re-sheet-note">optional</span> }
+                    </span>
+                    <span class="re-sheet-amount">{{ money(l.amount) }}</span>
+                  </div>
+                }
+
+                @if (cs.taxTotal > 0) {
+                  <div class="re-sheet-line">
+                    <span class="re-sheet-label">Tax</span>
+                    <span class="re-sheet-amount">{{ money(cs.taxTotal) }}</span>
+                  </div>
+                }
+              </div>
+
+              <div class="re-sheet-total">
+                <span>Grand total</span>
+                <span>{{ money(cs.grandTotal) }}</span>
+              </div>
+
+              @if (cs.amountInWords) { <p class="re-sheet-words">{{ cs.amountInWords }}</p> }
+            </div>
+          </re-section>
+
+          @if (cs.paymentPlan; as pl) {
+            <re-section title="Payment plan"
+                        [note]="pl.instalmentCount + ' instalments over ' + pl.durationMonths
+                                + ' months, averaging ' + money(pl.monthlyAverage) + ' a month.'"
+                        [flush]="true">
+              <div class="re-schedule">
+                @for (i of pl.instalments; track i.sequenceNumber) {
+                  <div class="re-sched-row">
+                    <span class="re-sched-seq">{{ i.sequenceNumber }}</span>
+                    <span class="re-sched-label">
+                      {{ i.label }}
+                      <span class="re-sched-sub">
+                        @if (i.milestoneName) { on {{ i.milestoneName }} }
+                        @else if (i.dueDate) { {{ i.dueDate | date:'mediumDate' }} }
+                      </span>
+                    </span>
+                    <span class="re-sched-amount">{{ money(i.totalAmount) }}</span>
+                  </div>
+                }
+              </div>
+            </re-section>
+          }
+
+          @if (cs.validUntil) {
+            <p class="re-quote-valid">
+              <span class="material-symbols-outlined">event_busy</span>
+              This quote holds until {{ cs.validUntil | date:'mediumDate' }}. After that the price
+              list may have moved and it should be re-run before anything is signed.
+            </p>
+          }
+
+          @if (cs.terms) {
+            <re-section title="Terms" icon="gavel">
+              <p class="re-prose">{{ cs.terms }}</p>
+            </re-section>
+          }
+        } @else {
+          <p class="re-mini-empty">
+            No price list applies to this unit yet, so it cannot be quoted. Publish one on the
+            pricing screen first.
+          </p>
+        }
+      }
+    }
+  }
+</re-detail-page>
+
+<re-drawer [open]="holding()"
+           title="Hold this unit"
+           [subtitle]="data()?.unitNumber ?? null"
+           size="sm"
+           [busy]="saving()"
+           (closed)="holding.set(false)">
+  <div class="re-form-grid">
+    <div class="re-field is-full">
+      <label for="h-for">Who for</label>
+      <input id="h-for" type="text" [ngModel]="holdFor()" (ngModelChange)="holdFor.set($event)"
+             placeholder="The customer’s name" />
+      <small>Required. A hold with no name attached is how units quietly disappear.</small>
+    </div>
+
+    <div class="re-field">
+      <label for="h-hours">For how long</label>
+      <div class="re-field-inline">
+        <input id="h-hours" type="number" min="1" max="720"
+               [ngModel]="holdHours()" (ngModelChange)="holdHours.set(+$event)" />
+        <span>hours</span>
+      </div>
+      @if (ctx.settings(); as s) {
+        <small>
+          Above {{ s.maxHoldHoursWithoutApproval }} hours this needs a manager’s approval.
+        </small>
+      }
+    </div>
+
+    <div class="re-field is-full">
+      <label for="h-note">Note</label>
+      <textarea id="h-note" rows="2" [ngModel]="holdNote()"
+                (ngModelChange)="holdNote.set($event)"></textarea>
+    </div>
+  </div>
+
+  <p class="re-drawer-note">
+    The unit comes off the market immediately and goes back on by itself when the clock runs out.
+    Nothing is sold and no money is taken.
+  </p>
+
+  <div class="re-drawer-actions">
+    <button type="button" class="re-touch-btn" (click)="holding.set(false)">Cancel</button>
+    <button type="button" class="re-touch-btn is-primary"
+            [disabled]="saving() || !holdFor().trim()" (click)="placeHold()">
+      {{ saving() ? 'Holding…' : 'Hold it' }}
+    </button>
+  </div>
+</re-drawer>
+
+<re-toast [message]="toast()" (dismissed)="toast.set(null)" />

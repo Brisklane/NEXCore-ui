@@ -1,0 +1,219 @@
+<re-detail-page
+  backRoute="/realestate/construction"
+  backLabel="All construction"
+  icon="construction"
+  [title]="data()?.name ?? ''"
+  [subtitle]="data()?.projectName ?? null"
+  [reference]="data()?.code ?? null"
+  [pills]="pills()"
+  [figures]="figures()"
+  [actions]="actions()"
+  [tabs]="tabs()"
+  [activeTab]="tab()"
+  [loading]="loading()"
+  [error]="error()"
+  [notFound]="notFound()"
+  (tabChange)="tab.set($event)"
+  (action)="act($event)"
+  (retry)="load()">
+
+  @if (data(); as d) {
+
+    @if (d.marginPercent < 0) {
+      <div class="alert alert-error" role="alert">
+        <span class="material-symbols-outlined">trending_down</span>
+        <span>
+          This project is forecast to lose {{ money(-d.forecastMargin) }}. The forecast final cost
+          of {{ money(d.forecastFinalCost) }} exceeds the revised contract value of
+          {{ money(d.revisedContractValue) }}. Every unpriced variation makes this worse, not
+          better.
+        </span>
+      </div>
+    }
+
+    @if (overCertified()) {
+      <div class="alert alert-error" role="alert">
+        <span class="material-symbols-outlined">gpp_maybe</span>
+        <span>
+          {{ (-progressGap()).toFixed(0) }} percentage points more has been certified than has
+          been built. Over-certification is money already paid for work that does not exist, and
+          it is recovered only by withholding future certificates.
+        </span>
+      </div>
+    }
+
+    @switch (tab()) {
+
+      @case ('overview') {
+        <re-section title="Progress"
+                    icon="insights"
+                    note="Physical is what has been built; financial is what has been certified.
+                          They should track each other. A wide gap in either direction is the
+                          earliest warning this project gives you.">
+          <re-progress [value]="d.physicalProgressPercent" label="Built" tone="accent" />
+          <re-progress [value]="d.financialProgressPercent"
+                       label="Certified"
+                       [tone]="overCertified() ? 'danger' : 'positive'" />
+
+          @if (underBilled()) {
+            <p class="re-gap-note">
+              <span class="material-symbols-outlined">payments</span>
+              {{ progressGap().toFixed(0) }} points of built work has not yet been certified —
+              roughly {{ money(d.revisedContractValue * progressGap() / 100) }} of revenue that
+              could be invoiced now.
+            </p>
+          }
+        </re-section>
+
+        <re-section title="The project" icon="construction">
+          <re-facts [items]="summary()" />
+        </re-section>
+
+        @if (costToComplete(); as ctc) {
+          <re-section title="Cost to complete"
+                      icon="calculate"
+                      [note]="'As at ' + (ctc.asOfDate | date:'mediumDate')
+                              + (ctc.preparedByName ? ', prepared by ' + ctc.preparedByName : '')
+                              + '. The cost performance index is earned value over actual cost — below 1 means the work done so far has cost more than it was budgeted to.'">
+            <re-facts [items]="[
+              { label: 'Budget', value: money(ctc.budgetCost) },
+              { label: 'Incurred', value: money(ctc.costIncurred) },
+              { label: 'Committed, not incurred', value: money(ctc.committedNotIncurred) },
+              { label: 'Estimated remaining', value: money(ctc.estimatedRemaining) },
+              { label: 'Forecast final cost', value: money(ctc.forecastFinalCost),
+                tone: ctc.isOverrunning ? 'danger' : 'positive' },
+              { label: 'Variance to budget', value: money(ctc.varianceToBudget),
+                tone: ctc.varianceToBudget > 0 ? 'danger' : 'positive' },
+              { label: 'Earned value', value: money(ctc.earnedValue) },
+              { label: 'Cost performance', value: (ctc.costPerformanceIndex | number:'1.2-2'),
+                tone: ctc.costPerformanceIndex < 1 ? 'danger' : 'positive',
+                hint: ctc.costPerformanceIndex < 1 ? 'spending more than earning' : 'earning more than spending' },
+              { label: 'Schedule performance', value: (ctc.schedulePerformanceIndex | number:'1.2-2'),
+                tone: ctc.schedulePerformanceIndex < 1 ? 'warning' : 'positive',
+                hint: ctc.schedulePerformanceIndex < 1 ? 'behind the plan' : 'ahead of the plan' },
+              { label: 'Assumptions', value: ctc.assumptions, wide: true }
+            ]" />
+          </re-section>
+        }
+      }
+
+      @case ('wbs') {
+        <re-section title="Work breakdown"
+                    icon="account_tree"
+                    note="Budget, committed and actual for every package, with earned value
+                          against actual cost. A package where actual has passed earned value is
+                          losing money now, whatever the overall forecast says."
+                    [flush]="true">
+          @if (!flatWbs().length) {
+            <p class="re-mini-empty">
+              No work breakdown has been defined. Without one there is nothing to measure progress
+              or cost against.
+            </p>
+          } @else {
+            <div class="re-table-wrap">
+              <table class="re-table">
+                <thead>
+                  <tr>
+                    <th>Package</th>
+                    <th style="text-align:right">Budget</th>
+                    <th style="text-align:right">Committed</th>
+                    <th style="text-align:right">Actual</th>
+                    <th style="text-align:right">Forecast</th>
+                    <th style="text-align:right">Variance</th>
+                    <th style="text-align:right">Progress</th>
+                    <th style="text-align:right">CPI</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (n of flatWbs(); track n.id) {
+                    <tr>
+                      <td [style.padding-left.px]="12 + n.depth * 18">
+                        <strong>{{ n.code }} {{ n.name }}</strong>
+                        <small>
+                          {{ wbsKind(n) }}
+                          @if (n.subcontractorName) { · {{ n.subcontractorName }} }
+                          @if (n.responsibleName) { · {{ n.responsibleName }} }
+                        </small>
+                      </td>
+                      <td style="text-align:right">{{ money(n.budgetAmount) }}</td>
+                      <td style="text-align:right">{{ money(n.committedAmount) }}</td>
+                      <td style="text-align:right">{{ money(n.actualAmount) }}</td>
+                      <td style="text-align:right">{{ money(n.forecastAmount) }}</td>
+                      <td style="text-align:right"
+                          [class.is-bad]="n.varianceAmount > 0"
+                          [class.is-good]="n.varianceAmount < 0">
+                        {{ money(n.varianceAmount) }}
+                      </td>
+                      <td style="text-align:right">{{ n.progressPercent | number:'1.0-0' }}%</td>
+                      <td style="text-align:right">
+                        @if (cpi(n) !== null) {
+                          <span [class.is-bad]="cpi(n)! < 1" [class.is-good]="cpi(n)! >= 1">
+                            {{ cpi(n) | number:'1.2-2' }}
+                          </span>
+                        } @else { — }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </re-section>
+      }
+
+      @case ('programme') {
+        <re-section title="Activities"
+                    icon="timeline"
+                    [note]="criticalActivities().length
+                            ? criticalActivities().length + ' activities are on the critical path — a day lost on any of them is a day lost on the whole project.'
+                            : 'No critical path has been calculated. Recalculate it from the programme screen.'">
+          <re-mini-list [rows]="activities()"
+                        emptyMessage="No programme has been built for this project." />
+        </re-section>
+      }
+
+      @case ('money') {
+        <re-section title="Cost and margin"
+                    icon="payments"
+                    note="Committed cost is money the project has promised but not yet paid —
+                          purchase orders and subcontracts. Leaving it out of the forecast is the
+                          commonest way a project looks profitable until the invoices arrive.">
+          <re-facts [items]="moneyFacts()" />
+        </re-section>
+      }
+
+      @case ('certificates') {
+        <re-section title="Interim payment certificates"
+                    icon="task_alt"
+                    note="What has been certified as done and payable, less retention, advance
+                          recovery and contra charges.">
+          <re-mini-list [rows]="certificates()"
+                        emptyMessage="No certificates have been issued on this project." />
+        </re-section>
+      }
+
+      @case ('variations') {
+        <re-section title="Variation orders"
+                    icon="edit_note"
+                    note="A variation not yet measured is a cost the forecast does not know about.
+                          Getting these agreed and priced early is the difference between a
+                          claim and a negotiation.">
+          <re-mini-list [rows]="variations()"
+                        emptyMessage="No variations have been raised on this project." />
+        </re-section>
+      }
+
+      @case ('subcontracts') {
+        <re-section title="Subcontracts"
+                    icon="engineering"
+                    note="Unverified insurance is the exposure nobody thinks about until there is
+                          an accident on site, so it is flagged on every contract that lacks it.">
+          <re-mini-list [rows]="subcontracts()"
+                        emptyMessage="No subcontracts have been let on this project." />
+        </re-section>
+      }
+    }
+  }
+</re-detail-page>
+
+<re-toast [message]="toast()" (dismissed)="toast.set(null)" />

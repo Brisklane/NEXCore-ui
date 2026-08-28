@@ -1,0 +1,216 @@
+<div class="page-container">
+
+  <a class="re-back" (click)="back()" tabindex="0" (keydown.enter)="back()">
+    <span class="material-symbols-outlined">arrow_back</span>The project
+  </a>
+
+  <div class="page-header">
+    <div>
+      <h2>Bill of quantities</h2>
+      <p class="subtitle">
+        @if (boq(); as b) {
+          {{ b.name }} — version {{ b.version }}{{ b.isCurrent ? ', current' : '' }}
+        } @else {
+          Every item of work, its quantity and its rate.
+        }
+      </p>
+    </div>
+
+    <div class="page-header-actions">
+      @if (available().length > 1) {
+        <select [ngModel]="boq()?.id" (ngModelChange)="open($event)" aria-label="Bill">
+          @for (b of available(); track b.id) {
+            <option [ngValue]="b.id">
+              {{ b.name }} v{{ b.version }}{{ b.isCurrent ? ' (current)' : '' }}
+            </option>
+          }
+        </select>
+      }
+
+      @if (boq()) {
+        <button type="button" class="btn-secondary" (click)="exportCsv()">
+          <span class="material-symbols-outlined">download</span>Export CSV
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (error()) {
+    <div class="alert alert-error" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <span>{{ error() }}</span>
+      <button type="button" class="btn-link" (click)="load()">Try again</button>
+    </div>
+  }
+
+  @if (loading()) {
+    <re-skeleton [rowCount]="12" [colCount]="6" />
+  } @else if (!boq()) {
+    <re-empty icon="list_alt"
+              title="No bill of quantities"
+              message="Price an estimate and convert it, or import a bill, and it appears here." />
+  } @else if (boq(); as b) {
+
+    <re-stats [items]="stats()" [compact]="true" />
+
+    @if (!b.isApproved) {
+      <div class="alert alert-warning" role="status">
+        <span class="material-symbols-outlined">pending</span>
+        <span>
+          This bill has not been approved. Certificates raised against an unapproved bill are
+          measured on rates nobody has signed off.
+        </span>
+      </div>
+    }
+
+    @if (softPercent() > 15) {
+      <div class="alert alert-warning" role="status">
+        <span class="material-symbols-outlined">help</span>
+        <span>
+          {{ softPercent() | number:'1.0-0' }}% of this bill is provisional sums and contingency —
+          allowances for work that has not been designed. The contract value will move, and the
+          measured total of {{ money(b.measuredTotal) }} is the only firm part of it.
+        </span>
+      </div>
+    }
+
+    @if (uncertifiedValue() > 0) {
+      <div class="alert" role="status">
+        <span class="material-symbols-outlined">pending_actions</span>
+        <span>
+          About {{ money(uncertifiedValue()) }} of work has been executed but not yet certified.
+          That is money already spent on site and not yet claimable.
+        </span>
+      </div>
+    }
+
+    <re-section title="Executed against the bill"
+                icon="engineering"
+                note="By value, not by line count. A bill can be ninety per cent complete by lines
+                      and half complete by value.">
+      <re-progress [value]="b.overallProgressPercent" label="Executed" tone="accent" />
+    </re-section>
+
+    <div class="re-boq-controls">
+      <div class="re-search">
+        <span class="material-symbols-outlined">search</span>
+        <input type="search"
+               placeholder="Item code or description"
+               [ngModel]="search()"
+               (ngModelChange)="search.set($event)"
+               aria-label="Search the bill" />
+      </div>
+
+      <select [ngModel]="kindFilter()" (ngModelChange)="kindFilter.set($event)"
+              aria-label="Kind of item">
+        <option [ngValue]="null">Every kind</option>
+        @for (k of kinds; track k.value) {
+          <option [ngValue]="k.value">{{ k.label }}</option>
+        }
+      </select>
+
+      @if (isFiltered()) {
+        <button type="button" class="btn-link re-clear" (click)="clear()">
+          <span class="material-symbols-outlined">close</span>Clear
+        </button>
+      }
+    </div>
+
+    @if (!rows().length) {
+      <re-empty icon="filter_alt_off"
+                [filtered]="isFiltered()"
+                title="Nothing matches"
+                message="No item in this bill fits what you have asked for."
+                actionLabel="Clear the filters"
+                actionIcon="close"
+                (action)="clear()" />
+    } @else {
+      <div class="re-table-wrap re-boq-table">
+        <table class="re-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Unit</th>
+              <th style="text-align:right">Quantity</th>
+              <th style="text-align:right">Rate</th>
+              <th style="text-align:right">Amount</th>
+              <th style="text-align:right">Executed</th>
+              <th style="text-align:right">Certified</th>
+              <th style="text-align:right">Progress</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of rows(); track r.kind + (r.section?.id ?? r.line?.id)) {
+              @if (r.kind === 'section' && r.section; as s) {
+                <tr class="re-boq-section">
+                  <td colspan="4" [style.padding-left.px]="12 + r.depth * 18">
+                    <button type="button" class="re-boq-toggle" (click)="toggle(s.id)">
+                      <span class="material-symbols-outlined">
+                        {{ isCollapsed(s.id) ? 'chevron_right' : 'expand_more' }}
+                      </span>
+                      <strong>{{ s.code }} {{ s.name }}</strong>
+                    </button>
+                  </td>
+                  <td style="text-align:right"><strong>{{ money(s.totalAmount) }}</strong></td>
+                  <td style="text-align:right">{{ money(s.executedAmount) }}</td>
+                  <td></td>
+                  <td style="text-align:right">{{ s.progressPercent | number:'1.0-0' }}%</td>
+                </tr>
+              } @else if (r.line; as l) {
+                <tr [class.is-allowance]="isAllowance(l)"
+                    [class.is-variation]="l.isVariation">
+                  <td [style.padding-left.px]="12 + r.depth * 18">
+                    <strong>{{ l.itemCode }}</strong>
+                    <small>{{ l.description }}</small>
+                    <span class="re-boq-tags">
+                      @if (isAllowance(l)) {
+                        <re-pill tone="warning">{{ kindLabel(l.kind) }}</re-pill>
+                      }
+                      @if (l.isVariation) {
+                        <re-pill tone="accent">
+                          Variation{{ l.variationNumber ? ' ' + l.variationNumber : '' }}
+                        </re-pill>
+                      }
+                      @if (l.remeasuredQuantity !== undefined && l.remeasuredQuantity !== null) {
+                        <re-pill tone="muted">
+                          Remeasured to {{ quantity(l.remeasuredQuantity) }}
+                        </re-pill>
+                      }
+                    </span>
+                  </td>
+                  <td>{{ l.uom }}</td>
+                  <td style="text-align:right">{{ quantity(l.quantity) }}</td>
+                  <td style="text-align:right">{{ exact(l.rate) }}</td>
+                  <td style="text-align:right">{{ money(l.amount) }}</td>
+                  <td style="text-align:right">{{ quantity(l.executedQuantity) }}</td>
+                  <td style="text-align:right"
+                      [class.is-warn]="l.executedQuantity > l.certifiedQuantity">
+                    {{ quantity(l.certifiedQuantity) }}
+                  </td>
+                  <td style="text-align:right">{{ l.progressPercent | number:'1.0-0' }}%</td>
+                </tr>
+              }
+            }
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="4">Total</td>
+              <td style="text-align:right">{{ money(b.totalAmount) }}</td>
+              <td colspan="2"></td>
+              <td style="text-align:right">{{ b.overallProgressPercent | number:'1.0-0' }}%</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <p class="re-boq-note">
+        <span class="material-symbols-outlined">info</span>
+        Certified quantity is what has been signed off and may be claimed. Executed quantity is
+        what has actually been built. Where the second is larger, the difference is work done and
+        not yet paid for — worth chasing before the next certificate rather than after it.
+      </p>
+    }
+  }
+
+  <re-toast [message]="toast()" (dismissed)="toast.set(null)" />
+</div>

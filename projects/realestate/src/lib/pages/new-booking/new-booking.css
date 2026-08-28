@@ -1,0 +1,89 @@
+/* =====================================================================
+   The booking wizard.
+
+   The step rail, the schedule and the cost sheet all live in
+   realestate-shared.css because the transfer and possession flows reuse
+   them. What is here is only what this wizard adds.
+   ===================================================================== */
+
+.re-wizard { display: flex; flex-direction: column; gap: 16px; }
+
+.re-wizard-search { max-width: 380px; margin-bottom: 12px; }
+
+.re-wizard-units {
+  max-height: 420px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding: 2px;
+}
+
+.re-wizard-check { margin-bottom: 12px; }
+
+.re-wizard-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 12px 0 0;
+  padding: 11px 13px;
+  border-radius: 10px;
+  background: var(--bg-muted, #f1f5f9);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-secondary, #64748b);
+  max-width: 80ch;
+}
+
+.re-wizard-note .material-symbols-outlined {
+  font-size: 19px;
+  flex-shrink: 0;
+  color: var(--accent, #2b7fff);
+}
+
+/* ── Plan cards ────────────────────────────────────────────────────── */
+
+.re-plans {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 10px;
+}
+
+.re-plan-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 13px 14px;
+  border-radius: 11px;
+  border: 1px solid var(--border-default, #e6eaf0);
+  background: var(--card-bg, #fff);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .12s ease, background .12s ease;
+}
+
+.re-plan-card:hover { border-color: var(--accent, #2b7fff); }
+.re-plan-card:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.re-plan-card.is-active {
+  border-color: var(--accent, #2b7fff);
+  background: var(--accent-soft, #f5f9ff);
+}
+
+.re-plan-card strong {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+}
+
+.re-plan-card span { font-size: 12.5px; color: var(--text-secondary, #64748b); }
+
+.re-plan-card small {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--accent, #2b7fff);
+}
+
+.re-plan-card small.is-bad { color: var(--danger, #dc2626); }
+
+/* The schedule inside the wizard is a preview, so it scrolls rather than
+   pushing the confirm button below three screenfuls of instalments. */
+.re-wizard .re-schedule { max-height: 340px; overflow-y: auto; scrollbar-width: thin; }

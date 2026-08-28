@@ -1,0 +1,118 @@
+/* =====================================================================
+   A land parcel.
+   ===================================================================== */
+
+.re-gap-list {
+  margin-top: 14px;
+  padding: 13px 14px;
+  border-radius: 11px;
+  border: 1px solid var(--danger-border, #fecaca);
+  background: var(--danger-soft, #fef2f2);
+}
+
+.re-gap-list h4 {
+  margin: 0 0 7px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--danger-text, #991b1b);
+}
+
+.re-gap-list ul { margin: 0 0 9px; padding-left: 18px; }
+
+.re-gap-list li {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--danger-text, #991b1b);
+  line-height: 1.5;
+}
+
+.re-gap-list p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--danger-text, #991b1b);
+  opacity: .85;
+}
+
+.re-cost-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 14px;
+  padding-top: 13px;
+  border-top: 2px solid var(--border-default, #e6eaf0);
+}
+
+.re-cost-total span {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-secondary, #64748b);
+}
+
+.re-cost-total strong {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-heading, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.re-holding {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 14px 0 0;
+  padding: 11px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--warning-border, #fde68a);
+  background: var(--warning-soft, #fffbeb);
+  color: var(--warning-text, #92400e);
+  font-size: 12.5px;
+  line-height: 1.55;
+  max-width: 82ch;
+}
+
+.re-holding .material-symbols-outlined { font-size: 19px; flex-shrink: 0; }
+
+/* ── The acquisition stage rail, laid out downwards ────────────────── */
+
+.re-steps-vertical { flex-direction: column; align-items: stretch; gap: 2px; }
+
+.re-steps-vertical .re-step {
+  display: grid;
+  grid-template-columns: 30px 1fr auto;
+  align-items: start;
+  gap: 11px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--border-subtle, #f1f5f9);
+}
+
+.re-steps-vertical .re-step:last-child { border-bottom: none; }
+
+.re-steps-vertical .re-step > span:nth-child(2) {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.re-steps-vertical strong {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-heading, #0f172a);
+}
+
+.re-steps-vertical small { font-size: 12px; color: var(--text-secondary, #64748b); }
+.re-steps-vertical small.is-late { color: var(--danger, #dc2626); font-weight: 600; }
+
+.re-step-cost {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #1e293b);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

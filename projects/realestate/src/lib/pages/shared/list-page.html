@@ -1,0 +1,253 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2>{{ config.title }}</h2>
+      <p class="subtitle">
+        @if (!loading() && total() > 0) {
+          {{ total() | number }} {{ total() === 1 ? (config.title | lowercase | slice:0:-1) : (config.title | lowercase) }}
+        } @else if (config.subtitle) {
+          {{ config.subtitle }}
+        }
+      </p>
+    </div>
+
+    <div class="page-header-actions">
+      @if (config.scope === 'project') {
+        <re-project-picker (projectChange)="onScope($event)" />
+      } @else if (config.scope === 'office') {
+        <re-office-picker (officeChange)="onScope($event)" />
+      }
+
+      @if (config.createLabel) {
+        <button type="button" class="btn-primary" (click)="create.emit()">
+          <span class="material-symbols-outlined">{{ config.createIcon ?? 'add' }}</span>
+          {{ config.createLabel }}
+        </button>
+      }
+
+      <ng-content select="[header-actions]" />
+    </div>
+  </div>
+
+  @if (config.helpKey) { <re-page-help [key]="config.helpKey" /> }
+
+  @if (error()) {
+    <div class="alert alert-error" role="alert">
+      <span class="material-symbols-outlined">error</span>
+      <span>{{ error() }}</span>
+      <button type="button" class="btn-link" (click)="refresh()">Try again</button>
+    </div>
+  }
+
+  @if (stats.length) { <re-stats [items]="stats" /> }
+
+  <ng-content select="[before-list]" />
+
+  <!-- Presets: named after the question somebody is asking, not the filter it sets. -->
+  @if (config.presets?.length) {
+    <div class="re-presets" role="group" [attr.aria-label]="'Common views of ' + config.title">
+      @for (p of config.presets; track p.key) {
+        <button type="button"
+                class="re-preset"
+                [class]="'tone-' + (p.tone ?? 'neutral')"
+                [class.is-active]="activePreset === p.key"
+                [attr.aria-pressed]="activePreset === p.key"
+                (click)="applyPreset(p)">
+          {{ p.label }}
+        </button>
+      }
+    </div>
+  }
+
+  @if (config.searchPlaceholder || config.filters?.length) {
+    <div class="re-toolbar">
+      @if (config.searchPlaceholder) {
+        <div class="re-search">
+          <span class="material-symbols-outlined">search</span>
+          <input type="text"
+                 [placeholder]="config.searchPlaceholder"
+                 [attr.aria-label]="'Search ' + config.title"
+                 [(ngModel)]="search"
+                 (ngModelChange)="onSearchChange()" />
+          @if (search) {
+            <button type="button" class="re-search-clear" (click)="search = ''; onSearchChange()"
+                    aria-label="Clear search">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          }
+        </div>
+      }
+
+      @for (f of config.filters ?? []; track f.key) {
+        <label class="re-field re-field-inline">
+          <span>
+            {{ f.label }}
+            @if (f.hint) { <em class="re-field-hint" [title]="f.hint">?</em> }
+          </span>
+
+          @switch (f.kind) {
+            @case ('select') {
+              <select [(ngModel)]="filterValues[f.key]" (ngModelChange)="onFilterChange()">
+                <option [ngValue]="undefined">Any</option>
+                @for (o of f.options ?? []; track o.value) {
+                  <option [ngValue]="o.value">{{ o.label }}</option>
+                }
+              </select>
+            }
+            @case ('toggle') {
+              <select [(ngModel)]="filterValues[f.key]" (ngModelChange)="onFilterChange()">
+                <option [ngValue]="undefined">Any</option>
+                <option [ngValue]="true">Yes</option>
+                <option [ngValue]="false">No</option>
+              </select>
+            }
+            @case ('date') {
+              <input type="date" [(ngModel)]="filterValues[f.key]" (ngModelChange)="onFilterChange()" />
+            }
+            @default {
+              <input type="text" [(ngModel)]="filterValues[f.key]" (ngModelChange)="onSearchChange()" />
+            }
+          }
+        </label>
+      }
+
+      @if (hasFilters()) {
+        <button type="button" class="btn-link re-clear" (click)="clearFilters()">
+          <span class="material-symbols-outlined">filter_alt_off</span>
+          Clear
+        </button>
+      }
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="re-card">
+      <re-skeleton [rowCount]="7" [colCount]="config.columns.length" />
+    </div>
+  } @else if (rows().length === 0) {
+    <re-empty
+      [icon]="hasFilters() ? 'search_off' : (config.emptyIcon ?? config.icon ?? 'inbox')"
+      [title]="hasFilters() ? 'Nothing matches those filters' : (config.emptyTitle ?? 'Nothing here yet')"
+      [message]="hasFilters()
+        ? 'Try widening the search, or clear the filters to see everything.'
+        : (config.emptyMessage ?? null)"
+      [filtered]="hasFilters()"
+      [actionLabel]="hasFilters() ? null : (config.createLabel ?? null)"
+      [actionIcon]="config.createIcon ?? 'add'"
+      (action)="create.emit()"
+      (clearFilters)="clearFilters()" />
+  } @else {
+    <div class="re-table-wrap">
+      <table class="re-table" [class.is-clickable]="config.clickable !== false">
+        <thead>
+          <tr>
+            @for (c of config.columns; track c.key) {
+              <th [class]="'align-' + (c.align ?? 'left')"
+                  [class.hide-sm]="c.hideBelow === 'sm'"
+                  [class.hide-md]="c.hideBelow === 'md'"
+                  [class.hide-lg]="c.hideBelow === 'lg'"
+                  [style.width]="c.width">
+                {{ c.label }}
+              </th>
+            }
+            @if (config.rowActions?.length) { <th class="align-right re-th-actions"><span class="sr-only">Actions</span></th> }
+          </tr>
+        </thead>
+
+        <tbody>
+          @for (row of rows(); track trackRow($index, row)) {
+            <tr [attr.tabindex]="config.clickable !== false ? 0 : null"
+                [attr.role]="config.clickable !== false ? 'button' : null"
+                (click)="config.clickable !== false && rowClick.emit(row)"
+                (keydown.enter)="config.clickable !== false && rowClick.emit(row)">
+
+              @for (c of config.columns; track c.key) {
+                <td [class]="'align-' + (c.align ?? 'left')"
+                    [class.hide-sm]="c.hideBelow === 'sm'"
+                    [class.hide-md]="c.hideBelow === 'md'"
+                    [class.hide-lg]="c.hideBelow === 'lg'"
+                    [attr.data-label]="c.label">
+
+                  @switch (c.kind) {
+                    @case ('strong') {
+                      <span class="re-cell-strong">{{ cell(row, c) }}</span>
+                    }
+                    @case ('money') {
+                      <span class="re-cell-num">{{ (cell(row, c) | number:'1.0-0') ?? '—' }}</span>
+                    }
+                    @case ('number') {
+                      <span class="re-cell-num">{{ (cell(row, c) | number) ?? '—' }}</span>
+                    }
+                    @case ('percent') {
+                      <span class="re-cell-num">{{ cell(row, c) | number:'1.0-1' }}%</span>
+                    }
+                    @case ('date') {
+                      <span>{{ cell(row, c) ? (cell(row, c) | date:'d MMM yyyy') : '—' }}</span>
+                    }
+                    @case ('datetime') {
+                      <span>{{ cell(row, c) ? (cell(row, c) | date:'d MMM, HH:mm') : '—' }}</span>
+                    }
+                    @case ('days') {
+                      <span class="re-cell-num">{{ cell(row, c) ?? '—' }}</span>
+                    }
+                    @case ('area') {
+                      <span class="re-cell-num">{{ cell(row, c) | number:'1.0-0' }}</span>
+                    }
+                    @case ('bool') {
+                      @if (cell(row, c)) {
+                        <span class="material-symbols-outlined re-tick">check</span>
+                      } @else {
+                        <span class="re-dash">—</span>
+                      }
+                    }
+                    @case ('pill') {
+                      @if (cell(row, c)) {
+                        <re-pill [tone]="$any(tone(row, c))">{{ cell(row, c) }}</re-pill>
+                      } @else { <span class="re-dash">—</span> }
+                    }
+                    @case ('progress') {
+                      <div class="re-cell-progress">
+                        <div class="re-cell-progress-track">
+                          <div class="re-cell-progress-fill" [style.width.%]="$any(cell(row, c)) || 0"></div>
+                        </div>
+                        <span>{{ cell(row, c) | number:'1.0-0' }}%</span>
+                      </div>
+                    }
+                    @default {
+                      <span>{{ cell(row, c) ?? '—' }}</span>
+                    }
+                  }
+
+                  @if (sub(row, c)) { <span class="re-cell-sub">{{ sub(row, c) }}</span> }
+                </td>
+              }
+
+              @if (config.rowActions?.length) {
+                <td class="align-right re-td-actions">
+                  @for (a of visibleActions(row); track a.key) {
+                    <button type="button"
+                            class="re-row-action"
+                            [class]="'tone-' + (a.tone ?? 'neutral')"
+                            [title]="a.label"
+                            [attr.aria-label]="a.label"
+                            (click)="$event.stopPropagation(); rowAction.emit({ action: a.key, row })">
+                      @if (a.icon) { <span class="material-symbols-outlined">{{ a.icon }}</span> }
+                      @else { {{ a.label }} }
+                    </button>
+                  }
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <re-pager [page]="page()" [size]="size" [total]="total()" (go)="goPage($event)" />
+  }
+
+  <ng-content select="[after-list]" />
+  <ng-content />
+
+  <re-toast [message]="toast()" (dismissed)="toast.set(null)" />
+</div>

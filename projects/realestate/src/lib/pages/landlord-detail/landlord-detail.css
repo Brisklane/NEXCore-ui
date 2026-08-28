@@ -1,0 +1,20 @@
+/* =====================================================================
+   A landlord.
+   ===================================================================== */
+
+.re-arrears-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 0;
+  padding: 12px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--danger-border, #fecaca);
+  background: var(--danger-soft, #fef2f2);
+  color: var(--danger-text, #991b1b);
+  font-size: 12.5px;
+  line-height: 1.55;
+  max-width: 82ch;
+}
+
+.re-arrears-note .material-symbols-outlined { font-size: 19px; flex-shrink: 0; }
